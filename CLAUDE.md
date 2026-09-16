@@ -1,6 +1,7 @@
-# Theclaudianos — bitácora y reglas
+# Mariano Peak — bitácora y reglas
 
-Repo de juegos web. Un juego = **un HTML autocontenido** en `juegos-pc/`, three.js desde CDN,
+Repo de juegos web (antes `Theclaudianos`; en GitHub el remoto sigue siendo `juniorspro/theclaudianos`
+hasta que se renombre desde Settings). Un juego = **un HTML autocontenido** en `juegos-pc/`, three.js desde CDN,
 se prueba **en el celular, en vertical (412×892)**.
 
 ## Qué hay acá
@@ -45,3 +46,16 @@ Credencial: `npx rezona@latest login --no-browser` (el PAT queda en `~/.rezona`,
 
 Sin resolver todavía: el PAT depende de que el usuario apruebe el código en la web, y **el
 contenedor es efímero** — cada sesión nueva necesita un login nuevo.
+
+### 2026-09-16 — el repo se llama Mariano Peak
+**Pedido textual:** «Mariano peak se llamará este repo».
+
+Qué se hizo: se renombró el proyecto a **Mariano Peak** en la documentación — título de esta
+bitácora y un `README.md` nuevo que es la portada del repo. El nombre no toca ningún juego:
+`juegos-pc/Bosque.html` sigue igual.
+
+Sin resolver todavía: el **rename en GitHub** no se puede hacer desde acá (no hay permiso de
+administración del repo por API). Lo tiene que hacer el usuario en
+`github.com/juniorspro/theclaudianos` → Settings → Repository name → `mariano-peak`. GitHub deja
+un redirect del nombre viejo, así que los clones existentes siguen andando; igual conviene correr
+después `git remote set-url origin https://github.com/juniorspro/mariano-peak.git`.
