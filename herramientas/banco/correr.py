@@ -21,8 +21,11 @@ def preparar():
     # se queda con el canvas procedural y todo lo demas es identico
     destino = "assets-no-existe/" if "sinia" in sys.argv else "assets/"
     s = re.sub(r"const CDN_IA='[^']*'", "const CDN_IA='%s'" % destino, s)
+    s = s.replace("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js",
+                  "GLTFLoader.js")
     open(DIR + "/bq.html", "w", encoding="utf-8").write(s)
     shutil.copy("crudo/ver/three.min.js", DIR + "/three.min.js")
+    shutil.copy("crudo/ver/GLTFLoader.js", DIR + "/GLTFLoader.js")
     for f in os.listdir("assets"):
         shutil.copy("assets/" + f, DIR + "/assets/" + f)
 
@@ -43,7 +46,8 @@ def main():
         pg = ctx.new_page()
         errores = []
         pg.on("pageerror", lambda e: errores.append(str(e)))
-        pg.on("console", lambda m: errores.append("console:" + m.text) if m.type == "error" else None)
+        pg.on("console", lambda m: errores.append((m.type, m.text[:300]))
+              if m.type in ("error", "warning") else None)
         pg.goto("http://127.0.0.1:8098/bq.html")
         pg.wait_for_function("window.__B", timeout=90000)
         pg.evaluate("document.getElementById('intro')"
@@ -51,11 +55,21 @@ def main():
         time.sleep(1.5)
         if "dia" in sys.argv:
             pg.evaluate("window.__B.saltar(200)")       # el ciclo arranca de noche
+        if "bicho" in sys.argv:
+            print("bicho:", pg.evaluate("window.__B.bicho(7,2.6)"))
         if "casa" in sys.argv:
             c = pg.evaluate("window.__B.casas()")[0]
             pg.evaluate(f"window.__B.ir({c['x']:.2f},{c['z']+24:.2f})")
             pg.evaluate("window.__B.mirar(0)")
         time.sleep(segundos)
+        if "bicho" in sys.argv:
+            print("bicho:", pg.evaluate("window.__B.bicho(%s,2.6)" % os.environ.get("DIST","8")))
+            time.sleep(1.2)          # que el mixer corra: en bind pose no se ve el ciclo
+        if "bicho" in sys.argv:
+            print("diag:", pg.evaluate("window.__B.diag()"))
+        if "pintar" in sys.argv:
+            print("pintar:", pg.evaluate("window.__B.pintar()"))
+            time.sleep(1)
         med = {
             "ia": pg.evaluate("window.__B.ia()"),
             "cuenta": pg.evaluate("window.__B.cuenta()"),
@@ -64,8 +78,9 @@ def main():
             if pg.evaluate("typeof renderer!=='undefined'") else None,
         }
         print(json.dumps(med, ensure_ascii=False))
-        if errores:
-            print("ERRORES", errores[:6])
+        print("errores de pagina:", len(errores))
+        for e in errores[:6]:
+            print("  -", e)
         pg.screenshot(path="crudo/banco/cruda.png")
         ctx.close(); nav.close()
     im = Image.open("crudo/banco/cruda.png").rotate(90, expand=True)

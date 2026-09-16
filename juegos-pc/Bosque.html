@@ -150,6 +150,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 (function(){
 "use strict";
@@ -172,6 +173,7 @@ const deltaLocal=(dx,dy)=>rotado()?{x:dy,y:-dx}:{x:dx,y:dy};
 
 /* ================= render ================= */
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.info.autoReset=false;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
 renderer.setSize(anchoStage(),altoStage());
 renderer.outputEncoding=THREE.sRGBEncoding;
@@ -463,6 +465,7 @@ const matTela=new THREE.MeshStandardMaterial({color:0x7a7060,roughness:1});
 const matTrapo=new THREE.MeshStandardMaterial({color:0x4a3f34,roughness:1});
 const matMadera=new THREE.MeshStandardMaterial({map:texTabla(),color:0x8a7358,roughness:.92});
 const matRoca=new THREE.MeshStandardMaterial({color:0x60625c,roughness:1,flatShading:true});
+const matTeja=new THREE.MeshStandardMaterial({map:texTabla(),color:0x9a9384,roughness:1});
 
 /* ================= viento compartido ================= */
 const VIENTO={uTiempo:{value:0},uFuerza:{value:.55}};
@@ -729,7 +732,7 @@ function crearCasa(ax,az,rot,semilla,dosPisos){
       caja(px,1.5,D/2+2.2,.22,3.0,.22,matViga,false,false);
       const zap=caja(px,2.92,D/2+1.8,.26,.2,1.0,matViga,false,false);zap.rotation.x=.35;
     }
-    const tej=caja(0,3.22,D/2+1.5,5.8,.18,2.9,matTabla,false,false);tej.rotation.x=.26;
+    const tej=caja(0,3.22,D/2+1.5,5.8,.18,2.9,matTeja,false,false);tej.rotation.x=.26;
     // jambas y dintel del vano
     for(const px of[-1.95,1.95])caja(px,1.9,D/2,.34,3.8,.74,matViga,false,false);
     caja(0,3.88,D/2,4.6,.34,.8,matViga,false,false);
@@ -1853,6 +1856,7 @@ const mostrar=t=>{elAviso.textContent=t;elAviso.style.opacity='1';avisoT=2.2;};
 const reloj=new THREE.Clock();
 function animar(){
   requestAnimationFrame(animar);
+  renderer.info.reset();   // a mano, porque autoReset esta apagado
   const dt=Math.min(reloj.getDelta(),.05),t=reloj.elapsedTime;
   cuadro++;
 
@@ -2020,7 +2024,7 @@ function animar(){
       // ---- SUSTO: se planta delante de la cara ----
       P.susto-=dt;
       const k=THREE.MathUtils.clamp(P.susto/.62,0,1);
-      P.grupo.visible=false;
+      if(!P.fijo)P.grupo.visible=false;
       // la cara ocupa toda la pantalla, temblando y acercándose
       const avance=1.08+(1-k)*.34;
       elSustoImg.style.opacity=String(Math.min(1,k*5));
@@ -2034,7 +2038,7 @@ function animar(){
       elVineta.style.opacity='1';
       vistaPresencia=1;
       if(P.susto<=0){
-        P.grupo.visible=false;P.grupo.scale.setScalar(.88);
+        if(!P.fijo)P.grupo.visible=false;P.grupo.scale.setScalar(.88);
         elSusto.style.opacity='0';elSustoImg.style.opacity='0';
         P.oculta=10+Math.random()*5;
         P.sustoEspera=30+Math.random()*55;
@@ -2043,7 +2047,7 @@ function animar(){
     const puedeSalir = GUIA.on || (recogidas>=2 && dia<.35 && !BAJO.on);      // de día no se asoma
     if(!puedeSalir){
       if(P.activa&&dia>=.35)P.activa=false;          // al amanecer se retira
-      P.grupo.visible=false;vistaPresencia=0;
+      if(!P.fijo)P.grupo.visible=false;vistaPresencia=0;
       elVineta.style.opacity=String(Math.min(1,.8+intLluvia*.2));
     }else{
       // por cada reliquia recuperada se atreve a acercarse un poco más
@@ -2144,6 +2148,7 @@ function animar(){
       P.ux=gr.position.x;P.uz=gr.position.z;
       P.vel+=(velReal-P.vel)*Math.min(1,dt*7);
       const andando=Math.min(P.vel/1.0,1);
+      animarMonstruo(dt,P.vel);
       P.paso+=dt*(1.5+P.vel*3.4);
       const sw=Math.sin(P.paso),amp=.09+andando*.60;
       P.piernas[0].rotation.x= sw*amp;
@@ -2205,7 +2210,8 @@ function animar(){
 
       // con la lluvia el cuerpo se disuelve y sólo quedan los ojos flotando
       const soloOjos=intLluvia>.32;
-      for(const m of P.cuerpo)m.visible=!soloOjos;
+      for(const m of P.cuerpo)m.visible=!soloOjos&&!P.modelo;   // el GLB reemplaza al titere
+      if(P.modelo)P.modelo.visible=!soloOjos;
       const brasa=.62+.38*Math.abs(Math.sin(t*1.7+Math.sin(t*.43)*1.7));
       P.ojos.forEach((o,k)=>{
         o.material.opacity=(k%2?.9:.55+.45*brasa)*(1-dia*.45)*(soloOjos?1.25:1);
@@ -2240,7 +2246,7 @@ function animar(){
         gr.rotation.z-=P.lado*e*.20;
         P.cabeza.rotation.x-=e*.30;
         for(const o of P.ojos)o.material.opacity*=(1-e);
-        if(P.esconde<=0){gr.visible=false;gr.scale.y=.88;P.oculta=10+Math.random()*5;}
+        if(P.esconde<=0&&!P.fijo){gr.visible=false;gr.scale.y=.88;P.oculta=10+Math.random()*5;}
       }
       vistaPresencia=gr.visible?THREE.MathUtils.clamp((enfoque-.9)/.1,0,1):0;
       elVineta.style.opacity=String(Math.min(1,.8+vistaPresencia*.2+intLluvia*.2));
@@ -2482,6 +2488,7 @@ function animar(){
   }else{
     renderer.render(scene,camera);
   }
+  leerBrillo();
 }
 
 /* ================= arranque ================= */
@@ -2711,10 +2718,211 @@ function cruzarPuerta(){
 intro.addEventListener('touchstart',e=>{e.stopPropagation();e.preventDefault();cruzarPuerta();},{passive:false});
 intro.addEventListener('click',e=>{e.stopPropagation();cruzarPuerta();});
 
+
+/* ================= texturas IA (Rezona Lab) =================
+   Lo procedural NO se borra: la foto pisa al canvas cuando decodifica, y si no llega el juego
+   se ve exactamente como antes. Cada foto trae los METROS que cubre y de ahi sale la escala,
+   no del gusto. Las cajas del pueblo comparten UNA geometria unitaria y se escalan por instancia,
+   asi que una repeticion global no puede ser correcta para todas: la UV se proyecta por caja
+   desde la posicion de mundo, y eso fija los metros por baldosa para todo el pueblo de una.
+   El tinte se recalcula en lineal porque three multiplica map x vertexColor x material.color. */
+const CDN_IA='https://cdn.jsdelivr.net/gh/Juniorspro/Theclaudianos@d1936655883fb42c41872c7dc833ce1698c9f693/assets/';
+const TEX_IA={};   // sonda: un base64/descarga que no llega no falla ni avisa
+
+function promLineal(img){
+  const L=64,c=document.createElement('canvas');c.width=c.height=L;
+  const x=c.getContext('2d');x.drawImage(img,0,0,L,L);
+  const d=x.getImageData(0,0,L,L).data;let r=0,g=0,b=0;
+  const aLin=v=>{v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4);};
+  for(let i=0;i<d.length;i+=4){r+=aLin(d[i]);g+=aLin(d[i+1]);b+=aLin(d[i+2]);}
+  const n=d.length/4;return{r:Math.max(r/n,1e-4),g:Math.max(g/n,1e-4),b:Math.max(b/n,1e-4)};
+}
+function normalDe(img,fuerza){
+  const L=512,c=document.createElement('canvas');c.width=c.height=L;
+  const x=c.getContext('2d');x.drawImage(img,0,0,L,L);
+  const p=x.getImageData(0,0,L,L).data,sal=x.createImageData(L,L),q=sal.data;
+  const lum=i=>(p[i]*.299+p[i+1]*.587+p[i+2]*.114)/255;
+  for(let y=0;y<L;y++)for(let X=0;X<L;X++){
+    const i=(y*L+X)*4;
+    const dx=(lum((y*L+(X+1)%L)*4)-lum((y*L+(X+L-1)%L)*4))*fuerza;
+    const dy=(lum((((y+1)%L)*L+X)*4)-lum((((y+L-1)%L)*L+X)*4))*fuerza;
+    const nx=-dx,ny=-dy,l=Math.hypot(nx,ny,1);
+    q[i]=(nx/l*.5+.5)*255;q[i+1]=(ny/l*.5+.5)*255;q[i+2]=(1/l*.5+.5)*255;q[i+3]=255;
+  }
+  x.putImageData(sal,0,0);
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.MirroredRepeatWrapping;return t;
+}
+/* la UV sale de la posicion de mundo: metros por baldosa reales, sin tocar ninguna geometria */
+function proyectarCaja(mat,metros){
+  const M=metros.toFixed(3);
+  mat.onBeforeCompile=sh=>{
+    sh.vertexShader=sh.vertexShader.replace('#include <uv_vertex>',
+      '#ifdef USE_UV\n'+
+      ' vec3 pIA=(modelMatrix*vec4(position,1.0)).xyz;\n'+
+      ' vec3 nIA=normalize(mat3(modelMatrix)*normal);\n'+
+      ' vec3 aIA=abs(nIA);\n'+
+      ' vUv=(aIA.y>aIA.x&&aIA.y>aIA.z)?pIA.xz/'+M+':(aIA.x>aIA.z)?pIA.zy/'+M+':pIA.xy/'+M+';\n'+
+      '#endif');
+  };
+  mat.needsUpdate=true;
+}
+function vestir(nombre,relieve,usos){
+  const im=new Image();im.crossOrigin='anonymous';
+  im.onload=()=>{
+    try{
+      const nuevo=promLineal(im),nrm=normalDe(im,relieve);
+      for(const u of usos){
+        const m=u.mat;
+        const t=new THREE.Texture(im);
+        t.wrapS=t.wrapT=THREE.MirroredRepeatWrapping;  // los dos bordes que se tocan son el mismo
+        t.encoding=THREE.sRGBEncoding;
+        t.anisotropy=renderer.capabilities.getMaxAnisotropy();
+        if(u.repeat)t.repeat.set(u.repeat[0],u.repeat[1]);
+        t.needsUpdate=true;
+        if(m.map&&m.map.image){                        // el tinte se recalcula, no se hereda
+          const viejo=promLineal(m.map.image);
+          m.color.r=Math.min(2,m.color.r*viejo.r/nuevo.r);
+          m.color.g=Math.min(2,m.color.g*viejo.g/nuevo.g);
+          m.color.b=Math.min(2,m.color.b*viejo.b/nuevo.b);
+        }
+        m.map=t;
+        m.normalMap=nrm;
+        m.normalScale=new THREE.Vector2(u.nScale||.8,u.nScale||.8);
+        if(u.metros)proyectarCaja(m,u.metros);
+        m.needsUpdate=true;
+      }
+      TEX_IA[nombre]='ok '+(im.naturalWidth||0)+'px';
+    }catch(e){TEX_IA[nombre]='error: '+e.message;}
+  };
+  im.onerror=()=>{TEX_IA[nombre]='no llego';};
+  TEX_IA[nombre]='pidiendo';
+  im.src=CDN_IA+nombre+'.jpg';
+}
+/* suelo: 1020 m de plano con una foto de 4 m -> 255 copias. Los otros van por proyeccion. */
+vestir('suelo',   1.6,[{mat:suelo.material,repeat:[255,255],nScale:.55}]);
+vestir('piedra',  2.4,[{mat:matPiedra,metros:2.0,nScale:.9}]);
+vestir('tabla',   2.0,[{mat:matTabla,metros:2.4,nScale:.8},{mat:matMadera,metros:2.4,nScale:.8}]);
+vestir('teja',    2.2,[{mat:matTeja,metros:2.4,nScale:.9}]);
+vestir('corteza', 2.6,[{mat:matViga,metros:2.2,nScale:.9},
+                       {mat:matRama,repeat:[1,2],nScale:.7}]);
+
+/* ================= el monstruo riggeado (Rezona) =================
+   Reemplaza al titere de cilindros negros: 25 huesos (los 16 de torsion colapsados, porque 41
+   no compilan el shader en WebGL1), tres clips y la piel humeda del modelo. El titere no se
+   borra, se apaga: si el GLB no llega, el juego se ve exactamente como antes. */
+function vestirMonstruo(){
+  if(!THREE.GLTFLoader){TEX_IA.monstruo='sin GLTFLoader';return;}
+  TEX_IA.monstruo='pidiendo';
+  new THREE.GLTFLoader().load(CDN_IA+'monstruo.glb',g=>{
+    try{
+      const m=g.scene,caja=new THREE.Box3().setFromObject(m),t=new THREE.Vector3();
+      caja.getSize(t);
+      const k=2.90/Math.max(t.y,1e-3);          // el titere medía 2,90 de alto en local
+      m.scale.setScalar(k);
+      m.position.y=-caja.min.y*k;               // los pies al piso del grupo, no el centro
+      m.traverse(o=>{
+        if(!o.isMesh&&!o.isSkinnedMesh)return;
+        o.frustumCulled=false;                  // el centro de una piel no es el del objeto
+        o.castShadow=true;o.receiveShadow=false;
+        const mt=o.material;if(!mt)return;
+        if(mt.color){                              // piel humeda a oscuras, no muñeco alumbrado:
+          const g=(mt.color.r+mt.color.g+mt.color.b)/3;   // se desatura hacia el gris pardo y
+          mt.color.setRGB(mt.color.r*.35+g*.65,mt.color.g*.35+g*.65,mt.color.b*.35+g*.65);
+          mt.color.multiplyScalar(.34);}                  // se baja: el rosa no existe de noche
+        if(mt.emissive)mt.emissive.setHex(0x08070a);
+        mt.roughness=Math.min(1,(mt.roughness===undefined?.9:mt.roughness)*.78);
+        mt.fog=true;
+      });
+      for(const o of PRESENCIA.cuerpo)o.visible=false;
+      PRESENCIA.grupo.add(m);
+      PRESENCIA.modelo=m;
+      const mez=new THREE.AnimationMixer(m),acc={};
+      const dame=n=>{const c=g.animations.find(a=>a.name===n);return c?mez.clipAction(c):null;};
+      acc.quieto=dame('preset:idle');acc.camina=dame('preset:walk');acc.corre=dame('preset:run');
+      for(const kk in acc)if(acc[kk]){acc[kk].play();acc[kk].setEffectiveWeight(kk==='quieto'?1:0);}
+      PRESENCIA.mezcla=mez;PRESENCIA.acc=acc;
+      TEX_IA.monstruo='ok '+g.animations.length+' clips';
+    }catch(e){TEX_IA.monstruo='error: '+e.message;}
+  },undefined,()=>{TEX_IA.monstruo='no llego';});
+}
+vestirMonstruo();
+
+/* El peso de cada clip sale de la VELOCIDAD MEDIDA del bicho, no de un temporizador: asi el
+   paso y el desplazamiento no se pueden desincronizar. La velocidad de referencia de cada
+   ciclo esta en un solo sitio para poder ajustarla midiendo el patinaje. */
+const VEL_CAMINA=1.25,VEL_CORRE=3.0;
+function animarMonstruo(dt,vel){
+  const A=PRESENCIA.acc;
+  if(!PRESENCIA.mezcla||!A)return;
+  const corre=THREE.MathUtils.clamp((vel-1.7)/1.6,0,1);
+  const anda=THREE.MathUtils.clamp(vel/.85,0,1)*(1-corre);
+  if(A.quieto)A.quieto.setEffectiveWeight(Math.max(0,1-anda-corre));
+  if(A.camina){A.camina.setEffectiveWeight(anda);
+    A.camina.timeScale=THREE.MathUtils.clamp(vel/VEL_CAMINA,.55,2.0);}
+  if(A.corre){A.corre.setEffectiveWeight(corre);
+    A.corre.timeScale=THREE.MathUtils.clamp(vel/VEL_CORRE,.7,1.9);}
+  PRESENCIA.mezcla.update(dt);
+}
+
+/* brillo del cuadro entero: readPixels sobre el lienzo ya dibujado. Con drawImage sobre un
+   lienzo WebGL sin preserveDrawingBuffer sale cero, y leerlo fuera del cuadro tambien. */
+let pedidoBrillo=null;
+function pedirBrillo(){return new Promise(r=>{pedidoBrillo=r;});}
+function leerBrillo(){
+  if(!pedidoBrillo)return;
+  const gl=renderer.getContext(),w=renderer.domElement.width,h=renderer.domElement.height;
+  const px=new Uint8Array(w*h*4);
+  gl.readPixels(0,0,w,h,gl.RGBA,gl.UNSIGNED_BYTE,px);
+  let s=0;for(let i=0;i<px.length;i+=4)s+=px[i]*.299+px[i+1]*.587+px[i+2]*.114;
+  const f=pedidoBrillo;pedidoBrillo=null;
+  f({medio:+(s/(w*h)).toFixed(2),w:w,h:h});
+}
+
 // sonda del banco: nada del juego la lee, existe para poder medir sin jugar
 window.__B={BAJO,CFG,FIN,bajar,subir,abrirTrampilla,activarNotas,
   cuenta:()=>({llamadas:renderer.info.render.calls,tri:renderer.info.render.triangles}),
-  jug:jugador,aplicarGfx};
+  jug:jugador,aplicarGfx,ia:()=>TEX_IA,brillo:pedirBrillo,
+  saltar:seg=>{reloj.elapsedTime+=seg;return reloj.elapsedTime;},
+  casas:()=>centrosCasa.map(c=>({x:c.x,z:c.z})),
+  ir:(x,z)=>{jugador.pos.x=x;jugador.pos.z=z;return{x:x,z:z};},
+  mirar:a=>{yaw=yawObj=a;return a;},
+  pintar:()=>{const P=PRESENCIA;if(!P.modelo)return 'sin modelo';
+    P.modelo.traverse(o=>{if(o.isMesh||o.isSkinnedMesh)
+      o.material=new THREE.MeshBasicMaterial({color:0xff00ff,fog:false,skinning:!!o.isSkinnedMesh});});
+    return 'pintado';},
+  diag:()=>{const P=PRESENCIA,g=P.grupo;const v=new THREE.Vector3();
+    g.getWorldPosition(v);camera.updateMatrixWorld();
+    const ojo=camera.getWorldPosition(new THREE.Vector3());
+    const pr=v.clone().project(camera);
+    return {visible:g.visible,pos:[+v.x.toFixed(2),+v.y.toFixed(2),+v.z.toFixed(2)],
+      cam:[+camera.position.x.toFixed(2),+camera.position.y.toFixed(2),+camera.position.z.toFixed(2)],
+      pantalla:[+pr.x.toFixed(2),+pr.y.toFixed(2),+pr.z.toFixed(2)],
+      estado:P.estado,fijo:!!P.fijo,modelo:!!P.modelo,escala:g.scale.x,
+      dist:+ojo.distanceTo(v).toFixed(2),
+      gl:{uniVert:renderer.capabilities.maxVertexUniforms,texVert:renderer.capabilities.floatVertexTextures,
+          w2:renderer.capabilities.isWebGL2,luces:(()=>{let n=0;scene.traverse(o=>{if(o.isLight&&o.visible)n++;});return n;})()},
+      modInfo:(()=>{if(!P.modelo)return null;const c=new THREE.Box3().setFromObject(P.modelo),
+        t=new THREE.Vector3();c.getSize(t);let pieles=0,vis=0,mats=[];
+        P.modelo.traverse(o=>{if(o.isMesh||o.isSkinnedMesh){pieles++;if(o.visible)vis++;
+          const m=o.material,pr=m.program;
+          mats.push({op:m.opacity,tr:!!m.transparent,vis:m.visible,piel:!!m.skinning,
+            col:m.color?m.color.getHexString():null,side:m.side,prog:!!pr,
+            diag:pr&&pr.diagnostics?String(pr.diagnostics.programLog||'si').slice(0,200):null});}});
+        return {tam:[+t.x.toFixed(2),+t.y.toFixed(2),+t.z.toFixed(2)],
+          min:[+c.min.x.toFixed(2),+c.min.y.toFixed(2),+c.min.z.toFixed(2)],
+          pieles:pieles,visibles:vis,mats:mats,escala:+P.modelo.scale.x.toFixed(3),
+          modVis:P.modelo.visible};})()};},
+  bicho:(d,vel)=>{const P=PRESENCIA,g=P.grupo;
+    g.visible=true;P.activa=true;P.oculta=999;P.estado='mira';P.estadoT=99;P.fijo=true;
+    const dir=camera.getWorldDirection(new THREE.Vector3());   // el frente lo dice la camara
+    const ojo=camera.getWorldPosition(new THREE.Vector3());    // la camara cuelga de la cabeza:
+    g.position.set(ojo.x+dir.x*(d||7),0,ojo.z+dir.z*(d||7));   // su .position es LOCAL
+    g.position.y=alturaEn(g.position.x,g.position.z);
+    g.rotation.y=Math.atan2(ojo.x-g.position.x,ojo.z-g.position.z);
+    if(vel!==undefined){P.vel=vel;animarMonstruo(.3,vel);}
+    return {x:+g.position.x.toFixed(2),z:+g.position.z.toFixed(2),
+            modelo:!!P.modelo,vel:P.vel};}};
 renderer.compile(scene,camera);
 animar();
 })();
