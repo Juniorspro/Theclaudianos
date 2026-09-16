@@ -29,6 +29,70 @@ se prueba **en el celular, en vertical (412×892)**.
 
 ## Bitácora
 
+### 2026-09-16 (2) — pies, costo, luz, cinta y HUD propio
+
+**Pedido textual:** «El monstruo está bajo tierra, el vhs ya se satura demasiado, hay poca
+iluminación global y está muy mal optimizado; necesito un menú hud completo y un Hud de controles
+personalizados con imágenes e íconos propios generados».
+
+| | antes | ahora |
+|---|---|---|
+| llamadas de dibujo (día) | 1298 | **591** |
+| triángulos por cuadro (día) | 12,10 M | **2,65 M** |
+| llamadas / triángulos (noche) | — | 455 / 1,86 M |
+| brillo medio del cuadro (día) | 61,9 | **93,3** |
+| brillo medio (noche) | 10,5 | 16,5 |
+| objetos en la escena | 2111 | 1341 |
+| errores de página | 0 | 0 |
+
+- **Los pies se MIDEN.** El bicho caminaba enterrado: el bind dice dónde termina el pie en reposo
+  y el ciclo lo baja. Al cargar se barren los tres clips en seis instantes cada uno, se busca el
+  vértice más bajo de la piel y se corrige el modelo por esa diferencia.
+- **Fundir las casas** (cientos de cajas que comparten una geometría unitaria escalada por
+  instancia) por casa y por material: de eso sale casi la mitad de las llamadas. El índice va en
+  `Uint32`. Y el raycast de oclusión pasó de mirar ~800 cajas a mirar las fundidas.
+- **Las hojas no proyectan sombra**: son el 90 % de los triángulos y su sombra es la mancha que la
+  copa ya proyecta con las ramas. Una sombra es una pasada entera de la escena.
+- **Recorte por cuadra atado a la niebla**: a `2,25/densidad` no queda nada detrás, pero el frustum
+  lo dibujaba igual. Y **la cuadra se achicó de 110 m a 55 m**, medido:
+
+  | CELDA_ARB | llamadas | triángulos |
+  |---|---|---|
+  | 110 | 434 | 4,10 M |
+  | 70 | 515 | 2,90 M |
+  | **55** | **596** | **2,70 M** |
+  | 40 | 707 | 2,09 M |
+
+  Trozos más chicos son los que el frustum descarta: partir más fino **baja** los triángulos
+  aunque suba las llamadas. 55 es la rodilla de la curva.
+- **Luz**: la hemisférica pasó de .21-.50 a .40-.80 con los dos colores bien distintos, la
+  exposición de .86-.94 a .94-1.02, y entró **luz de entorno de verdad**: una foto 360 generada,
+  pasada por `PMREMGenerator` a `scene.environment`, con la intensidad siguiendo el ciclo de día
+  (.20-.42). El cielo del juego es un shader de degradado y no ilumina; esto sí.
+- **La cinta**: `uFuerza` llegaba a 2,1 y a esa altura el filtro se come la imagen. Ahora se topa
+  en 1,25, la base bajó de .62 a .40, y el desaturado, el arrastre, las líneas de barrido, el
+  grano y la viñeta bajaron entre un 25 % y un 40 %. Y hay **ajuste del jugador**: NO / SUAVE /
+  MEDIA / FUERTE, en `localStorage`.
+- **HUD propio**: doce íconos y el título generados con Rezona, horneados a **máscaras PNG de
+  63 kB en total, adentro del HTML**. Menú con título, JUGAR, AJUSTES y CÓMO SE JUEGA; joystick
+  con aro y pulgar propios; botones de linterna, correr, VHS, pantalla y ajustes; contador con
+  ícono que cambia de reliquia a nota; y un ojo que se enciende cuando algo te mira.
+
+**Lo que costó una vuelta:**
+
+1. **El CSS enmascara por el CANAL ALFA, no por la luminancia.** Guardé los íconos como PNG en
+   gris (un tercio del peso) y salieron todos como cuadrados llenos. Van en gris+alfa: el gris
+   constante en blanco comprime a casi nada y la silueta va en el alfa. 345 kB → 63 kB.
+2. **`io.open(p,'w').write(expr)` me dejó el banco en cero bytes** — el mismo defecto que está
+   escrito en el manual, cometido igual: un `NameError` adentro del argumento. Se recuperó de
+   `origin` porque estaba pusheado. El texto se calcula entero y recién después se abre.
+3. **La interfaz no puede depender de una descarga**: los íconos van embebidos, las texturas y el
+   GLB por CDN.
+
+**Sin resolver:** quedan 595 mallas sueltas fuera de las casas (faroles, carteles, cercos) sin
+fundir, el menú no se puede volver a abrir una vez que entrás (sólo el ⚙), y la escala del ciclo
+de marcha del bicho sigue sin medirse contra el patinaje de los pies.
+
 ### 2026-09-16 — texturas de foto y el monstruo riggeado
 
 **Pedido textual:** «mejores el juego vhs a full con nuevas texturas etc hechos con IA de Rezona y

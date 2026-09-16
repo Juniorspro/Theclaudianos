@@ -50,8 +50,9 @@ def main():
               if m.type in ("error", "warning") else None)
         pg.goto("http://127.0.0.1:8098/bq.html")
         pg.wait_for_function("window.__B", timeout=90000)
-        pg.evaluate("document.getElementById('intro')"
-                    ".dispatchEvent(new Event('touchstart',{bubbles:true,cancelable:true}))")
+        if "menu" not in sys.argv:          # 'menu': la foto es del menu, sin entrar
+            pg.evaluate("document.getElementById('intro')"
+                        ".dispatchEvent(new Event('touchstart',{bubbles:true,cancelable:true}))")
         time.sleep(1.5)
         if "dia" in sys.argv:
             pg.evaluate("window.__B.saltar(200)")       # el ciclo arranca de noche
@@ -70,6 +71,25 @@ def main():
         if "pintar" in sys.argv:
             print("pintar:", pg.evaluate("window.__B.pintar()"))
             time.sleep(1)
+        if "joy" in sys.argv:
+            pg.evaluate("""(()=>{const z=document.getElementById('zonaMov');
+              const mk=(t,x,y)=>{const to=new Touch({identifier:7,target:z,clientX:x,clientY:y});
+                z.dispatchEvent(new TouchEvent(t,{bubbles:true,cancelable:true,
+                  touches:[to],targetTouches:[to],changedTouches:[to]}));};
+              mk('touchstart',110,700);mk('touchmove',150,660);
+              document.getElementById('joy').classList.add('on');})()""")
+            time.sleep(.6)
+            print("joy:", pg.evaluate("""(()=>{const j=document.getElementById('joy'),
+              i=document.querySelector('#joyAro .ic'),p=document.querySelector('#joyPunto .ic');
+              const cs=getComputedStyle(i),cp=getComputedStyle(p);
+              return {clase:j.className,op:getComputedStyle(j).opacity,
+                mascaraAro:(cs.webkitMaskImage||cs.maskImage||'none').slice(0,28),
+                mascaraPulgar:(cp.webkitMaskImage||cp.maskImage||'none').slice(0,28)};})()"""))
+        if "cfg" in sys.argv:
+            pg.evaluate("document.getElementById('cfgP').classList.add('on')")
+            time.sleep(.4)
+        if "costo" in sys.argv:
+            print("costo:", json.dumps(pg.evaluate("window.__B.costo()"), ensure_ascii=False))
         med = {
             "ia": pg.evaluate("window.__B.ia()"),
             "cuenta": pg.evaluate("window.__B.cuenta()"),
