@@ -23,6 +23,23 @@ new THREE.GLTFLoader().load(ARCH,g=>{
     cam.position.set(c.x+Math.sin(ang)*r, c.y+(alturaCam||0)*t.y, c.z+Math.cos(ang)*r);
     cam.lookAt(c); cam.updateMatrixWorld(); ren.render(esc,cam);
   };
+  // animacion: un rig se prueba midiendo cuanto se movieron SUS PROPIOS vertices
+  const mez=new THREE.AnimationMixer(raiz); let acc=null;
+  const piel=[]; raiz.traverse(o=>{if(o.isSkinnedMesh)piel.push(o);});
+  const muestras=(()=>{ if(!piel.length)return [];
+    const n=piel[0].geometry.attributes.position.count, paso=Math.max(1,(n/400)|0), l=[];
+    for(let i=0;i<n;i+=paso)l.push(i); return l; })();
+  function pos(){ const v=new THREE.Vector3(), out=[];
+    for(const i of muestras){ v.fromBufferAttribute(piel[0].geometry.attributes.position,i);
+      piel[0].boneTransform(i,v); out.push(v.clone()); } return out; }
+  window.__V.clip=n=>{ if(acc)acc.stop();
+    const c=g.animations.find(a=>a.name===n); if(!c)return 'sin clip '+n;
+    acc=mez.clipAction(c); acc.play(); mez.setTime(0); return c.duration; };
+  window.__V.enT=t=>{ mez.setTime(t); raiz.updateMatrixWorld(true);
+    for(const p of piel){ p.skeleton.update&&p.skeleton.update(); }
+    const a=window.__V.__base||(window.__V.__base=pos()), b=pos();
+    let mx=0,su=0; for(let i=0;i<b.length;i++){const d=a[i].distanceTo(b[i]);mx=Math.max(mx,d);su+=d;}
+    return {max:+mx.toFixed(4), medio:+(su/b.length).toFixed(4)}; };
   window.__V.foto(0,0);
   window.__V.listo=true;
 },undefined,e=>{window.__V.error=String(e&&e.message||e);window.__V.listo=true;});
