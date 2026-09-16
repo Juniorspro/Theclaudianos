@@ -8,13 +8,13 @@ se prueba **en el celular, en vertical (412×892)**.
 
 | ruta | qué es |
 |---|---|
-| `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. Es el único juego activo del repo. |
+| `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. Heredado de otra sesión del repo — **no es el proyecto de Mariano Peak**, se deja quieto. |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
 | `.claude/skills/banco` | Banco de pruebas, capturas y sondas. |
 | `herramientas/rezona/rz.py` | Cliente stdio del MCP de Rezona (no depende de que el cliente lo tenga configurado). |
 | `docs/MANUAL_JUEGOS.md` | Manual completo heredado. **Referencia, no plan de trabajo**: los juegos que nombra (BARRIO, CUBOS, Maicol…) no se continúan acá. |
-| `docs/TRASPASO_BOSQUE.md` | Estado del Bosque al traspaso. |
+| `docs/TRASPASO_BOSQUE.md` | Estado del Bosque al traspaso (referencia de esa otra línea de trabajo). |
 
 ## Reglas fijas del usuario
 
@@ -59,3 +59,15 @@ administración del repo por API). Lo tiene que hacer el usuario en
 `github.com/juniorspro/theclaudianos` → Settings → Repository name → `mariano-peak`. GitHub deja
 un redirect del nombre viejo, así que los clones existentes siguen andando; igual conviene correr
 después `git remote set-url origin https://github.com/juniorspro/mariano-peak.git`.
+
+### 2026-09-16 — Mariano Peak arranca limpio
+**Pedido textual:** «esta es otra sesión para otra persona pero usa el mismo repositorio nomás,
+acá lo del bosque nada que ver pero si quedan las habilidades de creación de juegos».
+
+Qué se hizo: el repo es **compartido**. El Bosque queda donde está, intacto, pero **no es el
+proyecto de esta línea**: acá lo que se hereda son las **skills** (`graficos`, `assets-ia`,
+`banco`), `herramientas/rezona/rz.py` y el manual. Juego nuevo, carpeta nueva.
+
+Login de Rezona: se corrió `npx rezona@latest login --no-browser` y se le pasó al usuario el link
+`rezona.ai/api-keys?code=…` para aprobar. El contenedor es efímero: **cada sesión nueva necesita
+un login nuevo**.
