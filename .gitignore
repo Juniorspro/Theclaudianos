@@ -1,0 +1,6 @@
+.rezona/
+credentials.json
+node_modules/
+__pycache__/
+*.pyc
+crudo/tmp/
