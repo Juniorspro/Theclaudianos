@@ -29,6 +29,46 @@ se prueba **en el celular, en vertical (412×892)**.
 
 ## Bitácora
 
+### 2026-09-17 — la última reliquia se marca y la sombra guía de más lejos
+
+**Pedido textual:** «As que cuando la sombra se lleve la última reliquia se muestre en el mapa como
+la ante última, también as que la sombra nos guíe de más lejos al recojer todas las notas».
+
+- **La marca ahora vale para las dos últimas.** La condición pasó de `recogidas===TOTAL-2` a
+  `recogidas>=TOTAL-2 && recogidas<TOTAL`, así que el contorno dorado —sin atenuación por
+  distancia, sin `depthTest` y sin niebla— también señala la que la sombra deja en `INICIO`.
+  Sin eso había que cruzar el bosque de memoria.
+- **La guía, de 8 m a 19 m.** `GUIA.delante` y `GUIA.llega` son constantes con nombre (19 y 9)
+  para poder medirlas y moverlas.
+- **De lejos y de noche un cuerpo oscuro es un agujero**, así que mientras guía la sombra lleva
+  dos cosas: un **halo propio** frío, sin atenuación por distancia ni niebla (medido: con opacidad
+  .24 no se encontraba a 19 m; quedó en .40 ± .14) y un **emisivo frío bajo** que se le pone al
+  empezar a guiar y se le saca al terminar, escrito sólo en la transición.
+- El ciclo de marcha de la guía sale de **lo que se movió**, suavizado como el del resto: sin
+  suavizar, un cuadro largo daba 24 m/s y disparaba el clip de correr sin motivo.
+
+**Medido** (412×892):
+
+| | |
+|---|---|
+| marca de la última | visible en `INICIO` (0, 14) a **99,2 m**, `enCuadro: true` |
+| pulso · escala (sin atenuar) | 0,45–0,89 · 0,0575–0,0616 |
+| marca de la anteúltima | visible a 190,3 m (sigue igual) |
+| guía: distancia al jugador | **18,8 m** (antes 8,0) |
+| guía: distancia a la trampilla | 74,0 m con el jugador a ~93 m |
+| halo mientras guía | visible, 0,26–0,54 |
+| errores de página | 0 |
+
+**Lo que costó una vuelta:**
+
+1. **La cámara mira por su −Z** y el juego hace `camera.rotation.y=yaw`: para apuntarla a un punto
+   va `atan2(-dx,-dz)`, no `atan2(dx,dz)` —que es la convención del *rumbo* de los objetos, que
+   miran a +Z—. Con el signo al revés la sonda daba la marca **centrada en pantalla** y dada
+   vuelta: el `adelante:false` del producto punto fue lo único que lo delató.
+2. **En este banco el bucle avanza ~0,3 s de juego por segundo de pared** (swiftshader). Una sonda
+   leída justo después de escribir el estado mide **el cuadro anterior**: la marca salía en
+   `(0,0,0)` y el jugador «no se movía». Con cuatro segundos de espera, todo correcto.
+
 ### 2026-09-16 (2) — pies, costo, luz, cinta y HUD propio
 
 **Pedido textual:** «El monstruo está bajo tierra, el vhs ya se satura demasiado, hay poca

@@ -88,6 +88,29 @@ def main():
         if "cfg" in sys.argv:
             pg.evaluate("document.getElementById('cfgP').classList.add('on')")
             time.sleep(.4)
+        if "fase11" in sys.argv or "fase12" in sys.argv:
+            # lejos del inicio: parado ahi, el propio juego levanta la reliquia al instante
+            pg.evaluate("window.__B.ir(74,-52)")
+            n = "window.__B.fase(12)" if "fase12" in sys.argv else "window.__B.fase(11)"
+            print("fase:", pg.evaluate(n))
+            time.sleep(1.0)
+            print("marcas:", json.dumps(pg.evaluate("window.__B.marcas()"), ensure_ascii=False))
+            print("reloj1:", pg.evaluate("window.__B.saltar(0)"))
+            time.sleep(2)
+            print("reloj2:", pg.evaluate("window.__B.saltar(0)"))
+            print("jug:", pg.evaluate("[+window.__B.jug.pos.x.toFixed(1),+window.__B.jug.pos.z.toFixed(1)]"))
+            print("mirarRel:", pg.evaluate("window.__B.mirarRel()"))
+            time.sleep(4)      # el banco va a pocos cuadros: la camara tarda en girar
+            print("marcas2:", json.dumps(pg.evaluate("window.__B.marcas()"), ensure_ascii=False))
+        if "guiar" in sys.argv:
+            # lejos de la trampilla: pegado a ella la sombra ya se queda al lado y no guia
+            pg.evaluate("window.__B.ir(74,-52)")
+            pg.evaluate("window.__B.abrirTrampilla()")
+            time.sleep(float(os.environ.get("ESPERA", "14")))   # el banco corre a pocos
+            # cuadros: el reloj del juego avanza mucho mas lento que el de la pared
+            print("guia:", json.dumps(pg.evaluate("window.__B.guia()"), ensure_ascii=False))
+            pg.evaluate("window.__B.mirarA()")
+            time.sleep(1)
         if "costo" in sys.argv:
             print("costo:", json.dumps(pg.evaluate("window.__B.costo()"), ensure_ascii=False))
         med = {

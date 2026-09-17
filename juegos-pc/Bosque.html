@@ -1594,7 +1594,11 @@ const NOTAS=[],TOTAL_NOTAS=5;
   }
 }
 let notas=0,faseNotas=false;
-const GUIA={on:false,x:0,z:0};
+/* La sombra guia hacia la trampilla caminando DELANTE del jugador. De cerca se lee a
+   escolta; de lejos se lee a que algo te lleva, que es lo que tiene que pasar cuando ya
+   juntaste las cinco notas. DELANTE es la distancia a la que camina; LLEGA, el radio en el
+   que se queda al lado de la trampilla esperandote. */
+const GUIA={on:false,x:0,z:0,delante:19.0,llega:9.0};
 /* contorno de la nota que toca: depthTest apagado, asi se ve a traves de todo */
 const MARCA=(function(){
   const c=document.createElement('canvas');c.width=c.height=128;
@@ -1627,6 +1631,24 @@ const MARCA_R=(function(){
     depthTest:false,depthWrite:false,fog:false,sizeAttenuation:false,
     blending:THREE.AdditiveBlending,opacity:.9}));
   m.scale.set(.058,.072,1);m.renderOrder=21;m.visible=false;scene.add(m);
+  return m;
+})();
+
+/* A diecinueve metros y de noche la sombra es negra sobre negro: para poder seguirla lleva
+   un resplandor propio, frio y flojo, SIN atenuacion por distancia ni niebla — mide lo mismo
+   a diez metros que a cincuenta. No es un cartel: es lo unico que se ve de ella. */
+const MARCA_G=(function(){
+  const c=document.createElement('canvas');c.width=c.height=128;
+  const x=c.getContext('2d');
+  const g=x.createRadialGradient(64,64,4,64,64,62);
+  g.addColorStop(0,'rgba(196,224,244,.50)');g.addColorStop(.45,'rgba(140,182,214,.14)');
+  g.addColorStop(1,'rgba(110,150,190,0)');
+  x.fillStyle=g;x.fillRect(0,0,128,128);
+  const t=new THREE.CanvasTexture(c);
+  const m=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,
+    depthTest:false,depthWrite:false,fog:false,sizeAttenuation:false,
+    blending:THREE.AdditiveBlending,opacity:.34}));
+  m.scale.set(.10,.13,1);m.renderOrder=19;m.visible=false;scene.add(m);
   return m;
 })();
 
@@ -2041,6 +2063,12 @@ function animar(){
   recortarCuadras(t,jugador.pos.x,jugador.pos.z);
   {const v=Math.min(1,vistaPresencia*1.3);
    if(Math.abs(v-ojoVisto)>.04){ojoVisto=v;elOjo.style.opacity=v.toFixed(2);}}
+  if(!GUIA.on&&MARCA_G.visible)MARCA_G.visible=false;
+  if(!GUIA.on&&PRESENCIA.guiaLuz&&PRESENCIA.modelo){
+    PRESENCIA.guiaLuz=false;
+    PRESENCIA.modelo.traverse(o=>{const m=o.material;
+      if(m&&m.emissive)m.emissive.setHex(0x08070a);});
+  }
   uCielo.uDia.value=dia;
   uCielo.uTiempo.value=t;
   uCielo.uSolDir.value.copy(dirAstro);
@@ -2388,18 +2416,37 @@ function animar(){
         gr.visible=true;P.oculta=0;P.esconde=0;P.susto=0;P.visibleT=99;
         const dTr=Math.hypot(BAJO.trX-jugador.pos.x,BAJO.trZ-jugador.pos.z)||1e-4;
         let gx,gz;
-        if(dTr<7.5){gx=BAJO.trX;gz=BAJO.trZ;}          // ya llegaste: se queda al lado
+        if(dTr<GUIA.llega){gx=BAJO.trX;gz=BAJO.trZ;}   // ya llegaste: se queda al lado
         else{
-          const av=Math.min(dTr-2.5,8.0);
+          const av=Math.min(dTr-3.0,GUIA.delante);
           gx=jugador.pos.x+(BAJO.trX-jugador.pos.x)/dTr*av;
           gz=jugador.pos.z+(BAJO.trZ-jugador.pos.z)/dTr*av;
         }
         GUIA.x+=(gx-GUIA.x)*Math.min(1,dt*1.5);
         GUIA.z+=(gz-GUIA.z)*Math.min(1,dt*1.5);
+        const avx=GUIA.x-gr.position.x,avz=GUIA.z-gr.position.z;
         gr.position.set(GUIA.x,alturaEn(GUIA.x,GUIA.z),GUIA.z);
+        // el ciclo sale de lo que se movio, suavizado: en un cuadro largo el salto de
+        // posicion da una velocidad enorme y el clip de correr se dispara sin motivo
+        P.vel+=(Math.hypot(avx,avz)/Math.max(dt,1e-4)-P.vel)*Math.min(1,dt*7);
+        animarMonstruo(dt,P.vel);
         gr.scale.y=.88;gr.rotation.z=0;gr.rotation.x=0;
         gr.rotation.y=Math.atan2(BAJO.trX-GUIA.x,BAJO.trZ-GUIA.z);
         P.cabeza.rotation.y=0;
+        /* Mientras guia tiene que VERSE: de noche y a diecinueve metros, un cuerpo oscuro
+           es un agujero. Se le sube un emisivo frio y flojo, y se le saca al dejar de guiar.
+           Se escribe solo en la transicion, no cada cuadro. */
+        if(P.modelo&&!P.guiaLuz){
+          P.guiaLuz=true;
+          P.modelo.traverse(o=>{const m=o.material;
+            if(m&&m.emissive){m.emissive.setHex(0x223243);
+              if('emissiveIntensity'in m)m.emissiveIntensity=1;}});
+        }
+        MARCA_G.visible=true;
+        MARCA_G.position.set(gr.position.x,gr.position.y+2.15,gr.position.z);
+        const pg2=.40+Math.sin(t*1.5)*.14;   // medido: con .24 a 19 m no se encuentra
+        MARCA_G.material.opacity=pg2;
+        MARCA_G.scale.set(.15+pg2*.07,.19+pg2*.09,1);
         if(BAJO.on)GUIA.on=false;                       // ya bajaste: deja de guiar
       }
       // ---- se agazapa y se mete tras el tronco; recien ahi se apaga ----
@@ -2547,8 +2594,9 @@ function animar(){
       if(li==='BOSQUE')FIN.txt.style.letterSpacing='.5em';
     }
   }
-  /* --- la anteultima brilla y se ve desde cualquier parte del mapa --- */
-  if(recogidas===TOTAL-2){
+  /* --- la anteultima Y la ultima brillan y se ven desde cualquier parte del mapa:
+         la ultima es la que la sombra deja donde empezaste, del otro lado del bosque --- */
+  if(recogidas>=TOTAL-2&&recogidas<TOTAL){
     let sr=null;
     for(const r of reliquias)if(!r.tomada){sr=r;break;}
     if(sr){
@@ -3143,6 +3191,50 @@ window.__B={BAJO,CFG,FIN,bajar,subir,abrirTrampilla,activarNotas,
   fundido:()=>({cajas:FUNDIDO[0],mallas:FUNDIDO[1],ocluyentes:ocluyentes.length,
                 pies:PRESENCIA.pies,entorno:!!ENTORNO.mapa}),
   sombras:v=>{renderer.shadowMap.enabled=v;scene.traverse(o=>{if(o.material)o.material.needsUpdate=true;});return v;},
+  fase:n=>{const q=Math.max(0,Math.min(TOTAL,n|0));
+    for(const r of reliquias)r.tomada=false;
+    let i=0;for(const r of reliquias){if(i>=q)break;r.tomada=true;r.malla.visible=false;i++;}
+    recogidas=q;contador('reliquia',recogidas,TOTAL);
+    if(recogidas===TOTAL-1)ultimaAlInicio();
+    return {recogidas:recogidas,total:TOTAL};},
+  mirarA:()=>{const o=new THREE.Vector3();camera.getWorldPosition(o);
+    const g=PRESENCIA.grupo;
+    // la camara mira por su -Z y el juego hace camera.rotation.y=yaw: para APUNTARLA
+    // va atan2(-dx,-dz). Con atan2(dx,dz) queda mirando justo para el otro lado — y el
+    // punto igual proyecta centrado, dado vuelta, que es la trampa de siempre.
+    yaw=yawObj=Math.atan2(o.x-g.position.x,o.z-g.position.z);
+    return +yaw.toFixed(3);},
+  mirarRel:()=>{const o=new THREE.Vector3();camera.getWorldPosition(o);
+    const r=reliquias.find(q=>!q.tomada);if(!r)return null;
+    yaw=yawObj=Math.atan2(o.x-r.x,o.z-r.z);
+    return {yaw:+yaw.toFixed(3),dist:+Math.hypot(r.x-o.x,r.z-o.z).toFixed(1)};},
+  marcas:()=>{const o=new THREE.Vector3();camera.getWorldPosition(o);
+    const sr=reliquias.find(r=>!r.tomada);
+    return {recogidas:recogidas,total:TOTAL,
+      cond:(recogidas>=TOTAL-2&&recogidas<TOTAL),
+      libres:reliquias.filter(r=>!r.tomada).length,
+      marcaR:{visible:MARCA_R.visible,
+        x:+MARCA_R.position.x.toFixed(2),z:+MARCA_R.position.z.toFixed(2),
+        opacidad:+MARCA_R.material.opacity.toFixed(2),
+        escala:+MARCA_R.scale.x.toFixed(4),
+        dist:sr?+Math.hypot(sr.x-o.x,sr.z-o.z).toFixed(1):null},
+      pantalla:(()=>{camera.updateMatrixWorld();
+        // un punto DETRAS de la camara proyecta igual, dado vuelta: hay que mirar la profundidad
+        const v=MARCA_R.position.clone();
+        const d=v.clone().sub(o).normalize().dot(camera.getWorldDirection(new THREE.Vector3()));
+        const pr=v.project(camera);
+        return {x:+pr.x.toFixed(2),y:+pr.y.toFixed(2),adelante:d>0,
+                enCuadro:d>0&&Math.abs(pr.x)<1&&Math.abs(pr.y)<1};})(),
+      inicio:{x:INICIO.x,z:INICIO.z},
+      reliquiaLibre:sr?{x:+sr.x.toFixed(2),z:+sr.z.toFixed(2)}:null};},
+  guia:()=>{const o=new THREE.Vector3();camera.getWorldPosition(o);
+    const g=PRESENCIA.grupo;
+    return {on:GUIA.on,delante:GUIA.delante,llega:GUIA.llega,
+      visible:g.visible,
+      dJugador:+Math.hypot(g.position.x-o.x,g.position.z-o.z).toFixed(1),
+      dTrampilla:+Math.hypot(BAJO.trX-g.position.x,BAJO.trZ-g.position.z).toFixed(1),
+      vel:+PRESENCIA.vel.toFixed(2),
+      halo:{visible:MARCA_G.visible,opacidad:+MARCA_G.material.opacity.toFixed(2)}};},
   costo:()=>{const por={};let tot=0,vis=0;
     scene.traverse(o=>{
       if(!o.isMesh&&!o.isPoints&&!o.isLine&&!o.isSprite)return;
