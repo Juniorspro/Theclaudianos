@@ -15,6 +15,7 @@ se prueba **en el celular, en vertical (412×892)**.
 | `herramientas/rezona/rz.py` | Cliente stdio del MCP de Rezona (no depende de que el cliente lo tenga configurado). |
 | `docs/MANUAL_JUEGOS.md` | Manual completo heredado. **Referencia, no plan de trabajo**: los juegos que nombra (BARRIO, CUBOS, Maicol…) no se continúan acá. |
 | `docs/TRASPASO_BOSQUE.md` | Estado del Bosque al traspaso. |
+| `docs/GUIA_JUEGOS_2D_PIXEL.md` | **Guía para hacer juegos 2D pixel art estilo Dan The Man**, destilada de EL TIPO: render, personajes por piezas, niveles procedurales, combate, mandos, menús, banco y trampas. |
 
 ## Reglas fijas del usuario
 
