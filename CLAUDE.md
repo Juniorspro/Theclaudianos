@@ -332,3 +332,26 @@ Lo que costó una vuelta cada uno:
 - En el banco, **al jugador lo tira la soga**: mover al jugador para encuadrar no sirve, vuelve solo
   a los 16 m del ancla. Se encuadra moviendo al BICHO delante de la cámara, y la distancia buena no
   se calcula: se mide la caja proyectada en píxeles y se corrige.
+
+### 2026-09-22 (k) — afuera se mira para donde uno quiera
+**Pedido textual:** «Haz que cuando el jugador esté en el espacio exterior fuera de la nave, pueda
+ver hacia donde quiera y la cámara no se quede fija en un lugar entiendes (Creo que es un pequeño
+bug arreglado porfavor)».
+
+Eran dos cosas, las dos medidas:
+- **La picada estaba topada entre 0,10 y 1,05 rad**, o sea flotando en el espacio sólo se podía
+  mirar para ABAJO, entre 6° y 60°. Afuera el tope pasa a ±1,28 rad (73° para arriba y para abajo);
+  adentro queda como estaba. Medido con el dedo arrastrando de verdad: la componente vertical de
+  la mirada iba de −0,10 a −0,87 y ahora va de **+0,78 a −0,96**.
+- **El auto-encuadre le robaba el yaw al dedo.** La cámara se acomoda sola detrás del movimiento
+  cuando la rapidez pasa de 1,2, y en cero gravedad la deriva no para nunca: apuntabas a un lado y
+  la cámara se volvía sola. Afuera no corre más. Medido: con yaw en 1,2 y empujando 4 segundos en
+  contra, el yaw queda en **1,2**.
+
+Lo que costó una vuelta:
+- **Mirando para arriba la cámara se hunde por debajo del jugador**, y pegado a la esclusa eso la
+  mete bajo la panza de la nave: el cuadro entero quedaba en **0,00 sobre 255** (no es que no
+  dibujara, es que desde abajo el casco es una pared sin luz). Afuera la distancia de cámara se
+  acorta hasta la mitad según cuánto se mire para arriba: **24,7 sobre 255**.
+- Volviendo a la nave hay que **volver a topar la picada**, si no la cámara entra con el ángulo de
+  afuera y queda por debajo del piso de la cubierta.

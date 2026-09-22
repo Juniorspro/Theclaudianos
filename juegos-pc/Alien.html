@@ -158,6 +158,7 @@ const CFG = {
   grav:-26, salto:9.2, saltoDoble:7.6, saltosMax:2,
   camDist:5.7, camAlto:0.40, camMira:1.24, camSuave:7.5, camGiro:0.0055,
   camDistCorrer:1.2, fovBase:60, fovCorrer:68,
+  camPicaEva:1.28,                            /* tope de picada afuera: 73° arriba y abajo */
   sombraLado:14, mundo:3000, corral:120,
   escalaForzada:0          /* sólo para el A/B del patinaje: 0 = automática */
 };
@@ -2286,6 +2287,7 @@ function entrarDeNuevo(){
   soga.visible = false;
   jug.pos.set(0, N.y0, N.z0 + 1.6);
   jug.vel.set(0, 0, 0);
+  camPitch = clamp(camPitch, 0.10, 1.05);    /* adentro no hay picada negativa: la cámara iría bajo el piso */
 }
 function cercaDeLaEsclusa(){
   return Math.hypot(jug.pos.x - ANCLA.x, jug.pos.z - ANCLA.z) < 3.4 &&
@@ -2673,7 +2675,9 @@ addEventListener('pointermove', e => {
     pintarPalanca(oX + (dx/d)*k, oY + (dy/d)*k, true);
   } else if(e.pointerId === idMira){
     camYaw -= (e.clientX - mX)*CFG.camGiro;
-    camPitch = clamp(camPitch + (e.clientY - mY)*CFG.camGiro*0.7, 0.10, 1.05);
+    /* flotando no hay suelo ni techo: el tope de abajo deja mirar para ARRIBA */
+    camPitch = clamp(camPitch + (e.clientY - mY)*CFG.camGiro*0.7,
+                     EVA.activa ? -CFG.camPicaEva : 0.10, EVA.activa ? CFG.camPicaEva : 1.05);
     mX = e.clientX; mY = e.clientY;
   }
 }, {passive:true});
@@ -2934,7 +2938,8 @@ function animar(dt){
 let ahoraVuelo = 0;
 function camara(dt){
   ahoraVuelo += dt;
-  if(idMira === null && jug.rapidez > 1.2){               /* se acomoda sola detrás del movimiento */
+  /* afuera la deriva nunca para: si la cámara se acomoda sola, le saca el control al dedo */
+  if(idMira === null && !EVA.activa && jug.rapidez > 1.2){ /* se acomoda sola detrás del movimiento */
     const obj = Math.atan2(jug.vel.x, jug.vel.z);          /* mirar HACIA donde va, no al revés */
     let d = obj - camYaw;
     while(d > Math.PI) d -= Math.PI*2;
@@ -2946,6 +2951,9 @@ function camara(dt){
   /* adentro la cámara se acerca y se endereza: si no, mira el techo desde afuera del casco */
   let distObj = CFG.camDist + CFG.camDistCorrer*corr + (cubierta ? 0 : jug.pos.y*0.22);
   if(cubierta) distObj = Math.min(distObj, 6.0);
+  /* mirando para arriba la cámara se hunde por debajo del jugador: acortándola no se mete
+     bajo la panza de la nave, que desde abajo es una pared negra */
+  if(EVA.activa && camPitch < 0) distObj *= 1 - 0.50*Math.min(1, -camPitch/CFG.camPicaEva);
   camDist = acercar(camDist, distObj, 6*dt);
 
   const pitchUsado = cubierta ? Math.min(camPitch, 0.24) : camPitch;
@@ -2956,7 +2964,7 @@ function camara(dt){
 
   const t = 1 - Math.exp(-CFG.camSuave*dt);
   camPos.x = lerp(camPos.x, bx, t);
-  camPos.y = lerp(camPos.y, Math.max(by, 0.8), t);
+  camPos.y = lerp(camPos.y, EVA.activa ? by : Math.max(by, 0.8), t);
   camPos.z = lerp(camPos.z, bz, t);
   if(EVA.activa){                      /* afuera: se acorta hasta que deje de estar en el casco */
     _tmpEva.copy(camPos).sub(jug.pos);
