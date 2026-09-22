@@ -70,7 +70,11 @@ Lo que costó una vuelta cada una, medido en el banco (Playwright headless, 412�
 5. **El fin de nivel era un `setTimeout`** y se disparaba encima del nivel siguiente. Ahora se
    cuenta en cuadros del nivel en curso.
 6. **Dibujo a 9 ms/cuadro** por gradientes creados 60 veces por segundo. Cielo y siluetas
-   cacheados en canvas offscreen + halo de luz pre-dibujado: **2,7 ms** (misma escena, mismo banco).
+   cacheados en canvas offscreen + halo de luz pre-dibujado: bajó a 2,7 ms en la misma escena y
+   el mismo banco. **Ojo con ese número**: esas dos mediciones eran sin calentar y son optimistas.
+   Midiendo con 200 cuadros de calentamiento y 300 de medición, el dibujo real está en
+   **~6,5 ms/cuadro** con 27 entidades. La mejora relativa vale (las dos puntas se midieron igual);
+   el absoluto de 2,7 ms, no.
 7. En CSS, `#acciones .bt` le ganaba en especificidad a `#bPausa`: el botón de pausa medía 70 px
    y tapaba el HUD. Salió del bloque de acciones.
 
@@ -79,3 +83,38 @@ Sondas: `window.__T` — `est()`, `anda(n)`, `entrada(k,v)`, `teletransportar(x)
 
 **Ojo con el bot de pruebas**: si deja una tecla apretada no hay flanco y el salto nunca sale —
 dos vueltas se fueron en culpar al juego de un defecto del instrumento.
+
+### 2026-09-22 (tarde) — texturas propias y el cobro de Rezona caído
+**Pedido textual:** «genera texturas de cielo y tierra con rezonalab, también te los personajes del
+juego Dan The Man peleas y puñetazos».
+
+**Rezona no generó nada en toda la sesión.** Todo `submit_*` de imagen, sprite, 3D y video vuelve con
+`CREDIT_RESERVE_FAILED: 扣费服务暂时不可用` («servicio de cobro no disponible»). Lo que se descartó,
+midiendo, antes de culpar al servicio:
+
+- No es la key: con la del login viejo y con una nueva del usuario pasa igual; `list_projects`,
+  `create_project` y `status` andan (446.069 créditos gastables).
+- No es cómo se pasa la key: por `REZONA_PAT` y escrita en `~/.rezona/credentials.json`, lo mismo.
+- No es el proyecto: falla en dos proyectos distintos.
+- No es el endpoint: sacarle `/game/pgcserver` al `baseUrl` da HTTP 405, o sea el que está es el bueno.
+- No son los parámetros ni el modelo: falla la llamada mínima; los nombres de modelo conocidos
+  (seedream, flux, gpt-image-1…) devuelven `GENERATION_MODEL_UNSUPPORTED`, otro error distinto.
+- No es el registro MCP: `~/.claude.json` tiene exactamente `npx -y rezona@latest mcp`, igual que `rz.py`.
+- **El audio engaña**: `submit_audio_generation` devuelve `task_id` y parece que anda, pero la tarea
+  termina `failed` con el mismo mensaje de cobro. Desde afuera parece que Rezona funciona.
+- Con el CLI 0.1.5 la misma key da `PAT_INACTIVE`: 0.1.5 y 0.2.0 no validan igual.
+
+Queda `herramientas/rezona/hornear_eltipo.py` y el bloque `ASSETS` entre marcas: cuando el cobro
+vuelva, se generan, se bajan, se hornean y pisan lo dibujado. El camino se probó entero con imágenes
+falsas **antes** de gastar una generación.
+
+Mientras tanto, cielo y tierra se hicieron **por código**, uno por tema (asfalto picado, chapa con
+remaches, baldosón sucio, grava, piedra quemada con brasas; estrellas y luna, vapor, luces de túnel,
+humo de incendio). Y los peleadores ganaron zapatilla, guante trasero, cinturón, ceja y estrella de
+impacto.
+
+Dos cosas que costaron una vuelta:
+- **Las partículas usaban el rng del nivel**: corrían la secuencia y una misma semilla dejaba de dar
+  la misma partida. El azar visual ahora sale de `Math.random`.
+- **Medir sin calentar miente**: el mismo banco daba 2,7 ms o 5,6 ms para el mismo dibujo. Con 200
+  cuadros de calentamiento, la textura de tierra no cuesta nada medible (6,2 vs 6,2 ms).
