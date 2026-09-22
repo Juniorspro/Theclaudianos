@@ -131,6 +131,8 @@
     background:linear-gradient(166deg,#fff 0%,rgba(255,255,255,0) 30%),
                radial-gradient(ellipse 38% 24% at 24% 15%, rgba(255,255,255,.45), rgba(255,255,255,0) 72%)}
   #compu .fila.no{opacity:.45}
+  #galaxias .fila.trabada{opacity:.5;border-style:dashed;border-color:rgba(140,180,220,.3)}
+  #galaxias .fila.trabada u{color:#8ea2b6}
   #compu .fila.puesta{border-color:rgba(130,255,180,.5);background:rgba(60,255,150,.07)}
   #compu .tit{font-size:10px;letter-spacing:.2em;color:#7fd8ff;margin:12px 2px 7px;font-weight:800}
   #compu .vender{display:block;width:100%;text-align:center;padding:12px;margin:4px 0 2px;
@@ -2273,20 +2275,20 @@ const GALAXIAS = [
   {id:'quietud', nombre:'LA QUIETUD', linea:'No hay nada, y sin embargo algo pasa.',
    cielo:{base:[0.002,0.004,0.011], neb1:[0.020,0.030,0.062], neb2:[0.010,0.014,0.030],
           sol:[0.70,0.80,1.00], est:0.35}, luz:0x9fc0e8,
-   especies:['hueco','peregrino','vela']},
+   especies:['hueco','peregrino','vela'], llave:'salto2'},
   {id:'coral', nombre:'CORAL PROFUNDO', linea:'Lo que se ve, se ve porque brilla solo.',
    cielo:{base:[0.004,0.016,0.014], neb1:[0.030,0.170,0.120], neb2:[0.010,0.090,0.140],
           sol:[0.70,1.00,0.85], est:1.4}, luz:0x8fffd0,
-   especies:['colonia','vigia','farol','raiz']},
+   especies:['colonia','vigia','farol','raiz'], llave:'salto3'},
   {id:'reverso', nombre:'EL REVERSO', linea:'Las cosas vuelven antes de haber ido.',
    cielo:{base:[0.016,0.004,0.020], neb1:[0.230,0.060,0.230], neb2:[0.120,0.115,0.040],
           sol:[1.00,0.80,1.00], est:1.8}, luz:0xe9a0ff,
-   especies:['torre','espejo','nudo']},
+   especies:['torre','espejo','nudo'], llave:'salto4'},
   {id:'vacio', nombre:'EL VACÍO', linea:'No vuelvas. Igual vas a volver.', peligrosa:true,
    cielo:{base:[0.0012,0.0010,0.0016], neb1:[0.014,0.004,0.006], neb2:[0.006,0.002,0.003],
           sol:[0.55,0.10,0.08], est:0.12}, luz:0xd06a5a,
    cuantos:2, cerca:[170, 420], lejos:900, amb:3.4,
-   especies:['segador','catedral','desollado','pozo','marea']}
+   especies:['segador','catedral','desollado','pozo','marea'], llave:'salto5'}
 ];
 const GAL = {actual:0, saltando:0, vistos:{}};
 
@@ -2306,6 +2308,7 @@ function aplicarGalaxia(i){
 }
 function viajarA(i){
   if(GAL.saltando > 0) return;
+  if(!galaxiaAbierta(i)) return;        /* sin el motor, ese rumbo no se puede poner */
   cerrarPanel();
   if(VUELO.estado !== 'espacio'){ aplicarGalaxia(i); return; }   /* en tierra queda el rumbo puesto */
   GAL.saltando = 1.6;
@@ -2710,12 +2713,16 @@ function pintarPanel(){
   dListaGal.innerHTML = '';
   GALAXIAS.forEach((g, i) => {
     const vistas = Object.keys(GAL.vistos[g.id] || {}).length;
+    const abierta = galaxiaAbierta(i);
     const b = document.createElement('div');
-    b.className = 'fila' + (i === GAL.actual ? ' aca' : '');
-    b.innerHTML = '<b>' + g.nombre + '</b><i>' + g.linea + '</i><u>' +
-      (i === GAL.actual ? 'ESTÁS ACÁ · ' : '') + vistas + ' de ' + g.especies.length +
-      ' especies en la cámara</u>';
-    b.addEventListener('pointerdown', e => { e.stopPropagation(); viajarA(i); });
+    b.className = 'fila' + (i === GAL.actual ? ' aca' : '') + (abierta ? '' : ' trabada');
+    b.innerHTML = abierta
+      ? '<b>' + g.nombre + '</b><i>' + g.linea + '</i><u>' +
+        (i === GAL.actual ? 'ESTÁS ACÁ · ' : '') + vistas + ' de ' + g.especies.length +
+        ' especies en la cámara</u>'
+      : '<b>◼ ' + g.nombre + '</b><i>fuera del alcance del motor</i><u>NECESITA ' +
+        saltoDe(g.llave).nombre + ' · ' + saltoDe(g.llave).precio + ' cr en la terminal</u>';
+    if(abierta) b.addEventListener('pointerdown', e => { e.stopPropagation(); viajarA(i); });
     dListaGal.appendChild(b);
   });
 }
@@ -3174,7 +3181,16 @@ const MEJORAS = [
   {id:'soga',       nombre:'SOGA LARGA',           precio:1600, linea:'28 m en vez de 16 para alejarse'},
   {id:'impulsores', nombre:'IMPULSORES DEL TRAJE', precio:2600, linea:'empuje 7 → 12 en caminata espacial'}
 ];
+/* el motor se mejora de a un escalón: cada clase abre UNA galaxia más */
+const SALTOS = [
+  {id:'salto2', nombre:'SALTO CLASE II',    precio:1800,  antes:null,     abre:2},
+  {id:'salto3', nombre:'SALTO CLASE III',   precio:3600,  antes:'salto2', abre:3},
+  {id:'salto4', nombre:'SALTO CLASE IV',    precio:6500,  antes:'salto3', abre:4},
+  {id:'salto5', nombre:'BLINDAJE DE VACÍO', precio:12000, antes:'salto4', abre:5}
+];
 const PLATA = {creditos:0, camara:0, compradas:{}, ultimaVenta:0};
+const galaxiaAbierta = i => !GALAXIAS[i].llave || !!PLATA.compradas[GALAXIAS[i].llave];
+const saltoDe = id => SALTOS.find(x => x.id === id);
 const camAct = () => CAMARAS[PLATA.camara];
 
 /* -------------------------------------------------------------- la terminal */
@@ -3281,6 +3297,16 @@ function pintarCompu(){
          '<u>' + (puesta ? 'EN USO' : (tiene ? 'TOCÁ PARA PONERLA' : c.precio + ' cr')) +
          ' · carrete ' + c.carrete + ' · alcance ' + c.alcance + ' m</u></div>';
   });
+  h += '<div class="tit">MOTOR DE SALTO</div>';
+  for(const t of SALTOS){
+    const tiene = !!PLATA.compradas[t.id];
+    const listo = !t.antes || !!PLATA.compradas[t.antes];
+    const puede = listo && PLATA.creditos >= t.precio;
+    h += '<div class="fila' + (tiene ? ' puesta' : (puede ? '' : ' no')) + '" data-s="' + t.id + '">' +
+         '<b>' + t.nombre + '</b><i>abre ' + GALAXIAS[t.abre].nombre + '</i>' +
+         '<u>' + (tiene ? 'INSTALADO' : (listo ? t.precio + ' cr' :
+                  'antes hay que poner ' + saltoDe(t.antes).nombre)) + '</u></div>';
+  }
   h += '<div class="tit">MEJORAS DE LA NAVE</div>';
   for(const m of MEJORAS){
     const tiene = !!PLATA.compradas[m.id], puede = PLATA.creditos >= m.precio;
@@ -3313,6 +3339,15 @@ function ponerCamara(i){
   pintarCompu(); pintarTerminal();
   return true;
 }
+function comprarSalto(id){
+  const t = saltoDe(id);
+  if(!t || PLATA.compradas[id]) return false;
+  if(t.antes && !PLATA.compradas[t.antes]) return false;   /* de a uno, en orden */
+  if(PLATA.creditos < t.precio) return false;
+  PLATA.creditos -= t.precio; PLATA.compradas[id] = true;
+  pintarCompu(); pintarTerminal();
+  return true;
+}
 function comprarMejora(id){
   const m = MEJORAS.find(x => x.id === id);
   if(!m || PLATA.compradas[id] || PLATA.creditos < m.precio) return false;
@@ -3328,9 +3363,10 @@ function aplicarMejora(id){
 }
 dListaCompu.addEventListener('pointerdown', e => {
   e.stopPropagation();
-  const fila = e.target.closest('[data-c],[data-m],[data-v],[data-a]');
+  const fila = e.target.closest('[data-c],[data-m],[data-v],[data-a],[data-s]');
   if(!fila) return;
-  if(fila.dataset.a) abrirAlbum();
+  if(fila.dataset.s) comprarSalto(fila.dataset.s);
+  else if(fila.dataset.a) abrirAlbum();
   else if(fila.dataset.v) venderTodo();
   else if(fila.dataset.c !== undefined) ponerCamara(+fila.dataset.c);
   else comprarMejora(fila.dataset.m);
@@ -3395,7 +3431,9 @@ window.__A = {
     compradas:Object.keys(PLATA.compradas), boton:dCompuB.classList.contains('ver'),
     abierto:COMPU.abierto, soga:EVA.largo, empuje:CFG.empuje,
     luz:LAMPARAS.length ? LAMPARAS[0].intensity : 0}; },
-  abrirCompu, cerrarCompu, vender:venderTodo, ponerCamara, comprarMejora,
+  abrirCompu, cerrarCompu, vender:venderTodo, ponerCamara, comprarMejora, comprarSalto,
+  rumbos(){ return GALAXIAS.map((g, i) => ({id:g.id, abierta:galaxiaAbierta(i),
+    llave:g.llave || null})); },
   album(){ return {fichadas:Object.keys(ALBUM), total:ALBUM_TOTAL, abierto:ALBUM_ABIERTO.v,
     chip:dEspecies.textContent, tapas:Object.keys(ALBUM).filter(k => !!ALBUM[k].tapa).length,
     detalle:ALBUM}; },

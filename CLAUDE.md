@@ -469,3 +469,29 @@ Se abre de dos maneras: tocando el chip `ESPECIES n/21` de arriba a la izquierda
 
 Probado: con el teleobjetivo en EL VACÍO entraron **El Segador (761 cr) y La Marea (711 cr)** con su
 tapa, los otros tres colosos siguen en `?`, y el botón de la terminal abre el álbum. Sin errores.
+
+### 2026-09-22 (p) — las galaxias se ganan
+**Pedido textual:** «Ahora haz que el jugador no pueda ir a todas las galaxias desde el comienzo,
+solo podrá ir a 2 desde el principio, tendrá que mejorar su nave para poder ir una por una a cada
+galaxia».
+
+Arrancan abiertas **Vega Rota** y **El Hervidero**. Las otras cuatro se abren de a una con el motor,
+y el motor se compra en la terminal **en orden**: cada clase exige la anterior.
+
+| motor | precio | abre |
+|---|---|---|
+| Salto clase II | 1.800 cr | La Quietud |
+| Salto clase III | 3.600 cr | Coral Profundo |
+| Salto clase IV | 6.500 cr | El Reverso |
+| Blindaje de vacío | 12.000 cr | EL VACÍO |
+
+En la carta de navegación las trabadas salen con borde punteado, un cuadradito negro delante del
+nombre, «fuera del alcance del motor» y qué motor hace falta con su precio. No responden al toque y
+`viajarA` las rechaza aunque se la llame de prestado.
+
+Que EL VACÍO sea lo último cierra la economía sola: los colosos pagan 700 cr por foto, pero para
+llegar hay que haber comprado los cuatro motores (23.900 cr) juntando de a 50 en Vega Rota.
+
+Medido: al arrancar `[true,true,false,false,false,false]`; `comprarSalto('salto3')` da falso con
+30.000 créditos en el bolsillo mientras falte el II; con el II puesto, el III entra y Coral Profundo
+pasa a `true` y el salto llega.
