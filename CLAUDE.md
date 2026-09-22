@@ -270,3 +270,16 @@ los que habilitan el permiso) `pantallaHorizontal()` pide pantalla completa y `s
 en Android el teléfono pasa a horizontal de verdad y `orientar()` apaga el giro solo porque el visor
 queda más ancho que alto. Cada botón del menú lo vuelve a pedir si se salió de pantalla completa.
 **Trampa:** `touchstart` no cuenta como gesto para `requestFullscreen`. En iOS no hay `lock`: queda el giro.
+
+### 2026-09-23 (4) — el giro se descuajeringaba en el visor
+**Pedido textual:** «Bug» (captura del visor de HTML de la app: capa de fin de nivel y lienzo de tamaños distintos).
+
+Causa: el giro ponía **anchos y altos en px por JS** y en el WebView del visor quedaban viejos después del
+intento de pantalla completa (el visor cambia de tamaño sin avisar como uno espera). Arreglo:
+
+- Giro **sólo por CSS**: `@media (orientation: portrait)` con `width:100vh; height:100vw` (y `dvh/dvw` si hay)
+  + `translateX(100vw) rotate(90deg)`. Ya no hay números que se queden viejos.
+- `aLocal` sale del `getBoundingClientRect()` real de `#pantalla`, no de `innerWidth`.
+- Si `orientation.lock` falla, **se sale de pantalla completa** y no se reintenta (`bloqueoFallo`).
+- Medido con `visor.js` cambiando el tamaño del visor (412×742 → 412×915 → 742×412 → vuelta): pantalla =
+  visor, capa = pantalla, lienzo coherente en cada paso; un toque en ▶ da `der=1`. Gestos 9/9, bot 15/15.

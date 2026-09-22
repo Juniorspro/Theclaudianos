@@ -75,6 +75,15 @@ table.res td:last-child{text-align:right;color:#fff;font-weight:bold}
 .aviso{position:absolute;left:0;right:0;bottom:300px;text-align:center;font-size:12px;
   color:#ffd24a;text-shadow:0 2px 4px #000;z-index:4;pointer-events:none;opacity:0;transition:opacity .25s}
 
+/* ====== giro: si el visor está parado, #pantalla se acuesta con unidades de viewport ====== */
+@media (orientation: portrait){
+  #pantalla{inset:auto;top:0;left:0;width:100vh;height:100vw;transform-origin:0 0;transform:translateX(100vw) rotate(90deg)}
+  .giro-inv #pantalla{transform:translateY(100vh) rotate(-90deg)}
+  @supports (width:100dvh){
+    #pantalla{width:100dvh;height:100dvw;transform:translateX(100dvw) rotate(90deg)}
+    .giro-inv #pantalla{transform:translateY(100dvh) rotate(-90deg)}
+  }
+}
 /* ====== todo en horizontal ====== */
 .apaisado #mandos{height:150px}
 .apaisado #pad{width:30%;height:160px}
@@ -328,40 +337,43 @@ let ANCHO=412, ALTO=700, DPR=1, PX=2, ANCHO_M=206, ALTO_M=346, ZONA_MANDOS=95;
 const cvH = document.createElement('canvas');          /* HUD: pixel art, encima de todo */
 const cxH = cvH.getContext('2d');
 const PIXELADO = true;      /* false = mundo dibujado directo a resolución de pantalla */
-/* ---------- el juego va siempre en horizontal: si el teléfono está parado, giramos todo 90° ---------- */
-let GIRO = 90, ROT = 0, APAISADO = true;
+/* ---------- el juego va siempre en horizontal: si el visor está parado, lo gira el CSS ----------
+   Nada de medidas en px desde JS: #pantalla se dimensiona con unidades de viewport dentro de
+   @media (orientation: portrait). Así todo lo de adentro comparte la misma caja aunque el visor
+   (WebView, vista previa de archivos) reporte tamaños cambiantes.                              */
+let GIRO = 90, APAISADO = true;
 try{ const gg = +localStorage.getItem('eltipo.giro'); if(gg===90 || gg===-90) GIRO = gg; }catch(e){}
+const mqVertical = matchMedia('(orientation: portrait)');
+const rotActual = ()=> mqVertical.matches ? GIRO : 0;
 function orientar(){
-  const vw = innerWidth, vh = innerHeight, p = document.getElementById('pantalla');
-  const girar = vh > vw;
-  ROT = girar ? GIRO : 0;
-  APAISADO = true;
   document.body.classList.add('apaisado');
-  if(girar){
-    Object.assign(p.style, {left:'0px', top:'0px', right:'auto', bottom:'auto',
-      width:vh+'px', height:vw+'px', transformOrigin:'0 0',
-      transform: GIRO===90 ? 'translate('+vw+'px,0) rotate(90deg)' : 'translate(0,'+vh+'px) rotate(-90deg)'});
-  } else Object.assign(p.style, {left:'', top:'', right:'', bottom:'', width:'', height:'', transform:''});
+  document.body.classList.toggle('giro-inv', GIRO===-90);
 }
-/* horizontal de verdad: pantalla completa + orientación bloqueada. Necesita un toque del usuario;
-   donde no hay permiso o soporte (iOS), queda el giro por CSS de orientar() */
+/* de coordenadas de la pantalla física a las del juego, con la caja real ya girada */
+function aLocal(sx, sy){
+  const rot = rotActual();
+  if(!rot) return {x: sx, y: sy};
+  const r = document.getElementById('pantalla').getBoundingClientRect();
+  return rot===90 ? {x: sy - r.top, y: r.right - sx} : {x: r.bottom - sy, y: sx - r.left};
+}
+/* horizontal de verdad: pantalla completa + orientación bloqueada, sólo donde el sistema lo permite.
+   Si el bloqueo falla (visores, iOS), se sale de pantalla completa y no se vuelve a intentar. */
+let bloqueoFallo = false;
 async function pantallaHorizontal(){
+  if(bloqueoFallo || !document.fullscreenEnabled || !(screen.orientation && screen.orientation.lock)) return;
+  let entre = false;
   try{
-    const d = document.documentElement;
-    if(!document.fullscreenElement && d.requestFullscreen) await d.requestFullscreen({navigationUI:'hide'});
-    if(screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
-  }catch(e){}
-  orientar(); medir();
+    if(!document.fullscreenElement){ await document.documentElement.requestFullscreen({navigationUI:'hide'}); entre = true; }
+    await screen.orientation.lock('landscape');
+  }catch(e){
+    bloqueoFallo = true;
+    if(entre && document.fullscreenElement){ try{ await document.exitFullscreen(); }catch(_){} }
+  }
 }
 for(const ev of ['touchend','click']) document.addEventListener(ev, ()=>{
   if(!document.fullscreenElement) pantallaHorizontal(); }, {once:true, passive:true});
-document.addEventListener('fullscreenchange', ()=>{ orientar(); medir(); });
-/* de coordenadas de la pantalla física a las del juego (girado) */
-function aLocal(sx, sy){
-  if(ROT===90) return {x: sy, y: innerWidth - sx};
-  if(ROT===-90) return {x: innerHeight - sy, y: sx};
-  return {x: sx, y: sy};
-}
+document.addEventListener('fullscreenchange', ()=> medir());
+mqVertical.addEventListener && mqVertical.addEventListener('change', ()=> medir());
 function medir(){
   DPR = Math.min(window.devicePixelRatio||1, 1.5);
   /* clientWidth/Height: el tamaño en el juego; getBoundingClientRect daría la caja ya girada */
@@ -381,8 +393,8 @@ function medir(){
   cvH.width = ANCHO_M; cvH.height = ALTO_M; cxH.imageSmoothingEnabled = false;
   cacheFondo.clave = '';                /* el fondo se rehace al tamaño nuevo */
 }
-window.addEventListener('resize', ()=>{ orientar(); medir(); });
-window.addEventListener('orientationchange', ()=> setTimeout(()=>{ orientar(); medir(); },120));
+window.addEventListener('resize', medir);
+window.addEventListener('orientationchange', ()=> setTimeout(medir,120));
 if(window.ResizeObserver) new ResizeObserver(medir).observe(cv);
 function revisarMedida(){
   const w = Math.round(cv.clientWidth), h = Math.round(cv.clientHeight);
@@ -3777,7 +3789,7 @@ clic('btNivelesOk', menu);
 clic('btComo', ()=> capa('capaComo'));
 clic('btComoOk', menu);
 clic('btSemilla', ()=>{ nuevaSemilla(); avisar('semilla nueva: '+J.semillaTx); });
-clic('btGiro', ()=>{ GIRO = -GIRO; try{ localStorage.setItem('eltipo.giro', GIRO); }catch(e){} orientar(); medir(); });
+clic('btGiro', ()=>{ GIRO = -GIRO; try{ localStorage.setItem('eltipo.giro', GIRO); }catch(e){} orientar(); setTimeout(medir, 30); });
 clic('btFinOk', ()=>{ if(J.nivel>=5){ menu(); } else { J.modo='tienda'; reiniciarEscena(); pintarTienda(); capa('capaTienda'); } });
 clic('btFinMenu', menu);
 clic('btSeguir', ()=> empezarNivel(Math.min(5, J.nivel+1)));
