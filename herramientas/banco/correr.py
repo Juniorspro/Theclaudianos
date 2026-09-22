@@ -111,6 +111,10 @@ def main():
             print("guia:", json.dumps(pg.evaluate("window.__B.guia()"), ensure_ascii=False))
             pg.evaluate("window.__B.mirarA()")
             time.sleep(1)
+        if "hdr" in sys.argv:
+            print("hdr:", json.dumps(pg.evaluate("window.__B.hdr()"), ensure_ascii=False))
+        if "niebla" in sys.argv:
+            print("niebla:", json.dumps(pg.evaluate("window.__B.niebla()"), ensure_ascii=False))
         if "costo" in sys.argv:
             print("costo:", json.dumps(pg.evaluate("window.__B.costo()"), ensure_ascii=False))
         med = {

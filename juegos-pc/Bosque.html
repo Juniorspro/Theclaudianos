@@ -259,7 +259,6 @@ renderer.info.autoReset=false;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
 renderer.setSize(anchoStage(),altoStage());
 renderer.outputEncoding=THREE.sRGBEncoding;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=.9;
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -281,6 +280,7 @@ function aplicarGfx(){
   renderer.setPixelRatio(g.px);
   // el mapa de sombra viejo hay que soltarlo a mano: three.js no lo recrea
   // porque cambie mapSize, se queda con el de antes y el cambio no hace nada
+  uVHS.uGlow.value=(CFG.gfx==='alta'&&HDR)?.85:0;   // el relleno es lo que siempre se paga
   if(astro.shadow.map){astro.shadow.map.dispose();astro.shadow.map=null;}
   astro.shadow.mapSize.set(g.mapa,g.mapa);
   if(renderer.shadowMap.enabled!==g.som){
@@ -297,10 +297,18 @@ const scene=new THREE.Scene();
 scene.fog=new THREE.FogExp2(0x060a0e,.055);
 
 /* ---------- post-proceso: cinta VHS ---------- */
+/* coma flotante si la placa puede: es lo que deja que una luz pase de 1,0 */
+const HDR=!!(renderer.capabilities.isWebGL2
+  ? renderer.extensions.get('EXT_color_buffer_float')
+  : renderer.extensions.get('EXT_color_buffer_half_float'));
 const destino=new THREE.WebGLRenderTarget(2,2,{
   minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,
-  format:THREE.RGBAFormat,stencilBuffer:false});
-destino.texture.encoding=THREE.sRGBEncoding;
+  format:THREE.RGBAFormat,stencilBuffer:false,
+  type:HDR?THREE.HalfFloatType:THREE.UnsignedByteType});
+destino.texture.encoding=HDR?THREE.LinearEncoding:THREE.sRGBEncoding;
+/* El tono lo pone la ultima pasada. Con ACES en el renderer, la escena llegaria al post ya
+   revelada y recortada. Sin HDR no hay donde guardar lo que pasa de 1, asi que se deja ACES. */
+renderer.toneMapping=HDR?THREE.NoToneMapping:THREE.ACESFilmicToneMapping;
 const escenaVHS=new THREE.Scene();
 const camVHS=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
 const uVHS={
@@ -308,7 +316,10 @@ const uVHS={
   uTiempo:{value:0},
   uFuerza:{value:.85},
   uGlitch:{value:0},
-  uRes:{value:new THREE.Vector2(1,1)}
+  uRes:{value:new THREE.Vector2(1,1)},
+  uExp:{value:1},            // la exposicion pasa a vivir en el post
+  uTono:{value:0},           // 1 = revelar aca (hay HDR); 0 = ya vino revelado
+  uGlow:{value:0}            // halo de lo que pasa de 1: solo en calidad alta
 };
 const matVHS=new THREE.ShaderMaterial({
   uniforms:uVHS,depthTest:false,depthWrite:false,
@@ -318,6 +329,7 @@ const matVHS=new THREE.ShaderMaterial({
     varying vec2 vUv;
     uniform sampler2D tDiffuse;
     uniform float uTiempo,uFuerza,uGlitch;
+    uniform float uExp,uTono,uGlow;
     uniform vec2 uRes;
     float hash(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
     float ruido(vec2 p){
@@ -325,6 +337,34 @@ const matVHS=new THREE.ShaderMaterial({
       float a=hash(i),b=hash(i+vec2(1.0,0.0)),c=hash(i+vec2(0.0,1.0)),d=hash(i+vec2(1.0,1.0));
       vec2 u=f*f*(3.0-2.0*f);
       return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);
+    }
+    /* El MISMO ACES que aplicaba three (con su division por 0,6 y sus dos matrices), para que
+       mover el revelado al post no cambie la foto; y el sRGB a mano, porque un ShaderMaterial
+       crudo no recibe ninguna de las dos cosas. Con el ajuste corto de Narkowicz la imagen
+       daba 129 de brillo medio donde antes daba 93. */
+    vec3 rrtOdt(vec3 v){
+      vec3 a=v*(v+0.0245786)-0.000090537;
+      vec3 b=v*(0.983729*v+0.4329510)+0.238081;
+      return a/b;
+    }
+    vec3 aces(vec3 color){
+      const mat3 ent=mat3(0.59719,0.07600,0.02840,
+                          0.35458,0.90834,0.13383,
+                          0.04823,0.01566,0.83777);
+      const mat3 sal=mat3( 1.60475,-0.10208,-0.00327,
+                          -0.53108, 1.10813,-0.07276,
+                          -0.07367,-0.00605, 1.07602);
+      color=ent*(color/0.6);
+      color=rrtOdt(color);
+      return clamp(sal*color,0.0,1.0);
+    }
+    vec3 aSRGB(vec3 c){
+      return mix(pow(max(c,vec3(0.0)),vec3(0.41666))*1.055-0.055,c*12.92,step(c,vec3(0.0031308)));
+    }
+    vec3 revelar(vec2 uv){
+      vec3 c=texture2D(tDiffuse,uv).rgb;
+      if(uTono<0.5)return c;                  // ya venia revelada (sin HDR)
+      return aSRGB(aces(c*uExp));
     }
     void main(){
       float F=uFuerza;
@@ -344,12 +384,22 @@ const matVHS=new THREE.ShaderMaterial({
       uv=clamp(uv,vec2(0.0),vec2(1.0));
       // aberración cromática
       float ab=(0.0015+enBanda*0.004+salto*0.007+uGlitch*0.003)*F;
-      float r=texture2D(tDiffuse,clamp(vec2(uv.x+ab,uv.y),0.0,1.0)).r;
-      vec4 base=texture2D(tDiffuse,uv);
-      float b=texture2D(tDiffuse,clamp(vec2(uv.x-ab,uv.y),0.0,1.0)).b;
+      float r=revelar(clamp(vec2(uv.x+ab,uv.y),0.0,1.0)).r;
+      vec3 base=revelar(uv);
+      float b=revelar(clamp(vec2(uv.x-ab,uv.y),0.0,1.0)).b;
       vec3 col=vec3(r,base.g,b);
+      /* halo de lo que pasa de 1: cuatro muestras del BUFFER CRUDO, no de la imagen revelada,
+         porque despues del tono ya no queda nada arriba de 1 para brillar. */
+      if(uGlow>0.0){
+        vec2 e=vec2(3.5/uRes.x,3.5/uRes.y);
+        vec3 h=texture2D(tDiffuse,clamp(uv+vec2( e.x,0.0),0.0,1.0)).rgb
+              +texture2D(tDiffuse,clamp(uv+vec2(-e.x,0.0),0.0,1.0)).rgb
+              +texture2D(tDiffuse,clamp(uv+vec2(0.0, e.y),0.0,1.0)).rgb
+              +texture2D(tDiffuse,clamp(uv+vec2(0.0,-e.y),0.0,1.0)).rgb;
+        col+=aSRGB(max(h*0.25*uExp-1.0,vec3(0.0))*0.5)*uGlow;
+      }
       // sangrado horizontal hacia la derecha, como una cinta gastada
-      vec3 arrastre=texture2D(tDiffuse,clamp(uv+vec2(-3.0/uRes.x,0.0),0.0,1.0)).rgb;
+      vec3 arrastre=revelar(clamp(uv+vec2(-3.0/uRes.x,0.0),0.0,1.0));
       col=mix(col,col*0.62+arrastre*0.38,0.26*F);
       // desaturado y tinte de tubo
       float lum=dot(col,vec3(0.299,0.587,0.114));
@@ -380,6 +430,7 @@ cabeza.add(cuello);cuello.add(camera);scene.add(cabeza);
 
 /* ================= cielo (shader) ================= */
 const uCielo={
+  uLineal:{value:0},uCieloGan:{value:1},
   uCenit:{value:new THREE.Color(0x030610)},
   uHorizonte:{value:new THREE.Color(0x0a1018)},
   uNiebla:{value:new THREE.Color(0x060a0e)},
@@ -389,12 +440,14 @@ const uCielo={
   uTiempo:{value:0},
   uTapado:{value:0}
 };
+uCielo.uLineal.value=HDR?1:0;
 const cielo=new THREE.Mesh(new THREE.SphereGeometry(320,48,32),new THREE.ShaderMaterial({
   side:THREE.BackSide,depthWrite:false,fog:false,uniforms:uCielo,
   vertexShader:`varying vec3 vDir;
     void main(){vDir=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
   fragmentShader:`
     varying vec3 vDir;
+    uniform float uLineal,uCieloGan;
     uniform vec3 uCenit,uHorizonte,uNiebla,uSolCol;
     uniform vec3 uSolDir; uniform float uDia,uTiempo,uTapado;
     float hash(vec3 p){return fract(sin(dot(p,vec3(12.9898,78.233,37.719)))*43758.5453);}
@@ -416,6 +469,10 @@ const cielo=new THREE.Mesh(new THREE.SphereGeometry(320,48,32),new THREE.ShaderM
       col+=uSolCol*pow(s,1.6)*0.05*uDia*claro;       // difusión atmosférica
       // fundido con la niebla en el horizonte
       col=mix(uNiebla,col,smoothstep(-0.04,0.30,h));
+      /* Un ShaderMaterial crudo escribe lo que le pongas: estos colores estan pensados para
+         la PANTALLA. Con el destino en HDR el post revela y codifica, asi que hay que
+         entregarlos en lineal o el cielo sale lavado (medido: brillo 153 contra 93). */
+      if(uLineal>0.5)col=pow(max(col,vec3(0.0)),vec3(2.2))*uCieloGan;
       gl_FragColor=vec4(col,1.0);
     }`
 }));
@@ -2024,6 +2081,7 @@ function nivelDia(t){
 }
 const mmss=s=>{s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
 const cNieblaN=new THREE.Color(0x060a0e),cNieblaD=new THREE.Color(0x5b6b64),cNieblaLl=new THREE.Color(0x141a20);
+const cSolNiebla=new THREE.Color(0x9e8f6e);   // el color con el que se enciende del lado del sol
 const cAstroN=new THREE.Color(0x8fb0e0),cAstroD=new THREE.Color(0xffe2ad);
 const cAmbCN=new THREE.Color(0x162434),cAmbCD=new THREE.Color(0x71899a);
 const cAmbSN=new THREE.Color(0x050806),cAmbSD=new THREE.Color(0x33422a);
@@ -2053,11 +2111,22 @@ function animar(){
   ambiente.intensity=THREE.MathUtils.lerp(.40,.80,dia)*(1-intLluvia*.6)+flash*1.3;
   ambiente.color.copy(cAmbCN).lerp(cAmbCD,dia);
   ambiente.groundColor.copy(cAmbSN).lerp(cAmbSD,dia);
-  renderer.toneMappingExposure=THREE.MathUtils.lerp(.94,1.02,dia)*(1-intLluvia*.32);
+  // de noche el revelado necesita mas exposicion que antes: el buffer es lineal y casi todo
+  // el cuadro vive abajo de 0,05, donde la curva ACES apenas levanta (medido: 8,1 contra 16,5)
+  const expo=THREE.MathUtils.lerp(HDR?1.55:.94,1.02,dia)*(1-intLluvia*.32);
+  if(HDR){uVHS.uTono.value=1;uVHS.uExp.value=expo;}
+  else renderer.toneMappingExposure=expo;
   if(ENTORNO.mapa)ENTORNO.intensidad(THREE.MathUtils.lerp(.20,.42,dia)*(1-intLluvia*.45));
 
   tmpCol.copy(cNieblaN).lerp(cNieblaD,dia).lerp(cNieblaLl,intLluvia*.88);
   scene.fog.color.copy(tmpCol);
+  // la bruma baja y su tinte: el sol se pasa a espacio de vista una vez por cuadro
+  NIEBLA.uNbCamY.value=camera.getWorldPosition(tmpV).y;
+  NIEBLA.uNbVistaMundo.value.setFromMatrix4(camera.matrixWorld);
+  NIEBLA.uNbSolV.value.copy(dirAstro).transformDirection(camera.matrixWorldInverse);
+  NIEBLA.uNbSolCol.value.copy(tmpCol).lerp(cSolNiebla,.55+dia*.35);
+  NIEBLA.uNbAlta.value=(.0075+intLluvia*.010)*(1-dia*.35);
+  NIEBLA.uNbBase.value=alturaEn(jugador.pos.x,jugador.pos.z)-.6;
   scene.fog.density=THREE.MathUtils.lerp(.055,.034,dia)+intLluvia*intLluvia*.055;
 
   recortarCuadras(t,jugador.pos.x,jugador.pos.z);
@@ -2700,6 +2769,13 @@ function animar(){
     renderer.render(scene,camera);
     renderer.setRenderTarget(null);
     renderer.render(escenaVHS,camVHS);
+  }else if(HDR){
+    // sin cinta pero con HDR: el revelado tiene que pasar igual, una sola vez
+    uVHS.uFuerza.value=0;uVHS.uGlitch.value=0;
+    renderer.setRenderTarget(destino);
+    renderer.render(scene,camera);
+    renderer.setRenderTarget(null);
+    renderer.render(escenaVHS,camVHS);
   }else{
     renderer.render(scene,camera);
   }
@@ -3044,6 +3120,96 @@ vestir('teja',    2.2,[{mat:matTeja,metros:2.4,nScale:.9}]);
 vestir('corteza', 2.6,[{mat:matViga,metros:2.2,nScale:.9},
                        {mat:matRama,repeat:[1,2],nScale:.7}]);
 
+/* ================= niebla con bruma baja =================
+   Los uniformes son UN solo objeto compartido por todos los materiales: se asignan por
+   referencia dentro de onBeforeCompile, asi una escritura por cuadro alcanza para todos.
+   La cantidad de niebla suma dos cosas: la exponencial de siempre (cuadratica, la que ya
+   estaba tuneada) y la integral de la bruma baja a lo largo del rayo, que depende de la
+   altura de la camara y de hacia donde mira. */
+const NIEBLA={
+  uNbAlta:{value:.0090},              // cuanta bruma hay pegada al piso
+  uNbCaida:{value:.115},              // cada cuantos metros se divide (1/8,7 m)
+  uNbBase:{value:0},                  // la cota donde la bruma es mas espesa
+  uNbCamY:{value:0},
+  uNbSolV:{value:new THREE.Vector3(0,1,0)},     // el sol en espacio de vista
+  uNbSolCol:{value:new THREE.Color(0x30404e)},  // de que color se enciende del lado del sol
+  uNbVistaMundo:{value:new THREE.Matrix3()},
+  /* three aplica la niebla DESPUES del tono y del sRGB, asi que su color esta pensado para la
+     pantalla. Con el revelado movido al post, el buffer es lineal: hay que entrar el color de
+     niebla en lineal o todo lo lejano se vuelve blanco (medido: el bosque entero nevado). */
+  uNbLineal:{value:0}
+};
+function parchearNiebla(mat){
+  if(!mat||mat.fog===false||mat.userData.nb)return;
+  if(!(mat.isMeshStandardMaterial||mat.isMeshPhongMaterial||mat.isMeshLambertMaterial))return;
+  mat.userData.nb=1;
+  const previo=mat.onBeforeCompile;
+  mat.onBeforeCompile=function(sh,r){
+    if(previo)previo.call(mat,sh,r);
+    for(const k in NIEBLA)sh.uniforms[k]=NIEBLA[k];   // por REFERENCIA, no copia
+    sh.vertexShader=sh.vertexShader
+      .replace('#include <fog_pars_vertex>',
+        '#include <fog_pars_vertex>\n#ifdef USE_FOG\nvarying vec3 vNbPos;\n#endif')
+      .replace('#include <fog_vertex>',
+        '#include <fog_vertex>\n#ifdef USE_FOG\nvNbPos=mvPosition.xyz;\n#endif');
+    sh.fragmentShader=sh.fragmentShader
+      .replace('#include <fog_pars_fragment>',
+        '#ifdef USE_FOG\n'+
+        ' varying vec3 vNbPos;\n uniform vec3 fogColor;\n uniform float fogDensity;\n'+
+        ' uniform float uNbAlta,uNbCaida,uNbBase,uNbCamY,uNbLineal;\n'+
+        ' uniform vec3 uNbSolV,uNbSolCol;\n uniform mat3 uNbVistaMundo;\n'+
+        '#endif')
+      .replace('#include <fog_fragment>',
+        '#ifdef USE_FOG\n'+
+        ' float nbD=length(vNbPos);\n'+
+        ' vec3 nbDir=vNbPos/max(nbD,1e-4);\n'+
+        ' float nbDy=(uNbVistaMundo*nbDir).y;\n'+
+        ' float nbK=uNbCaida*nbDy;\n'+
+        ' float nbInt=abs(nbK)>1e-4?(1.0-exp(-nbK*nbD))/nbK:nbD;\n'+
+        ' float nbBaja=uNbAlta*exp(-uNbCaida*(uNbCamY-uNbBase))*nbInt;\n'+
+        ' float nbE=fogDensity*nbD;\n'+
+        ' float nbCant=1.0-exp(-(nbE*nbE+nbBaja));\n'+
+        ' float nbSol=pow(max(dot(nbDir,uNbSolV),0.0),6.0);\n'+
+        ' vec3 nbCol=mix(fogColor,uNbSolCol,nbSol*0.85);\n'+
+        ' if(uNbLineal>0.5)nbCol=pow(max(nbCol,vec3(0.0)),vec3(2.2));\n'+
+        ' gl_FragColor.rgb=mix(gl_FragColor.rgb,nbCol,clamp(nbCant,0.0,1.0));\n'+
+        '#endif');
+  };
+  mat.needsUpdate=true;
+}
+function vestirNiebla(raiz){
+  let n=0;
+  (raiz||scene).traverse(o=>{
+    const m=o.material;if(!m)return;
+    for(const mm of (Array.isArray(m)?m:[m])){if(!mm.userData.nb){parchearNiebla(mm);n++;}}
+  });
+  return n;
+}
+NIEBLA.uNbLineal.value=HDR?1:0;
+const NB_MATS=vestirNiebla(scene);
+
+/* Los materiales SIN luz (basic, sprites, puntos, lineas) tienen su color escrito a ojo contra
+   la pantalla. Con el buffer en lineal, ese color se mezcla y se revela como si fuera lineal:
+   las nubes de 0x1e2836 pasaban de ser un velo a ser un polígono gris. Se convierten una vez.
+   Los materiales con luz NO se tocan: el tono los pasaba igual antes y ahora. */
+function linealizarSinLuz(raiz){
+  if(!HDR)return 0;
+  let n=0;
+  (raiz||scene).traverse(o=>{
+    const m=o.material;if(!m)return;
+    for(const mm of (Array.isArray(m)?m:[m])){
+      if(mm.userData.lin)continue;
+      const sinLuz=mm.isMeshBasicMaterial||mm.isSpriteMaterial||mm.isPointsMaterial||mm.isLineBasicMaterial;
+      if(!sinLuz||!mm.color)continue;
+      // lo aditivo es LUZ: en un buffer lineal tiene que sumar mas, no menos. No se convierte.
+      if(mm.blending===THREE.AdditiveBlending){mm.userData.lin=1;continue;}
+      mm.userData.lin=1;mm.color.convertSRGBToLinear();n++;
+    }
+  });
+  return n;
+}
+const SIN_LUZ=linealizarSinLuz(scene);
+
 /* ================= luz de entorno (IBL) =================
    El cielo del juego es un shader de degradado y NO ilumina. Una foto 360 pasada por PMREM sí:
    le da a cada material el rebote del cielo, que es lo que faltaba para que las cosas no se
@@ -3111,7 +3277,7 @@ function vestirMonstruo(){
       const dame=n=>{const c=g.animations.find(a=>a.name===n);return c?mez.clipAction(c):null;};
       acc.quieto=dame('preset:idle');acc.camina=dame('preset:walk');acc.corre=dame('preset:run');
       for(const kk in acc)if(acc[kk]){acc[kk].play();acc[kk].setEffectiveWeight(kk==='quieto'?1:0);}
-      PRESENCIA.mezcla=mez;PRESENCIA.acc=acc;ENTORNO.sumar(m);
+      PRESENCIA.mezcla=mez;PRESENCIA.acc=acc;ENTORNO.sumar(m);vestirNiebla(m);
       /* Los pies al piso MEDIDOS, no supuestos: el bind dice donde termina el pie en reposo y
          el ciclo lo baja. Se barren los tres clips y se corrige por el punto mas bajo que
          alcanza la piel; sin esto el bicho camina enterrado hasta la rodilla. */
@@ -3188,6 +3354,12 @@ window.__B={BAJO,CFG,FIN,bajar,subir,abrirTrampilla,activarNotas,
     P.modelo.traverse(o=>{if(o.isMesh||o.isSkinnedMesh)
       o.material=new THREE.MeshBasicMaterial({color:0xff00ff,fog:false,skinning:!!o.isSkinnedMesh});});
     return 'pintado';},
+  hdr:()=>({hdr:HDR,sinLuz:SIN_LUZ,mats:NB_MATS,tipo:destino.texture.type,tono:uVHS.uTono.value,
+            exp:+uVHS.uExp.value.toFixed(3),glow:uVHS.uGlow.value,
+            renderer:renderer.toneMapping}),
+  niebla:()=>({mats:NB_MATS,alta:NIEBLA.uNbAlta.value,caida:NIEBLA.uNbCaida.value,
+               base:+NIEBLA.uNbBase.value.toFixed(2),camY:+NIEBLA.uNbCamY.value.toFixed(2),
+               densidad:+scene.fog.density.toFixed(4)}),
   fundido:()=>({cajas:FUNDIDO[0],mallas:FUNDIDO[1],ocluyentes:ocluyentes.length,
                 pies:PRESENCIA.pies,entorno:!!ENTORNO.mapa}),
   sombras:v=>{renderer.shadowMap.enabled=v;scene.traverse(o=>{if(o.material)o.material.needsUpdate=true;});return v;},
