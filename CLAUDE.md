@@ -242,3 +242,25 @@ Lo que costó una vuelta cada uno:
 - **Un bicho de 1,5 m a 30 m es un punto.** La distancia de aparición sale del tamaño del bicho.
 - La piel va apagada y los ojos encendidos: lo que asusta es que te miren desde lo oscuro, no el
   color. Bajaron de 89 mil a 53 mil triángulos con tres en pantalla.
+
+### 2026-09-22 (h) — los bichos se mueven
+**Pedido textual:** «Hazlos que se muevan, que no estén quietos en el espacio, que tengan algún
+movimiento o que hagan algo».
+
+Cada especie se mueve como corresponde a su cuerpo, no todas igual:
+- **acechante**: se queda quieto mirándote y cada tantos segundos avanza de golpe.
+- **insecto**: corridas cortas en direcciones al azar, con pausa, girando sobre sí mismo.
+- **medusa**: la campana se contrae y esa contracción la empuja; el rumbo va virando solo.
+- **vigía**: orbita alrededor del jugador, siempre mirándolo, y **parpadea**.
+- **fauces**: se echa atrás, abre grande y muerde para adelante.
+- **colonia**: gira en espiral y late la escala.
+- **hueco**: cae dando vueltas, con tics secos cada tanto.
+- **torre**: cada piso gira a su ritmo y se desfasa, así el apilado se retuerce.
+
+Para que una parte se mueva **no puede ir fundida con el resto**: la campana de la medusa, las dos
+mandíbulas de las fauces y cada piso de la torre se funden aparte y cuelgan de un pivote propio,
+con la geometría trasladada a ese pivote para que gire donde corresponde.
+
+Medido: 1,1 a 5,4 m de recorrido en cuatro segundos según la especie, 7 pisos de torre moviéndose
+hasta 1,5 rad y las mandíbulas 0,53 rad. Además los bichos se frenan a 3,2 m del jugador y se
+empujan afuera si quedan encima de la nave.

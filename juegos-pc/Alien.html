@@ -1123,18 +1123,19 @@ const ARQ = [
 { id:'medusa', min:1, alto:[4.0, 6.5], mote:['que cuelga','pálido','de mil hilos','sin apuro'],
   hacer(rnd, r, P){
     const R = 0.62;
-    esfAr(P.piel, R, R*0.78, R, 0, 1.55, 0);                            /* campana */
-    esfAr(P.piel, R*0.72, R*0.42, R*0.72, 0, 1.30, 0);
-    P.duro.push(pz(_toroG, R*0.98, R*0.98, 0.16, 0, 1.30, 0, 1.5708, 0, 0));
+    const C = P.sub('campana', 0, 1.34, 0);                             /* late: va aparte */
+    esfAr(C.piel, R, R*0.78, R, 0, 1.55, 0);
+    esfAr(C.piel, R*0.72, R*0.42, R*0.72, 0, 1.30, 0);
+    C.duro.push(pz(_toroG, R*0.98, R*0.98, 0.16, 0, 1.30, 0, 1.5708, 0, 0));
     const nojos = 6 + Math.floor(r*8);
     for(let i = 0; i < nojos; i++){
       const a = (i/nojos)*6.2832;
-      ojoAr(P, Math.sin(a)*R*0.55, 1.20, Math.cos(a)*R*0.55, 0.045 + rnd()*0.02);
+      ojoAr(C, Math.sin(a)*R*0.55, 1.20, Math.cos(a)*R*0.55, 0.045 + rnd()*0.02);
     }
     const nfr = 16;
     for(let i = 0; i < nfr; i++){                                       /* fleco corto del borde */
       const a = (i/nfr)*6.2832, x = Math.sin(a)*R*0.92, z = Math.cos(a)*R*0.92;
-      segAr(P.piel, x, 1.28, z, x*1.15, 0.92 - rnd()*0.2, z*1.15, 0.030);
+      segAr(C.piel, x, 1.28, z, x*1.15, 0.92 - rnd()*0.2, z*1.15, 0.030);
     }
     const nt = 4 + Math.floor(r*4);
     for(let i = 0; i < nt; i++){                                        /* hilos largos */
@@ -1180,13 +1181,14 @@ const ARQ = [
   hacer(rnd, r, P){
     const R = 0.86;
     for(const s of [1, -1]){                                            /* dos mandíbulas */
+      const M = P.sub(s > 0 ? 'mandSup' : 'mandInf', 0, 1.10, -0.45);   /* bisagra atrás */
       const ang = s*0.34;
-      esfAr(P.piel, R, R*0.40, R*0.82, 0, 1.10 + s*0.26, 0.10, ang, 0, 0);
+      esfAr(M.piel, R, R*0.40, R*0.82, 0, 1.10 + s*0.26, 0.10, ang, 0, 0);
       const nd = 9 + Math.floor(r*7);
       for(let i = 0; i < nd; i++){
         const a = -1.25 + (i/(nd-1))*2.5;
         const x = Math.sin(a)*R*0.86, z = Math.cos(a)*R*0.70 + 0.10;
-        conoAr(P.luz, x, 1.10 + s*0.14, z, 0.045, 0.26 + rnd()*0.10, s > 0 ? Math.PI : 0, 0, 0);
+        conoAr(M.luz, x, 1.10 + s*0.14, z, 0.045, 0.26 + rnd()*0.10, s > 0 ? Math.PI : 0, 0, 0);
       }
     }
     esfAr(P.piel, R*0.66, 0.44, R*0.60, 0, 1.10, -0.55);                /* cuerpito de atrás */
@@ -1254,17 +1256,18 @@ const ARQ = [
     for(let i = 0; i < n; i++){
       const e = 0.52 - i*0.045, h = 0.34;
       giro += 0.7 + rnd()*0.9;
-      esfAr(P.piel, e, h, e*0.86, 0, y, 0, 0, giro, 0);
-      P.duro.push(pz(_toroG, e*1.02, e*1.02, 0.12, 0, y - h*0.72, 0, 1.5708, 0, 0));
+      const S = P.sub('piso' + i, 0, y, 0);                                /* cada piso se mueve */
+      esfAr(S.piel, e, h, e*0.86, 0, y, 0, 0, giro, 0);
+      S.duro.push(pz(_toroG, e*1.02, e*1.02, 0.12, 0, y - h*0.72, 0, 1.5708, 0, 0));
       const dx = Math.sin(giro), dz = Math.cos(giro);
       for(const l of [-1, 1]){                                             /* dos ojos por piso */
         const a = giro + l*0.34;
-        ojoAr(P, Math.sin(a)*e*0.80, y + 0.06, Math.cos(a)*e*0.72, 0.048);
+        ojoAr(S, Math.sin(a)*e*0.80, y + 0.06, Math.cos(a)*e*0.72, 0.048);
       }
-      P.luz.push(pz(_cajaG, 0.16, 0.016, 0.02, dx*e*0.78, y - 0.09, dz*e*0.70, 0, giro, 0));
+      S.luz.push(pz(_cajaG, 0.16, 0.016, 0.02, dx*e*0.78, y - 0.09, dz*e*0.70, 0, giro, 0));
       for(const l of [-1, 1]){                                             /* bracitos */
         const a = giro + l*1.57;
-        segAr(P.duro, Math.sin(a)*e*0.7, y, Math.cos(a)*e*0.6,
+        segAr(S.duro, Math.sin(a)*e*0.7, y, Math.cos(a)*e*0.6,
               Math.sin(a)*e*1.5, y - 0.18, Math.cos(a)*e*1.3, 0.028);
       }
       y += h*1.55;
@@ -1291,7 +1294,14 @@ function crearBicho(nivel, semilla){
   const rnd = sembrar(semilla);
   const r = Math.min(nivel/9, 1);
   const g = new THREE.Group();
-  const P = {piel:[], duro:[], ojo:[], luz:[]};
+  const P = {piel:[], duro:[], ojo:[], luz:[], subs:{}};
+  /* una parte que se tiene que mover no puede ir fundida con el resto: se funde aparte y
+     cuelga de un pivote propio */
+  P.sub = function(nombre, px, py, pz){
+    if(!this.subs[nombre])
+      this.subs[nombre] = {piel:[], duro:[], ojo:[], luz:[], p:[px||0, py||0, pz||0]};
+    return this.subs[nombre];
+  };
 
   /* qué especies andan dando vueltas a esta altura, sin repetir la anterior */
   let posibles = ARQ.filter(a => a.min <= nivel);
@@ -1316,12 +1326,29 @@ function crearBicho(nivel, semilla){
   matLuz.emissive.setHSL(acento, 1.0, 0.52).convertSRGBToLinear();
   matLuz.emissiveIntensity = 1.8 + r*1.8;
 
-  [[P.piel, matPiel], [P.duro, matDuro], [P.ojo, matOjo], [P.luz, matLuz]].forEach(([p, mat]) => {
-    if(!p.length) return;
-    const m = new THREE.Mesh(fundir(p, 2), mat);
-    m.frustumCulled = false;
-    g.add(m);
-  });
+  const mats = [['piel', matPiel], ['duro', matDuro], ['ojo', matOjo], ['luz', matLuz]];
+  function armar(destino, bolsa, pivote){
+    mats.forEach(([k, mat]) => {
+      const p = bolsa[k];
+      if(!p || !p.length) return;
+      const geo = fundir(p, 2);
+      if(pivote) geo.translate(-pivote[0], -pivote[1], -pivote[2]);
+      const m = new THREE.Mesh(geo, mat);
+      m.frustumCulled = false;
+      destino.add(m);
+    });
+  }
+  armar(g, P, null);
+  g.userData.partes = {};
+  for(const nombre in P.subs){
+    const sb = P.subs[nombre];
+    const o = new THREE.Object3D();
+    o.position.set(sb.p[0], sb.p[1], sb.p[2]);
+    armar(o, sb, sb.p);
+    o.userData.base = o.position.clone();
+    g.add(o);
+    g.userData.partes[nombre] = o;
+  }
 
   /* el tamaño lo decide la especie, no el azar suelto */
   const caja = new THREE.Box3().setFromObject(g);
@@ -1349,6 +1376,12 @@ function crearBicho(nivel, semilla){
   g.userData.rareza = r;
   g.userData.gira = new THREE.Vector3((rnd()-0.5)*0.18, (rnd()-0.5)*0.42, (rnd()-0.5)*0.14);
   g.userData.deriva = new THREE.Vector3((rnd()-0.5)*0.5, (rnd()-0.5)*0.3, (rnd()-0.5)*0.5);
+  g.userData.rumbo = new THREE.Vector3(rnd()-0.5, (rnd()-0.5)*0.4, rnd()-0.5).normalize();
+  g.userData.imp = new THREE.Vector3();
+  g.userData.reloj = rnd()*2.5;
+  g.userData.mordida = 0;
+  g.userData.envion = 0;
+  g.userData.parpadeo = 2 + rnd()*4;
   g.userData.fase = rnd()*6.2832;
   g.userData.capturado = 0;
   g.userData.radio = objetivo*0.6;
@@ -1371,23 +1404,162 @@ function limpiarBichos(){
   BICHOS.vivos.forEach(b => esc.remove(b));
   BICHOS.vivos.length = 0;
 }
+/* Cada especie se mueve como corresponde a su cuerpo: el que acecha se queda quieto y de golpe
+   avanza, el insecto pega saltos cortos, la medusa nada a pulsos, las fauces muerden. */
+const _aJug = new THREE.Vector3(), _lado = new THREE.Vector3();
+const CONDUCTA = {
+  acechante(b, u, t, dt, a, d){
+    u.mirar = 1;
+    u.reloj -= dt;
+    if(u.reloj <= 0){ u.reloj = 3.5 + Math.random()*4; if(d > 8) u.envion = 1; }
+    if(u.envion > 0){                                  /* avanza de golpe y se queda quieto */
+      b.position.addScaledVector(a, 3.4*dt*u.envion);
+      u.envion = Math.max(0, u.envion - dt*0.9);
+    }
+    b.rotation.z = Math.sin(t*0.55 + u.fase)*0.06;
+    b.position.y += Math.sin(t*0.4 + u.fase)*0.5*dt;
+  },
+  insecto(b, u, t, dt, a, d){
+    u.reloj -= dt;
+    if(u.reloj <= 0){                                  /* corridas cortas y pausa */
+      u.reloj = 0.4 + Math.random()*1.3;
+      const ang = Math.random()*6.2832;
+      u.imp.set(Math.sin(ang), (Math.random()-0.5)*0.9, Math.cos(ang)).multiplyScalar(4 + Math.random()*4);
+      if(d > 15) u.imp.addScaledVector(a, 4);
+      if(d < 5)  u.imp.addScaledVector(a, -5);
+    }
+    b.position.addScaledVector(u.imp, dt);
+    u.imp.multiplyScalar(1 - Math.min(dt*2.6, 0.92));
+    b.rotation.y += dt*(1.4 + u.imp.length()*0.35);
+    b.rotation.x = Math.sin(t*7 + u.fase)*0.14;
+  },
+  medusa(b, u, t, dt, a, d){
+    const ciclo = Math.sin(t*1.15 + u.fase);
+    const c = u.partes.campana;
+    if(c){ const k = (ciclo + 1)/2; c.scale.set(1 + k*0.20, 1 - k*0.26, 1 + k*0.20); }
+    b.position.addScaledVector(u.rumbo, Math.max(0, ciclo)*2.2*dt);   /* empuja al contraerse */
+    u.rumbo.x += (Math.random()-0.5)*dt*0.35;
+    u.rumbo.z += (Math.random()-0.5)*dt*0.35;
+    u.rumbo.y += ((d > 20 ? a.y : 0) - u.rumbo.y*0.4)*dt*0.3;
+    u.rumbo.normalize();
+    b.rotation.y += dt*0.22;
+    b.rotation.z = Math.sin(t*0.5 + u.fase)*0.12;
+    b.rotation.x = Math.sin(t*0.43 + u.fase*1.7)*0.09;
+  },
+  vigia(b, u, t, dt, a, d){
+    u.mirar = 1;
+    _lado.set(-a.z, 0, a.x);
+    b.position.addScaledVector(_lado, 1.1*dt);                        /* gira alrededor */
+    if(d > 13) b.position.addScaledVector(a, 0.9*dt);
+    if(d < 6)  b.position.addScaledVector(a, -1.1*dt);
+    b.position.y += Math.sin(t*0.75 + u.fase)*0.7*dt;
+    u.parpadeo -= dt;                                                 /* parpadea */
+    let k = 1;
+    if(u.parpadeo < 0.22){ k = Math.max(0.08, Math.abs(u.parpadeo)/0.22); }
+    if(u.parpadeo < -0.22) u.parpadeo = 2.5 + Math.random()*4;
+    b.scale.set(u.escBase, u.escBase*k, u.escBase);
+  },
+  fauces(b, u, t, dt, a, d){
+    u.mirar = 1;
+    u.reloj -= dt;
+    if(u.reloj <= 0){ u.reloj = 2.8 + Math.random()*3.5; u.mordida = 1; }
+    let abre = 0.16 + Math.sin(t*1.3 + u.fase)*0.08;
+    if(u.mordida > 0){
+      u.mordida = Math.max(0, u.mordida - dt*1.5);
+      if(u.mordida > 0.5){ abre = 0.62; b.position.addScaledVector(a, -1.4*dt); }
+      else { abre = 0.02; b.position.addScaledVector(a, 6.0*dt*(u.mordida/0.5)); }
+    } else if(d > 13) b.position.addScaledVector(a, 0.9*dt);
+    else if(d < 5.5)  b.position.addScaledVector(a, -1.2*dt);
+    if(u.partes.mandSup) u.partes.mandSup.rotation.x = -abre;
+    if(u.partes.mandInf) u.partes.mandInf.rotation.x =  abre;
+    b.rotation.z = Math.sin(t*0.9 + u.fase)*0.07;
+  },
+  colonia(b, u, t, dt, a, d){
+    b.rotation.y += dt*0.5;
+    b.rotation.x = Math.sin(t*0.6 + u.fase)*0.16;
+    b.rotation.z = Math.cos(t*0.47 + u.fase)*0.14;
+    _lado.set(-a.z, 0, a.x);
+    b.position.addScaledVector(_lado, 0.8*dt);
+    b.position.y += Math.sin(t*0.35 + u.fase)*0.9*dt;
+    if(d > 17) b.position.addScaledVector(a, 0.5*dt);
+    const k = 1 + Math.sin(t*1.7 + u.fase)*0.05;
+    b.scale.setScalar(u.escBase*k);
+  },
+  hueco(b, u, t, dt, a, d){
+    b.rotation.x += dt*0.55;                                          /* cae girando */
+    b.rotation.z += dt*0.21;
+    b.position.addScaledVector(u.rumbo, 1.3*dt);
+    if(d > 18) b.position.addScaledVector(a, 0.6*dt);
+    if(Math.random() < dt*0.35){                                      /* tic seco */
+      b.rotation.y += (Math.random()-0.5)*1.4;
+      u.imp.set((Math.random()-0.5)*4, (Math.random()-0.5)*3, (Math.random()-0.5)*4);
+    }
+    b.position.addScaledVector(u.imp, dt);
+    u.imp.multiplyScalar(1 - Math.min(dt*3, 0.95));
+  },
+  torre(b, u, t, dt, a, d){
+    let i = 0;
+    for(const k in u.partes){
+      const o = u.partes[k];
+      o.rotation.y = Math.sin(t*(0.45 + i*0.11) + u.fase + i*0.8)*0.62;
+      o.position.x = o.userData.base.x + Math.sin(t*0.85 + i*0.6)*0.05*i;
+      o.position.z = o.userData.base.z + Math.cos(t*0.73 + i*0.4)*0.05*i;
+      i++;
+    }
+    b.rotation.y += dt*0.28;
+    b.position.addScaledVector(u.deriva, dt*1.2);
+    b.position.y += Math.sin(t*0.3 + u.fase)*0.8*dt;
+    if(d > 20) b.position.addScaledVector(a, 0.6*dt);
+  }
+};
+
 function pasoBichos(dt, t){
   const enEspacio = VUELO.espacio > 0.6;
   if(!enEspacio){ if(BICHOS.vivos.length) limpiarBichos(); return; }
   while(BICHOS.vivos.length < 3) soltarBicho();
   for(let i = BICHOS.vivos.length - 1; i >= 0; i--){
     const b = BICHOS.vivos[i], u = b.userData;
-    b.rotation.x += u.gira.x*dt; b.rotation.y += u.gira.y*dt; b.rotation.z += u.gira.z*dt;
-    b.position.addScaledVector(u.deriva, dt);
-    b.position.y += Math.sin(t*0.7 + u.fase)*0.25*dt;
-    if(u.rareza > 0.6 && u.capturado === 0)       /* a los raros les late la escala */
-      b.scale.setScalar(u.escBase*(1 + Math.sin(t*2.1 + u.fase)*0.07*u.rareza));
+    _aJug.copy(jug.pos).sub(b.position);
+    const d = Math.max(_aJug.length(), 0.001);
+    _aJug.multiplyScalar(1/d);
+
+    if(u.capturado === 0){
+      u.mirar = 0;
+      const c = CONDUCTA[u.arq];
+      if(c) c(b, u, t, dt, _aJug, d);
+      else {
+        b.rotation.x += u.gira.x*dt; b.rotation.y += u.gira.y*dt; b.rotation.z += u.gira.z*dt;
+        b.position.addScaledVector(u.deriva, dt);
+      }
+      if(u.mirar){                                   /* el que mira, mira de verdad */
+        const obj = Math.atan2(_aJug.x, _aJug.z);
+        let dd = obj - b.rotation.y;
+        while(dd > Math.PI) dd -= Math.PI*2;
+        while(dd < -Math.PI) dd += Math.PI*2;
+        b.rotation.y += dd*(1 - Math.exp(-1.6*dt));
+      }
+      if(d < 3.2) b.position.addScaledVector(_aJug, -(3.2 - d)*2.4*dt);   /* no se le encima */
+      /* que no se metan adentro de la nave */
+      for(let k = 0; k < BULTOS.length; k++){
+        const c2 = BULTOS[k];
+        if(b.position.x > c2.x0 - 2 && b.position.x < c2.x1 + 2 &&
+           b.position.y > c2.y0 - 2 && b.position.y < c2.y1 + 2 &&
+           b.position.z > c2.z0 - 2 && b.position.z < c2.z1 + 2){
+          b.position.z -= 4*dt; b.position.y += 1.5*dt;
+        }
+      }
+      if(u.rareza > 0.6 && u.arq !== 'vigia' && u.arq !== 'colonia')
+        b.scale.setScalar(u.escBase*(1 + Math.sin(t*2.1 + u.fase)*0.05*u.rareza));
+    }
+
     u.sueltos.forEach(m => {
-      const d = m.userData;
-      d.fase += d.vel*dt;
-      m.position.set(Math.sin(d.fase)*d.rad, d.sube + Math.sin(d.fase*0.6)*0.4, Math.cos(d.fase)*d.rad*Math.cos(d.incl));
+      const s2 = m.userData;
+      s2.fase += s2.vel*dt;
+      m.position.set(Math.sin(s2.fase)*s2.rad, s2.sube + Math.sin(s2.fase*0.6)*0.4,
+                     Math.cos(s2.fase)*s2.rad*Math.cos(s2.incl));
       m.rotation.y += dt*1.6;
     });
+
     if(u.capturado > 0){
       u.capturado += dt;
       b.position.addScaledVector(u.deriva, dt*6);
@@ -1399,7 +1571,6 @@ function pasoBichos(dt, t){
     }
   }
 }
-
 
 /* ------------------------------------------------------------ caminata espacial */
 const EVA = { activa:false, largo:16, t:0 };
