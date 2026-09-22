@@ -111,3 +111,31 @@ Lo que costó una vuelta cada uno:
   alta, que ya viene partido alrededor del hueco de la escalera.
 - Una sola lámpara pegada al techo deja el techo negro: van dos por cubierta y más abajo.
 - La puerta metida adentro del casco no se ve: va **por delante** de la cara de popa.
+
+### 2026-09-22 (c) — nave grande con texturas generadas y referencias reales
+**Pedido textual:** «Genera texturas en Rezona lab para la nave, genera una más grande espaciosa
+y mejor diseñada busca referencias reales etc».
+
+Referencias medidas, no inventadas: la bodega sigue la proporción de la **bodega del C-17**
+(26,8 × 5,5 × 3,76 m de alto, rampa de popa) ensanchada a 24 × 12 con 3,80 de puntal; las
+paredes van forradas de **racks tipo módulo Destiny de la ISS** (1,9 m de alto × 1,1 de ancho,
+con los raceways de caños en el chaflán de los rincones). La nave pasó de 20 a 30 m de largo y
+de 13 a 15,4 de ancho; cubierta alta de 20 × 10 con puente, consolas y asientos; escalera de 15
+escalones con baranda alrededor del hueco; rampa de embarque de 8 m.
+
+**Rezona sigue caído** (`CREDIT_RESERVE_FAILED` en cada reintento, ahora van horas). Las texturas
+salieron por Higgsfield: casco de chapas remachadas y piso de bodega con tread de diamante y
+argollas de amarre. La de pared quedó colgada del lado del proveedor; el slot está cableado y
+entra sin tocar nada más.
+
+Lo que costó una vuelta cada uno:
+- **Un `map` repetido sobre geometría fundida se estira distinto en cada pieza.** La UV se rehace
+  por proyección de caja (el eje dominante de la normal elige qué dos coordenadas del mundo van),
+  así la textura mide lo mismo en todo el casco. Metros por repetición: 6 el casco, 2 el piso.
+- **Una imagen generada no es repetible aunque el prompt lo pida.** Se cose solapando las últimas
+  filas y columnas sobre las primeras y recortando; el salto de costura se mide (3,2 y 4,7 sobre
+  255 en el casco).
+- **El mapa multiplica al color del material**: poner el color en blanco al aplicar la textura
+  revienta el interior.
+- El estado de los trabajos del proveedor **miente**: dos texturas figuraban «queued» media hora
+  después de estar terminadas. Hay que mirar el historial, no el estado del trabajo.
