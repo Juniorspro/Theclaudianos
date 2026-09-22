@@ -185,3 +185,34 @@ Lo que costó una vuelta cada uno:
 - El envejecido que funciona: sepia sucio con un resto de color, negros levantados, desvanecido
   desparejo por campo de ruido, viñeta, grano, halación por encima, humedad, rayas, polvo y
   emulsión comida en los bordes. Y el papel también manchado y mordido.
+
+### 2026-09-22 (f) — caminata espacial y bichos que empeoran
+**Pedido textual:** «Ahora haz que cuando la nave despegue y esté volando por el espacio, el
+jugador pueda salir al espacio exterior atado a una soga y podrá sacarle foto a los aliens que se
+vean allí (Quiero que inventes aliens cada vez más raros, que al principio sean un poco normales
+y mientras más avance el jugador sean más extraños)».
+
+En el espacio, parado en la esclusa, el botón de la nave pasa a `SALIR AL ESPACIO`. Afuera: cero
+gravedad, la palanca empuja en el plano de la cámara, el botón da envión para arriba, y una soga
+de 16 m que cuelga con panza y tira cuando se termina. Volviendo a la esclusa el botón dice
+`ENTRAR`.
+
+Los bichos se arman por código con una semilla y una **rareza** que sube con cada uno
+fotografiado: 0 es un huevo con dos ojos y cuatro patas; 9 es una cosa de anillos rojos, bocas con
+dientes, ojos en tallos, copias de sí misma adentro y pedazos orbitando sueltos. Cada uno tiene
+nombre inventado (`Mnouul-43 pálido`) que va al pie de la copia junto con la rareza y el número de
+especie.
+
+Lo que costó una vuelta cada uno:
+- **El HUD se actualizaba después del `return` de EVA**, así que el botón nunca decía `ENTRAR`.
+  Sacarlo a una función aparte y llamarlo en los dos caminos.
+- **La cámara se metía adentro del casco al flotar afuera.** Los muros no alcanzan: por arriba de
+  la nave no hay ninguno. Va el bulto entero del casco como caja, y se acorta la distancia hasta
+  que la cámara sale.
+- **`mirar()` es relativo**: una sonda que lo llamaba con el ángulo absoluto apuntaba a cualquier
+  lado y daba 2 de 5 fotos falladas. Con `apuntar()` absoluto, 4 de 4.
+- El levantado de negros del revelado **tapaba el espacio**: en una escena oscura hay que bajarlo
+  (va por `VUELO.espacio`) y aflojar el fogonazo, si no la copia sale lechosa.
+- `PointsMaterial` sin textura dibuja **cuadrados**: el polvo de estrellas necesita un punto
+  redondo hecho con un degradado radial en un canvas.
+- La nebulosa que se veía bien por el ventanal chico **se come el cuadro** cuando estás afuera.

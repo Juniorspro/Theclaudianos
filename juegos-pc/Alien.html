@@ -16,6 +16,11 @@
     padding:7px 13px;border-radius:999px;font-size:11px;letter-spacing:.16em;font-weight:700;
     color:#bfefff;background:rgba(10,16,26,.42);border:1px solid rgba(120,230,255,.28);
     backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  #especies{position:absolute;top:calc(env(safe-area-inset-top,0px) + 52px);left:14px;
+    padding:6px 12px;border-radius:999px;font-size:10px;letter-spacing:.16em;font-weight:800;
+    color:#ffd9a8;background:rgba(26,14,6,.46);border:1px solid rgba(255,180,100,.34);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity .3s}
+  #especies.ver{opacity:1}
   #pista{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:14px;
     padding:7px 11px;border-radius:12px;font-size:10px;line-height:1.5;text-align:right;
     color:#8fa6b8;background:rgba(10,16,26,.34);border:1px solid rgba(140,180,210,.16);
@@ -85,6 +90,7 @@
 <canvas id="lienzo"></canvas>
 <div id="ui">
   <div class="chip">ALIEN GRID</div>
+  <div id="especies">ESPECIES 0</div>
   <div id="pista">izquierda: mover<br>derecha: mirar<br>botón: saltar</div>
   <div id="base"></div><div id="puno"></div>
   <div id="usar">TOMAR CÁMARA</div>
@@ -207,10 +213,10 @@ const cielo = new THREE.Mesh(
           float est2 = hash(floor(d*2100.0));
           e += vec3(0.70,0.78,1.00)*smoothstep(0.9994, 1.0, est2)*1.6;
           float neb = ruido(d*2.6)*0.58 + ruido(d*6.1)*0.28 + ruido(d*13.0)*0.14;
-          e += vec3(0.26,0.09,0.38)*smoothstep(0.50, 0.94, neb)*0.85;
+          e += vec3(0.26,0.09,0.38)*smoothstep(0.58, 0.97, neb)*0.46;
           float neb2 = ruido(d*1.9 + 17.0)*0.7 + ruido(d*4.7 + 3.0)*0.3;
-          e += vec3(0.05,0.15,0.30)*smoothstep(0.52, 0.96, neb2)*0.65;
-          e *= 0.85 + 0.35*ruido(d*1.3 + 41.0);
+          e += vec3(0.05,0.15,0.30)*smoothstep(0.60, 0.98, neb2)*0.34;
+          e *= 0.88 + 0.26*ruido(d*1.3 + 41.0);
           float s = max(dot(d, uSol), 0.0);
           e += vec3(1.00,0.96,0.88)*pow(s, 1200.0)*7.0;
           e += vec3(0.55,0.68,1.00)*pow(s, 9.0)*0.045;
@@ -626,6 +632,7 @@ const MAT_NAVE = {
 
 /* dónde está parado el jugador: devuelve la caja de la cubierta o null */
 function enNave(x, y, z){
+  if(EVA.activa) return null;
   if(y >= N.y0 - 0.4 && x > N.esc.x0 - 1.0 && x < N.esc.x1 + 1.0 &&
      z > N.esc.z - 1.6 && z < N.escZ1 + 1.6)             /* subiendo: el techo está abierto */
     return {x0:-N.x, x1:N.x, z0:N.z0, z1:N.z1, y0:N.y0, y1:N.y1 + N.alto2};
@@ -657,7 +664,7 @@ const RADIO_CUERPO = 0.42, ALTO_CUERPO = 1.7;
 function resolverMuros(){
   for(let i = 0; i < MUROS.length; i++){
     const m = MUROS[i];
-    if(m.soloVuelo && VUELO.estado === 'tierra') continue;
+    if(m.soloVuelo && (VUELO.estado === 'tierra' || EVA.activa)) continue;
     if(jug.pos.y + ALTO_CUERPO < m.y0 || jug.pos.y > m.y1) continue;
     if(jug.pos.x <= m.x0 - RADIO_CUERPO || jug.pos.x >= m.x1 + RADIO_CUERPO) continue;
     if(jug.pos.z <= m.z0 - RADIO_CUERPO || jug.pos.z >= m.z1 + RADIO_CUERPO) continue;
@@ -712,9 +719,15 @@ const polvo = (function(){
     p[i*3+2] = (Math.random()-0.5)*520 + 27;
   }
   g.setAttribute('position', new THREE.BufferAttribute(p, 3));
-  const mat = new THREE.PointsMaterial({color:0xdfeaff, size:0.55, sizeAttenuation:true,
-    transparent:true, opacity:0, depthWrite:false, blending:THREE.AdditiveBlending});
-  mat.size = 0.95;
+  const lc = document.createElement('canvas'); lc.width = lc.height = 32;   /* punto redondo */
+  const lg = lc.getContext('2d');
+  const rg = lg.createRadialGradient(16, 16, 0, 16, 16, 16);
+  rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(0.45, 'rgba(220,235,255,0.55)');
+  rg.addColorStop(1, 'rgba(160,200,255,0)');
+  lg.fillStyle = rg; lg.fillRect(0, 0, 32, 32);
+  const texPunto = new THREE.CanvasTexture(lc);
+  const mat = new THREE.PointsMaterial({color:0xdfeaff, size:0.85, sizeAttenuation:true,
+    map:texPunto, transparent:true, opacity:0, depthWrite:false, blending:THREE.AdditiveBlending});
   const pts = new THREE.Points(g, mat); pts.frustumCulled = false; pts.visible = false;
   esc.add(pts); return pts;
 })();
@@ -741,7 +754,7 @@ function pasoVuelo(dt){
   }
 
   const enTierra = e.estado === 'tierra';
-  const cerrada = enTierra ? 0 : clamp(e.t/1.1, 0, 1);
+  const cerrada = (enTierra || EVA.activa) ? 0 : clamp(e.t/1.1, 0, 1);
   const abre = e.estado === 'bajando' ? clamp((e.t - 3.6)/1.1, 0, 1) : 0;
   const k = clamp(cerrada - abre, 0, 1);
   compuerta[0].position.x = lerp(-N.puerta*1.6, -N.puerta/2, k);
@@ -759,6 +772,7 @@ function pasoVuelo(dt){
   hemi.intensity = lerp(0.55, 0.16, e.espacio);
   MAT_NAVE.tobera.emissiveIntensity = 1.5 + 3.2*(e.estado === 'tierra' ? 0 : 1)*clamp(e.t/1.5, 0, 1);
 
+  pasoBichos(dt, ahoraVuelo);
   polvo.visible = e.espacio > 0.02;
   polvo.material.opacity = e.espacio*0.95;
   if(polvo.visible){                       /* pasan de proa a popa y se reciclan */
@@ -856,8 +870,35 @@ function campoManchas(n){
   };
 }
 
+/* el visor va de 9% a 91% de ancho y de 8% a 78% de alto: lo que cae ahí adentro, entra */
+function bichoEnCuadro(){
+  let mejor = null, mejorD = 1e9;
+  const v = new THREE.Vector3();
+  for(const b of BICHOS.vivos){
+    if(b.userData.capturado) continue;
+    v.copy(b.position).project(cam);
+    if(v.z > 1) continue;
+    const u = v.x*0.5 + 0.5, w = -v.y*0.5 + 0.5;
+    if(u < 0.06 || u > 0.94 || w < 0.05 || w > 0.84) continue;
+    const d = b.position.distanceTo(cam.position);
+    if(d > 75 || d > mejorD) continue;
+    mejorD = d; mejor = b;
+  }
+  return mejor;
+}
+
 function sacarFoto(){
   if(!FOTO.tiene || FOTO.abierta) return null;
+  const presa = bichoEnCuadro();
+  if(presa){
+    presa.userData.capturado = 0.0001;
+    BICHOS.cazados++;
+    BICHOS.nivel = Math.min(BICHOS.nivel + 1, 12);
+    BICHOS.ultimo = {nombre:presa.userData.nombre, nivel:presa.userData.nivel,
+                     rareza:+presa.userData.rareza.toFixed(2)};
+    dEspecies.textContent = 'ESPECIES ' + BICHOS.cazados;
+    dEspecies.classList.add('ver');
+  }
   const rel = 0.80, lw = lienzo.width, lh = lienzo.height;
   let sw = lw, sh = sw/rel;
   if(sh > lh){ sh = lh; sw = sh*rel; }
@@ -868,7 +909,7 @@ function sacarFoto(){
   const g = tmp.getContext('2d');
   /* el fogonazo ilumina la toma; se dibuja EN EL MISMO turno del render o sale negro */
   const expo = rend.toneMappingExposure;
-  rend.toneMappingExposure = expo*1.42;
+  rend.toneMappingExposure = expo*(1.05 + 0.32*(1 - VUELO.espacio));
   rend.render(esc, cam);
   rend.toneMappingExposure = expo;
   g.drawImage(lienzo, sx, sy, sw, sh, 0, 0, W, H);
@@ -884,8 +925,9 @@ function sacarFoto(){
       r = r*0.20 + (lum*1.02 + 27)*0.80;
       v = v*0.20 + (lum*0.92 + 20)*0.80;
       b = b*0.20 + (lum*0.73 + 15)*0.80;
-      r = r*0.72 + 36; v = v*0.72 + 32; b = b*0.70 + 27;
-      const f = 0.58 + 0.60*desvan(x/W, y/H);
+      const piso = 34 - 16*VUELO.espacio;         /* en el espacio el negro tiene que quedar negro */
+      r = r*0.74 + piso; v = v*0.74 + piso*0.90; b = b*0.72 + piso*0.78;
+      const f = 0.66 + 0.48*desvan(x/W, y/H);
       const dx = (x/W - 0.5)*2, dy = (y/H - 0.5)*2;
       const vig = 1 - 0.62*Math.max(0, Math.sqrt(dx*dx + dy*dy) - 0.42);
       const gr = (Math.random() - 0.5)*32;
@@ -954,6 +996,20 @@ function sacarFoto(){
   p.drawImage(tmp, M, M);
   p.strokeStyle = 'rgba(58,44,26,0.38)'; p.lineWidth = 2;
   p.strokeRect(M - 1, M - 1, W + 2, H + 2);
+  p.textAlign = 'center';
+  if(presa){
+    p.fillStyle = 'rgba(48,34,16,0.88)';
+    p.font = 'italic 21px Georgia, "Times New Roman", serif';
+    p.fillText(presa.userData.nombre, dPapel.width/2, H + M + 36);
+    p.fillStyle = 'rgba(74,56,32,0.70)';
+    p.font = '12px Georgia, "Times New Roman", serif';
+    p.fillText('RAREZA ' + (presa.userData.nivel + 1) + '  ·  ESPECIE N° ' + BICHOS.cazados,
+               dPapel.width/2, H + M + 58);
+  } else {
+    p.fillStyle = 'rgba(74,56,32,0.55)';
+    p.font = 'italic 14px Georgia, "Times New Roman", serif';
+    p.fillText('sin nada adentro', dPapel.width/2, H + M + 44);
+  }
   p.globalCompositeOperation = 'destination-out';
   for(let k = 0; k < 16; k++){
     const l = k % 4;
@@ -972,6 +1028,325 @@ function sacarFoto(){
 }
 function cerrarFoto(){ FOTO.abierta = false; dCopia.classList.remove('ver'); }
 dCopia.addEventListener('pointerdown', e => { e.stopPropagation(); cerrarFoto(); });
+
+
+/* --------------------------------------------------- bichos del espacio */
+/* Se arman por código con una semilla. La rareza sube con cada uno fotografiado: al principio
+   son casi normales y después dejan de tener sentido. */
+const BICHOS = { vivos:[], nivel:0, cazados:0, sem:20260922, ultimo:null };
+const ANCLA = new THREE.Vector3(0, N.y0 + 0.9, N.z0 - 1.2);   /* la soga sale de la compuerta */
+
+function sembrar(s){
+  let x = (s >>> 0) || 1;
+  return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x/4294967296; };
+}
+const _esferaG = new THREE.SphereGeometry(1, 10, 8);
+const _toroG   = new THREE.TorusGeometry(1, 0.22, 6, 16);
+const _conoG   = new THREE.ConeGeometry(1, 1, 8);
+function pz(geo, sx, sy, sz, x, y, z, rx, ry, rz){
+  const m = new THREE.Matrix4();
+  m.compose(new THREE.Vector3(x, y, z),
+            new THREE.Quaternion().setFromEuler(new THREE.Euler(rx||0, ry||0, rz||0)),
+            new THREE.Vector3(sx, sy, sz));
+  return {geo, m};
+}
+
+function nombreBicho(rnd, nivel){
+  const a = ['Yrr','Quel','Oth','Vhan','Sim','Lugg','Noc','Thra','Ix','Pum','Grei','Ubb','Zar','Mno','Aql'];
+  const b = ['ok','ath','uul','ix','or','esh','un','ai','ogg','yr','ek','ous','imm'];
+  const c = ['pálido','de nueve bocas','que no termina','sin adentro','doblado','de vidrio',
+             'que mira dos veces','al revés','que se repite','hueco','que suena','de muchas manos',
+             'anterior','sin sombra','que ya estaba'];
+  let n = a[(rnd()*a.length)|0] + b[(rnd()*b.length)|0];
+  if(nivel >= 2) n += '-' + (2 + ((rnd()*97)|0));
+  if(nivel >= 3) n += ' ' + c[(rnd()*c.length)|0];
+  return n;
+}
+
+function crearBicho(nivel, semilla){
+  const rnd = sembrar(semilla);
+  const r = Math.min(nivel/9, 1);
+  const g = new THREE.Group();
+  const piel = [], duro = [], ojo = [], luz = [];
+
+  const tono = rnd(), tono2 = (tono + 0.25 + rnd()*0.5) % 1;
+  const matPiel = new THREE.MeshStandardMaterial({roughness:0.55, metalness:0.12});
+  matPiel.color.setHSL(tono, 0.28 + r*0.5, 0.42 - r*0.12).convertSRGBToLinear();
+  matPiel.emissive.setHSL(tono, 0.6, 0.10 + r*0.22).convertSRGBToLinear();
+  const matDuro = new THREE.MeshStandardMaterial({roughness:0.35, metalness:0.55});
+  matDuro.color.setHSL(tono2, 0.30 + r*0.45, 0.34).convertSRGBToLinear();
+  matDuro.emissive.setHSL(tono2, 0.7, 0.06 + r*0.20).convertSRGBToLinear();
+  const matOjo = new THREE.MeshStandardMaterial({color:col(0x08080c), roughness:0.10, metalness:0.2});
+  const matLuz = new THREE.MeshStandardMaterial({roughness:0.4});
+  matLuz.color.setHSL((tono + 0.5) % 1, 0.9, 0.06).convertSRGBToLinear();
+  matLuz.emissive.setHSL((tono + 0.5) % 1, 1.0, 0.55).convertSRGBToLinear();
+  matLuz.emissiveIntensity = 1.4 + r*2.2;
+
+  /* cuerpo: de un huevo liso a varios cuerpos encimados que no cierran */
+  const ncore = 1 + Math.floor(r*3 + rnd()*r*2);
+  const alto = 1.0 + rnd()*0.5;
+  for(let i = 0; i < ncore; i++){
+    const e = i === 0 ? 1 : (0.35 + rnd()*0.55);
+    const ox = i === 0 ? 0 : (rnd()-0.5)*1.5*r;
+    const oy = i === 0 ? 0 : (rnd()-0.5)*1.8;
+    const oz = i === 0 ? 0 : (rnd()-0.5)*1.5*r;
+    piel.push(pz(_esferaG, 0.62*e, alto*0.62*e, 0.55*e, ox, oy, oz,
+                 (rnd()-0.5)*r, (rnd()-0.5)*r, (rnd()-0.5)*r*1.4));
+  }
+  /* cabeza: al principio hay; después se la come el cuerpo */
+  const hayCabeza = r < 0.62 || rnd() < 0.4;
+  const cy = alto*0.62 + 0.30;
+  if(hayCabeza) piel.push(pz(_esferaG, 0.36, 0.40, 0.34, 0, cy, 0.02));
+
+  /* ojos: dos, y después todos los que entren, algunos en tallos */
+  const nojos = 2 + Math.floor(r*9 + rnd()*r*4);
+  for(let i = 0; i < nojos; i++){
+    const a = (i/nojos)*6.2832 + rnd()*0.4, ele = (rnd()-0.35)*1.4;
+    const base = hayCabeza && i < 3 ? 0.38 : 0.62;
+    const bx = Math.sin(a)*base*(0.6 + rnd()*0.7);
+    const by = (hayCabeza && i < 3 ? cy : 0) + ele*(hayCabeza && i < 3 ? 0.25 : 0.8);
+    const bz = Math.cos(a)*base*(0.5 + rnd()*0.8);
+    let ex = bx, ey = by, ez = bz;
+    if(r > 0.5 && rnd() < r*0.7){                  /* ojo en tallo */
+      const L = 0.25 + rnd()*0.8*r;
+      ex = bx*(1 + L); ey = by + (rnd()-0.3)*L; ez = bz*(1 + L);
+      duro.push(pz(_cilG, 0.035, L, 0.035, (bx+ex)/2, (by+ey)/2, (bz+ez)/2,
+                   Math.atan2(ey-by, Math.hypot(ex-bx, ez-bz)) - Math.PI/2, Math.atan2(ex-bx, ez-bz), 0));
+    }
+    const tam = 0.10 + rnd()*0.10 - r*0.02;
+    ojo.push(pz(_esferaG, tam, tam, tam, ex, ey, ez));
+    luz.push(pz(_esferaG, tam*0.45, tam*0.45, tam*0.30, ex*1.06, ey, ez*1.06 + tam*0.6));
+  }
+
+  /* miembros */
+  const nmiem = 2 + Math.floor(r*7 + rnd()*2);
+  for(let i = 0; i < nmiem; i++){
+    const a = (i/nmiem)*6.2832 + rnd()*0.5;
+    const sube = (rnd()-0.5)*1.2;
+    let px = Math.sin(a)*0.5, py = sube*0.5, pz2 = Math.cos(a)*0.45;
+    const seg = 2 + Math.floor(r*3);
+    let dir = new THREE.Vector3(Math.sin(a), (rnd()-0.5)*1.4, Math.cos(a)).normalize();
+    for(let k = 0; k < seg; k++){
+      const L = (0.45 + rnd()*0.35)*(1 - k*0.12);
+      const nx = px + dir.x*L, ny = py + dir.y*L, nz = pz2 + dir.z*L;
+      duro.push(pz(_cilG, 0.085 - k*0.012, L, 0.085 - k*0.012, (px+nx)/2, (py+ny)/2, (pz2+nz)/2,
+                   Math.atan2(ny-py, Math.hypot(nx-px, nz-pz2)) - Math.PI/2, Math.atan2(nx-px, nz-pz2), 0));
+      px = nx; py = ny; pz2 = nz;
+      dir = dir.clone().add(new THREE.Vector3((rnd()-0.5)*r*1.6, (rnd()-0.5)*r*1.2, (rnd()-0.5)*r*1.6)).normalize();
+    }
+    piel.push(pz(_esferaG, 0.10, 0.10, 0.10, px, py, pz2));
+  }
+
+  /* tentáculos, anillos, bocas y pedazos sueltos: entran con la rareza */
+  if(r > 0.28){
+    const nt = Math.floor(r*5) + 1;
+    for(let i = 0; i < nt; i++){
+      let px = (rnd()-0.5)*0.7, py = -alto*0.5, pz2 = (rnd()-0.5)*0.6;
+      let dx = (rnd()-0.5)*0.5, dy = -0.5 - rnd()*0.4, dz = (rnd()-0.5)*0.5;
+      for(let k = 0; k < 7; k++){
+        const t = 0.12 - k*0.012;
+        piel.push(pz(_esferaG, t, t, t, px, py, pz2));
+        px += dx*0.22; py += dy*0.22; pz2 += dz*0.22;
+        dx += (rnd()-0.5)*0.5; dz += (rnd()-0.5)*0.5; dy += (rnd()-0.5)*0.3;
+      }
+    }
+  }
+  if(r > 0.42){
+    const na = 1 + Math.floor(r*2);
+    for(let i = 0; i < na; i++)
+      duro.push(pz(_toroG, 0.9 + rnd()*0.7, 0.9 + rnd()*0.7, 0.9 + rnd()*0.7,
+                   (rnd()-0.5)*0.4, (rnd()-0.5)*1.2, (rnd()-0.5)*0.4,
+                   rnd()*3.14, rnd()*3.14, rnd()*3.14));
+  }
+  if(r > 0.5){
+    const nb = 1 + Math.floor(r*4);
+    for(let i = 0; i < nb; i++){
+      const a = rnd()*6.2832, bx = Math.sin(a)*0.55, bz = Math.cos(a)*0.5, by = (rnd()-0.5)*1.2;
+      duro.push(pz(_toroG, 0.22, 0.22, 0.22, bx, by, bz, 1.5708, 0, a));
+      const nd = 5 + Math.floor(r*6);
+      for(let k = 0; k < nd; k++){
+        const t = (k/nd)*6.2832;
+        luz.push(pz(_conoG, 0.035, 0.11, 0.035, bx + Math.cos(t)*0.19, by + Math.sin(t)*0.19, bz + 0.03,
+                    0, 0, -t + 1.5708));
+      }
+    }
+  }
+  if(r > 0.72){                                   /* copias chicas de sí mismo, adentro */
+    for(let i = 0; i < 3; i++)
+      piel.push(pz(_esferaG, 0.2, 0.26, 0.2, (rnd()-0.5)*0.5, (rnd()-0.5)*1.0, (rnd()-0.5)*0.5));
+  }
+
+  const grupos = [[piel, matPiel], [duro, matDuro], [ojo, matOjo], [luz, matLuz]];
+  grupos.forEach(([p, mat]) => {
+    if(!p.length) return;
+    const m = new THREE.Mesh(fundir(p, 2), mat);
+    m.frustumCulled = false;
+    g.add(m);
+  });
+
+  /* pedazos que orbitan sueltos: son hijos aparte porque se mueven */
+  g.userData.sueltos = [];
+  if(r > 0.55){
+    const ns = 2 + Math.floor(r*3);
+    for(let i = 0; i < ns; i++){
+      const geo = rnd() < 0.5 ? _cajaG : _esferaG;
+      const m = new THREE.Mesh(geo, rnd() < 0.5 ? matDuro : matLuz);
+      const e = 0.12 + rnd()*0.22;
+      m.scale.set(e, e*(0.6 + rnd()), e);
+      m.userData = {rad:1.0 + rnd()*1.6, vel:(rnd()-0.5)*1.6, fase:rnd()*6.2832,
+                    incl:(rnd()-0.5)*1.4, sube:(rnd()-0.5)*1.2};
+      g.add(m); g.userData.sueltos.push(m);
+    }
+  }
+
+  const escala = 0.85 + rnd()*0.7 + r*0.45;
+  g.scale.setScalar(escala);
+  g.userData.escBase = escala;
+  g.userData.nivel = nivel;
+  g.userData.nombre = nombreBicho(rnd, nivel);
+  g.userData.rareza = r;
+  g.userData.gira = new THREE.Vector3((rnd()-0.5)*0.5*(0.3 + r), (rnd()-0.5)*0.7, (rnd()-0.5)*0.5*(0.3 + r));
+  g.userData.deriva = new THREE.Vector3((rnd()-0.5)*0.55, (rnd()-0.5)*0.35, (rnd()-0.5)*0.55);
+  g.userData.fase = rnd()*6.2832;
+  g.userData.capturado = 0;
+  g.userData.radio = 1.3*escala;
+  return g;
+}
+
+function soltarBicho(){
+  BICHOS.sem = (BICHOS.sem*1664525 + 1013904223) >>> 0;
+  const b = crearBicho(BICHOS.nivel, BICHOS.sem);
+  const rnd = sembrar(BICHOS.sem ^ 0x9e37);
+  const a = rnd()*6.2832, el = (rnd()-0.45)*1.1, d = 15 + rnd()*20;
+  b.position.set(ANCLA.x + Math.sin(a)*d*Math.cos(el),
+                 ANCLA.y + Math.sin(el)*d*0.8 + 2,
+                 ANCLA.z - 4 - Math.abs(Math.cos(a))*d*0.7);
+  esc.add(b); BICHOS.vivos.push(b);
+  return b;
+}
+function limpiarBichos(){
+  BICHOS.vivos.forEach(b => esc.remove(b));
+  BICHOS.vivos.length = 0;
+}
+function pasoBichos(dt, t){
+  const enEspacio = VUELO.espacio > 0.6;
+  if(!enEspacio){ if(BICHOS.vivos.length) limpiarBichos(); return; }
+  while(BICHOS.vivos.length < 3) soltarBicho();
+  for(let i = BICHOS.vivos.length - 1; i >= 0; i--){
+    const b = BICHOS.vivos[i], u = b.userData;
+    b.rotation.x += u.gira.x*dt; b.rotation.y += u.gira.y*dt; b.rotation.z += u.gira.z*dt;
+    b.position.addScaledVector(u.deriva, dt);
+    b.position.y += Math.sin(t*0.7 + u.fase)*0.25*dt;
+    if(u.rareza > 0.6 && u.capturado === 0)       /* a los raros les late la escala */
+      b.scale.setScalar(u.escBase*(1 + Math.sin(t*2.1 + u.fase)*0.07*u.rareza));
+    u.sueltos.forEach(m => {
+      const d = m.userData;
+      d.fase += d.vel*dt;
+      m.position.set(Math.sin(d.fase)*d.rad, d.sube + Math.sin(d.fase*0.6)*0.4, Math.cos(d.fase)*d.rad*Math.cos(d.incl));
+      m.rotation.y += dt*1.6;
+    });
+    if(u.capturado > 0){
+      u.capturado += dt;
+      b.position.addScaledVector(u.deriva, dt*6);
+      u.escBase *= 1 - dt*0.55;
+      b.scale.setScalar(u.escBase);
+      if(u.capturado > 2.2){ esc.remove(b); BICHOS.vivos.splice(i, 1); }
+    } else if(b.position.distanceTo(ANCLA) > 70){
+      esc.remove(b); BICHOS.vivos.splice(i, 1);
+    }
+  }
+}
+
+
+/* ------------------------------------------------------------ caminata espacial */
+const EVA = { activa:false, largo:16, t:0 };
+const CASCO = {x0:-7.9, x1:7.9, y0:0.4, y1:9.5, z0:11.9, z1:42.1};   /* bulto de la nave */
+const soga = (function(){
+  const n = 24, g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n*3), 3));
+  const l = new THREE.Line(g, new THREE.LineBasicMaterial({color:col(0xd8cfa8), transparent:true, opacity:0.95}));
+  l.frustumCulled = false; l.visible = false; esc.add(l);
+  return l;
+})();
+const gancho = (function(){                       /* el anclaje, para que la soga salga de algo */
+  const m = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.045, 6, 12), MAT_NAVE.oscuro);
+  m.position.copy(ANCLA); m.rotation.x = Math.PI/2; esc.add(m); return m;
+})();
+
+function salirAlEspacio(){
+  if(EVA.activa || VUELO.estado !== 'espacio') return;
+  EVA.activa = true; EVA.t = 0;
+  jug.pos.set(ANCLA.x, ANCLA.y + 0.3, ANCLA.z - 2.4);
+  jug.vel.set(0, 0.8, -6.5);
+  jug.enSuelo = false;
+  soga.visible = true;
+}
+function entrarDeNuevo(){
+  if(!EVA.activa) return;
+  EVA.activa = false;
+  soga.visible = false;
+  jug.pos.set(0, N.y0, N.z0 + 1.6);
+  jug.vel.set(0, 0, 0);
+}
+function cercaDeLaEsclusa(){
+  return Math.hypot(jug.pos.x - ANCLA.x, jug.pos.z - ANCLA.z) < 3.4 &&
+         Math.abs(jug.pos.y - ANCLA.y) < 3.0;
+}
+
+const _dirEva = new THREE.Vector3(), _arribaEva = new THREE.Vector3(0,1,0), _tmpEva = new THREE.Vector3();
+function pasoEva(dt, ix, iy, mag, salto){
+  EVA.t += dt;
+  /* cero gravedad: la palanca empuja en el plano de la cámara y el botón da un envión para arriba */
+  _dirEva.set(Math.sin(camYaw), 0, Math.cos(camYaw));
+  const derX = -_dirEva.z, derZ = _dirEva.x;
+  const emp = 7.0;
+  if(mag > 0.05){
+    jug.vel.x += (derX*ix + _dirEva.x*(-iy))*emp*dt;
+    jug.vel.z += (derZ*ix + _dirEva.z*(-iy))*emp*dt;
+  }
+  if(salto) jug.vel.y += 6.2*dt*60*0.016;
+  jug.vel.multiplyScalar(1 - Math.min(dt*0.85, 0.5));      /* el traje frena de a poco */
+  jug.pos.addScaledVector(jug.vel, dt);
+
+  /* la soga: más allá del largo, tira para adentro */
+  _tmpEva.copy(jug.pos).sub(ANCLA);
+  const d = _tmpEva.length();
+  if(d > EVA.largo){
+    _tmpEva.multiplyScalar(1/d);
+    jug.pos.copy(ANCLA).addScaledVector(_tmpEva, EVA.largo);
+    const hacia = jug.vel.dot(_tmpEva);
+    if(hacia > 0) jug.vel.addScaledVector(_tmpEva, -hacia*1.6);   /* rebota tenso */
+  }
+  resolverMuros();
+
+  /* el cuerpo mira hacia donde va, y flota */
+  const v = Math.hypot(jug.vel.x, jug.vel.z);
+  if(v > 0.3){
+    const obj = Math.atan2(jug.vel.x, jug.vel.z);
+    let dd = obj - jug.yaw;
+    while(dd > Math.PI) dd -= Math.PI*2;
+    while(dd < -Math.PI) dd += Math.PI*2;
+    jug.yaw += dd*(1 - Math.exp(-4*dt));
+  }
+  jug.rapidez = v;
+  jug.estado = 'caer';
+  alien.position.copy(jug.pos);
+  alien.rotation.y = jug.yaw;
+  alien.rotation.x = Math.sin(EVA.t*0.9)*0.10 - 0.18;
+  alien.rotation.z = Math.sin(EVA.t*0.7 + 1.0)*0.08;
+
+  /* la soga cuelga con una panza que depende de lo estirada que esté */
+  const p = soga.geometry.attributes.position, n = p.count, flojo = Math.max(0, 1 - d/EVA.largo);
+  for(let i = 0; i < n; i++){
+    const u = i/(n-1);
+    const px = ANCLA.x + (jug.pos.x - ANCLA.x)*u;
+    const py = ANCLA.y + (jug.pos.y + 0.9 - ANCLA.y)*u - Math.sin(u*Math.PI)*flojo*2.4;
+    const pz = ANCLA.z + (jug.pos.z - ANCLA.z)*u;
+    const w = Math.sin(u*9 + EVA.t*2)*0.06*flojo;
+    p.setXYZ(i, px + w, py, pz + w);
+  }
+  p.needsUpdate = true;
+}
 
 /* las texturas generadas pisan al color plano cuando decodifican, no antes */
 function meterTextura(b64, mats){
@@ -1250,6 +1625,7 @@ const dBase = document.getElementById('base'), dPuno = document.getElementById('
 const dSalto = document.getElementById('salto'), dPista = document.getElementById('pista');
 const dVolar = document.getElementById('volar');
 const dUsar = document.getElementById('usar'), dVisor = document.getElementById('visor');
+const dEspecies = document.getElementById('especies');
 let idPalanca = null, idMira = null, oX = 0, oY = 0, mX = 0, mY = 0;
 const RADIO = 58;
 
@@ -1295,7 +1671,11 @@ function largar(){ dSalto.classList.remove('on'); }
 function tocarVolar(e){
   e.preventDefault();
   dVolar.classList.add('on');
-  if(VUELO.estado === 'tierra') despegar(); else if(VUELO.estado === 'espacio') aterrizar();
+  const q = dVolar.textContent;
+  if(q === 'DESPEGAR') despegar();
+  else if(q === 'ATERRIZAR') aterrizar();
+  else if(q === 'SALIR AL ESPACIO') salirAlEspacio();
+  else if(q === 'ENTRAR') entrarDeNuevo();
 }
 function soltarVolar(){ dVolar.classList.remove('on'); }
 function tocarUsar(e){
@@ -1356,6 +1736,18 @@ function paso(dt){
   if(!ent.salto) ent.saltoLatch = false;
   ent.salto = false;
 
+  if(EVA.activa){
+    pasoEva(dt, ix, iy, mag, ent.salto || teclas.Space);
+    ent.salto = false;
+    jug.aire = 0;
+    animar(dt);
+    pasoVuelo(dt);
+    camara(dt);
+    hud();
+    cielo.position.copy(cam.position);
+    return;
+  }
+
   jug.vel.y += CFG.grav*dt;
   jug.pos.x += jug.vel.x*dt;
   jug.pos.z += jug.vel.z*dt;
@@ -1403,7 +1795,16 @@ function paso(dt){
   pasoVuelo(dt);
   camara(dt);
 
-  FOTO.cerca = !FOTO.tiene && jug.pos.y < N.y1 - 0.5 &&
+  hud();
+
+  clave.position.set(jug.pos.x + 18, 15, jug.pos.z - 22);
+  clave.target.position.copy(jug.pos);
+  clave.target.updateMatrixWorld();
+  cielo.position.copy(cam.position);
+}
+
+function hud(){
+  FOTO.cerca = !FOTO.tiene && !EVA.activa && jug.pos.y < N.y1 - 0.5 &&
     Math.hypot(jug.pos.x - MESA.x, jug.pos.z - MESA.z) < 2.3;
   const b = camaraObj.userData.bombita;
   if(b) b.emissiveIntensity = FOTO.tiene ? 0.5
@@ -1415,15 +1816,14 @@ function paso(dt){
   if(FOTO.tiene !== dVisor.classList.contains('ver')) dVisor.classList.toggle('ver', FOTO.tiene);
 
   const aBordo = !!enNave(jug.pos.x, jug.pos.y, jug.pos.z);
-  const puede = aBordo && (VUELO.estado === 'tierra' || VUELO.estado === 'espacio');
+  const enEsclusa = VUELO.estado === 'espacio' && cercaDeLaEsclusa();
+  let txt = null;
+  if(EVA.activa) txt = enEsclusa ? 'ENTRAR' : null;
+  else if(aBordo && VUELO.estado === 'espacio') txt = enEsclusa ? 'SALIR AL ESPACIO' : 'ATERRIZAR';
+  else if(aBordo && VUELO.estado === 'tierra') txt = 'DESPEGAR';
+  const puede = !!txt;
   if(puede !== dVolar.classList.contains('ver')) dVolar.classList.toggle('ver', puede);
-  const txt = VUELO.estado === 'espacio' ? 'ATERRIZAR' : 'DESPEGAR';
-  if(dVolar.textContent !== txt) dVolar.textContent = txt;
-
-  clave.position.set(jug.pos.x + 18, 15, jug.pos.z - 22);
-  clave.target.position.copy(jug.pos);
-  clave.target.updateMatrixWorld();
-  cielo.position.copy(cam.position);
+  if(txt && dVolar.textContent !== txt) dVolar.textContent = txt;
 }
 
 /* animación de código; con GLB riggeado manda el mixer */
@@ -1519,6 +1919,29 @@ function camara(dt){
   camPos.x = lerp(camPos.x, bx, t);
   camPos.y = lerp(camPos.y, Math.max(by, 0.8), t);
   camPos.z = lerp(camPos.z, bz, t);
+  if(EVA.activa){                      /* afuera: se acorta hasta que deje de estar en el casco */
+    _tmpEva.copy(camPos).sub(jug.pos);
+    const largo = _tmpEva.length();
+    if(largo > 0.01){
+      _tmpEva.multiplyScalar(1/largo);
+      let libre = largo;
+      for(let i = 1; i <= 10; i++){
+        const t2 = largo*i/10;
+        const px = jug.pos.x + _tmpEva.x*t2, py = jug.pos.y + _tmpEva.y*t2, pz = jug.pos.z + _tmpEva.z*t2;
+        /* el casco entero, no sólo los muros: por arriba de la nave no hay ninguno */
+        let choca = px > CASCO.x0 && px < CASCO.x1 && py > CASCO.y0 && py < CASCO.y1 &&
+                    pz > CASCO.z0 && pz < CASCO.z1;
+        for(let k = 0; k < MUROS.length && !choca; k++){
+          const m = MUROS[k];
+          if(m.soloVuelo) continue;
+          if(px > m.x0 - 0.3 && px < m.x1 + 0.3 && py > m.y0 - 0.3 && py < m.y1 + 0.3 &&
+             pz > m.z0 - 0.3 && pz < m.z1 + 0.3) choca = true;
+        }
+        if(choca){ libre = Math.max(1.2, largo*(i-1)/10); break; }
+      }
+      camPos.copy(jug.pos).addScaledVector(_tmpEva, libre);
+    }
+  }
   if(cubierta){                        /* queda encerrada en la cubierta, no cruza el casco */
     camPos.x = clamp(camPos.x, cubierta.x0 + 0.40, cubierta.x1 - 0.40);
     camPos.z = clamp(camPos.z, cubierta.z0 + 0.40, cubierta.z1 - 0.40);
@@ -1591,7 +2014,17 @@ window.__A = {
   saltar(){ ent.salto = true; },
   mirar(dy){ camYaw += dy; },
   picar(v){ camPitch = v; },
+  apuntar(y, p){ camYaw = y; if(p !== undefined) camPitch = p; return [camYaw, camPitch]; },
   clip(){ return mezcla.actual ? mezcla.actual.getClip().name : null; },
+  bichos(){ return {vivos:BICHOS.vivos.length, nivel:BICHOS.nivel, cazados:BICHOS.cazados,
+    ultimo:BICHOS.ultimo, eva:EVA.activa,
+    lista:BICHOS.vivos.map(b => ({n:b.userData.nombre, r:+b.userData.rareza.toFixed(2),
+      d:+b.position.distanceTo(jug.pos).toFixed(1), cap:b.userData.capturado > 0}))}; },
+  eva(){ return {activa:EVA.activa, dist:+jug.pos.distanceTo(ANCLA).toFixed(2),
+    cerca:cercaDeLaEsclusa(), soga:soga.visible, boton:dVolar.textContent,
+    pos:jug.pos.toArray().map(v => +v.toFixed(2))}; },
+  salir:salirAlEspacio, entrar:entrarDeNuevo,
+  ponerNivel(n){ BICHOS.nivel = n; limpiarBichos(); return BICHOS.nivel; },
   fotos(){ return {tiene:FOTO.tiene, cerca:FOTO.cerca, carrete:FOTO.carrete, abierta:FOTO.abierta,
     boton:dUsar.classList.contains('ver'), texto:dUsar.textContent,
     camaraEn: camaraObj.parent ? camaraObj.parent.name || camaraObj.parent.type : null}; },
