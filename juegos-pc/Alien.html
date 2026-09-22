@@ -46,15 +46,15 @@
     box-shadow:0 8px 24px rgba(0,0,0,.4)}
   #panelb.ver{opacity:1;visibility:visible}
   #panelb.on{transform:scale(.93)}
-  #galaxias,#compu{position:fixed;inset:0;z-index:27;display:none;align-items:center;justify-content:center;
+  #galaxias,#compu,#album{position:fixed;inset:0;z-index:27;display:none;align-items:center;justify-content:center;
     background:rgba(3,5,12,.80);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);padding:18px}
-  #galaxias.ver,#compu.ver{display:flex}
-  #galaxias .caja,#compu .caja{width:100%;max-width:360px;max-height:82vh;overflow:auto;
+  #galaxias.ver,#compu.ver,#album.ver{display:flex}
+  #galaxias .caja,#compu .caja,#album .caja{width:100%;max-width:360px;max-height:82vh;overflow:auto;
     border:1px solid rgba(150,190,255,.22);border-radius:16px;padding:14px;
     background:linear-gradient(180deg,rgba(14,20,34,.96),rgba(8,10,18,.96));
     box-shadow:0 24px 60px rgba(0,0,0,.6)}
-  #galaxias h3,#compu h3{font-size:11px;letter-spacing:.24em;color:#9fd8ff;margin-bottom:2px;font-weight:800}
-  #galaxias .sub,#compu .sub{font-size:10px;color:#7d8ea0;margin-bottom:12px;letter-spacing:.08em}
+  #galaxias h3,#compu h3,#album h3{font-size:11px;letter-spacing:.24em;color:#9fd8ff;margin-bottom:2px;font-weight:800}
+  #galaxias .sub,#compu .sub,#album .sub{font-size:10px;color:#7d8ea0;margin-bottom:12px;letter-spacing:.08em}
   #galaxias .fila,#compu .fila{display:block;width:100%;text-align:left;padding:11px 12px;margin-bottom:8px;
     border-radius:12px;border:1px solid rgba(140,180,220,.20);background:rgba(255,255,255,.03);
     color:#dfe9f4;pointer-events:auto;cursor:pointer}
@@ -63,7 +63,7 @@
   #galaxias .fila i,#compu .fila i{display:block;font-style:normal;font-size:11px;color:#8ea2b6;margin-top:3px}
   #galaxias .fila u,#compu .fila u{display:block;text-decoration:none;font-size:10px;color:#ffc98a;margin-top:6px;
     letter-spacing:.12em}
-  #galaxias .cerrar,#compu .cerrar{display:block;width:100%;text-align:center;padding:10px;margin-top:4px;
+  #galaxias .cerrar,#compu .cerrar,#album .cerrar{display:block;width:100%;text-align:center;padding:10px;margin-top:4px;
     border-radius:10px;border:1px solid rgba(140,180,220,.18);color:#9fb0c0;font-size:11px;
     letter-spacing:.18em;pointer-events:auto;cursor:pointer;background:transparent}
   #galnom{position:absolute;top:calc(env(safe-area-inset-top,0px) + 52px);right:14px;
@@ -153,6 +153,19 @@
     border:1.5px solid rgba(120,255,180,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
   #compub.ver{opacity:1;visibility:visible}
   #compub.on{transform:scale(.93)}
+  #album .grupo{font-size:10px;letter-spacing:.2em;color:#7fd8ff;margin:13px 2px 7px;font-weight:800}
+  #album .ficha{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;margin-bottom:7px;
+    border-radius:12px;border:1px solid rgba(140,180,220,.20);background:rgba(255,255,255,.03)}
+  #album .ficha.no{opacity:.5;border-style:dashed}
+  #album .ficha .tapa{width:54px;height:66px;flex:0 0 54px;border-radius:6px;overflow:hidden;
+    background:#0a0d13;border:1px solid rgba(160,190,220,.22);display:grid;place-items:center;
+    color:#46566a;font-size:22px;font-weight:800}
+  #album .ficha .tapa img{width:100%;height:100%;object-fit:cover;display:block}
+  #album .ficha .txt{flex:1;min-width:0}
+  #album .ficha b{display:block;font-size:12px;letter-spacing:.13em;font-weight:800;color:#e4eef8}
+  #album .ficha i{display:block;font-style:normal;font-size:10.5px;line-height:1.5;color:#93a7ba;margin-top:4px}
+  #album .ficha u{display:block;text-decoration:none;font-size:9.5px;color:#ffc98a;margin-top:5px;letter-spacing:.1em}
+  #especies{cursor:pointer;pointer-events:auto}
   #carga{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:#0b0d14;
     color:#7fd8ff;font-size:12px;letter-spacing:.2em;transition:opacity .5s}
 </style>
@@ -178,6 +191,7 @@
 </div>
 <div id="galaxias"><div class="caja"><h3>CARTA DE NAVEGACIÓN</h3><div class="sub">elegí a dónde saltar</div><div id="listagal"></div><div class="cerrar" id="cerrargal">CERRAR</div></div></div>
 <div id="compu"><div class="caja"><h3>TERMINAL DE CARGA</h3><div class="sub" id="compusub">vender lo que trajiste</div><div id="listacompu"></div><div class="cerrar" id="cerrarcompu">CERRAR</div></div></div>
+<div id="album"><div class="caja"><h3>ÁLBUM DE ESPECIES</h3><div class="sub" id="albumsub">0 de 21</div><div id="listaalbum"></div><div class="cerrar" id="cerraralbum">CERRAR</div></div></div>
 <div id="peligro"></div>
 <div id="fogonazo"></div>
 <div id="copia"><canvas id="papel"></canvas><small>TOCÁ PARA CERRAR</small></div>
@@ -1007,8 +1021,7 @@ function sacarFoto(){
                      rareza:+presa.userData.rareza.toFixed(2)};
     const gid = GALAXIAS[GAL.actual].id;
     (GAL.vistos[gid] || (GAL.vistos[gid] = {}))[presa.userData.arq] = true;
-    dEspecies.textContent = 'ESPECIES ' + BICHOS.cazados;
-    dEspecies.classList.add('ver');
+
   }
   const rel = 0.80, lw = lienzo.width, lh = lienzo.height;
   let sw = lw, sh = sw/rel;
@@ -1130,6 +1143,11 @@ function sacarFoto(){
   }
   p.globalCompositeOperation = 'source-over';
 
+  if(presa){                      /* la tapa del álbum sale de la MISMA copia, ya envejecida */
+    const t2 = document.createElement('canvas'); t2.width = 108; t2.height = 135;
+    t2.getContext('2d').drawImage(tmp, 0, 0, 108, 135);
+    anotarEnAlbum(presa.userData, anota.precio, t2.toDataURL('image/jpeg', 0.62));
+  }
   FOTO.carrete++;
   FOTO.rollo.push(anota);
   terminal.dicho = ''; pintarTerminal();
@@ -2684,6 +2702,8 @@ const dListaGal = document.getElementById('listagal'), dGalNom = document.getEle
 const dCompu = document.getElementById('compu'), dCompuB = document.getElementById('compub');
 const dListaCompu = document.getElementById('listacompu'), dCompuSub = document.getElementById('compusub');
 const dPlata = document.getElementById('plata'), dRollo = document.getElementById('rollo');
+const dAlbum = document.getElementById('album'), dListaAlbum = document.getElementById('listaalbum');
+const dAlbumSub = document.getElementById('albumsub');
 const dCasco = document.getElementById('casco');
 
 function pintarPanel(){
@@ -2711,7 +2731,7 @@ function pintarPalanca(px, py, vis){
 }
 addEventListener('pointerdown', e => {
   if(FOTO.abierta) return;                    /* con la copia abierta no se arma la palanca */
-  if(PANEL.abierto || COMPU.abierto) return;
+  if(PANEL.abierto || COMPU.abierto || ALBUM_ABIERTO.v) return;
   if(e.target === dSalto || e.target === dVolar || e.target === dUsar || e.target === dPanelB ||
      e.target === dCompuB) return;
   if(e.clientX < innerWidth*0.52 && idPalanca === null){
@@ -3067,6 +3087,77 @@ function marco(ahora){
 const linterna = new THREE.SpotLight(col(0xdfeaf2), 0.0, 26, 0.72, 0.62, 1.7);
 cam.add(linterna); cam.add(linterna.target); linterna.target.position.set(0, 0, -1);
 
+/* ============================================================== álbum de especies
+   Lo que el jugador fotografió queda anotado con su ficha. Lo que no vio es un "?". */
+const FICHAS = {
+  acechante:['EL ACECHANTE', 'Piernas larguísimas y brazos que le llegan a las rodillas, con una sola ranura de luz por cara. No corre: se queda quieto mirándote y avanza de golpe.'],
+  insecto:  ['EL INSECTO', 'Tórax segmentado, seis patas, mandíbulas y aguijón. Corre de a tramos cortos y se para en seco, como si escuchara.'],
+  medusa:   ['LA MEDUSA', 'Una campana que se contrae para empujarse sola, con los ojos abajo y los hilos colgando cinco metros. Nunca tiene apuro.'],
+  vigia:    ['EL VIGÍA', 'Un ojo del tamaño de una cabeza rodeado de ojos chicos. Te orbita sin dejar de mirarte y cada tanto parpadea.'],
+  fauces:   ['LAS FAUCES', 'Dos mandíbulas dentadas y un cuerpito atrás que apenas alcanza a sostenerlas. Se echa atrás, abre grande y muerde.'],
+  colonia:  ['LA COLONIA', 'Un coral que se ramifica sin centro, con un ojo en la punta de cada rama. Gira en espiral y late despacio.'],
+  hueco:    ['EL HUECO', 'El esqueleto abierto de algo que no está adentro. Cae dando vueltas y cada tanto se sacude solo.'],
+  torre:    ['LA TORRE', 'Segmentos apilados, cada uno con su propia cara y su propio ritmo. El apilado se retuerce mientras gira.'],
+  forja:    ['LA FORJA', 'Planchas soldadas con las costuras todavía al rojo. No se sabe si está viva o si alguien la armó y la dejó ahí.'],
+  enjambre: ['EL ENJAMBRE', 'No es uno: son seis cúmulos que respiran juntos y se abren cuando te acercás demasiado.'],
+  peregrino:['EL PEREGRINO', 'Un aro enorme cruzando el vacío tan despacio que no parece movimiento. Hace mucho que va y no vuelve.'],
+  vela:     ['LA VELA', 'Una membrana finita que ondea y se deja llevar por lo que sea que sople ahí afuera.'],
+  farol:    ['EL FAROL', 'Cuerpo oscuro y un cebo encendido en la punta de una caña. La luz no es para ver: es para que vayas.'],
+  raiz:     ['LA RAÍZ', 'Un árbol dado vuelta que camina con las raíces. Abajo no tiene tierra y camina igual.'],
+  espejo:   ['EL ESPEJO', 'Dos mitades que se copian con retardo. Cada tanto se alinean y por un segundo parece una sola cosa.'],
+  nudo:     ['EL NUDO', 'Aros trabados girando cada uno por su lado. No tiene punta por donde empezar a desatarlo.'],
+  segador:  ['EL SEGADOR', 'Un arco de más de cien metros con el filo encendido y doce ojos en la cabeza. Barre despacio, como algo que ya pasó y no terminó de pasar.'],
+  catedral: ['LA CATEDRAL', 'Seis pisos de columnas y arcos con ventanas que titilan, y un rosetón con un ojo en el medio. Cada piso gira con su propia fase.'],
+  desollado:['EL DESOLLADO', 'Doce vértebras, nueve pares de costillas abiertas y una calavera de tres mandíbulas que se da vuelta a mirarte.'],
+  pozo:     ['EL POZO', 'Una esfera oscura con cuatro anillos dentados girando al revés uno del otro. De cerca tira para adentro.'],
+  marea:    ['LA MAREA', 'Cinco cortinas de tentáculos desfasadas, con ojos a lo largo de la cresta. Llega como una ola y no rompe nunca.']
+};
+const ALBUM = {};          /* arq -> {veces, nombre, rareza, precio, tapa} */
+const ALBUM_TOTAL = Object.keys(FICHAS).length;
+
+function anotarEnAlbum(u, precio, tapa){
+  const a = ALBUM[u.arq] || (ALBUM[u.arq] = {veces:0, nombre:'', rareza:0, precio:0, tapa:null});
+  a.veces++;
+  if(precio >= a.precio || !a.tapa){    /* se guarda la mejor copia, no la última */
+    a.precio = precio; a.nombre = u.nombre; a.rareza = u.rareza; a.tapa = tapa || a.tapa;
+  }
+  dEspecies.textContent = 'ESPECIES ' + Object.keys(ALBUM).length + '/' + ALBUM_TOTAL;
+  dEspecies.classList.add('ver');
+}
+function abrirAlbum(){ if(ALBUM_ABIERTO.v) return; ALBUM_ABIERTO.v = true; pintarAlbum(); dAlbum.classList.add('ver'); }
+function cerrarAlbum(){ ALBUM_ABIERTO.v = false; dAlbum.classList.remove('ver'); }
+const ALBUM_ABIERTO = {v:false};
+function pintarAlbum(){
+  let h = '';
+  for(const g of GALAXIAS){
+    h += '<div class="grupo">' + g.nombre + '</div>';
+    for(const id of g.especies){
+      const f = FICHAS[id] || [id.toUpperCase(), ''];
+      const a = ALBUM[id];
+      if(a){
+        const tapa = a.tapa ? '<img src="' + a.tapa + '" alt="">' : '◆';
+        h += '<div class="ficha"><div class="tapa">' + tapa + '</div><div class="txt">' +
+             '<b>' + f[0] + '</b><i>' + f[1] + '</i>' +
+             '<u>' + a.nombre + ' · rareza ' + a.rareza.toFixed(1) +
+             ' · ' + a.veces + (a.veces === 1 ? ' foto' : ' fotos') +
+             ' · mejor pago ' + a.precio + ' cr</u></div></div>';
+      } else {
+        h += '<div class="ficha no"><div class="tapa">?</div><div class="txt">' +
+             '<b>?</b><i>Sin registro. Nadie le sacó una foto todavía.</i></div></div>';
+      }
+    }
+  }
+  dAlbumSub.textContent = Object.keys(ALBUM).length + ' de ' + ALBUM_TOTAL + ' especies fichadas';
+  dListaAlbum.innerHTML = h;
+}
+dEspecies.addEventListener('pointerdown', e => { e.stopPropagation(); abrirAlbum(); }, {passive:true});
+document.getElementById('cerraralbum').addEventListener('pointerdown', e => {
+  e.stopPropagation(); cerrarAlbum();
+}, {passive:true});
+dAlbum.addEventListener('pointerdown', e => {
+  e.stopPropagation(); if(e.target === dAlbum) cerrarAlbum();
+}, {passive:true});
+
 /* ======================================================== plata: vender y comprar
    Tres fotos por carrete. Se venden en la terminal de la bodega y con eso se compran
    cámaras mejores y mejoras de la nave. */
@@ -3167,6 +3258,9 @@ function cerrarCompu(){ COMPU.abierto = false; dCompu.classList.remove('ver'); }
 function pintarCompu(){
   const total = FOTO.rollo.reduce((a, f) => a + f.precio, 0);
   let h = '';
+  h += '<button class="vender" data-a="1" style="border-color:rgba(150,200,255,.45);' +
+       'background:rgba(90,160,255,.12);color:#cfe3ff">ÁLBUM · ' +
+       Object.keys(ALBUM).length + '/' + ALBUM_TOTAL + ' ESPECIES</button>';
   h += '<div class="tit">CARRETE — ' + FOTO.rollo.length + '/' + camAct().carrete + '</div>';
   if(!FOTO.rollo.length){
     h += '<div class="fila no"><b>SIN FOTOS</b><i>salí al espacio y traé algo</i></div>';
@@ -3234,9 +3328,10 @@ function aplicarMejora(id){
 }
 dListaCompu.addEventListener('pointerdown', e => {
   e.stopPropagation();
-  const fila = e.target.closest('[data-c],[data-m],[data-v]');
+  const fila = e.target.closest('[data-c],[data-m],[data-v],[data-a]');
   if(!fila) return;
-  if(fila.dataset.v) venderTodo();
+  if(fila.dataset.a) abrirAlbum();
+  else if(fila.dataset.v) venderTodo();
   else if(fila.dataset.c !== undefined) ponerCamara(+fila.dataset.c);
   else comprarMejora(fila.dataset.m);
 }, {passive:true});
@@ -3301,6 +3396,10 @@ window.__A = {
     abierto:COMPU.abierto, soga:EVA.largo, empuje:CFG.empuje,
     luz:LAMPARAS.length ? LAMPARAS[0].intensity : 0}; },
   abrirCompu, cerrarCompu, vender:venderTodo, ponerCamara, comprarMejora,
+  album(){ return {fichadas:Object.keys(ALBUM), total:ALBUM_TOTAL, abierto:ALBUM_ABIERTO.v,
+    chip:dEspecies.textContent, tapas:Object.keys(ALBUM).filter(k => !!ALBUM[k].tapa).length,
+    detalle:ALBUM}; },
+  abrirAlbum, cerrarAlbum,
   regalar(n){ PLATA.creditos += n; pintarTerminal(); return PLATA.creditos; },
   tomar:tomarCamara, disparar:sacarFoto, cerrarFoto, papel:dPapel,
   vuelo(){ return {estado:VUELO.estado, t:+VUELO.t.toFixed(2), caida:+VUELO.caida.toFixed(1),

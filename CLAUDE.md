@@ -449,3 +449,23 @@ Lo que costó una vuelta:
   ficha de la cámara, el teleobjetivo no se notaría en nada.
 - La sonda leía `FOTO.lleno`, que sólo se recalcula en el HUD: justo después de vender decía
   «lleno» con el carrete vacío. El estado se calcula en el momento, no se lee del cachito del HUD.
+
+### 2026-09-22 (o) — el álbum
+**Pedido textual:** «Quiero que ahora agregues un álbum en el que se verá a todos los aliens a los
+que el jugador le sacó foto seguido de una breve descripción de ese alien (Los aliens que aún no ha
+visto el jugador aparecerán como "?")».
+
+Ficha de las **21 especies**, agrupadas por galaxia y en el orden de la carta. La que fotografiaste
+muestra el nombre de la especie, su descripción, el nombre del ejemplar, la rareza, cuántas fotos
+le sacaste y cuánto pagó la mejor. La que no viste es un `?` con borde punteado y «Sin registro».
+Arriba, el contador: «2 de 21 especies fichadas».
+
+**La tapa de cada ficha es la foto del propio jugador**, no un dibujo: al disparar se recorta la
+copia ya envejecida a 108×135 y se guarda como JPEG al 62%. Si volvés a fotografiar la misma
+especie, sólo pisa la tapa si esa copia paga más.
+
+Se abre de dos maneras: tocando el chip `ESPECIES n/21` de arriba a la izquierda, o desde el botón
+`ÁLBUM` que quedó primero en la terminal de la bodega.
+
+Probado: con el teleobjetivo en EL VACÍO entraron **El Segador (761 cr) y La Marea (711 cr)** con su
+tapa, los otros tres colosos siguen en `?`, y el botón de la terminal abre el álbum. Sin errores.
