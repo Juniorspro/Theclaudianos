@@ -8,7 +8,7 @@ se prueba **en el celular, en vertical (412×892)**.
 | ruta | qué es |
 |---|---|
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. |
-| `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil: mundo grid, cielo 360, nave de dos cubiertas que se recorre por dentro, seis galaxias y caminata espacial de agarradera en agarradera con una antena que hay que orientar. |
+| `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil: mundo grid, cielo 360, nave de dos cubiertas que se recorre por dentro, seis galaxias y caminata espacial con soga. |
 | `herramientas/glb/` | `juntar_anim.py` (varios GLB del mismo rig → uno con todos los clips) y `hornear.py` (achicar texturas y recompactar para meterlo en un HTML). |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -399,3 +399,20 @@ Lo que costó una vuelta cada uno:
   300 y con la escala achicada para que siga midiendo medio grado.
 - Con la linterna a 2,8 y sin caída, el casco a un metro se **quema en blanco** (117 sobre 255 en
   una escena que tiene que dar miedo). Con 1,25 e intensidad que cae con la distancia, 41.
+
+### 2026-09-22 (m) — afuera queda limpio otra vez
+**Pedido textual:** «Quiero que ahora borres la antena esa que esta ahí arriba de la nave, no es
+necesario también la pantalla que está a su lado borrala, también borra la escalera esa que está
+por fuera la nave».
+
+Se sacó todo lo de afuera que había traído la vuelta anterior: el mástil con el plato, el monitor
+de la señal con su poste, y las 14 agarraderas del casco (la «escalera»). Con eso se fueron también
+las piezas que sólo existían para ellas: el cursor de mano, el toque para agarrarse, los botones
+`SOLTARSE` y `TIRAR DE LA SOGA`, la línea de tarea, los mensajes de control y el puntito azul.
+Son 19.465 caracteres menos.
+
+**Lo que queda:** primera persona, la linterna del casco, la luz que se escapa por la escotilla y
+el visor con viñeta. Afuera se vuelve a volar con la palanca y el botón de envión, como antes.
+La soga vuelve a 16 m (se había estirado a 26 sólo para que la ruta de agarraderas llegara).
+Probado: entrar, despegar, salir, empujar 16 m hasta que la soga tensa, y volver a entrar — sin
+errores de consola, 33 draw calls.
