@@ -216,3 +216,29 @@ Lo que costó una vuelta cada uno:
 - `PointsMaterial` sin textura dibuja **cuadrados**: el polvo de estrellas necesita un punto
   redondo hecho con un degradado radial en un canvas.
 - La nebulosa que se veía bien por el ventanal chico **se come el cuadro** cuando estás afuera.
+
+### 2026-09-22 (g) — los bichos dejan de ser bultos
+**Pedido textual:** «Haz que los aliens no sean tan deformes, dales formas y características
+únicas a cada uno, hazlos de distintos tamaños, como si buscasen asustar al jugador con su
+apariencia».
+
+El generador tiraba primitivas al azar y por eso salían amorfos. Ahora hay **ocho arquetipos
+dibujados a propósito**, cada uno con su silueta, su tamaño y desde qué rareza aparece:
+`acechante` (biped larguísimo de brazos hasta las rodillas, una ranura de luz por cara, 3-4,4 m),
+`insecto` (tórax segmentado, seis patas, mandíbulas y aguijón, 1,1-1,9 m), `medusa` (campana con
+ojos abajo y hilos de 4-6,5 m), `vigía` (un ojo enorme rodeado de ojos chicos), `fauces` (dos
+mandíbulas con dientes y un cuerpito atrás, 3,2-5,2 m), `colonia` (coral que se ramifica con ojos
+en las puntas), `hueco` (esqueleto abierto sin nada adentro) y `torre` (segmentos apilados, cada
+uno con su cara). La rareza agrega ojos, dientes y largo, pero **no rompe la silueta**, y no se
+repite el arquetipo anterior.
+
+Lo que costó una vuelta cada uno:
+- **`pasoBichos` borra todo lo que pasa de 70 m de la nave.** Una sonda que teleportaba al jugador
+  y al bicho a 230 m para sacar la ficha les borraba el bicho en el cuadro siguiente: las capturas
+  salían vacías y parecía que el generador no dibujaba nada.
+- **Los muros no alcanzan para frenar la cámara**: las alas y los motores quedan fuera del casco.
+  Van tres bultos (fuselaje y un ala por lado) y no una caja sola, porque una caja que cubra las
+  alas también tapa el punto por donde se sale a caminar.
+- **Un bicho de 1,5 m a 30 m es un punto.** La distancia de aparición sale del tamaño del bicho.
+- La piel va apagada y los ojos encendidos: lo que asusta es que te miren desde lo oscuro, no el
+  color. Bajaron de 89 mil a 53 mil triángulos con tres en pantalla.
