@@ -334,6 +334,8 @@ const cvM = document.createElement('canvas');          /* mundo: baja resolució
 const cxM = cvM.getContext('2d', {alpha:false});
 let cx = cxP;                                          /* contexto activo */
 let ANCHO=412, ALTO=700, DPR=1, PX=2, ANCHO_M=206, ALTO_M=346, ZONA_MANDOS=95;
+let PXH=2, ANCHO_H=206, ALTO_H=346, ZONA_H=95;   /* el HUD va a su propia escala: no se achica al alejar la cámara */
+const FILAS_MUNDO = 280;                          /* antes 206 en un teléfono de 412: la cámara ~35 % más lejos */
 const cvH = document.createElement('canvas');          /* HUD: pixel art, encima de todo */
 const cxH = cvH.getContext('2d');
 const PIXELADO = true;      /* false = mundo dibujado directo a resolución de pantalla */
@@ -375,7 +377,8 @@ for(const ev of ['touchend','click']) document.addEventListener(ev, ()=>{
 document.addEventListener('fullscreenchange', ()=> medir());
 mqVertical.addEventListener && mqVertical.addEventListener('change', ()=> medir());
 function medir(){
-  DPR = Math.min(window.devicePixelRatio||1, 1.5);
+  /* DPR entero del aparato (tope 3): con 1,5 el navegador reescalaba el lienzo y los píxeles salían borrosos */
+  DPR = Math.min(window.devicePixelRatio||1, 3);
   /* clientWidth/Height: el tamaño en el juego; getBoundingClientRect daría la caja ya girada */
   ANCHO = Math.max(240, Math.round(cv.clientWidth));
   ALTO  = Math.max(200, Math.round(cv.clientHeight));
@@ -384,13 +387,20 @@ function medir(){
   cxP.setTransform(DPR,0,0,DPR,0,0);
   cxP.imageSmoothingEnabled = false;
   /* escala entera: el píxel del mundo mide PX píxeles de pantalla, sin medios píxeles */
-  PX = PIXELADO ? Math.max(2, Math.round(Math.min(ANCHO, ALTO)/212)) : 1;
+  /* el píxel del mundo mide un número ENTERO de píxeles del aparato (PXd); PX, en px de CSS, puede ser fraccionario.
+     FILAS_MUNDO fija cuánto mundo entra en el lado corto: más filas = cámara más lejos */
+  const corto = Math.min(ANCHO, ALTO);
+  if(PIXELADO){ const PXd = Math.max(2, Math.round(corto*DPR/FILAS_MUNDO)); PX = PXd/DPR;
+    PXH = Math.max(2, Math.round(Math.max(2, Math.round(corto/212))*DPR))/DPR; }
+  else { PX = 1; PXH = 1; }
   ANCHO_M = Math.ceil(ANCHO/PX); ALTO_M = Math.ceil(ALTO/PX);
+  ANCHO_H = Math.ceil(ANCHO/PXH); ALTO_H = Math.ceil(ALTO/PXH);
   cvM.width = ANCHO_M; cvM.height = ALTO_M;
   cxM.imageSmoothingEnabled = false;
   J.cam.esc = PX;                       /* ANCHO/esc sigue siendo el ancho visible del mundo */
   ZONA_MANDOS = Math.round((ANCHO > ALTO ? 118 : 190)/PX);   /* alto de mundo debajo de los mandos */
-  cvH.width = ANCHO_M; cvH.height = ALTO_M; cxH.imageSmoothingEnabled = false;
+  ZONA_H = Math.round((ANCHO > ALTO ? 118 : 190)/PXH);
+  cvH.width = ANCHO_H; cvH.height = ALTO_H; cxH.imageSmoothingEnabled = false;
   cacheFondo.clave = '';                /* el fondo se rehace al tamaño nuevo */
 }
 window.addEventListener('resize', medir);
@@ -3058,7 +3068,7 @@ function oscuridad(){
   if(!T.oscuro) return;
   const p = J.jug, c = J.cam;
   const px = (p.x - c.x)*c.esc, py = (p.y-18 - c.y)*c.esc;
-  const g = cx.createRadialGradient(px, py, 20, px, py, 200);
+  const g = cx.createRadialGradient(px, py, 10*c.esc, px, py, 100*c.esc);   /* radio en mundo, no en pantalla */
   g.addColorStop(0,'rgba(255,240,200,0.20)'); g.addColorStop(0.42,'rgba(10,12,18,0.30)');
   g.addColorStop(1,'rgba(4,5,9,0.88)');
   cx.fillStyle=g; cx.fillRect(0,0,ANCHO,ALTO);
@@ -3196,7 +3206,7 @@ function barraPx(g, x, y, w, h, v, a, b, fondo){
     rectPx(g, x, y+1, f, 1, 'rgba(255,255,255,0.5)'); }
 }
 function hud(){
-  const g = cxH, p = J.jug, W = ANCHO_M;
+  const g = cxH, p = J.jug, W = ANCHO_H;
   g.clearRect(0,0,cvH.width,cvH.height);
   /* --- retrato + vida --- */
   const v = p.vida/p.vidaMax;
@@ -3247,7 +3257,7 @@ function hud(){
   if(z) tx(g, 'OLEADA '+z.ola+'/'+z.oleadas.length+' · QUEDAN '+vivosDeZona(z), W>>1, 50, 1, GRAD.oro, 'cen');
   /* --- jefe o flecha al objetivo --- */
   if(J.jefe && !J.jefe.muerto){
-    const j = J.jefe, yb = ALTO_M - ZONA_MANDOS - 18;
+    const j = J.jefe, yb = ALTO_H - ZONA_H - 18;
     tx(g, j.nom+'  ·  FASE '+j.fase, W>>1, yb-12, 1, GRAD.rojo, 'cen');
     barraPx(g, 20, yb, W-40, 6, j.vida/j.vidaMax, '#e8404a', '#a02030', '#2a1420');
     barraPx(g, 20, yb+10, W-40, 2, j.quiebre/j.quiebreMax, '#ffd24a', '#c9901a', '#1c2033');
@@ -3256,14 +3266,14 @@ function hud(){
     const obj = J.mundo.zonas.find(q=>q.estado!=='limpia');
     const destino = obj ? obj.x1 : J.mundo.salida.x;
     if(Math.abs(destino - p.x) > 120 && (J.t>>4)%2===0){
-      const d = sig(destino-p.x), ax = d>0 ? W-10 : 10, ay = Math.round(ALTO_M*0.42);
+      const d = sig(destino-p.x), ax = d>0 ? W-10 : 10, ay = Math.round(ALTO_H*0.42);
       for(let i=0;i<5;i++) rectPx(g, ax - d*i, ay-4+i, 1, 9-i*2, '#141018');
       for(let i=0;i<4;i++) rectPx(g, ax - d*(i+1), ay-3+i, 1, 7-i*2, '#ffd24a');
     }
   }
   /* --- cartel de presentación del jefe --- */
   if(J.cartel){
-    const c = J.cartel, y0 = Math.round(ALTO_M*0.28);
+    const c = J.cartel, y0 = Math.round(ALTO_H*0.28);
     if(((110-c.t)>2 && c.t>2) || (J.t%2)){
       rectPx(g, 0, y0, W, 58, 'rgba(8,8,14,0.85)'); rectPx(g, 0, y0, W, 2, '#ff5a50'); rectPx(g, 0, y0+56, W, 2, '#ff5a50');
       const kj = TIPO_KIT[c.k];
@@ -3314,7 +3324,7 @@ function dibujar(){
   if(J.jug.inv>20 && !J.jug.muerto){ cx.fillStyle='rgba(255,40,40,0.09)'; cx.fillRect(0,0,ANCHO,ALTO); }
   hud();
   cxP.imageSmoothingEnabled = false;
-  cxP.drawImage(cvH, 0, 0, ANCHO_M*PX, ALTO_M*PX);
+  cxP.drawImage(cvH, 0, 0, ANCHO_H*PXH, ALTO_H*PXH);
 }
 let acum=0, ultimo=0;
 function bucle(ts){
@@ -3638,7 +3648,7 @@ function pasarMenu(){
 }
 const TITULO_PX = 'EL TIPO';
 function dibujarTituloPx(E){
-  const S = ANCHO_M>ALTO_M ? 4 : Math.max(3, Math.min(5, Math.floor(ANCHO_M/46)));
+  const S = ANCHO_M>ALTO_M ? Math.max(4, Math.round(ALTO_M/52)) : Math.max(3, Math.min(5, Math.floor(ANCHO_M/46)));
   const {w} = puntosTexto(TITULO_PX);
   const x0 = Math.floor((ANCHO_M - w*S)/2), y0 = Math.floor(ALTO_M*0.07);
   const celdas = []; let x = 0, i = 0;

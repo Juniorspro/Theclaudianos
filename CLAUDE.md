@@ -283,3 +283,16 @@ intento de pantalla completa (el visor cambia de tamaño sin avisar como uno esp
 - Si `orientation.lock` falla, **se sale de pantalla completa** y no se reintenta (`bloqueoFallo`).
 - Medido con `visor.js` cambiando el tamaño del visor (412×742 → 412×915 → 742×412 → vuelta): pantalla =
   visor, capa = pantalla, lienzo coherente en cada paso; un toque en ▶ da `der=1`. Gestos 9/9, bot 15/15.
+
+### 2026-09-23 (5) — cámara más lejos
+**Pedido textual:** «quiero que alejes un poco más la cámara y el peronaje se vea desde lejos, lo mismo con los mapas».
+
+- El píxel del mundo ahora mide un número **entero de píxeles del aparato** (`PXd`), no de CSS: `PX = PXd/DPR`
+  puede ser fraccionario sin que tiemble nada. `FILAS_MUNDO = 280` fija cuánto mundo entra en el lado corto.
+  En un teléfono de 412 con DPR 2,625: de 446×206 a **585×270** de mundo (≈ 30 % más lejos).
+- `DPR` sube de tope 1,5 a 3. **Trampa:** con 1,5 el navegador reescalaba el lienzo 1,75 veces y los píxeles
+  salían borrosos o desparejos en el celu; en el banco con DPR 1 o 2 no se notaba.
+- En DPR 1 no cambia nada (el mínimo sigue siendo 2 px por píxel de mundo). **Probar con `deviceScaleFactor:2.625`.**
+- El HUD va a su propia escala (`PXH`, `ANCHO_H`, `ALTO_H`, `ZONA_H`) y no se achica. El halo de `oscuridad()`
+  pasó a medirse en mundo. El título de la portada crece con `ALTO_M`.
+- Medido: bot 15/15, gestos 9/9, sin errores; dibujo a DPR 2,625 de 2,08/1,80 a 2,23/2,49 ms (n1/n5).
