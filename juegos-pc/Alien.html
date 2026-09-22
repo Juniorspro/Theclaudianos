@@ -32,6 +32,15 @@
     background:radial-gradient(circle at 38% 32%,rgba(226,252,255,.96),rgba(86,206,255,.80) 46%,rgba(30,120,180,.70));
     box-shadow:0 6px 20px rgba(0,0,0,.42),0 0 22px rgba(90,220,255,.50)}
   /* botón salto */
+  #volar{position:absolute;right:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 158px);
+    padding:11px 18px;border-radius:999px;pointer-events:auto;opacity:0;visibility:hidden;
+    transition:opacity .25s,transform .09s,background .09s;
+    font-size:11px;font-weight:800;letter-spacing:.14em;color:#ffe6c8;white-space:nowrap;
+    background:linear-gradient(180deg,rgba(255,150,60,.30),rgba(30,16,8,.55));
+    border:1.5px solid rgba(255,170,90,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    box-shadow:0 8px 24px rgba(0,0,0,.4),0 0 22px rgba(255,140,50,.20)}
+  #volar.ver{opacity:1;visibility:visible}
+  #volar.on{transform:scale(.93);background:linear-gradient(180deg,rgba(255,190,110,.5),rgba(50,26,10,.6))}
   #salto{position:absolute;right:26px;bottom:calc(env(safe-area-inset-bottom,0px) + 44px);
     width:96px;height:96px;border-radius:50%;pointer-events:auto;display:grid;place-items:center;
     font-size:11px;font-weight:800;letter-spacing:.14em;color:#d8f6ff;
@@ -49,6 +58,7 @@
   <div class="chip">ALIEN GRID</div>
   <div id="pista">izquierda: mover<br>derecha: mirar<br>botón: saltar</div>
   <div id="base"></div><div id="puno"></div>
+  <div id="volar">DESPEGAR</div>
   <div id="salto">SALTO</div>
 </div>
 <div id="carga">CARGANDO</div>
@@ -98,7 +108,7 @@ esc.add(cam);
 /* ------------------------------------------------------------------ cielo */
 const uCielo = {
   uMapa:{value:null}, uTieneMapa:{value:0}, uSol:{value:new THREE.Vector3(0.62,0.20,-0.76).normalize()},
-  uNiebla:{value:col(HORIZONTE)}
+  uNiebla:{value:col(HORIZONTE)}, uEspacio:{value:0}
 };
 const cielo = new THREE.Mesh(
   new THREE.SphereGeometry(460, 48, 32),
@@ -110,9 +120,19 @@ const cielo = new THREE.Mesh(
     fragmentShader:`
       varying vec3 vDir;
       uniform sampler2D uMapa; uniform float uTieneMapa; uniform vec3 uSol; uniform vec3 uNiebla;
+      uniform float uEspacio;
       const float PI = 3.14159265;
       float hash(vec3 p){ p = fract(p*0.3183099+vec3(0.71,0.113,0.419)); p *= 17.0;
         return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+      /* hash sobre la celda sola da cubos: hay que interpolar las ocho esquinas */
+      float ruido(vec3 p){
+        vec3 i = floor(p), f = fract(p);
+        f = f*f*(3.0 - 2.0*f);
+        return mix(mix(mix(hash(i),               hash(i+vec3(1.0,0.0,0.0)), f.x),
+                       mix(hash(i+vec3(0.0,1.0,0.0)), hash(i+vec3(1.0,1.0,0.0)), f.x), f.y),
+                   mix(mix(hash(i+vec3(0.0,0.0,1.0)), hash(i+vec3(1.0,0.0,1.0)), f.x),
+                       mix(hash(i+vec3(0.0,1.0,1.0)), hash(i+vec3(1.0,1.0,1.0)), f.x), f.y), f.z);
+      }
       void main(){
         vec3 d = normalize(vDir);
         vec3 c;
@@ -146,6 +166,22 @@ const cielo = new THREE.Mesh(
           c += vec3(0.22,0.10,0.34)*smoothstep(0.55,1.0,neb)*smoothstep(0.15,0.9,h)*0.22;
           c = mix(c, uNiebla*1.35, exp(-abs(h)*12.0)*0.46);
           c = mix(c, uNiebla, smoothstep(0.0,-0.18,h)*0.95);
+        }
+        if(uEspacio > 0.001){                         /* afuera de la atmósfera */
+          vec3 e = vec3(0.004, 0.006, 0.017);
+          float est = hash(floor(d*900.0));
+          e += vec3(0.85,0.90,1.00)*smoothstep(0.9980, 1.0, est)*2.6;
+          float est2 = hash(floor(d*2100.0));
+          e += vec3(0.70,0.78,1.00)*smoothstep(0.9994, 1.0, est2)*1.6;
+          float neb = ruido(d*2.6)*0.58 + ruido(d*6.1)*0.28 + ruido(d*13.0)*0.14;
+          e += vec3(0.26,0.09,0.38)*smoothstep(0.50, 0.94, neb)*0.85;
+          float neb2 = ruido(d*1.9 + 17.0)*0.7 + ruido(d*4.7 + 3.0)*0.3;
+          e += vec3(0.05,0.15,0.30)*smoothstep(0.52, 0.96, neb2)*0.65;
+          e *= 0.85 + 0.35*ruido(d*1.3 + 41.0);
+          float s = max(dot(d, uSol), 0.0);
+          e += vec3(1.00,0.96,0.88)*pow(s, 1200.0)*7.0;
+          e += vec3(0.55,0.68,1.00)*pow(s, 9.0)*0.045;
+          c = mix(c, e, uEspacio);
         }
         gl_FragColor = vec4(c, 1.0);
         #include <tonemapping_fragment>
@@ -204,7 +240,9 @@ const suelo = new THREE.Mesh(
 );
 suelo.rotation.x = -Math.PI/2;
 suelo.receiveShadow = true;
-esc.add(suelo);
+const mundo = new THREE.Group();   /* todo lo que se queda abajo al despegar */
+esc.add(mundo);
+mundo.add(suelo);
 
 /* pilares: dos mallas instanciadas = dos llamadas, haya 1 o 40 */
 (function pilares(){
@@ -241,7 +279,7 @@ esc.add(suelo);
   }
   cuerpo.instanceMatrix.needsUpdate = true; luz.instanceMatrix.needsUpdate = true;
   zocalo.instanceMatrix.needsUpdate = true;
-  esc.add(cuerpo); esc.add(luz); esc.add(zocalo);
+  mundo.add(cuerpo); mundo.add(luz); mundo.add(zocalo);
 })();
 
 
@@ -358,7 +396,9 @@ const MAT_NAVE = {
   }
   oscuro.push(cajaP(8.0, 2.0, 6.0, 0, 10.35, 34.0));        /* puente */
   vidrio.push(cajaP(7.2, 1.25, 0.35, 0, 10.45, 30.9));
-  vidrio.push(cajaP(9.4, 1.70, 0.35, 0, 7.60, 39.1));       /* ventanal de proa */
+  oscuro.push(cajaP(10.2, 0.45, 0.6, 0, 6.62, 39.0));       /* marco del ventanal de proa */
+  oscuro.push(cajaP(10.2, 0.45, 0.6, 0, 8.38, 39.0));
+  for(const l of [-1,1]) oscuro.push(cajaP(0.5, 2.2, 0.6, l*4.3, 7.50, 39.0));
   for(const l of [-1,1]) vidrio.push(cajaP(0.35, 1.5, 6.0, l*6.55, 7.60, 32.0));
   /* puerta: va POR DELANTE de la cara de popa, si no el casco la tapa */
   oscuro.push(cajaP(N.puerta*2+0.7, N.dintel+0.35, 0.55, 0, N.y0 + N.dintel/2, 11.72));
@@ -384,11 +424,22 @@ const MAT_NAVE = {
   /* ---------------- interior ---------------- */
   /* Paneles, no una caja cerrada: el techo de la bodega ES el piso de arriba, y ese piso ya
      viene partido alrededor del hueco de la escalera. */
-  function paredes(x, z0, z1, y, alto, puerta){
+  function paredes(x, z0, z1, y, alto, puerta, ventana){
     const t = 0.16, yc = y + alto/2;
     dentro.push(cajaP(t, alto, z1-z0, -x + t/2, yc, (z0+z1)/2));
     dentro.push(cajaP(t, alto, z1-z0,  x - t/2, yc, (z0+z1)/2));
-    dentro.push(cajaP(x*2, alto, t, 0, yc, z1 - t/2));
+    if(ventana){                       /* hueco de proa: antepecho, dintel y dos jambas */
+      const vx = 3.9, va = y + 1.10, vb = y + 2.70;
+      dentro.push(cajaP(x*2, va - y, t, 0, (y + va)/2, z1 - t/2));
+      dentro.push(cajaP(x*2, y + alto - vb, t, 0, (vb + y + alto)/2, z1 - t/2));
+      dentro.push(cajaP(x - vx, vb - va, t, -(x + vx)/2, (va + vb)/2, z1 - t/2));
+      dentro.push(cajaP(x - vx, vb - va, t,  (x + vx)/2, (va + vb)/2, z1 - t/2));
+      oscuro.push(cajaP(vx*2 + 0.3, 0.16, 0.34, 0, va, z1 - 0.22));
+      oscuro.push(cajaP(vx*2 + 0.3, 0.16, 0.34, 0, vb, z1 - 0.22));
+      plafon.push(cajaP(vx*2 - 0.4, 0.06, 0.22, 0, va + 0.12, z1 - 0.38));
+    } else {
+      dentro.push(cajaP(x*2, alto, t, 0, yc, z1 - t/2));
+    }
     if(puerta){
       const ancho = x - N.puerta, sobre = alto - N.dintel;
       dentro.push(cajaP(ancho, alto, t, -(x + N.puerta)/2, yc, z0 + t/2));
@@ -408,7 +459,7 @@ const MAT_NAVE = {
   /* racks contra las paredes: 1,9 de alto por 1,1 de ancho, como el Destiny */
   function racks(x, z0, z1, y){
     for(const l of [-1,1]){
-      for(let z = z0 + 0.7; z < z1 - 1.2; z += 1.2){
+      for(let z = z0 + 0.7; z < z1 - 2.6; z += 1.2){
         oscuro.push(cajaP(0.34, 1.90, 1.06, l*(x - 0.24), y + 1.05, z + 0.53));
         dentro.push(cajaP(0.12, 1.66, 0.86, l*(x - 0.46), y + 1.05, z + 0.53));
         luces.push(cajaP(0.06, 0.07, 0.34, l*(x - 0.54), y + 1.72, z + 0.53));
@@ -416,7 +467,7 @@ const MAT_NAVE = {
     }
   }
   paredes(N.x,  N.z0, N.z1, N.y0, N.alto,  true);
-  paredes(N.x2, N.z2, N.z3, N.y1, N.alto2, false);
+  paredes(N.x2, N.z2, N.z3, N.y1, N.alto2, false, true);
   racks(N.x,  N.z0, N.z1, N.y0);
   racks(N.x2, N.z2, N.z3, N.y1);
   dentro.push(cajaP(N.x2*2, 0.14, N.z3-N.z2, 0, N.y1 + N.alto2 - 0.07, zc2));   /* techo de arriba */
@@ -523,7 +574,7 @@ const MAT_NAVE = {
   /* una sola lámpara pegada al techo deja el techo negro: van varias, y más abajo */
   const faroles = [];
   for(const f of [0.22, 0.5, 0.78]) faroles.push([0xffe8cc, N.y0 + 2.4, N.z0 + (N.z1-N.z0)*f]);
-  for(const f of [0.3, 0.72])       faroles.push([0xcfe9ff, N.y1 + 2.0, N.z2 + (N.z3-N.z2)*f]);
+  for(const f of [0.3, 0.72])       faroles.push([0xe6eef6, N.y1 + 2.0, N.z2 + (N.z3-N.z2)*f]);
   faroles.forEach(([c, y, z]) => {
     const l = new THREE.PointLight(col(c), 0.95, 22, 1.2);
     l.position.set(0, y, z); esc.add(l);
@@ -563,6 +614,7 @@ const RADIO_CUERPO = 0.42, ALTO_CUERPO = 1.7;
 function resolverMuros(){
   for(let i = 0; i < MUROS.length; i++){
     const m = MUROS[i];
+    if(m.soloVuelo && VUELO.estado === 'tierra') continue;
     if(jug.pos.y + ALTO_CUERPO < m.y0 || jug.pos.y > m.y1) continue;
     if(jug.pos.x <= m.x0 - RADIO_CUERPO || jug.pos.x >= m.x1 + RADIO_CUERPO) continue;
     if(jug.pos.z <= m.z0 - RADIO_CUERPO || jug.pos.z >= m.z1 + RADIO_CUERPO) continue;
@@ -573,6 +625,107 @@ function resolverMuros(){
     else if(min === b){ jug.pos.x = m.x1 + RADIO_CUERPO; if(jug.vel.x < 0) jug.vel.x = 0; }
     else if(min === c){ jug.pos.z = m.z0 - RADIO_CUERPO; if(jug.vel.z > 0) jug.vel.z = 0; }
     else { jug.pos.z = m.z1 + RADIO_CUERPO; if(jug.vel.z < 0) jug.vel.z = 0; }
+  }
+}
+
+
+/* ---------------------------------------------------------------- vuelo */
+/* La nave NO se mueve: se va el mundo. Mover la nave obligaría a mover también sus 19 pisos y
+   14 muros, y cualquier desfasaje entre lo que se ve y lo que se pisa se paga caro. */
+const VUELO = { estado:'tierra', t:0, caida:0, vel:0, espacio:0, sacude:0 };
+const CIELO_TIERRA = col(HORIZONTE).clone(), CIELO_ESPACIO = col(0x05070f);
+
+/* compuerta de dos hojas: se cierran al despegar y tapan la puerta */
+const MAT_COMPUERTA = new THREE.MeshStandardMaterial({color:col(0x262b33), roughness:0.48,
+                                                      metalness:0.64,
+                                                      emissive:col(0x1a0b04), emissiveIntensity:1.0});
+const MAT_FRANJA = new THREE.MeshStandardMaterial({color:col(0x0a0704), emissive:col(0xffa03c),
+                                                   emissiveIntensity:1.1, roughness:0.5});
+const compuerta = [-1, 1].map(l => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(N.puerta, N.dintel, 0.22), MAT_COMPUERTA);
+  m.position.set(l*(N.puerta*1.6), N.y0 + N.dintel/2, N.z0 + 0.14);
+  /* una hoja lisa se lee a pared: nervios, franja de peligro y el filo del encuentro */
+  const nervio = new THREE.Mesh(new THREE.BoxGeometry(N.puerta*0.94, 0.13, 0.10), MAT_NAVE.oscuro);
+  for(const dy of [-1.0, 0, 1.0]){
+    const n = nervio.clone(); n.position.set(0, dy, 0.16); m.add(n);
+  }
+  const vert = new THREE.Mesh(new THREE.BoxGeometry(0.13, N.dintel*0.9, 0.10), MAT_NAVE.oscuro);
+  vert.position.set(-l*N.puerta*0.34, 0, 0.16); m.add(vert);
+  const franja = new THREE.Mesh(new THREE.BoxGeometry(N.puerta*0.8, 0.11, 0.06), MAT_FRANJA);
+  franja.position.set(0, N.dintel/2 - 0.42, 0.18); m.add(franja);
+  const filo = new THREE.Mesh(new THREE.BoxGeometry(0.09, N.dintel*0.96, 0.24), MAT_FRANJA);
+  filo.position.set(l*(N.puerta/2 - 0.05), 0, 0.02); m.add(filo);
+  esc.add(m); return m;
+});
+MUROS.push({x0:-N.puerta, x1:N.puerta, z0:N.z0-0.14, z1:N.z0+0.34,
+            y0:N.y0, y1:N.y0 + N.alto, soloVuelo:true});
+
+/* campo de estrellas que pasa de largo: es lo que hace que se lea a "yendo", no a "flotando" */
+const polvo = (function(){
+  const n = 700, g = new THREE.BufferGeometry(), p = new Float32Array(n*3);
+  for(let i = 0; i < n; i++){
+    p[i*3]   = (Math.random()-0.5)*160;
+    p[i*3+1] = (Math.random()-0.5)*110 + 12;
+    p[i*3+2] = (Math.random()-0.5)*520 + 27;
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  const mat = new THREE.PointsMaterial({color:0xdfeaff, size:0.55, sizeAttenuation:true,
+    transparent:true, opacity:0, depthWrite:false, blending:THREE.AdditiveBlending});
+  mat.size = 0.95;
+  const pts = new THREE.Points(g, mat); pts.frustumCulled = false; pts.visible = false;
+  esc.add(pts); return pts;
+})();
+
+function despegar(){ if(VUELO.estado === 'tierra'){ VUELO.estado = 'subiendo'; VUELO.t = 0; } }
+function aterrizar(){ if(VUELO.estado === 'espacio'){ VUELO.estado = 'bajando'; VUELO.t = 0; } }
+
+function pasoVuelo(dt){
+  const e = VUELO;
+  if(e.estado === 'subiendo'){
+    e.t += dt;
+    e.vel = Math.min(e.vel + 11*dt, 75);
+    e.caida += e.vel*dt;
+    e.espacio = clamp((e.t - 2.2)/4.0, 0, 1);
+    e.sacude = e.t < 0.6 ? e.t/0.6 : Math.max(0, 1 - (e.t - 0.6)/2.6);
+    if(e.t > 7.0){ e.estado = 'espacio'; e.espacio = 1; e.sacude = 0; }
+  } else if(e.estado === 'bajando'){
+    e.t += dt;
+    e.vel = Math.max(e.vel - 6*dt, 22);   /* bajar a 8 m/s desde 270 m son treinta segundos */
+    e.caida = Math.max(e.caida - e.vel*dt, 0);
+    e.espacio = clamp(1 - (e.t - 0.4)/3.4, 0, 1);
+    e.sacude = e.caida < 60 ? Math.max(0, 1 - e.caida/60)*0.7 : 0;
+    if(e.caida <= 0){ e.estado = 'tierra'; e.vel = 0; e.espacio = 0; e.sacude = 0; }
+  }
+
+  const enTierra = e.estado === 'tierra';
+  const cerrada = enTierra ? 0 : clamp(e.t/1.1, 0, 1);
+  const abre = e.estado === 'bajando' ? clamp((e.t - 3.6)/1.1, 0, 1) : 0;
+  const k = clamp(cerrada - abre, 0, 1);
+  compuerta[0].position.x = lerp(-N.puerta*1.6, -N.puerta/2, k);
+  compuerta[1].position.x = lerp( N.puerta*1.6,  N.puerta/2, k);
+
+  mundo.position.y = -e.caida;
+  mundo.visible = e.espacio < 0.92;
+
+  uCielo.uEspacio.value = e.espacio;
+  esc.fog.color.copy(CIELO_TIERRA).lerp(CIELO_ESPACIO, e.espacio);
+  esc.fog.near = lerp(120, 400, e.espacio);
+  esc.fog.far  = lerp(300, 2000, e.espacio);
+  clave.intensity = lerp(1.65, 0.50, e.espacio);
+  contra.intensity = lerp(1.05, 0.75, e.espacio);
+  hemi.intensity = lerp(0.55, 0.16, e.espacio);
+  MAT_NAVE.tobera.emissiveIntensity = 1.5 + 3.2*(e.estado === 'tierra' ? 0 : 1)*clamp(e.t/1.5, 0, 1);
+
+  polvo.visible = e.espacio > 0.02;
+  polvo.material.opacity = e.espacio*0.95;
+  if(polvo.visible){                       /* pasan de proa a popa y se reciclan */
+    const p = polvo.geometry.attributes.position, v = 40 + 70*e.espacio;
+    for(let i = 0; i < p.count; i++){
+      let z = p.getZ(i) - v*dt;
+      if(z < 27 - 260){ z += 520; p.setX(i, (Math.random()-0.5)*160); p.setY(i, (Math.random()-0.5)*110 + 12); }
+      p.setZ(i, z);
+    }
+    p.needsUpdate = true;
   }
 }
 
@@ -851,6 +1004,7 @@ addEventListener('keyup', e => { teclas[e.code] = false; });
 
 const dBase = document.getElementById('base'), dPuno = document.getElementById('puno');
 const dSalto = document.getElementById('salto'), dPista = document.getElementById('pista');
+const dVolar = document.getElementById('volar');
 let idPalanca = null, idMira = null, oX = 0, oY = 0, mX = 0, mY = 0;
 const RADIO = 58;
 
@@ -860,7 +1014,7 @@ function pintarPalanca(px, py, vis){
   dBase.style.opacity = dPuno.style.opacity = vis ? '1' : '0';
 }
 addEventListener('pointerdown', e => {
-  if(e.target === dSalto) return;
+  if(e.target === dSalto || e.target === dVolar) return;
   if(e.clientX < innerWidth*0.52 && idPalanca === null){
     idPalanca = e.pointerId; oX = e.clientX; oY = e.clientY;
     pintarPalanca(oX, oY, true);
@@ -892,6 +1046,17 @@ addEventListener('pointercancel', soltar, {passive:true});
 /* el botón responde a touchstart: en el celular el camino de click se saltea */
 function pulsar(e){ e.preventDefault(); ent.salto = true; dSalto.classList.add('on'); }
 function largar(){ dSalto.classList.remove('on'); }
+function tocarVolar(e){
+  e.preventDefault();
+  dVolar.classList.add('on');
+  if(VUELO.estado === 'tierra') despegar(); else if(VUELO.estado === 'espacio') aterrizar();
+}
+function soltarVolar(){ dVolar.classList.remove('on'); }
+dVolar.addEventListener('touchstart', tocarVolar, {passive:false});
+dVolar.addEventListener('touchend', soltarVolar, {passive:true});
+dVolar.addEventListener('mousedown', tocarVolar);
+dVolar.addEventListener('mouseup', soltarVolar);
+
 dSalto.addEventListener('touchstart', pulsar, {passive:false});
 dSalto.addEventListener('touchend', largar, {passive:true});
 dSalto.addEventListener('mousedown', pulsar);
@@ -978,7 +1143,14 @@ function paso(dt){
   mancha.scale.setScalar(0.66 + 0.34*f);
   mancha.material.opacity = 0.20*f;
 
+  pasoVuelo(dt);
   camara(dt);
+
+  const aBordo = !!enNave(jug.pos.x, jug.pos.y, jug.pos.z);
+  const puede = aBordo && (VUELO.estado === 'tierra' || VUELO.estado === 'espacio');
+  if(puede !== dVolar.classList.contains('ver')) dVolar.classList.toggle('ver', puede);
+  const txt = VUELO.estado === 'espacio' ? 'ATERRIZAR' : 'DESPEGAR';
+  if(dVolar.textContent !== txt) dVolar.textContent = txt;
 
   clave.position.set(jug.pos.x + 18, 15, jug.pos.z - 22);
   clave.target.position.copy(jug.pos);
@@ -1052,7 +1224,9 @@ function animar(dt){
 }
 
 /* cámara en tercera persona, desde arriba y con vida propia */
+let ahoraVuelo = 0;
 function camara(dt){
+  ahoraVuelo += dt;
   if(idMira === null && jug.rapidez > 1.2){               /* se acomoda sola detrás del movimiento */
     const obj = Math.atan2(jug.vel.x, jug.vel.z);          /* mirar HACIA donde va, no al revés */
     let d = obj - camYaw;
@@ -1083,6 +1257,12 @@ function camara(dt){
     camPos.y = clamp(camPos.y, cubierta.y0 + 0.45, cubierta.y1 - 0.30);
   }
   cam.position.copy(camPos);
+  if(VUELO.sacude > 0.001){                 /* el despegue se siente en la cámara */
+    const a = VUELO.sacude*0.085;
+    cam.position.x += Math.sin(ahoraVuelo*37.0)*a;
+    cam.position.y += Math.sin(ahoraVuelo*53.0)*a;
+    cam.position.z += Math.sin(ahoraVuelo*41.0)*a*0.6;
+  }
 
   camMira.set(                                            /* mira un poco adelante */
     lerp(camMira.x, jug.pos.x + jug.vel.x*0.22, t),
@@ -1144,6 +1324,11 @@ window.__A = {
   mirar(dy){ camYaw += dy; },
   picar(v){ camPitch = v; },
   clip(){ return mezcla.actual ? mezcla.actual.getClip().name : null; },
+  vuelo(){ return {estado:VUELO.estado, t:+VUELO.t.toFixed(2), caida:+VUELO.caida.toFixed(1),
+    espacio:+VUELO.espacio.toFixed(3), mundo:mundo.visible, mundoY:+mundo.position.y.toFixed(1),
+    boton:dVolar.classList.contains('ver'), texto:dVolar.textContent,
+    compuerta:+compuerta[0].position.x.toFixed(2), polvo:polvo.visible}; },
+  despegar, aterrizar,
   reloj(){ return mezcla.mixer ? +mezcla.mixer.timeScale.toFixed(3) : null; },
   clips(){ const r = {}; for(const k in mezcla.acc){ const c = mezcla.acc[k].getClip();
     r[k] = {dur:+c.duration.toFixed(2), vel:+(c.userData.vel||0).toFixed(3),

@@ -139,3 +139,26 @@ Lo que costó una vuelta cada uno:
   revienta el interior.
 - El estado de los trabajos del proveedor **miente**: dos texturas figuraban «queued» media hora
   después de estar terminadas. Hay que mirar el historial, no el estado del trabajo.
+
+### 2026-09-22 (d) — botón de despegue
+**Pedido textual:** «Ahora agrega un botón para que la nave comience a volar por el espacio exterior».
+
+Botón `DESPEGAR` que aparece **sólo estando a bordo** y pasa a `ATERRIZAR` una vez en el espacio.
+Siete segundos de subida: se cierran las dos hojas de la compuerta de popa, sacude la cámara, el
+cielo se funde del atardecer al espacio, y aparece el polvo de estrellas que pasa de largo. Desde
+el puente se ve todo por el ventanal de proa. El aterrizaje lo deshace en unos seis segundos.
+
+Lo que costó una vuelta cada uno:
+- **La nave no se mueve: se va el mundo.** Mover la nave obligaría a mover también sus 19 pisos y
+  15 muros, y cualquier desfasaje entre lo que se ve y lo que se pisa se paga caro. El suelo y los
+  pilares van en un grupo que baja y se apaga.
+- **El puente era una caja cerrada**: el «ventanal» era un panel opaco y adentro no se veía nada
+  del espacio. Hay que abrir un hueco de verdad en la pared de proa (antepecho, dintel y dos
+  jambas) y sacar el vidrio exterior que lo tapaba.
+- **Un `hash` sobre la celda sola da cubos**: la nebulosa salía de ladrillos. Va ruido con las ocho
+  esquinas interpoladas.
+- Una hoja de compuerta lisa se lee a pared: necesita nervios, franja de peligro y el filo del
+  encuentro encendido.
+- La compuerta cerrada tiene que **bloquear de verdad**: va un muro con bandera `soloVuelo`, que se
+  saltea mientras la nave está en tierra.
+- Bajar a 8 m/s desde 270 m son treinta segundos de aterrizaje: el piso de velocidad va en 22.
