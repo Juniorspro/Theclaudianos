@@ -593,6 +593,108 @@ function pose(e){
   return p;
 }
 
+/* ---------- protagonista en pixel art, armado por piezas ----------
+   Las piezas son un calco limpiado a mano del sprite de referencia (mirando a la derecha,
+   origen en los pies). Cada una sigue a su articulación del rig: así hereda correr, combo,
+   gancho, patada, guardia y dash sin una sola animación nueva. Brazos y piernas estirados
+   se completan con cápsulas pintadas de a un píxel, sin antialias.                    */
+const HEROE_PX = {"piezas":{"CABEZA":[".............kk........","............koOk.......",".......kk..kooOk....kk.","......koOkkoooOk...kook","...kk.kooOkooooOk.kooOk","..koOkkoooooooooOkooOk.",".kooOkoooooooooooooOk..","kOoooooooooooooooooOk..","kOoooooooooooooooooook.",".kOOkkkkkkkkkkkkkkkkkk.",".kOkllllllllkggggklllk.",".kOkllllllllkglglklllk.",".kOkLLLLLLLLkggggkLLLk.",".kOkkkkkkkkkkkkkkkkkkk.",".kOoykwkwwkyyykwkwwkyk.",".kOoykwkwwkyyykwkwwkyk.",".kOoykwwwwkyyykwwwwkyk.",".kkOykwwwwkyyykwwwwkyyk","...kyykwwkyyyyykwwkyyyk","...kyyykkyyyyyyykkyyyyk","....kYyyyyyyyyyyyyyyyk.",".....kYYyyyyyyyyyyyYk.."],"TORSO":["kkkkkkkkkkkkkkkkk","Ssssssssssssssssk","ssssssssssssssssS","ssssssssssssssssS",".sSsssssssssssSS.","..SSsssssssssSS..","...SSssssssSSS...",".....kkkkkkkk....",".....kvvvvvvk....","....kvVvvVvvvk...","....vVVkvvkVVv...","...kVVkkVVkkVVk.."],"PUNO_T":[".kkkkkk.","kYyyyyYk","kYYyYyYk","kYyyyyYk","kYYYYYYk","kkYYYYkk",".kkkkkk."],"PUNO_D":[".kkkkkk.","kyyyyyyk","kyYyYyyk","kyyyyyyk","kYyyyyYk","kYYYYYYk",".kkkkkk."],"PIERNA_T":[".......kkNkkN","......kNNnnnn",".....kNNnnnnn","....kNNnnnnnn","...kNNnnnnnnk","..kNNnnnnnnk.",".kNNNnnnnnnk.","kNNNnnnnnnk..","kNNNNnnnnk...",".kkkkkkkkk...","..kYyyyyk....","..kkkkkkk...."],"PIERNA_D":["nkknNkkNkk....","nnnnnnnnnnk...","nnnnnnnnnnnk..","kkNnnnnnnnnk..",".kNNnnnnnnnnk.",".kNNnnnnnnnnk.",".kNNNnnnnnnnk.",".kNNNnnnnnnnk.",".kNNNNnnnnnnk.",".kkkkkkkkkkk..","....kYyyyyk...","....kkkkkkk..."],"COLAS":["kkk....","kllkk..",".kllLkk","..kkLLk","..kkLLk",".kllLkk","kllkk..","kkk...."],"PIE":["kkkkkkk","kyyyyyk","kYyyyyk","kkkkkkk"]},"anclas":{"CABEZA":[-9,-46],"TORSO":[-7,-24],"PUNO_T":[-12,-21],"PUNO_D":[7,-21],"PIERNA_T":[-13,-12],"PIERNA_D":[0,-12],"COLAS":[-14,-37],"PIE":[0,0]},"pal":{"k":"#141018","o":"#e6681c","O":"#b24a14","l":"#d7f231","L":"#9fbd22","g":"#3fc7b4","y":"#fbfba5","Y":"#d9d488","w":"#ffffff","s":"#d4d6d3","S":"#9ea09d","v":"#86d6a0","V":"#4f9e6c","n":"#3d3a5c","N":"#2b2842"}};
+const HPX = {};
+const lienzoH = document.createElement('canvas'); lienzoH.width = 104; lienzoH.height = 84;
+const gH = lienzoH.getContext('2d');
+const HOX = 52, HOY = 72;                       /* pies del héroe dentro del lienzo: sobra lugar para estirarse */
+function hornearHeroe(){
+  for(const k in HEROE_PX.piezas){
+    const f = HEROE_PX.piezas[k], c = document.createElement('canvas');
+    c.width = Math.max(...f.map(r=>r.length)); c.height = f.length;
+    const g = c.getContext('2d');
+    for(let y=0;y<f.length;y++) for(let x=0;x<f[y].length;x++){
+      const ch = f[y][x]; if(ch==='.') continue;
+      g.fillStyle = HEROE_PX.pal[ch]; g.fillRect(x,y,1,1);
+    }
+    HPX[k] = c;
+  }
+}
+hornearHeroe();
+/* cápsula de píxeles duros: contorno primero, color después */
+function capsulaPx(g, x1,y1,x2,y2, r, col){
+  const n = Math.max(2, Math.ceil(Math.hypot(x2-x1,y2-y1)*1.5));
+  for(const [rr,cc] of [[r+1, HEROE_PX.pal.k],[r, col]]){
+    g.fillStyle = cc;
+    for(let i=0;i<=n;i++){ const t=i/n;
+      g.fillRect(Math.round(x1+(x2-x1)*t-rr), Math.round(y1+(y2-y1)*t-rr), rr*2, rr*2); }
+  }
+}
+/* pose quieta de referencia del rig: los desplazamientos se miden contra esto */
+const REPOSO = {cabX:0,cabY:-29,homX:0,homY:-23,mIx:-9,mIy:-13.6,mDx:10.5,mDy:-15,pIx:-3,pIy:0,pDx:3,pDy:0};
+const KH = 1.3;                                 /* el sprite es más grande que el rig viejo */
+function dibujarHeroePx(e){
+  const p = pose(e), A = HEROE_PX.anclas, g = gH, R = REPOSO;
+  g.clearRect(0,0,lienzoH.width,lienzoH.height);
+  const d = (a,b)=> Math.round((a-b)*KH);
+  const inX = Math.round(p.incl*12);            /* la inclinación corre la parte alta */
+  const cab = [d(p.cabX,R.cabX)+inX, d(p.cabY,R.cabY)];
+  const tor = [d(p.homX,R.homX)+Math.round(inX*0.6), d(p.homY,R.homY)];
+  const pd  = [d(p.pDx,R.pDx), d(p.pDy,R.pDy)];
+  const pt  = [d(p.pIx,R.pIx), d(p.pIy,R.pIy)];
+  const dB = (a,b)=> Math.round((a-b)*1.35);      /* los brazos se estiran algo más que el cuerpo */
+  const md  = [dB(p.mDx,R.mDx)+inX, dB(p.mDy,R.mDy)];
+  /* la cabeza es enorme: si el puño sube, avanza, así no se come la cara */
+  if(md[1] < 0) md[0] += Math.round(-md[1]*0.4);
+  /* tope de largo: brazo de persona, no de goma */
+  const topar = (v, max)=>{ const L=Math.hypot(v[0],v[1]); if(L>max){ v[0]=Math.round(v[0]*max/L); v[1]=Math.round(v[1]*max/L); } };
+  topar(md, 17);
+  const mt  = [dB(p.mIx,R.mIx)+inX, dB(p.mIy,R.mIy)];
+  topar(mt, 14); topar(pd, 22); topar(pt, 16);
+  const pinta = (k,dx,dy)=> g.drawImage(HPX[k], HOX+A[k][0]+dx, HOY+A[k][1]+dy);
+  /* colas de la vincha: flamean con la carrera */
+  const ola = Math.round(Math.sin(J.t*0.25)*1.2 - e.vx*0.6);
+  pinta('COLAS', cab[0]-1+Math.min(0,ola), cab[1]+Math.round(Math.sin(J.t*0.18)));
+  /* piernas: cerca del reposo va la hakama tal cual; estirada, cápsula + pie */
+  const cadera = [HOX, HOY-12+tor[1]];
+  for(const [k, off, pie, sombra] of [['PIERNA_T', pt, -7, true], ['PIERNA_D', pd, 7, false]]){
+    if(Math.abs(off[0]) + Math.abs(off[1]) <= 6) pinta(k, off[0], off[1]);
+    else {
+      const px = HOX + pie + off[0], py = HOY - 3 + off[1];
+      capsulaPx(g, cadera[0]+(pie>0?3:-3), cadera[1], px, py, 5, HEROE_PX.pal[sombra?'N':'n']);
+      g.drawImage(HPX.PIE, Math.round(px-3), Math.round(py));
+    }
+  }
+  /* brazo de atrás: del hombro al puño */
+  const hT = [HOX-7+tor[0], HOY-21+tor[1]], puT = [HOX-7.5+mt[0], HOY-17+mt[1]];
+  capsulaPx(g, hT[0],hT[1], puT[0],puT[1], 3, HEROE_PX.pal.Y);
+  pinta('PUNO_T', mt[0], mt[1]);
+  pinta('TORSO', tor[0], tor[1]);
+  /* brazo delantero: si el puño cae encima de la cara, va por detrás de la cabeza */
+  const hD = [HOX+7+tor[0], HOY-21+tor[1]], puD = [HOX+11+md[0], HOY-17+md[1]];
+  const tapaCara = puD[0] < HOX+16+cab[0] && puD[1] < HOY-24+cab[1];
+  const brazoD = ()=>{ capsulaPx(g, hD[0],hD[1], puD[0],puD[1], 3, HEROE_PX.pal.y); pinta('PUNO_D', md[0], md[1]); };
+  if(tapaCara) brazoD();
+  pinta('CABEZA', cab[0], cab[1]);
+  if(e.est==='aturdido' || e.est==='muerto'){   /* ojos en cruz */
+    g.fillStyle = HEROE_PX.pal.k;
+    for(const ox of [-3, 6]) for(let i=0;i<4;i++){
+      g.fillRect(HOX+ox+i+cab[0], HOY-32+i+cab[1], 1, 1);
+      g.fillRect(HOX+ox+3-i+cab[0], HOY-32+i+cab[1], 1, 1);
+    }
+  }
+  if(!tapaCara) brazoD();                        /* si no, encima de todo */
+  /* al mundo: espejado según hacia dónde mira; caído o volando, rotado */
+  cx.save();
+  cx.translate(Math.round(e.x), Math.round(e.y));
+  if(e.parpadeo && (J.t>>1)%2===0) cx.globalAlpha = 0.45;
+  if(e.est==='muerto') cx.rotate(-Math.PI/2*e.dir);
+  else if(e.est==='volando') cx.rotate(Math.round(p.incl*2)/2*Math.PI/2);
+  cx.scale(e.dir,1);
+  cx.drawImage(lienzoH, -HOX, -HOY);
+  cx.restore();
+  if(e.arma){
+    cx.save(); cx.translate(Math.round(e.x + e.dir*(11+md[0])), Math.round(e.y-17+md[1]));
+    cx.scale(e.dir,1); dibujarArma(e.arma, 0, 0); cx.restore();
+  }
+  return {manoX: e.x + e.dir*(11+md[0]), manoY: e.y-17+md[1]};
+}
+
 /* ---------- cabeza del protagonista (pelo en púas, vincha, ojazos) ---------- */
 function dibujarCabezaDan(e, col){
   const t = J.t, corre = Math.abs(e.vx), viento = -e.vx*0.6 + Math.sin(t*0.16)*0.7;
@@ -646,6 +748,7 @@ function dibujarCabezaDan(e, col){
 
 /* ---------- dibujar un peleador ---------- */
 function dibujarPeleador(e){
+  if(e.col && e.col.estilo==='dan' && HPX.CABEZA) return dibujarHeroePx(e);
   const p = pose(e), d = e.dir, col = e.col;
   cx.save();
   cx.translate(e.x, e.y);
@@ -2966,6 +3069,8 @@ window.__T = {
       (IMG[k].error?'ERROR':(IMG[k].listo? IMG[k].w+'x'+IMG[k].h+(IMG[k].pat?' +pat':'') : 'cargando')) : 'sin cargar';
     r.__total = Object.keys(ASSETS).length; r.__kb = Math.round(Object.values(ASSETS).join('').length/1024);
     return r; },
+  pose(e){ return pose(e || J.jug); },
+  lienzoHeroe(){ return lienzoH.toDataURL(); },
   cuentaTipos(){ const c={}; for(const e of J.ents) c[e.tipo]=(c[e.tipo]||0)+1; return c; },
   listo:true,
 };

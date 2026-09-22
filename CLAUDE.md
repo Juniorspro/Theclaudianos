@@ -142,3 +142,23 @@ lienzo grande, así que el texto queda nítido. Se apaga con `PIXELADO=false`.
 El protagonista es ahora el del sprite de referencia, armado por partes dentro del rig (pelo naranja
 en púas que se tira con la carrera, vincha con gema y colas que flamean, ojos blancos que se
 entrecierran al pegar, gi gris, faja verde). La paleta salió de contar colores del PNG, no a ojo.
+
+### 2026-09-22 (noche, 2) — el protagonista en pixel art, idéntico al sprite
+**Pedido textual:** «Hacelo procedural idéntico» (sobre el sprite de `juegos-pc/referencias/protagonista.jpg`).
+
+El protagonista ya no es vectorial: es un **calco en píxeles del sprite de referencia**, 28×46, limpiado a
+mano (`herramientas/calco_protagonista.py`) y partido en piezas — cabeza, colas de la vincha, torso, dos
+puños, dos piernas y pie. Cada pieza **sigue a su articulación del rig**, así hereda todas las poses que
+ya había sin escribir ni una animación nueva. Brazos y piernas estirados se completan con cápsulas
+pintadas de a un píxel, sin antialias.
+
+- La imagen de referencia viene **suavizada, sin grilla**: el factor de ampliación no se puede sacar
+  (el error por bloque crece parejo con el factor). Se redujo por moda de paleta y se limpió a mano.
+- La conversión automática confunde la vincha con la piel y deja píxeles sueltos: sirve de calco, no de sprite.
+- Con cabeza enorme, **el puño que sube tapa la cara**: si el puño cae sobre la cara, el brazo va por
+  detrás de la cabeza; y cuando sube, avanza.
+- Los brazos estirados al 165 % quedaban de goma: 135 % con tope de largo (17 px) y grosor 3.
+- **Capturar el cuadro pico**: el directo está estirado sólo en los cuadros 2 y 3. Una captura en el 4
+  muestra el puño volviendo y parece que la animación no anda. `__T.pose()` y `__T.lienzoHeroe()`
+  sirven para mirar la pose y el personaje aislado.
+- Costo: 2,44 ms contra 2,47 ms con el héroe vectorial. Nada.
