@@ -281,6 +281,9 @@ function aplicarGfx(){
   // el mapa de sombra viejo hay que soltarlo a mano: three.js no lo recrea
   // porque cambie mapSize, se queda con el de antes y el cambio no hace nada
   uVHS.uGlow.value=(CFG.gfx==='alta'&&HDR)?.85:0;   // el relleno es lo que siempre se paga
+  // la linterna proyectando sombra es una pasada entera mas: medido de noche, 447 -> 388
+  // llamadas y 1,82 -> 1,42 M de triangulos. Se la queda la calidad alta.
+  linterna.castShadow=(CFG.gfx==='alta');
   if(astro.shadow.map){astro.shadow.map.dispose();astro.shadow.map=null;}
   astro.shadow.mapSize.set(g.mapa,g.mapa);
   if(renderer.shadowMap.enabled!==g.som){
@@ -693,7 +696,7 @@ function rngSemilla(s){let a=s>>>0;return()=>{a=(a*1664525+1013904223)>>>0;retur
 
 function construirArbol(semilla){
   const rnd=rngSemilla(semilla*7919+13);
-  const ramas=[],hojas=[];
+  const ramas=[],hojas=[],hojasLejos=[];
   const ALTO_REF=5.4;
   const tonoHoja=new THREE.Color().setHSL(.24+rnd()*.06,.42+rnd()*.18,.24+rnd()*.1);
   const tonoCorteza=new THREE.Color().setHSL(.08+rnd()*.03,.16,.42+rnd()*.12);
@@ -717,8 +720,18 @@ function construirArbol(semilla){
         .multiply(new THREE.Matrix4().makeScale(s,s*(1.1+rnd()*.5),s));
       const g=HOJA_BASE.clone();g.applyMatrix4(m);g.computeVertexNormals();
       const c=tonoHoja.clone().offsetHSL((rnd()-.5)*.03,(rnd()-.5)*.12,(rnd()-.5)*.14);
-      marcar(g,flexHoja(nivel),rnd()*6.283,c);
+      const fase=rnd()*6.283;
+      marcar(g,flexHoja(nivel),fase,c);
       hojas.push(g);
+      // copa de lejos: una de cada tres, agrandada desde su propia base (el origen de la
+      // tarjeta ES su base), asi la mancha ocupa lo mismo con un tercio de los triangulos
+      if(i%3===0){
+        const gl=HOJA_BASE.clone();
+        gl.applyMatrix4(m.clone().multiply(new THREE.Matrix4().makeScale(1.62,1.5,1.62)));
+        gl.computeVertexNormals();
+        marcar(gl,flexHoja(nivel),fase,c);
+        hojasLejos.push(gl);
+      }
     }
   }
 
@@ -742,7 +755,7 @@ function construirArbol(semilla){
 
   const base=new THREE.Matrix4().makeRotationZ((rnd()-.5)*.12);
   rama(base,2.3+rnd()*.5,.20+rnd()*.05,0);
-  return {ramas:fusionar(ramas),hojas:fusionar(hojas)};
+  return {ramas:fusionar(ramas),hojas:fusionar(hojas),hojasLejos:fusionar(hojasLejos)};
 }
 
 const matRama=new THREE.MeshStandardMaterial({map:TEX_CORTEZA,vertexColors:true,roughness:.94});
@@ -1252,33 +1265,41 @@ while(plantados<3800&&intentos<260000){
    de lo que hay detras — pero el frustum igual lo dibuja. Se apagan las cuadras que solo aportan
    niebla, y se reparte en el tiempo porque el limite cambia con el dia y la lluvia. */
 const CUADRAS=[];
+const CUAD_CERCA=72;   // hasta aca la copa entera; mas alla, la de lejos
 let proxRecorte=0;
 function recortarCuadras(t,x,z){
   if(t<proxRecorte)return;
   proxRecorte=t+.35;
   const lim=2.25/Math.max(scene.fog.density,1e-3)+CELDA_ARB*.9+16;
-  const l2=lim*lim;
+  const l2=lim*lim, cerca2=CUAD_CERCA*CUAD_CERCA;
   for(const c of CUADRAS){
     const d2=(c.x-x)*(c.x-x)+(c.z-z)*(c.z-z);
-    const ver=d2<l2;
-    if(c.r.visible!==ver){c.r.visible=ver;c.h.visible=ver;}
+    const ver=d2<l2, detalle=d2<cerca2;
+    if(c.r.visible!==ver)c.r.visible=ver;
+    const vh=ver&&detalle, vl=ver&&!detalle;
+    if(c.h.visible!==vh)c.h.visible=vh;
+    if(c.hl.visible!==vl)c.hl.visible=vl;
   }
 }
 // una esfera envolvente común: cada malla la lleva a su celda con su matriz
 VARIANTES.forEach(V=>{
   const esfera=new THREE.Sphere(new THREE.Vector3(0,6,0),CELDA_ARB*.78+16);
   V.ramas.boundingSphere=esfera;V.hojas.boundingSphere=esfera.clone();
+  V.hojasLejos.boundingSphere=esfera.clone();
 });
 grupoArb.forEach(G=>{
   const V=VARIANTES[G.v];
   const r=new THREE.InstancedMesh(V.ramas,matRama,G.ms.length);
   const h=new THREE.InstancedMesh(V.hojas,matHoja,G.ms.length);
-  G.ms.forEach((m,i)=>{r.setMatrixAt(i,m);h.setMatrixAt(i,m);});
-  r.instanceMatrix.needsUpdate=h.instanceMatrix.needsUpdate=true;
-  r.position.set(G.ccx,0,G.ccz);h.position.set(G.ccx,0,G.ccz);
-  r.castShadow=true;h.castShadow=false;r.receiveShadow=h.receiveShadow=true;
-  scene.add(r,h);
-  CUADRAS.push({r:r,h:h,x:G.ccx,z:G.ccz});
+  const hl=new THREE.InstancedMesh(V.hojasLejos,matHoja,G.ms.length);
+  G.ms.forEach((m,i)=>{r.setMatrixAt(i,m);h.setMatrixAt(i,m);hl.setMatrixAt(i,m);});
+  r.instanceMatrix.needsUpdate=h.instanceMatrix.needsUpdate=hl.instanceMatrix.needsUpdate=true;
+  r.position.set(G.ccx,0,G.ccz);h.position.set(G.ccx,0,G.ccz);hl.position.set(G.ccx,0,G.ccz);
+  r.castShadow=true;h.castShadow=hl.castShadow=false;
+  r.receiveShadow=h.receiveShadow=hl.receiveShadow=true;
+  hl.visible=false;
+  scene.add(r,h,hl);
+  CUADRAS.push({r:r,h:h,hl:hl,x:G.ccx,z:G.ccz});
   if(ocluyentes.length<14)ocluyentes.push(r);
 });
 
@@ -1293,7 +1314,8 @@ grupoArb.forEach(G=>{
     ms.push(compR(x,alturaEn(x,z)-.5,z,0,Math.random()*6.283,0,e*1.4,e,e*1.4));
   }
   if(ms.length){
-    const h=new THREE.InstancedMesh(arb.hojas,matHoja,ms.length);
+    // un arbusto es una mancha a un metro del piso: le alcanza la copa de lejos
+    const h=new THREE.InstancedMesh(arb.hojasLejos,matHoja,ms.length);
     const r=new THREE.InstancedMesh(arb.ramas,matRama,ms.length);
     ms.forEach((m,i)=>{h.setMatrixAt(i,m);r.setMatrixAt(i,m);});
     h.instanceMatrix.needsUpdate=r.instanceMatrix.needsUpdate=true;
@@ -3357,6 +3379,12 @@ window.__B={BAJO,CFG,FIN,bajar,subir,abrirTrampilla,activarNotas,
   hdr:()=>({hdr:HDR,sinLuz:SIN_LUZ,mats:NB_MATS,tipo:destino.texture.type,tono:uVHS.uTono.value,
             exp:+uVHS.uExp.value.toFixed(3),glow:uVHS.uGlow.value,
             renderer:renderer.toneMapping}),
+  copas:()=>{let cerca=0,lejos=0,off=0;
+    for(const c of CUADRAS){if(c.h.visible)cerca++;else if(c.hl.visible)lejos++;else off++;}
+    return {cuadras:CUADRAS.length,completas:cerca,lejanas:lejos,apagadas:off,
+      triCerca:VARIANTES[0].hojas.index.count/3,triLejos:VARIANTES[0].hojasLejos.index.count/3,
+      triRamas:VARIANTES[0].ramas.index.count/3,
+      arbolesVisibles:(()=>{let n=0;for(const c of CUADRAS)if(c.r.visible)n+=c.r.count;return n;})()};},
   niebla:()=>({mats:NB_MATS,alta:NIEBLA.uNbAlta.value,caida:NIEBLA.uNbCaida.value,
                base:+NIEBLA.uNbBase.value.toFixed(2),camY:+NIEBLA.uNbCamY.value.toFixed(2),
                densidad:+scene.fog.density.toFixed(4)}),
@@ -3407,6 +3435,22 @@ window.__B={BAJO,CFG,FIN,bajar,subir,abrirTrampilla,activarNotas,
       dTrampilla:+Math.hypot(BAJO.trX-g.position.x,BAJO.trZ-g.position.z).toFixed(1),
       vel:+PRESENCIA.vel.toFixed(2),
       halo:{visible:MARCA_G.visible,opacidad:+MARCA_G.material.opacity.toFixed(2)}};},
+  gordos:()=>{const l=[];
+    scene.traverse(o=>{
+      if(!o.isMesh)return;
+      let v=o.visible,q=o.parent;while(q){if(!q.visible)v=false;q=q.parent;}
+      if(!v)return;
+      const g=o.geometry,ix=g&&g.index,at=g&&g.attributes&&g.attributes.position;
+      if(!at)return;
+      const tri=((ix?ix.count:at.count)/3|0)*(o.isInstancedMesh?o.count:1);
+      l.push([o.name||(o.material&&o.material.name)||(o.isInstancedMesh?'inst':'malla'),
+              tri,o.isInstancedMesh?o.count:1,o.castShadow?'S':'-']);
+    });
+    const jun={};
+    for(const [n,t,c,sh] of l){const k=n+'|'+sh;jun[k]=jun[k]||[0,0,0];
+      jun[k][0]+=t;jun[k][1]+=c;jun[k][2]++;}
+    return Object.entries(jun).map(([k,v])=>[k,v[0],v[1],v[2]])
+      .sort((a,b)=>b[1]-a[1]).slice(0,10);},
   costo:()=>{const por={};let tot=0,vis=0;
     scene.traverse(o=>{
       if(!o.isMesh&&!o.isPoints&&!o.isLine&&!o.isSprite)return;

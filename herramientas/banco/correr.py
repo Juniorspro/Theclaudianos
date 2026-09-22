@@ -111,6 +111,11 @@ def main():
             print("guia:", json.dumps(pg.evaluate("window.__B.guia()"), ensure_ascii=False))
             pg.evaluate("window.__B.mirarA()")
             time.sleep(1)
+        if "gordos" in sys.argv:
+            for f in pg.evaluate("window.__B.gordos()"):
+                print("  gordo %-16s tri %8d  instancias %5d  mallas %3d" % (f[0], f[1], f[2], f[3]))
+        if "copas" in sys.argv:
+            print("copas:", json.dumps(pg.evaluate("window.__B.copas()"), ensure_ascii=False))
         if "hdr" in sys.argv:
             print("hdr:", json.dumps(pg.evaluate("window.__B.hdr()"), ensure_ascii=False))
         if "niebla" in sys.argv:
