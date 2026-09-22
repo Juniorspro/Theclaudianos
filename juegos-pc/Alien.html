@@ -159,9 +159,14 @@
   #album .ficha{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;margin-bottom:7px;
     border-radius:12px;border:1px solid rgba(140,180,220,.20);background:rgba(255,255,255,.03)}
   #album .ficha.no{opacity:.5;border-style:dashed}
-  #album .ficha .tapa{width:54px;height:66px;flex:0 0 54px;border-radius:6px;overflow:hidden;
-    background:#0a0d13;border:1px solid rgba(160,190,220,.22);display:grid;place-items:center;
-    color:#46566a;font-size:22px;font-weight:800}
+  #album .ficha .tapa{position:relative;width:54px;height:66px;flex:0 0 54px;border-radius:6px;
+    overflow:hidden;background:#0a0d13;border:1px solid rgba(160,190,220,.22);display:grid;
+    place-items:center;color:#46566a;font-size:22px;font-weight:800}
+  #album .ficha .tapa.vacia{border-style:dashed;
+    background:repeating-linear-gradient(135deg,#0a0d13 0 6px,#0d1119 6px 12px)}
+  #album .ficha .tapa .num{position:absolute;left:0;right:0;bottom:0;padding:1px 0;
+    font-size:8px;letter-spacing:.1em;text-align:center;color:#9fb4c8;background:rgba(3,7,12,.78)}
+  #album .grupo span{float:right;color:#ffc98a;letter-spacing:.1em}
   #album .ficha .tapa img{width:100%;height:100%;object-fit:cover;display:block}
   #album .ficha .txt{flex:1;min-width:0}
   #album .ficha b{display:block;font-size:12px;letter-spacing:.13em;font-weight:800;color:#e4eef8}
@@ -3135,26 +3140,35 @@ function abrirAlbum(){ if(ALBUM_ABIERTO.v) return; ALBUM_ABIERTO.v = true; pinta
 function cerrarAlbum(){ ALBUM_ABIERTO.v = false; dAlbum.classList.remove('ver'); }
 const ALBUM_ABIERTO = {v:false};
 function pintarAlbum(){
-  let h = '';
+  /* Cada bicho del juego tiene su hueco numerado, esté o no fichado: el álbum se ve
+     entero desde el principio y se nota exactamente cuántos faltan y dónde. */
+  let h = '', n = 0, hechas = 0;
   for(const g of GALAXIAS){
-    h += '<div class="grupo">' + g.nombre + '</div>';
+    const tengo = g.especies.filter(id => ALBUM[id]).length;
+    h += '<div class="grupo">' + g.nombre + ' <span>' + tengo + '/' + g.especies.length + '</span></div>';
     for(const id of g.especies){
+      n++;
+      const num = '#' + String(n).padStart(2, '0');
       const f = FICHAS[id] || [id.toUpperCase(), ''];
       const a = ALBUM[id];
       if(a){
+        hechas++;
         const tapa = a.tapa ? '<img src="' + a.tapa + '" alt="">' : '◆';
-        h += '<div class="ficha"><div class="tapa">' + tapa + '</div><div class="txt">' +
-             '<b>' + f[0] + '</b><i>' + f[1] + '</i>' +
+        h += '<div class="ficha"><div class="tapa">' + tapa + '<span class="num">' + num + '</span></div>' +
+             '<div class="txt"><b>' + f[0] + '</b><i>' + f[1] + '</i>' +
              '<u>' + a.nombre + ' · rareza ' + a.rareza.toFixed(1) +
              ' · ' + a.veces + (a.veces === 1 ? ' foto' : ' fotos') +
              ' · mejor pago ' + a.precio + ' cr</u></div></div>';
       } else {
-        h += '<div class="ficha no"><div class="tapa">?</div><div class="txt">' +
-             '<b>?</b><i>Sin registro. Nadie le sacó una foto todavía.</i></div></div>';
+        h += '<div class="ficha no"><div class="tapa vacia">?<span class="num">' + num + '</span></div>' +
+             '<div class="txt"><b>?</b><i>Hueco vacío. Todavía nadie le sacó una foto.</i>' +
+             '<u>' + num + ' · ' + g.nombre + '</u></div></div>';
       }
     }
   }
-  dAlbumSub.textContent = Object.keys(ALBUM).length + ' de ' + ALBUM_TOTAL + ' especies fichadas';
+  const faltan = ALBUM_TOTAL - hechas;
+  dAlbumSub.textContent = hechas + ' de ' + ALBUM_TOTAL + ' huecos llenos' +
+    (faltan ? ' · faltan ' + faltan : ' · álbum completo');
   dListaAlbum.innerHTML = h;
 }
 dEspecies.addEventListener('pointerdown', e => { e.stopPropagation(); abrirAlbum(); }, {passive:true});

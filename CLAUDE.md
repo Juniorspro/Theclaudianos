@@ -495,3 +495,21 @@ llegar hay que haber comprado los cuatro motores (23.900 cr) juntando de a 50 en
 Medido: al arrancar `[true,true,false,false,false,false]`; `comprarSalto('salto3')` da falso con
 30.000 créditos en el bolsillo mientras falte el II; con el II puesto, el III entra y Coral Profundo
 pasa a `true` y el salto llega.
+
+### 2026-09-22 (q) — el álbum con todos los huecos
+**Pedido textual:** «Quiero que el álbum esté completo, osea no con las imágenes, sino me refiero a
+con cada alien que exista dentro del juego entiendes, que cada alien tenga su hueco en el álbum».
+
+Primero se midió: **los 21 bichos del juego ya estaban todos**. `ARQ` tiene 21 arquetipos, las seis
+galaxias suman esos mismos 21 y ninguno queda afuera (`sólo en ARQ: []`, `sólo en galaxias: []`).
+Lo que faltaba era que se leyera como álbum de figuritas y no como una lista con interrogantes:
+
+- **Cada bicho tiene su hueco numerado**, `#01` a `#21`, en el orden de la carta de navegación. El
+  número va abajo de la tapa, tanto en el hueco vacío como sobre la foto pegada.
+- El hueco vacío es un **hueco de verdad**: borde punteado y rayado diagonal, con el `?` encima y
+  abajo qué número y de qué galaxia es.
+- Cada galaxia lleva su marcador al costado (`VEGA ROTA 3/3`) y arriba va el total:
+  «3 de 21 huecos llenos · faltan 18», que pasa a «álbum completo» cuando no falta ninguno.
+
+Medido en el banco: 21 fichas dibujadas, numeración `#01 … #21` sin saltos, y con tres fotos en
+Vega Rota el grupo marca 3/3 y el encabezado «faltan 18».
