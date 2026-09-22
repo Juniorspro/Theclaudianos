@@ -343,6 +343,19 @@ function orientar(){
       transform: GIRO===90 ? 'translate('+vw+'px,0) rotate(90deg)' : 'translate(0,'+vh+'px) rotate(-90deg)'});
   } else Object.assign(p.style, {left:'', top:'', right:'', bottom:'', width:'', height:'', transform:''});
 }
+/* horizontal de verdad: pantalla completa + orientación bloqueada. Necesita un toque del usuario;
+   donde no hay permiso o soporte (iOS), queda el giro por CSS de orientar() */
+async function pantallaHorizontal(){
+  try{
+    const d = document.documentElement;
+    if(!document.fullscreenElement && d.requestFullscreen) await d.requestFullscreen({navigationUI:'hide'});
+    if(screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
+  }catch(e){}
+  orientar(); medir();
+}
+for(const ev of ['touchend','click']) document.addEventListener(ev, ()=>{
+  if(!document.fullscreenElement) pantallaHorizontal(); }, {once:true, passive:true});
+document.addEventListener('fullscreenchange', ()=>{ orientar(); medir(); });
 /* de coordenadas de la pantalla física a las del juego (girado) */
 function aLocal(sx, sy){
   if(ROT===90) return {x: sy, y: innerWidth - sx};
@@ -3753,7 +3766,9 @@ function menu(){
   capa('capaTitulo');
 }
 const clic = (id,fn)=>{ const el=document.getElementById(id);
-  el.addEventListener('click', e=>{ e.preventDefault(); audioListo(); SFX.blip(); fn(); }); };
+  el.addEventListener('click', e=>{ e.preventDefault(); audioListo(); SFX.blip();
+    if(!document.fullscreenElement) pantallaHorizontal();
+    fn(); }); };
 document.addEventListener('touchstart', audioListo, {once:true, passive:true});
 document.addEventListener('mousedown', audioListo, {once:true});
 clic('btJugar', ()=> empezarNivel(J.prog.desbloq||1));

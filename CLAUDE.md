@@ -261,3 +261,12 @@ explica), y el **elite, al bloquear, se quedaba con el escudo para siempre** (se
   (`golpeAlEscudo`, `romperEscudo`). Dash, gancho y plancha lo siguen rompiendo de una.
 - El bloqueo del elite dura 45 cuadros y se va solo.
 - Medido: 400 → 398 → 395 → roto a 386; 309 de 900 cuadros sin escudo; el elite vuelve a 0.
+
+### 2026-09-23 (3) — horizontal de verdad al entrar
+**Pedido textual:** «quiero que al entrar al juego la pantalla ya se ponga en horizontal».
+
+Al abrir, el juego ya se ve acostado (giro por CSS). Con el **primer toque** (`touchend`/`click`, que son
+los que habilitan el permiso) `pantallaHorizontal()` pide pantalla completa y `screen.orientation.lock('landscape')`:
+en Android el teléfono pasa a horizontal de verdad y `orientar()` apaga el giro solo porque el visor
+queda más ancho que alto. Cada botón del menú lo vuelve a pedir si se salió de pantalla completa.
+**Trampa:** `touchstart` no cuenta como gesto para `requestFullscreen`. En iOS no hay `lock`: queda el giro.
