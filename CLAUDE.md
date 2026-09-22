@@ -8,7 +8,7 @@ se prueba **en el celular, en vertical (412×892)**.
 | ruta | qué es |
 |---|---|
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. |
-| `juegos-pc/Alien.html` | **Alien Grid.** Tercera persona móvil: personaje riggeado con 4 clips, mundo grid, cielo 360 y una nave de dos cubiertas que se recorre por dentro. |
+| `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil: mundo grid, cielo 360, nave de dos cubiertas que se recorre por dentro, seis galaxias y caminata espacial de agarradera en agarradera con una antena que hay que orientar. |
 | `herramientas/glb/` | `juntar_anim.py` (varios GLB del mismo rig → uno con todos los clips) y `hornear.py` (achicar texturas y recompactar para meterlo en un HTML). |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -355,3 +355,47 @@ Lo que costó una vuelta:
   acorta hasta la mitad según cuánto se mire para arriba: **24,7 sobre 255**.
 - Volviendo a la nave hay que **volver a topar la picada**, si no la cámara entra con el ángulo de
   afuera y queda por debajo del piso de la cubierta.
+
+### 2026-09-22 (l) — primera persona y la caminata a mano
+**Pedido textual:** «Mira el vídeo completo y fíjate si puedes recrear ese juego con lo que tenemos
+dejando la tercera persona atrás» + «Lo mejor sería que sí toques alien grid y que lo transformes
+para no perder tiempo y créditos».
+
+El video es **«God Sized»** de `@160_dev` (Godot), terror espacial sobre astrofobia. Se bajó y se
+miró cuadro por cuadro (36 s, 60 cuadros por segundo): primera persona sin cuerpo, un cursor de
+mano blanco en el centro que se abre y se cierra, barras que se prenden en azul al mirarlas, un
+plato de antena mal apuntado con un rayo rojo de mira, un monitor chico que dice
+`[ LINK READY ] SIGNAL: 92% RATE: 128 KBPS STANDBY`, y el plano final de la nave cruzando el disco
+de Neptuno.
+
+Alien Grid **pasó a primera persona** en vez de nacer un juego nuevo:
+- La cámara no orbita más: **es la cabeza**, a 1,58 m, con cabeceo del tranco y balanceo.
+  `camPitch` cambió de sentido — antes era la picada de una cámara en órbita (0,10 a 1,05 rad, o
+  sea sólo se podía mirar para abajo), ahora es la mirada: positivo arriba, ±1,45 rad.
+- El cuerpo no se dibuja, pero **el esqueleto sigue ahí**: la cámara de fotos sigue colgada del
+  hueso de la mano derecha y se ve en el borde del cuadro, como se ve en primera persona.
+- Afuera, la caminata espacial se hace **de agarradera en agarradera**: 14 barras desde la esclusa
+  de popa, subiendo por la popa y siguiendo el espinazo hasta el mástil. Se mira una, se toca, y el
+  tranco dura 0,62 s. `SOLTARSE` te deja a la deriva; `TIRAR DE LA SOGA` te trae de vuelta.
+- Tarea nueva: **la antena**. Se la toca para agarrarla y el mismo arrastre que mueve la cámara
+  pasa a girar el plato. La pantallita mide la señal contra el puntito azul del cielo y a 99,65%
+  de alineación engancha: `[ ENLACE LISTO ] SEÑAL: 100% RÉGIMEN: 128 KBPS TRANSMITIENDO`, y
+  contesta control.
+- Linterna de casco, luz que se escapa por la escotilla, viñeta y reflejo de visor.
+
+Lo que costó una vuelta cada uno:
+- **Apuntar con un rayo a una barra de 5 cm es imposible con el dedo.** El raycaster daba «nada»
+  aunque la barra estuviera en el centro de la pantalla: 7 cm de error de puntería son 14 cm a dos
+  metros, y el cilindro tiene 5. Se elige la agarradera **más cerca del centro de la mirada** por
+  ángulo (tolerancia 0,30 rad), no por rayo.
+- **Dónde está el casco no se adivina.** Las barras de popa quedaban adentro de una plancha que
+  está 56 cm por delante de la cara del casco: el jugador salía y veía una pared lisa. Ahora cada
+  barra se pega tirando un rayo contra la nave al construirla.
+- **La soga de 16 m no llegaba**: la ruta de agarraderas termina a 19 m del gancho, así que al
+  llegar al mástil te tironeaba para atrás. Pasó a 26.
+- **Un `CanvasTexture` que sólo se pinta cuando cambia el valor arranca negro.** La pantalla de la
+  antena hay que pintarla una vez al armarla.
+- **El cielo es una esfera de 460 m**: el puntito azul puesto a 700 quedaba tapado por atrás. Va a
+  300 y con la escala achicada para que siga midiendo medio grado.
+- Con la linterna a 2,8 y sin caída, el casco a un metro se **quema en blanco** (117 sobre 255 en
+  una escena que tiene que dar miedo). Con 1,25 e intensidad que cae con la distancia, 41.

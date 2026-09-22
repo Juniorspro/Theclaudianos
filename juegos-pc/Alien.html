@@ -122,6 +122,39 @@
     border:1.5px solid rgba(140,235,255,.40);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
     box-shadow:0 8px 26px rgba(0,0,0,.38);transition:transform .09s,background .09s}
   #salto.on{transform:scale(.92);background:radial-gradient(circle at 42% 34%,rgba(160,245,255,.44),rgba(20,40,60,.60) 68%)}
+  /* ---- primera persona: el casco, la mano y la tarea ---- */
+  #casco{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .7s}
+  #casco.ver{opacity:1}
+  #casco .vin{position:absolute;inset:0;
+    background:radial-gradient(ellipse 74% 58% at 50% 50%, rgba(0,0,0,0) 44%, rgba(0,0,0,.52) 80%, rgba(0,0,0,.93) 100%)}
+  #casco .ref{position:absolute;inset:0;opacity:.07;
+    background:linear-gradient(166deg,#fff 0%,rgba(255,255,255,0) 30%),
+               radial-gradient(ellipse 38% 24% at 24% 15%, rgba(255,255,255,.45), rgba(255,255,255,0) 72%)}
+  #mano{position:absolute;left:50%;top:50%;width:42px;height:42px;margin:-21px 0 0 -21px;
+    pointer-events:none;opacity:0;transition:opacity .2s,transform .18s}
+  #mano.ver{opacity:.5} #mano.ver.cerca{opacity:1;transform:scale(1.15)}
+  #mano svg{width:100%;height:100%;display:block;filter:drop-shadow(0 0 5px rgba(0,0,0,.9))}
+  #tarea{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 74px);text-align:center;
+    font-size:11px;letter-spacing:.16em;color:#8fe6d2;opacity:0;transition:opacity .5s;
+    text-shadow:0 0 14px rgba(20,90,80,.9)}
+  #tarea.ver{opacity:.95}
+  #radio{position:absolute;left:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 270px);
+    max-width:66%;font-size:10.5px;line-height:1.5;letter-spacing:.06em;color:#b6ffd8;
+    opacity:0;transition:opacity .7s;text-shadow:0 1px 6px #000,0 0 14px rgba(20,120,80,.9)}
+  #radio div{background:rgba(2,10,8,.55);padding:4px 8px;margin:3px 0;border-left:2px solid rgba(120,255,190,.5)}
+  #radio.ver{opacity:.95}
+  #soltar,#soga{position:absolute;left:20px;padding:11px 18px;border-radius:999px;pointer-events:auto;
+    opacity:0;visibility:hidden;transition:opacity .25s,transform .09s;
+    font-size:11px;font-weight:800;letter-spacing:.14em;white-space:nowrap;
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #soltar{bottom:calc(env(safe-area-inset-bottom,0px) + 158px);color:#dff3ff;
+    background:linear-gradient(180deg,rgba(120,220,255,.24),rgba(8,20,30,.55));
+    border:1.5px solid rgba(140,235,255,.5)}
+  #soga{bottom:calc(env(safe-area-inset-bottom,0px) + 214px);color:#f0e0b4;
+    background:linear-gradient(180deg,rgba(230,200,120,.24),rgba(28,22,8,.55));
+    border:1.5px solid rgba(230,205,130,.5)}
+  #soltar.ver,#soga.ver{opacity:1;visibility:visible}
+  #soltar.on,#soga.on{transform:scale(.93)}
   #carga{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:#0b0d14;
     color:#7fd8ff;font-size:12px;letter-spacing:.2em;transition:opacity .5s}
 </style>
@@ -140,6 +173,17 @@
   <div id="volar">DESPEGAR</div>
   <div id="visor"><i></i><i></i><i></i><i></i><b>REC</b></div>
   <div id="salto">SALTO</div>
+  <div id="soltar">SOLTARSE</div>
+  <div id="soga">TIRAR DE LA SOGA</div>
+  <div id="tarea"></div>
+  <div id="radio"></div>
+  <svg id="mano" viewBox="0 0 48 48" fill="none">
+    <path id="manoA" d="M16 27V13a2.6 2.6 0 015.2 0v9.5M21.2 22.5V11a2.6 2.6 0 015.2 0v11.5M26.4 22.5V13a2.6 2.6 0 015.2 0v11M31.6 24v-5a2.4 2.4 0 014.8 0v12c0 6-4.4 10.5-10.4 10.5S15 37.5 15 31.5l-2.6-4.4a2.5 2.5 0 014.2-2.6L18.4 27"
+      stroke="#eaf6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path id="manoB" style="display:none" d="M15 28c0-4 2.6-6.5 6-6.5h7.5c4 0 7 2.8 7 6.8v3.5c0 5.6-4.2 9.7-9.9 9.7S15 37.4 15 31.8zM19 21.5v-4.2a2.5 2.5 0 015 0v4.2M24 21.5v-5.6a2.5 2.5 0 015 0v5.6"
+      stroke="#eaf6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div id="casco"><div class="ref"></div><div class="vin"></div></div>
 </div>
 <div id="galaxias"><div class="caja"><h3>CARTA DE NAVEGACIÓN</h3><div class="sub">elegí a dónde saltar</div><div id="listagal"></div><div class="cerrar" id="cerrargal">CERRAR</div></div></div>
 <div id="peligro"></div>
@@ -158,7 +202,8 @@ const CFG = {
   grav:-26, salto:9.2, saltoDoble:7.6, saltosMax:2,
   camDist:5.7, camAlto:0.40, camMira:1.24, camSuave:7.5, camGiro:0.0055,
   camDistCorrer:1.2, fovBase:60, fovCorrer:68,
-  camPicaEva:1.28,                            /* tope de picada afuera: 73° arriba y abajo */
+  ojo:1.58, pitchMax:1.45,                    /* altura de los ojos y tope del cogote */
+  alcanceMano:3.6, tolMano:0.30, viaje:0.62, empujeEva:0.85, /* hasta dónde llega el brazo y cuánto dura el tranco */
   sombraLado:14, mundo:3000, corral:120,
   escalaForzada:0          /* sólo para el A/B del patinaje: 0 = automática */
 };
@@ -2253,7 +2298,7 @@ function viajarA(i){
 }
 
 /* ------------------------------------------------------------ caminata espacial */
-const EVA = { activa:false, largo:16, t:0 };
+const EVA = { activa:false, largo:26, t:0 };   /* la ruta de agarraderas llega a 19 m */
 /* los bultos de la nave para que la cámara de afuera no se meta adentro: el fuselaje y las
    alas van por separado, si no la caja tapa el punto por donde se sale */
 const BULTOS = [
@@ -2268,6 +2313,10 @@ const soga = (function(){
   l.frustumCulled = false; l.visible = false; esc.add(l);
   return l;
 })();
+/* la luz que se escapa por la escotilla: sin ella, salir es mirar una plancha negra */
+const luzEsclusa = new THREE.PointLight(col(0xffd2a0), 0, 11, 1.8);
+luzEsclusa.position.set(ANCLA.x, ANCLA.y + 0.35, ANCLA.z - 1.25);
+esc.add(luzEsclusa);
 const gancho = (function(){                       /* el anclaje, para que la soga salga de algo */
   const m = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.045, 6, 12), MAT_NAVE.oscuro);
   m.position.copy(ANCLA); m.rotation.x = Math.PI/2; esc.add(m); return m;
@@ -2277,17 +2326,21 @@ function salirAlEspacio(){
   if(EVA.activa || VUELO.estado !== 'espacio') return;
   EVA.activa = true; EVA.t = 0;
   jug.pos.set(ANCLA.x, ANCLA.y + 0.3, ANCLA.z - 2.4);
-  jug.vel.set(0, 0.8, -6.5);
+  jug.vel.set(0, 0.4, -2.2);
   jug.enSuelo = false;
   soga.visible = true;
+  MANOS.agarrado = null; MANOS.viaje = null;
+  camYaw = 0; camPitch = 0.80;           /* se sale mirando la ruta que sube, no una plancha */
+  irA(AGARRES[0]);                       /* se sale agarrado de la primera: nadie salta al vacío */
 }
 function entrarDeNuevo(){
   if(!EVA.activa) return;
   EVA.activa = false;
+  MANOS.agarrado = null; MANOS.viaje = null; MANOS.mirado = null; MANOS.tira = false;
+  ANT.agarrada = false;
   soga.visible = false;
   jug.pos.set(0, N.y0, N.z0 + 1.6);
   jug.vel.set(0, 0, 0);
-  camPitch = clamp(camPitch, 0.10, 1.05);    /* adentro no hay picada negativa: la cámara iría bajo el piso */
 }
 function cercaDeLaEsclusa(){
   return Math.hypot(jug.pos.x - ANCLA.x, jug.pos.z - ANCLA.z) < 3.4 &&
@@ -2297,17 +2350,20 @@ function cercaDeLaEsclusa(){
 const _dirEva = new THREE.Vector3(), _arribaEva = new THREE.Vector3(0,1,0), _tmpEva = new THREE.Vector3();
 function pasoEva(dt, ix, iy, mag, salto){
   EVA.t += dt;
+  const quieto = !!(MANOS.agarrado || MANOS.viaje);   /* de la mano no te mueve ni la palanca */
   /* cero gravedad: la palanca empuja en el plano de la cámara y el botón da un envión para arriba */
   _dirEva.set(Math.sin(camYaw), 0, Math.cos(camYaw));
   const derX = -_dirEva.z, derZ = _dirEva.x;
   const emp = 7.0;
-  if(mag > 0.05){
+  if(mag > 0.05 && !quieto){
     jug.vel.x += (derX*ix + _dirEva.x*(-iy))*emp*dt;
     jug.vel.z += (derZ*ix + _dirEva.z*(-iy))*emp*dt;
   }
-  if(salto) jug.vel.y += 6.2*dt*60*0.016;
-  jug.vel.multiplyScalar(1 - Math.min(dt*0.85, 0.5));      /* el traje frena de a poco */
-  jug.pos.addScaledVector(jug.vel, dt);
+  if(salto && !quieto) jug.vel.y += 6.2*dt*60*0.016;
+  if(!quieto){
+    jug.vel.multiplyScalar(1 - Math.min(dt*0.85, 0.5));    /* el traje frena de a poco */
+    jug.pos.addScaledVector(jug.vel, dt);
+  }
 
   /* la soga: más allá del largo, tira para adentro */
   _tmpEva.copy(jug.pos).sub(ANCLA);
@@ -2347,6 +2403,254 @@ function pasoEva(dt, ix, iy, mag, salto){
     p.setXYZ(i, px + w, py, pz + w);
   }
   p.needsUpdate = true;
+}
+
+/* ================================================================ afuera, a mano
+   Caminata espacial de verdad: no se nada, se va de agarradera en agarradera. Y hay
+   una tarea — la antena está apuntando a cualquier lado y sin ella no hay señal. */
+const DIR_CASA = new THREE.Vector3(0.18, 0.44, 0.88).normalize();   /* el puntito azul */
+
+const MAT_BARRA    = new THREE.MeshStandardMaterial({color:col(0x39424c), roughness:0.5, metalness:0.7,
+                       emissive:col(0x0d1a2e), emissiveIntensity:1.0});
+const MAT_BARRA_ON = new THREE.MeshStandardMaterial({color:col(0x2a3c58), roughness:0.4, metalness:0.6,
+                       emissive:col(0x3f7dff), emissiveIntensity:2.6});
+const AGARRES = [];
+(function agarraderas(){
+  const gBarra = new THREE.CylinderGeometry(0.052, 0.052, 0.88, 8); gBarra.rotateZ(Math.PI/2);
+  const gPata  = new THREE.BoxGeometry(0.075, 0.18, 0.075);
+  const arriba = new THREE.Vector3(0,1,0);
+  /* la ruta: se sube por la popa, se pasa al lomo y se camina el espinazo hasta el mástil */
+  const ruta = [
+    [0, 2.40, 11.90, 0,0,-1], [0, 4.00, 11.90, 0,0,-1], [0, 5.25, 11.95, 0,0,-1],
+    [0, 5.65, 13.20, 0,1,0],  [0, 5.65, 14.40, 0,1,0],
+    [0, 6.70, 14.90, 0,0,-1], [0, 8.40, 14.90, 0,0,-1],
+    [0, 9.45, 16.50, 0,1,0],  [0, 9.45, 18.60, 0,1,0], [0, 9.45, 20.70, 0,1,0],
+    [0, 9.45, 22.80, 0,1,0],  [0, 9.45, 24.90, 0,1,0], [0, 9.45, 27.00, 0,1,0],
+    [0, 9.45, 29.10, 0,1,0]
+  ];
+  /* Dónde está el casco DE VERDAD no se adivina: se tira un rayo y se pega la barra ahí.
+     La popa, por ejemplo, tiene una plancha 56 cm por delante de la cara del casco. */
+  const mallas = [];
+  esc.traverse(o => { if(o.isMesh && o.visible) mallas.push(o); });
+  const rayoCasco = new THREE.Raycaster(); rayoCasco.far = 3.2;
+  const _desde = new THREE.Vector3(), _contra = new THREE.Vector3();
+  for(const r of ruta){
+    const g = new THREE.Group();
+    const barra = new THREE.Mesh(gBarra, MAT_BARRA); barra.position.y = 0.175; g.add(barra);
+    for(const l of [-1,1]){ const pa = new THREE.Mesh(gPata, MAT_BARRA); pa.position.set(l*0.40, 0.09, 0); g.add(pa); }
+    const n = new THREE.Vector3(r[3], r[4], r[5]).normalize();
+    _desde.set(r[0], r[1], r[2]).addScaledVector(n, 1.4);
+    rayoCasco.set(_desde, _contra.copy(n).negate());
+    const toca = rayoCasco.intersectObjects(mallas, false)[0];
+    if(toca) g.position.copy(toca.point).addScaledVector(n, 0.05);
+    else g.position.set(r[0], r[1], r[2]);
+    g.quaternion.setFromUnitVectors(arriba, n);
+    g.userData = {agarre:true, n, barra, i:AGARRES.length};
+    esc.add(g); AGARRES.push(g);
+  }
+})();
+
+/* ------------------------------------------------------------------ la antena */
+const ANT = {yaw:-1.22, pitch:-0.34, senal:0, enlace:false, agarrada:false, t:0, dicho:0};
+const _nAnt = new THREE.Vector3();
+const antena = (function(){
+  const g = new THREE.Group(); g.position.set(2.70, 9.40, 28.20); esc.add(g);
+  const mastil = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.95, 10), MAT_NAVE.casco);
+  mastil.position.y = 0.48; g.add(mastil);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.40, 0.16, 12), MAT_NAVE.oscuro);
+  base.position.y = 0.08; g.add(base);
+
+  const cabeza = new THREE.Group(); cabeza.position.y = 0.98; g.add(cabeza);
+  const plato = new THREE.Group(); cabeza.add(plato);
+  /* el plato: media esfera abierta mirando al +Z del pivote */
+  const cuenco = new THREE.Mesh(
+    new THREE.SphereGeometry(0.62, 28, 14, 0, Math.PI*2, 0, Math.PI*0.44),
+    new THREE.MeshStandardMaterial({color:col(0x7e858d), roughness:0.62, metalness:0.30,
+                                    side:THREE.DoubleSide}));
+  cuenco.rotation.x = -Math.PI/2; cuenco.position.z = -0.20; plato.add(cuenco);
+  const cuello = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.14, 0.26, 10), MAT_NAVE.oscuro);
+  cuello.rotation.x = Math.PI/2; cuello.position.z = -0.30; plato.add(cuello);
+  const cuerno = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.20, 8), MAT_NAVE.oscuro);
+  cuerno.rotation.x = -Math.PI/2; cuerno.position.z = 0.40; plato.add(cuerno);
+  /* las tres patas del alimentador: un cilindro apunta a +Y, no a +Z, así que va por cuaternión */
+  const ejeY = new THREE.Vector3(0,1,0), foco = new THREE.Vector3(0, 0, 0.40);
+  for(let i = 0; i < 3; i++){
+    const a = i/3*Math.PI*2 + 0.4;
+    const pie = new THREE.Vector3(Math.cos(a)*0.55, Math.sin(a)*0.55, 0.06);
+    const hacia = foco.clone().sub(pie), largo = hacia.length();
+    const v = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, largo, 5), MAT_NAVE.oscuro);
+    v.quaternion.setFromUnitVectors(ejeY, hacia.clone().normalize());
+    v.position.copy(pie).addScaledVector(hacia, 0.5/largo*largo*0.5/largo*largo).lerp(foco, 0.0);
+    v.position.copy(pie.clone().lerp(foco, 0.5));
+    plato.add(v);
+  }
+  /* el rayo de puntería: sin él no se sabe a dónde apunta */
+  const rayo = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 7.0, 6),
+    new THREE.MeshStandardMaterial({color:col(0x200000), emissive:col(0xff2a18),
+                                    emissiveIntensity:2.4, roughness:0.5, transparent:true, opacity:0.75}));
+  rayo.rotation.x = Math.PI/2; rayo.position.z = 3.5; plato.add(rayo);
+
+  /* la pantallita: lo que dice ES la tarea */
+  const lienzo = document.createElement('canvas'); lienzo.width = 256; lienzo.height = 192;
+  const cx = lienzo.getContext('2d');
+  const tex = new THREE.CanvasTexture(lienzo); tex.encoding = THREE.sRGBEncoding;
+  const pant = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.435),
+    new THREE.MeshBasicMaterial({map:tex}));
+  const marco = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.50, 0.06), MAT_NAVE.oscuro);
+  const pie = new THREE.Group(); pie.position.set(1.35, 9.45, 26.90); pie.rotation.y = -0.62; esc.add(pie);
+  const poste = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.62, 8), MAT_NAVE.oscuro);
+  poste.position.y = 0.31; pie.add(poste);
+  marco.position.set(0, 0.80, 0); marco.rotation.x = -0.32; pie.add(marco);
+  pant.position.set(0, 0.80, 0.032); pant.rotation.x = -0.32; pie.add(pant);
+  return {g, cabeza, plato, rayo, cuenco, lienzo, cx, tex};
+})();
+pintarPantalla();                     /* si no se pinta una vez, el tubo arranca negro */
+antena.cuenco.userData.antena = true;
+antena.plato.userData.antena = true;
+
+function pintarPantalla(){
+  const c = antena.cx, W = 256, H = 192;
+  c.fillStyle = '#05070a'; c.fillRect(0,0,W,H);
+  c.fillStyle = 'rgba(40,255,140,0.045)';
+  for(let y = 0; y < H; y += 4) c.fillRect(0, y, W, 2);       /* las rayas del tubo */
+  const pc = Math.round(ANT.senal*100);
+  c.textAlign = 'center'; c.fillStyle = ANT.enlace ? '#8dff9f' : '#ffd24a';
+  c.font = 'bold 19px ui-monospace, monospace';
+  c.fillText(ANT.enlace ? '[ ENLACE LISTO ]' : '[ SIN ENLACE ]', W/2, 40);
+  c.fillStyle = '#c8ff6a'; c.font = 'bold 17px ui-monospace, monospace';
+  c.fillText('SEÑAL: ' + pc + '%', W/2, 80);
+  c.fillText('RÉGIMEN: ' + (ANT.enlace ? 128 : Math.round(ANT.senal*ANT.senal*54)) + ' KBPS', W/2, 108);
+  c.fillStyle = ANT.enlace ? '#8dff9f' : '#6d8a58';
+  c.font = '15px ui-monospace, monospace';
+  c.fillText(ANT.enlace ? 'TRANSMITIENDO' : 'EN ESPERA', W/2, 140);
+  c.strokeStyle = 'rgba(140,255,120,.35)'; c.lineWidth = 2; c.strokeRect(14, 14, W-28, H-28);
+  c.fillStyle = ANT.enlace ? '#8dff9f' : '#ffd24a';
+  c.fillRect(26, 156, (W-52)*ANT.senal, 8);
+  c.strokeStyle = 'rgba(200,255,160,.25)'; c.strokeRect(26, 156, W-52, 8);
+  antena.tex.needsUpdate = true;
+}
+
+/* el puntito azul: es a dónde hay que apuntar y es "casa" */
+const puntoCasa = (function(){
+  const cnv = document.createElement('canvas'); cnv.width = cnv.height = 64;
+  const g = cnv.getContext('2d'), d = g.createRadialGradient(32,32,0,32,32,32);
+  d.addColorStop(0,'rgba(255,255,255,1)'); d.addColorStop(0.18,'rgba(190,225,255,.9)');
+  d.addColorStop(0.45,'rgba(120,180,255,.25)'); d.addColorStop(1,'rgba(90,150,255,0)');
+  g.fillStyle = d; g.fillRect(0,0,64,64);
+  const t = new THREE.CanvasTexture(cnv); t.encoding = THREE.sRGBEncoding;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({map:t, transparent:true, depthWrite:false,
+    blending:THREE.AdditiveBlending, opacity:0.95}));
+  s.scale.setScalar(4.2); s.visible = false; esc.add(s);
+  return s;
+})();
+
+/* ------------------------------------------------------ la mano y los viajes */
+const MANOS = {mirado:null, agarrado:null, viaje:null, tarea:0};
+const _dirMano = new THREE.Vector3(), _anclaTmp = new THREE.Vector3(),
+      _aMano = new THREE.Vector3(), _posAnt = new THREE.Vector3();
+
+function anclaDe(g){            /* dónde queda la cabeza al colgarse de esa agarradera */
+  return _anclaTmp.copy(g.position).addScaledVector(g.userData.n, 1.15)
+                  .add(new THREE.Vector3(0, -CFG.ojo, 0));
+}
+function irA(g){
+  if(MANOS.viaje) return;
+  MANOS.viaje = {desde:jug.pos.clone(), hasta:anclaDe(g).clone(), t:0, dur:CFG.viaje, g};
+  MANOS.agarrado = null;
+  jug.vel.set(0,0,0);
+}
+function soltarAgarre(){
+  if(!MANOS.agarrado) return;
+  MANOS.agarrado = null;
+  jug.vel.set(Math.sin(camYaw)*Math.cos(camPitch), Math.sin(camPitch), Math.cos(camYaw)*Math.cos(camPitch))
+         .multiplyScalar(CFG.empujeEva);
+}
+function tirarSoga(dt){
+  if(MANOS.agarrado || MANOS.viaje) return;
+  _tmpEva.copy(ANCLA).sub(jug.pos);
+  const d = _tmpEva.length();
+  if(d < 1.2) return;
+  jug.vel.addScaledVector(_tmpEva.multiplyScalar(1/d), 7.0*dt);
+}
+function pasoManos(dt){
+  ANT.t += dt;
+  /* a qué le estoy apuntando con la mano */
+  /* Apuntar con un rayo a una barra de 5 cm es imposible con el dedo: se elige la que
+     queda MÁS CERCA DEL CENTRO de la mirada, dentro del alcance del brazo. */
+  MANOS.mirado = null;
+  if(EVA.activa && !ANT.agarrada){
+    cam.getWorldDirection(_dirMano);
+    let mejor = CFG.tolMano;
+    const probar = (o, pos, alc, premio) => {
+      _aMano.copy(pos).sub(cam.position);
+      const d = _aMano.length();
+      if(d > alc || d < 0.01) return;
+      const ang = Math.acos(clamp(_aMano.dot(_dirMano)/d, -1, 1)) - (premio || 0);
+      if(ang < mejor){ mejor = ang; MANOS.mirado = o; }
+    };
+    for(const g of AGARRES) probar(g, g.position, CFG.alcanceMano);
+    antena.cabeza.getWorldPosition(_posAnt);
+    probar(antena.plato, _posAnt, CFG.alcanceMano*1.5, 0.08);
+  }
+  for(const g of AGARRES){
+    const on = MANOS.mirado === g || MANOS.agarrado === g;
+    if(g.userData.barra.material !== (on ? MAT_BARRA_ON : MAT_BARRA))
+      g.userData.barra.material = on ? MAT_BARRA_ON : MAT_BARRA;
+  }
+
+  /* el tranco de mano en mano */
+  if(MANOS.viaje){
+    const v = MANOS.viaje;
+    v.t += dt;
+    const u = clamp(v.t/v.dur, 0, 1), e = u*u*(3-2*u);     /* arranca y frena suave */
+    jug.pos.lerpVectors(v.desde, v.hasta, e);
+    jug.vel.set(0,0,0);
+    if(u >= 1){ MANOS.agarrado = v.g; MANOS.viaje = null; }
+  } else if(MANOS.agarrado){
+    jug.pos.copy(anclaDe(MANOS.agarrado));
+    jug.vel.set(0,0,0);
+  }
+
+  /* la antena */
+  _nAnt.set(Math.sin(ANT.yaw)*Math.cos(ANT.pitch), Math.sin(ANT.pitch), Math.cos(ANT.yaw)*Math.cos(ANT.pitch));
+  antena.cabeza.rotation.y = ANT.yaw;
+  antena.plato.rotation.x = -ANT.pitch;
+  const d = _nAnt.dot(DIR_CASA);
+  ANT.senal = clamp((d - 0.55)/0.45, 0, 1);
+  const enlaceAntes = ANT.enlace;
+  ANT.enlace = d > 0.9965;
+  if(Math.abs(ANT.senal - ANT.dicho) > 0.008 || ANT.enlace !== enlaceAntes){
+    ANT.dicho = ANT.senal; pintarPantalla();
+  }
+  if(ANT.enlace !== enlaceAntes && ANT.enlace) llegoLaSenal();
+  const m = antena.rayo.material;
+  m.emissive.copy(ANT.enlace ? col(0x35ff7a) : col(0xff2a18));
+  m.emissiveIntensity = ANT.enlace ? 3.0 : 1.6 + 0.8*Math.sin(ANT.t*4);
+
+  if(MANOS.tira) tirarSoga(dt);
+  puntoCasa.visible = VUELO.espacio > 0.5;
+  /* el cielo es una esfera de 460: más lejos que eso, el punto queda tapado */
+  if(puntoCasa.visible) puntoCasa.position.copy(cam.position).addScaledVector(DIR_CASA, 300);
+}
+
+const MENSAJES = [
+  'CONTROL: …te escuchamos, aunque tarde.',
+  'CONTROL: la señal va a llegar a casa en cuatro horas.',
+  'CONTROL: allá abajo es de noche. Alguien te está esperando.',
+  'CONTROL: volvé adentro cuando quieras.'
+];
+function llegoLaSenal(){
+  MANOS.tarea = 3;
+  dRadio.innerHTML = MENSAJES.map(l => '<div>' + l + '</div>').join('');
+  dRadio.classList.add('ver');
+  setTimeout(() => dRadio.classList.remove('ver'), 16000);
+}
+function textoTarea(){
+  if(!EVA.activa) return VUELO.estado === 'espacio' ? 'SALÍ POR LA ESCLUSA' : '';
+  if(ANT.enlace) return 'VOLVÉ A LA ESCLUSA';
+  if(ANT.agarrada) return 'ARRASTRÁ PARA ORIENTAR · SEÑAL ' + Math.round(ANT.senal*100) + '%';
+  if(jug.pos.z > 24) return 'TOCÁ LA ANTENA Y APUNTALA AL PUNTO AZUL';
+  return 'SEGUÍ LAS AGARRADERAS HASTA LA ANTENA';
 }
 
 /* las texturas generadas pisan al color plano cuando decodifican, no antes */
@@ -2448,7 +2752,7 @@ var jug = {
   pos:new THREE.Vector3(0,0,-4), vel:new THREE.Vector3(), yaw:0,
   enSuelo:true, saltos:0, fase:0, estado:'quieto', rapidez:0, aire:0
 };
-let camYaw = 0, camPitch = CFG.camAlto, camDist = CFG.camDist;
+let camYaw = 0, camPitch = 0, camDist = CFG.camDist, inclinaEva = 0;
 const camPos = new THREE.Vector3(0,6,14), camMira = new THREE.Vector3();
 
 /* ------------------------------------------------------------- GLB riggeado */
@@ -2589,6 +2893,7 @@ function meterGLB(b64){
       raiz.traverse(o => {
         if(!o.isMesh) return;
         o.castShadow = true; o.frustumCulled = false;
+        o.visible = false;        /* primera persona: el cuerpo no se dibuja, los huesos sí sirven */
         const m = o.material;
         if(m && m.emissiveMap){ m.emissive.setRGB(1,1,1); m.emissiveIntensity = 1.9; }
         if(m){ m.roughness = Math.min(m.roughness !== undefined ? m.roughness : 0.7, 0.72); m.side = THREE.FrontSide; }
@@ -2630,6 +2935,10 @@ const dEspecies = document.getElementById('especies');
 const dPanelB = document.getElementById('panelb'), dGal = document.getElementById('galaxias');
 const dPeligro = document.getElementById('peligro'), dAviso = document.getElementById('aviso');
 const dListaGal = document.getElementById('listagal'), dGalNom = document.getElementById('galnom');
+const dMano = document.getElementById('mano'), dManoA = document.getElementById('manoA'),
+      dManoB = document.getElementById('manoB'), dCasco = document.getElementById('casco');
+const dTarea = document.getElementById('tarea'), dRadio = document.getElementById('radio');
+const dSoltar = document.getElementById('soltar'), dSoga = document.getElementById('soga');
 
 function pintarPanel(){
   dListaGal.innerHTML = '';
@@ -2657,7 +2966,9 @@ function pintarPalanca(px, py, vis){
 addEventListener('pointerdown', e => {
   if(FOTO.abierta) return;                    /* con la copia abierta no se arma la palanca */
   if(PANEL.abierto) return;
-  if(e.target === dSalto || e.target === dVolar || e.target === dUsar || e.target === dPanelB) return;
+  if(e.target === dSalto || e.target === dVolar || e.target === dUsar || e.target === dPanelB ||
+     e.target === dSoltar || e.target === dSoga) return;
+  toques.set(e.pointerId, {x:e.clientX, y:e.clientY, t:performance.now()});
   if(e.clientX < innerWidth*0.52 && idPalanca === null){
     idPalanca = e.pointerId; oX = e.clientX; oY = e.clientY;
     pintarPalanca(oX, oY, true);
@@ -2674,19 +2985,51 @@ addEventListener('pointermove', e => {
     ent.x = (dx/d)*(k/RADIO); ent.y = (dy/d)*(k/RADIO); ent.mag = k/RADIO;
     pintarPalanca(oX + (dx/d)*k, oY + (dy/d)*k, true);
   } else if(e.pointerId === idMira){
+    if(ANT.agarrada){                       /* con la antena en la mano el dedo la gira a ella */
+      ANT.yaw   -= (e.clientX - mX)*CFG.camGiro*1.1;
+      ANT.pitch  = clamp(ANT.pitch - (e.clientY - mY)*CFG.camGiro*0.9, -1.25, 1.35);
+      mX = e.clientX; mY = e.clientY;
+      return;
+    }
     camYaw -= (e.clientX - mX)*CFG.camGiro;
-    /* flotando no hay suelo ni techo: el tope de abajo deja mirar para ARRIBA */
-    camPitch = clamp(camPitch + (e.clientY - mY)*CFG.camGiro*0.7,
-                     EVA.activa ? -CFG.camPicaEva : 0.10, EVA.activa ? CFG.camPicaEva : 1.05);
+    /* en primera persona el dedo para abajo mira para abajo, y el tope es el cogote */
+    camPitch = clamp(camPitch - (e.clientY - mY)*CFG.camGiro*0.8, -CFG.pitchMax, CFG.pitchMax);
     mX = e.clientX; mY = e.clientY;
   }
 }, {passive:true});
 function soltar(e){
+  const t0 = toques.get(e.pointerId);
+  if(t0){
+    toques.delete(e.pointerId);
+    /* un toque corto y quieto no es ni palanca ni mirada: es la mano */
+    if(Math.hypot(e.clientX - t0.x, e.clientY - t0.y) < 15 && performance.now() - t0.t < 420) tocar();
+  }
   if(e.pointerId === idPalanca){ idPalanca = null; ent.x = ent.y = ent.mag = 0; pintarPalanca(oX, oY, false); }
   if(e.pointerId === idMira) idMira = null;
 }
 addEventListener('pointerup', soltar, {passive:true});
 addEventListener('pointercancel', soltar, {passive:true});
+
+const toques = new Map();
+function tocar(){
+  if(FOTO.abierta || PANEL.abierto) return;
+  if(ANT.agarrada){ ANT.agarrada = false; return; }   /* segundo toque: la suelta */
+  if(!EVA.activa) return;
+  const m = MANOS.mirado;
+  if(!m) return;
+  if(m.userData.antena){ ANT.agarrada = true; return; }
+  irA(m);
+}
+function botonLargo(el, abajo, arriba){
+  const dn = e => { e.preventDefault(); e.stopPropagation(); el.classList.add('on'); abajo(); };
+  const up = e => { el.classList.remove('on'); if(arriba) arriba(); };
+  el.addEventListener('touchstart', dn, {passive:false});
+  el.addEventListener('mousedown', dn);
+  addEventListener('touchend', up); addEventListener('mouseup', up);
+  addEventListener('touchcancel', up);
+}
+botonLargo(dSoltar, () => soltarAgarre());
+botonLargo(dSoga,   () => { MANOS.tira = true; }, () => { MANOS.tira = false; });
 
 /* el botón responde a touchstart: en el celular el camino de click se saltea */
 function pulsar(e){ e.preventDefault(); ent.salto = true; dSalto.classList.add('on'); }
@@ -2769,6 +3112,7 @@ function paso(dt){
   ent.salto = false;
 
   if(EVA.activa){
+    pasoManos(dt);
     pasoEva(dt, ix, iy, mag, ent.salto || teclas.Space);
     ent.salto = false;
     jug.aire = 0;
@@ -2855,6 +3199,25 @@ function hud(){
   const hayAviso = pel > 0.12;
   if(hayAviso !== dAviso.classList.contains('ver')) dAviso.classList.toggle('ver', hayAviso);
 
+  /* primera persona: el casco, la mano y la tarea */
+  if(EVA.activa !== dCasco.classList.contains('ver')) dCasco.classList.toggle('ver', EVA.activa);
+  linterna.intensity = EVA.activa ? 1.25 : 0;
+  luzEsclusa.intensity = (EVA.activa ? 1.5 : 0);
+  if(EVA.activa !== dMano.classList.contains('ver')) dMano.classList.toggle('ver', EVA.activa);
+  const cerca = !!MANOS.mirado;
+  if(cerca !== dMano.classList.contains('cerca')) dMano.classList.toggle('cerca', cerca);
+  const puno = !!(MANOS.agarrado || ANT.agarrada);
+  const dA = puno ? 'none' : '', dB = puno ? '' : 'none';
+  if(dManoA.style.display !== dA){ dManoA.style.display = dA; dManoB.style.display = dB; }
+  const tt = textoTarea();
+  if(dTarea.textContent !== tt) dTarea.textContent = tt;
+  if(!!tt !== dTarea.classList.contains('ver')) dTarea.classList.toggle('ver', !!tt);
+  const verSoltar = EVA.activa && !!MANOS.agarrado;
+  if(verSoltar !== dSoltar.classList.contains('ver')) dSoltar.classList.toggle('ver', verSoltar);
+  const verSoga = EVA.activa && !MANOS.agarrado && !MANOS.viaje &&
+                  jug.pos.distanceTo(ANCLA) > 3.0;
+  if(verSoga !== dSoga.classList.contains('ver')) dSoga.classList.toggle('ver', verSoga);
+
   const verGal = VUELO.espacio > 0.5;
   if(verGal !== dGalNom.classList.contains('ver')) dGalNom.classList.toggle('ver', verGal);
 
@@ -2935,69 +3298,23 @@ function animar(dt){
 }
 
 /* cámara en tercera persona, desde arriba y con vida propia */
-let ahoraVuelo = 0;
+let ahoraVuelo = 0, pasoFase = 0;
 function camara(dt){
   ahoraVuelo += dt;
-  /* afuera la deriva nunca para: si la cámara se acomoda sola, le saca el control al dedo */
-  if(idMira === null && !EVA.activa && jug.rapidez > 1.2){ /* se acomoda sola detrás del movimiento */
-    const obj = Math.atan2(jug.vel.x, jug.vel.z);          /* mirar HACIA donde va, no al revés */
-    let d = obj - camYaw;
-    while(d > Math.PI) d -= Math.PI*2;
-    while(d < -Math.PI) d += Math.PI*2;
-    camYaw += d*(1-Math.exp(-1.6*dt))*clamp(jug.rapidez/CFG.vCorrer,0,1);
-  }
   const corr = clamp((jug.rapidez - CFG.vCaminar)/(CFG.vCorrer - CFG.vCaminar), 0, 1);
-  const cubierta = enNave(jug.pos.x, jug.pos.y, jug.pos.z);
-  /* adentro la cámara se acerca y se endereza: si no, mira el techo desde afuera del casco */
-  let distObj = CFG.camDist + CFG.camDistCorrer*corr + (cubierta ? 0 : jug.pos.y*0.22);
-  if(cubierta) distObj = Math.min(distObj, 6.0);
-  /* mirando para arriba la cámara se hunde por debajo del jugador: acortándola no se mete
-     bajo la panza de la nave, que desde abajo es una pared negra */
-  if(EVA.activa && camPitch < 0) distObj *= 1 - 0.50*Math.min(1, -camPitch/CFG.camPicaEva);
-  camDist = acercar(camDist, distObj, 6*dt);
 
-  const pitchUsado = cubierta ? Math.min(camPitch, 0.24) : camPitch;
-  const cp = Math.cos(pitchUsado), sp = Math.sin(pitchUsado);
-  const bx = jug.pos.x + Math.sin(camYaw + Math.PI)*camDist*cp;
-  const bz = jug.pos.z + Math.cos(camYaw + Math.PI)*camDist*cp;
-  const by = jug.pos.y + CFG.camMira + camDist*sp;
+  /* PRIMERA PERSONA: la cámara no orbita, ES la cabeza. En horizontal va pegada al
+     cuerpo; en vertical amortigua, si no cada escalón es un golpe. */
+  camPos.x = jug.pos.x; camPos.z = jug.pos.z;
+  camPos.y = lerp(camPos.y, jug.pos.y + CFG.ojo, 1 - Math.exp(-16*dt));
 
-  const t = 1 - Math.exp(-CFG.camSuave*dt);
-  camPos.x = lerp(camPos.x, bx, t);
-  camPos.y = lerp(camPos.y, EVA.activa ? by : Math.max(by, 0.8), t);
-  camPos.z = lerp(camPos.z, bz, t);
-  if(EVA.activa){                      /* afuera: se acorta hasta que deje de estar en el casco */
-    _tmpEva.copy(camPos).sub(jug.pos);
-    const largo = _tmpEva.length();
-    if(largo > 0.01){
-      _tmpEva.multiplyScalar(1/largo);
-      let libre = largo;
-      for(let i = 1; i <= 10; i++){
-        const t2 = largo*i/10;
-        const px = jug.pos.x + _tmpEva.x*t2, py = jug.pos.y + _tmpEva.y*t2, pz = jug.pos.z + _tmpEva.z*t2;
-        /* los bultos enteros, no sólo los muros: por arriba de la nave no hay ninguno */
-        let choca = false;
-        for(let k = 0; k < BULTOS.length && !choca; k++){
-          const c = BULTOS[k];
-          choca = px > c.x0 && px < c.x1 && py > c.y0 && py < c.y1 && pz > c.z0 && pz < c.z1;
-        }
-        for(let k = 0; k < MUROS.length && !choca; k++){
-          const m = MUROS[k];
-          if(m.soloVuelo) continue;
-          if(px > m.x0 - 0.3 && px < m.x1 + 0.3 && py > m.y0 - 0.3 && py < m.y1 + 0.3 &&
-             pz > m.z0 - 0.3 && pz < m.z1 + 0.3) choca = true;
-        }
-        if(choca){ libre = Math.max(1.2, largo*(i-1)/10); break; }
-      }
-      camPos.copy(jug.pos).addScaledVector(_tmpEva, libre);
-    }
-  }
-  if(cubierta){                        /* queda encerrada en la cubierta, no cruza el casco */
-    camPos.x = clamp(camPos.x, cubierta.x0 + 0.40, cubierta.x1 - 0.40);
-    camPos.z = clamp(camPos.z, cubierta.z0 + 0.40, cubierta.z1 - 0.40);
-    camPos.y = clamp(camPos.y, cubierta.y0 + 0.45, cubierta.y1 - 0.30);
-  }
-  cam.position.copy(camPos);
+  /* el tranco se siente: sin esto caminar en primera persona es deslizarse */
+  pasoFase += jug.rapidez*dt*2.3;
+  const anda = EVA.activa ? 0 : clamp(jug.rapidez/CFG.vCaminar, 0, 1.4);
+  const bobY = Math.sin(pasoFase*2)*0.026*anda;
+  const rol  = Math.sin(pasoFase)*0.016*anda;
+
+  cam.position.set(camPos.x, camPos.y + bobY, camPos.z);
   const tiembla = VUELO.sacude + BICHOS.peligro*0.9;
   if(tiembla > 0.001){                     /* el despegue y lo que se acerca se sienten */
     const a = tiembla*0.085;
@@ -3005,16 +3322,11 @@ function camara(dt){
     cam.position.y += Math.sin(ahoraVuelo*53.0)*a;
     cam.position.z += Math.sin(ahoraVuelo*41.0)*a*0.6;
   }
-
-  camMira.set(                                            /* mira un poco adelante */
-    lerp(camMira.x, jug.pos.x + jug.vel.x*0.22, t),
-    lerp(camMira.y, jug.pos.y + CFG.camMira, t),
-    lerp(camMira.z, jug.pos.z + jug.vel.z*0.22, t)
-  );
-  cam.lookAt(camMira);
+  /* camYaw es hacia dónde MIRA: el frente de la cámara es -Z, así que va yaw + PI */
+  cam.rotation.set(camPitch, camYaw + Math.PI, rol + inclinaEva, 'YXZ');
 
   const fov = CFG.fovBase + (CFG.fovCorrer - CFG.fovBase)*corr;
-  if(Math.abs(cam.fov - fov) > 0.05){ cam.fov = lerp(cam.fov, fov, t); cam.updateProjectionMatrix(); }
+  if(Math.abs(cam.fov - fov) > 0.05){ cam.fov = lerp(cam.fov, fov, 1 - Math.exp(-7*dt)); cam.updateProjectionMatrix(); }
 }
 
 /* ------------------------------------------------------------------ marco */
@@ -3040,6 +3352,10 @@ function marco(ahora){
   if(suavems > 26 && dpr > 0.75){ dpr = Math.max(0.75, dpr-0.12); rend.setPixelRatio(dpr); medir(); suavems = 16; }
   else if(suavems < 11 && dpr < Math.min(devicePixelRatio||1,2)){ dpr = Math.min(Math.min(devicePixelRatio||1,2), dpr+0.1); rend.setPixelRatio(dpr); medir(); suavems = 16; }
 }
+
+/* la linterna del casco: afuera es la única luz que le pega al casco de cerca */
+const linterna = new THREE.SpotLight(col(0xdfeaf2), 0.0, 26, 0.72, 0.62, 1.7);
+cam.add(linterna); cam.add(linterna.target); linterna.target.position.set(0, 0, -1);
 
 /* ----------------------------------------------------------------- sondas */
 window.__A = {
@@ -3086,6 +3402,17 @@ window.__A = {
   fotos(){ return {tiene:FOTO.tiene, cerca:FOTO.cerca, carrete:FOTO.carrete, abierta:FOTO.abierta,
     boton:dUsar.classList.contains('ver'), texto:dUsar.textContent,
     camaraEn: camaraObj.parent ? camaraObj.parent.name || camaraObj.parent.type : null}; },
+  manos(){ return {mirado:MANOS.mirado ? (MANOS.mirado.userData.antena ? 'antena' : MANOS.mirado.userData.i) : null,
+    agarrado:MANOS.agarrado ? MANOS.agarrado.userData.i : null, viajando:!!MANOS.viaje,
+    antena:ANT.agarrada, agarres:AGARRES.length,
+    cabeza:cam.position.toArray().map(v => +v.toFixed(2))}; },
+  antena(){ return {yaw:+ANT.yaw.toFixed(3), pitch:+ANT.pitch.toFixed(3),
+    senal:+ANT.senal.toFixed(3), enlace:ANT.enlace, tarea:dTarea.textContent}; },
+  agarrar(i){ irA(AGARRES[i]); return i; },
+  soltarAgarre, tocar, girarAntena(y, p){ ANT.yaw = y; ANT.pitch = p; return [ANT.yaw, ANT.pitch]; },
+  apuntarACasa(){ ANT.yaw = Math.atan2(DIR_CASA.x, DIR_CASA.z); ANT.pitch = Math.asin(DIR_CASA.y);
+    return [ANT.yaw, ANT.pitch]; },
+  DIR_CASA, AGARRES,
   tomar:tomarCamara, disparar:sacarFoto, cerrarFoto, papel:dPapel,
   vuelo(){ return {estado:VUELO.estado, t:+VUELO.t.toFixed(2), caida:+VUELO.caida.toFixed(1),
     espacio:+VUELO.espacio.toFixed(3), mundo:mundo.visible, mundoY:+mundo.position.y.toFixed(1),
