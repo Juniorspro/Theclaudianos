@@ -480,7 +480,7 @@ function rectR(x,y,w,h,r){
   cx.lineTo(x+r,y+h); cx.quadraticCurveTo(x,y+h,x,y+h-r);
   cx.lineTo(x,y+r); cx.quadraticCurveTo(x,y,x+r,y); cx.closePath();
 }
-function miembro(x1,y1,x2,y2,largo1,largo2,flex,grosor,col){
+function miembro(x1,y1,x2,y2,largo1,largo2,flex,grosor,col,borde){
   /* dos huesos con codo/rodilla resuelto por ley de cosenos */
   const dx=x2-x1, dy=y2-y1; let d=Math.hypot(dx,dy);
   d = Math.min(d, largo1+largo2-0.01);
@@ -490,7 +490,7 @@ function miembro(x1,y1,x2,y2,largo1,largo2,flex,grosor,col){
   const ex = x1 + Math.cos(a+b)*largo1, ey = y1 + Math.sin(a+b)*largo1;
   const fx = x1 + Math.cos(a)*d, fy = y1 + Math.sin(a)*d;
   cx.lineCap='round'; cx.lineJoin='round';
-  cx.strokeStyle='#0b0b12'; cx.lineWidth=grosor+2.4;
+  cx.strokeStyle='#0b0b12'; cx.lineWidth=grosor+(borde===undefined?2.4:borde);
   cx.beginPath(); cx.moveTo(x1,y1); cx.lineTo(ex,ey); cx.lineTo(fx,fy); cx.stroke();
   cx.strokeStyle=col; cx.lineWidth=grosor;
   cx.beginPath(); cx.moveTo(x1,y1); cx.lineTo(ex,ey); cx.lineTo(fx,fy); cx.stroke();
@@ -570,19 +570,69 @@ function pose(e){
     const s1=Math.sin(c), s2=Math.sin(c+Math.PI);
     p.pIx = s1*9; p.pIy = -Math.max(0,Math.sin(c))*7;
     p.pDx = s2*9; p.pDy = -Math.max(0,Math.sin(c+Math.PI))*7;
-    p.mIx = -3 + s2*7; p.mIy = -19 - Math.abs(s2)*2;
-    p.mDx =  3 + s1*7; p.mDy = -19 - Math.abs(s1)*2;
+    p.mIx = -5 + s2*7; p.mIy = -15 - Math.abs(s2)*2;
+    p.mDx =  5 + s1*7; p.mDy = -15.5 - Math.abs(s1)*2;
     p.cadY = -13 - Math.abs(Math.sin(c*2))*1.4;
     p.homY = p.cadY-10; p.cabY = p.cadY-16;
     p.incl = 0.13*v;
     return p;
   }
-  /* quieto: respiración */
+  /* quieto: respiración, manos en guardia despejada */
   const r = Math.sin(t*0.06)*1.1;
   p.homY += r*0.5; p.cabY += r*0.7;
-  p.mIy += r*0.4; p.mDy += r*0.4;
-  p.mIx=-6; p.mDx=6;
+  p.mIx=-9; p.mIy=-13.6+r*0.4; p.mDx=10.5; p.mDy=-15+r*0.4;
   return p;
+}
+
+/* ---------- cabeza del protagonista (pelo en púas, vincha, ojazos) ---------- */
+function dibujarCabezaDan(e, col){
+  const t = J.t, corre = Math.abs(e.vx), viento = -e.vx*0.6 + Math.sin(t*0.16)*0.7;
+  cx.strokeStyle='#0b0b12'; cx.lineWidth=1.8; cx.lineJoin='round';
+  /* colas de la vincha, atrás de todo */
+  cx.fillStyle=col.cinta;
+  for(let i=0;i<2;i++){
+    const on = Math.sin(t*0.22 + i*1.6)*2.2 - corre*1.6;
+    cx.beginPath();
+    cx.moveTo(-5, -3.4+i*2.6);
+    cx.lineTo(-12.5+viento*0.6, -6.5+i*3.4+on);
+    cx.lineTo(-11.5+viento*0.6, -2.6+i*3.4+on);
+    cx.closePath(); cx.fill(); cx.stroke();
+  }
+  /* pelo: púas hacia arriba y atrás */
+  cx.fillStyle=col.pelo;
+  cx.beginPath();
+  cx.moveTo(-6.6,-4);
+  const puas=[[-9.4,-13.4],[-5.6,-9.6],[-5.4,-16.6],[-1,-10.4],[1.4,-17.4],[4.2,-10.6],[7.2,-14.4],[7.6,-6.4]];
+  for(const [px,py] of puas) cx.lineTo(px + viento*(py<-10?1.5:0.7), py);
+  cx.lineTo(7,-4); cx.closePath(); cx.fill(); cx.stroke();
+  cx.fillStyle=col.peloOsc;
+  cx.beginPath(); cx.moveTo(-6.6,-4); cx.lineTo(-3.4,-8.2); cx.lineTo(-1,-4.2); cx.closePath(); cx.fill();
+  /* cara */
+  cx.fillStyle=col.piel; cx.lineWidth=2;
+  rectR(-7,-7.6,14,14.4,4.4); cx.fill(); cx.stroke();
+  /* vincha con la gema */
+  cx.fillStyle=col.cinta;
+  cx.beginPath(); rectR(-7.6,-6.6,15.2,4.4,1.6); cx.fill(); cx.stroke();
+  cx.fillStyle=col.gema; cx.strokeStyle='#0b0b12'; cx.lineWidth=1.4;
+  cx.beginPath(); rectR(1.2,-6,3.6,3.4,1); cx.fill(); cx.stroke();
+  /* ojos grandes de sprite */
+  cx.lineWidth=2.2; cx.strokeStyle='#0b0b12';
+  const golpeando = e.est==='golpe' || e.est==='slam' || e.est==='dash';
+  if(e.est==='muerto' || e.est==='aturdido'){
+    cx.strokeStyle='#0b0b12'; cx.lineWidth=1.8;
+    for(const ox of [-1.6, 4.2]){
+      cx.beginPath(); cx.moveTo(ox-1.6,-2.4); cx.lineTo(ox+1.6,0.4);
+      cx.moveTo(ox+1.6,-2.4); cx.lineTo(ox-1.6,0.4); cx.stroke();
+    }
+  } else {
+    const alto = golpeando? 3.2 : 4.6, arriba = golpeando? -1.6 : -2.6;
+    cx.fillStyle=col.ojo;
+    cx.beginPath(); rectR(-2.8, arriba, 3.4, alto, 0.8); cx.fill();
+    cx.beginPath(); rectR(1.6, arriba, 3.8, alto, 0.8); cx.fill();
+    cx.fillStyle='#0b0b12';
+    cx.fillRect(-3.4, arriba-1.2, 9.6, 1.2);            /* sombra de la vincha */
+    if(golpeando) cx.fillRect(-3.2, arriba, 9.2, 1.2);  /* entrecierra al pegar */
+  }
 }
 
 /* ---------- dibujar un peleador ---------- */
@@ -595,7 +645,8 @@ function dibujarPeleador(e){
   cx.rotate(p.incl);
   if(e.parpadeo && (J.t>>1)%2===0) cx.globalAlpha=0.45;
 
-  const gr = e.gordo? 6.6 : 4.6;       /* grosor de miembro */
+  const gr = col.gr || (e.gordo? 6.6 : 4.6);       /* grosor de miembro */
+  const bd = col.borde || 2.4;                      /* grosor del contorno */
   const zapa = (x,y,mira)=>{            /* zapatilla: el pie apunta hacia adelante */
     cx.save(); cx.translate(x,y+1.2);
     cx.fillStyle = col.zapa||'#1a1a22'; cx.strokeStyle='#0b0b12'; cx.lineWidth=1.8;
@@ -603,29 +654,56 @@ function dibujarPeleador(e){
     cx.restore();
   };
   /* piernas (detrás) */
-  const pi = miembro(p.cadX-2, p.cadY, p.pIx, p.pIy, 8, 8, 1, gr, col.pierna);
+  const pi = miembro(p.cadX-2, p.cadY, p.pIx, p.pIy, 8, 8, 1, gr+0.6, col.piernaOsc||col.pierna, bd);
   zapa(pi.fx, pi.fy, 1);
   /* brazo de atrás */
-  const ba = miembro(p.homX-2, p.homY, p.mIx, p.mIy, 8, 8, 1, gr-0.6, col.brazoAtras||col.brazo);
+  const ba = miembro(p.homX-2, p.homY, p.mIx, p.mIy, 8, 8, 1, gr-0.8, col.brazoAtras||col.brazo, bd);
   cx.fillStyle = col.guanteAtras||col.guante||col.piel; cx.strokeStyle='#0b0b12'; cx.lineWidth=1.6;
-  cx.beginPath(); cx.arc(ba.fx, ba.fy, e.gordo?3.6:2.7, 0, 7); cx.fill(); cx.stroke();
+  cx.beginPath(); cx.arc(ba.fx, ba.fy, col.puno? col.puno-1.4 : (e.gordo?3.6:2.7), 0, 7); cx.fill(); cx.stroke();
   /* torso */
-  cx.beginPath();
-  cx.moveTo(p.homX-7, p.homY-2); cx.lineTo(p.homX+7, p.homY-2);
-  cx.lineTo(p.cadX+5.5, p.cadY+2); cx.lineTo(p.cadX-5.5, p.cadY+2); cx.closePath();
-  cx.fillStyle=col.torso; cx.strokeStyle='#0b0b12'; cx.lineWidth=2.2; cx.fill(); cx.stroke();
-  if(col.franja){ cx.beginPath(); cx.moveTo(p.homX-6,p.homY+3); cx.lineTo(p.homX+6,p.homY+3);
-    cx.lineTo(p.cadX+4.6,p.cadY-1); cx.lineTo(p.cadX-4.6,p.cadY-1); cx.closePath();
-    cx.fillStyle=col.franja; cx.fill(); }
-  /* cinturón */
-  cx.fillStyle = col.cinto||'#1d1d26'; cx.strokeStyle='#0b0b12'; cx.lineWidth=1.4;
-  rectR(p.cadX-6, p.cadY-1.6, 12, 4, 1.4); cx.fill(); cx.stroke();
-  if(col.hebilla){ cx.fillStyle=col.hebilla; cx.fillRect(p.cadX-1.6, p.cadY-1, 3.4, 2.6); }
+  cx.strokeStyle='#0b0b12'; cx.lineWidth=2.2;
+  if(col.estilo==='dan'){
+    /* chaleco con hombreras sobre cuerpo claro */
+    cx.beginPath();
+    cx.moveTo(p.homX-8.4, p.homY-3); cx.lineTo(p.homX+8.4, p.homY-3);
+    cx.lineTo(p.cadX+6, p.cadY+2); cx.lineTo(p.cadX-6, p.cadY+2); cx.closePath();
+    cx.fillStyle=col.torso; cx.fill(); cx.stroke();
+    cx.fillStyle=col.hombrera;
+    cx.beginPath(); rectR(p.homX-9.4, p.homY-4.6, 6.4, 5.6, 2.4); cx.fill(); cx.stroke();
+    cx.beginPath(); rectR(p.homX+3.2, p.homY-4.6, 6.4, 5.6, 2.4); cx.fill(); cx.stroke();
+    cx.fillStyle='rgba(0,0,0,0.10)';
+    cx.fillRect(p.homX-1, p.homY-2, 2, (p.cadY-p.homY)+2);
+    /* faja con las dos puntas colgando */
+    cx.fillStyle=col.faja;
+    cx.beginPath(); rectR(p.cadX-6.6, p.cadY-3, 13.2, 5.4, 2); cx.fill(); cx.stroke();
+    cx.fillStyle=col.fajaOsc;
+    const bal = Math.sin(J.t*0.14)*1.4 - e.vx*0.5;
+    cx.beginPath(); cx.moveTo(p.cadX-2.4, p.cadY+1); cx.lineTo(p.cadX-4.6+bal, p.cadY+9);
+    cx.lineTo(p.cadX-0.6+bal, p.cadY+8.4); cx.closePath(); cx.fill(); cx.stroke();
+    cx.beginPath(); cx.moveTo(p.cadX+2.4, p.cadY+1); cx.lineTo(p.cadX+1.4+bal, p.cadY+8.6);
+    cx.lineTo(p.cadX+5.2+bal, p.cadY+7.6); cx.closePath(); cx.fill(); cx.stroke();
+  } else {
+    cx.beginPath();
+    cx.moveTo(p.homX-7, p.homY-2); cx.lineTo(p.homX+7, p.homY-2);
+    cx.lineTo(p.cadX+5.5, p.cadY+2); cx.lineTo(p.cadX-5.5, p.cadY+2); cx.closePath();
+    cx.fillStyle=col.torso; cx.fill(); cx.stroke();
+    if(col.franja){ cx.beginPath(); cx.moveTo(p.homX-6,p.homY+3); cx.lineTo(p.homX+6,p.homY+3);
+      cx.lineTo(p.cadX+4.6,p.cadY-1); cx.lineTo(p.cadX-4.6,p.cadY-1); cx.closePath();
+      cx.fillStyle=col.franja; cx.fill(); }
+  }
+  /* cinturón (los que no traen faja propia) */
+  if(col.cinto){
+    cx.fillStyle = col.cinto; cx.strokeStyle='#0b0b12'; cx.lineWidth=1.4;
+    rectR(p.cadX-6, p.cadY-1.6, 12, 4, 1.4); cx.fill(); cx.stroke();
+    if(col.hebilla){ cx.fillStyle=col.hebilla; cx.fillRect(p.cadX-1.6, p.cadY-1, 3.4, 2.6); }
+  }
   /* pierna delantera */
-  const pd = miembro(p.cadX+2, p.cadY, p.pDx, p.pDy, 8, 8, 1, gr, col.pierna);
+  const pd = miembro(p.cadX+2, p.cadY, p.pDx, p.pDy, 8, 8, 1, gr+0.6, col.pierna, bd);
   zapa(pd.fx, pd.fy, 1);
   /* cabeza */
   cx.save(); cx.translate(p.cabX, p.cabY);
+  if(col.estilo==='dan'){ dibujarCabezaDan(e, col); cx.restore(); }
+  else {
   cx.fillStyle=col.piel; cx.strokeStyle='#0b0b12'; cx.lineWidth=2.2;
   rectR(-6.5,-7.5,13,14,4); cx.fill(); cx.stroke();
   if(col.pelo){ cx.fillStyle=col.pelo; cx.beginPath();
@@ -642,12 +720,12 @@ function dibujarPeleador(e){
     if(col.ojoRojo){ cx.fillStyle=col.ojoRojo; cx.fillRect(2.2,-3.2,2,2.4);} }
   if(col.bigote){ cx.fillStyle=col.bigote; cx.fillRect(-1,1.2,7,2); }
   if(col.barba){ cx.fillStyle=col.barba; rectR(-5,0.5,11,6,2.5); cx.fill(); }
-  cx.restore();
+  cx.restore(); }
   /* brazo delantero (encima) */
-  const br = miembro(p.homX+2, p.homY, p.mDx, p.mDy, 8, 8, -1, gr-0.4, col.brazo);
+  const br = miembro(p.homX+2, p.homY, p.mDx, p.mDy, 8, 8, -1, gr-0.2, col.brazo, bd);
   /* guante/arma en la mano */
   cx.fillStyle = col.guante||col.piel; cx.strokeStyle='#0b0b12'; cx.lineWidth=1.8;
-  cx.beginPath(); cx.arc(br.fx, br.fy, e.gordo?4.2:3.2, 0, 7); cx.fill(); cx.stroke();
+  cx.beginPath(); cx.arc(br.fx, br.fy, col.puno || (e.gordo?4.2:3.2), 0, 7); cx.fill(); cx.stroke();
   if(e.arma) dibujarArma(e.arma, br.fx, br.fy);
   cx.restore();
   return {manoX: e.x + d*br.fx, manoY: e.y + br.fy};
@@ -935,9 +1013,14 @@ function monedas(m,x,y,n){ for(let i=0;i<n;i++) (m.semillas||(m.semillas=[])).pu
 
 /* ---------- paletas de personajes ---------- */
 const PAL = {
-  tipo:    {torso:'#2f6fd0', franja:'#e8eef7', pierna:'#26324a', brazo:'#2f6fd0', brazoAtras:'#24559e',
-            piel:'#f0b287', pelo:'#2b2118', guante:'#e8eef7', guanteAtras:'#cdd5e4',
-            zapa:'#e8eef7', cinto:'#1d2436', hebilla:'#ffd24a'},
+  tipo:    {estilo:'dan',
+            torso:'#d4d6d3', franja:'#bfc2bf', hombrera:'#e9ebe8',
+            pierna:'#3d3a5c', piernaOsc:'#2b2842',
+            brazo:'#fbfba5', brazoAtras:'#e6e68f', piel:'#fbfba5',
+            pelo:'#e6681c', peloOsc:'#c04f12',
+            cinta:'#d7f231', gema:'#4fd1c5', faja:'#8fd9a8', fajaOsc:'#5fae7d',
+            guante:'#fbfba5', guanteAtras:'#e6e68f', puno:3.7, gr:5.6, borde:1.9,
+            zapa:'#fbfba5', cinto:null, ojo:'#ffffff'},
   guardia: {torso:'#b03a34', franja:'#7d2622', pierna:'#3a3038', brazo:'#b03a34', brazoAtras:'#8a2c27',
             piel:'#d79b6d', casco:'#6e6a78', guante:'#3a3038'},
   escudero:{torso:'#7a7f92', franja:'#5a5f70', pierna:'#33363f', brazo:'#7a7f92', brazoAtras:'#5f6473',
