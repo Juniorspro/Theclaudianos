@@ -185,3 +185,24 @@ fluorescentes, balizas de antena, nubes, banderas.
 
 Medido con calentamiento contra el commit anterior: **2,46 → 1,51 ms** por cuadro. Las piezas
 horneadas cuestan menos que los trazos vectoriales que reemplazan.
+
+### 2026-09-22 (noche, 4) — menús en pixel art, vivos
+**Pedido textual:** «Mejora los menús que sean dinámicos y gotys o sea pixel art el fondo también que el
+nombré este escrito en pixels que tengan animaciones de colores o algo etc».
+
+- **Fuente de píxeles propia** (`FUENTE_PX`, 5×7, con tildes, Ñ, ¡¿ y moneda) sin fuentes externas.
+  `pixelar(el, S, {grad})` convierte el texto de un elemento en un lienzo con contorno, sombra y degradé
+  por fila, a escala entera; guarda el texto en `data-px` para poder rehacerlo. `pixelarCapa(id)` se
+  llama al mostrar cada capa.
+- **Portada viva** (`dibujarMenu`/`pasarMenu`): el fondo del nivel con su parallax y sus animaciones,
+  el protagonista que corre, se cruza a un matón, le mete el combo de tres con hit-stop, estrellas y
+  K.O., y lo manda a volar; después fundido con trama Bayer (como las consolas) al nivel y rival
+  siguientes. El nombre **EL TIPO** se dibuja en el mundo pixelado: cada letra cae al abrir, ondula,
+  bandas de color de fuego que corren y un barrido de luz.
+- El nombre grande va **sólo en la portada** (`ESC.conTitulo`): en tienda y cómo se juega se metía
+  detrás del encabezado.
+- En los menús los mandos se sacan del layout (`display:none`) y la escena ocupa toda la pantalla.
+- Botones y paneles de 16 bits con bisel por `box-shadow`, entradas escalonadas con `steps()`,
+  el rango del fin de nivel cicla colores con `hue-rotate`, íconos de la tienda y retratos de jefes en
+  la lista de niveles sacados del mismo kit de piezas; candado en los cerrados.
+- Música de menú propia (triángulo, más lenta) y blip al tocar botones.
