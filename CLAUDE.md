@@ -296,3 +296,24 @@ intento de pantalla completa (el visor cambia de tamaño sin avisar como uno esp
 - El HUD va a su propia escala (`PXH`, `ANCHO_H`, `ALTO_H`, `ZONA_H`) y no se achica. El halo de `oscuridad()`
   pasó a medirse en mundo. El título de la portada crece con `ALTO_M`.
 - Medido: bot 15/15, gestos 9/9, sin errores; dibujo a DPR 2,625 de 2,08/1,80 a 2,23/2,49 ms (n1/n5).
+
+### 2026-09-23 (6) — resolución baja y optimizaciones
+**Pedido textual:** «Bájale la resolución a un 80% va muy lag y busca optimizaciones».
+
+Culpable, medido con el perfilador de Chrome a DPR 2,625 y CPU ×6 más lenta: **el JS del juego no llega al 2 %**; todo
+se iba en pintar píxeles. La vuelta anterior había subido el lienzo a la resolución del aparato (2342×1082) y
+bajó de 34 a **13 cuadros por segundo**.
+
+- **Lienzo = mundo × m**, con `m` divisor de `PXd` y `≤ RES_LIENZO (0,8) × PXd`; el CSS lo agranda con
+  `image-rendering:pixelated` (lo hace el compositor, gratis). Con `PXd 4` → `m 2`: 1171×541, la cuarta parte de
+  los píxeles, y el mundo se ve **igual** porque cada píxel del mundo sigue midiendo 4 del aparato. El HUD va a
+  `hs` píxeles de lienzo enteros, así que tampoco sale desparejo.
+- **Velos** (oscuridad, niebla, tintes de furia/cámara lenta/daño) se pintan en el lienzo del mundo antes de agrandarlo.
+- **Tiras del parallax recortadas** a las filas que tienen algo (`filasUsadas`, `tiraPx`): se pintaban enteras,
+  casi todas transparentes.
+- **HUD**: se borra y se agranda sólo la franja de arriba (`HUD_Y1`); entera sólo con jefe, cartel o flecha.
+- **No se redibuja un cuadro que no cambió** (`if(!pasos) return`): en pantallas de 90/120 Hz se dibujaba dos veces.
+- Medido con CPU ×6: antes del zoom 37/35, con zoom 13/14, ahora **42/40** cuadros por segundo (n1/n4). Bot 15/15,
+  gestos 9/9, sin errores; capturas de n1, n3, n5 y jefe iguales a las de antes.
+- **Trampa del banco:** `Emulation.setCPUThrottlingRate` en headless también frena el rasterizado por software, así
+  que el costo de rellenar píxeles aparece. Sin frenar, todo da 60 y no se ve nada.

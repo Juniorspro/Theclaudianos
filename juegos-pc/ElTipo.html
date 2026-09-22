@@ -12,7 +12,7 @@
 html,body{width:100%;height:100%;overflow:hidden;background:#07070c;
   font-family:"Trebuchet MS","Verdana",sans-serif;color:#fff;touch-action:none;overscroll-behavior:none}
 #pantalla{position:fixed;inset:0;display:flex;flex-direction:column}
-#lienzo{display:block;width:100%;flex:1 1 0;min-height:0;background:#0a0a12}   /* sin el tamaño propio del canvas trabando el flex */
+#lienzo{display:block;image-rendering:pixelated;image-rendering:crisp-edges;width:100%;flex:1 1 0;min-height:0;background:#0a0a12}   /* sin el tamaño propio del canvas trabando el flex */
 
 /* ---------- mandos: flotan sobre el juego, como en Dan The Man ---------- */
 #mandos{position:absolute;left:0;right:0;bottom:0;height:200px;display:flex;pointer-events:none;z-index:3}
@@ -334,7 +334,8 @@ const cvM = document.createElement('canvas');          /* mundo: baja resolució
 const cxM = cvM.getContext('2d', {alpha:false});
 let cx = cxP;                                          /* contexto activo */
 let ANCHO=412, ALTO=700, DPR=1, PX=2, ANCHO_M=206, ALTO_M=346, ZONA_MANDOS=95;
-let PXH=2, ANCHO_H=206, ALTO_H=346, ZONA_H=95;   /* el HUD va a su propia escala: no se achica al alejar la cámara */
+let PXH=2, ANCHO_H=206, ALTO_H=346, ZONA_H=95, HUD_Y1=9999;   /* el HUD va a su propia escala: no se achica al alejar la cámara */
+const RES_LIENZO = 0.8;                           /* tope de resolución del lienzo, relativo al aparato */
 const FILAS_MUNDO = 280;                          /* antes 206 en un teléfono de 412: la cámara ~35 % más lejos */
 const cvH = document.createElement('canvas');          /* HUD: pixel art, encima de todo */
 const cxH = cvH.getContext('2d');
@@ -382,17 +383,23 @@ function medir(){
   /* clientWidth/Height: el tamaño en el juego; getBoundingClientRect daría la caja ya girada */
   ANCHO = Math.max(240, Math.round(cv.clientWidth));
   ALTO  = Math.max(200, Math.round(cv.clientHeight));
-  cv.width  = Math.round(ANCHO*DPR);
-  cv.height = Math.round(ALTO*DPR);
-  cxP.setTransform(DPR,0,0,DPR,0,0);
-  cxP.imageSmoothingEnabled = false;
-  /* escala entera: el píxel del mundo mide PX píxeles de pantalla, sin medios píxeles */
   /* el píxel del mundo mide un número ENTERO de píxeles del aparato (PXd); PX, en px de CSS, puede ser fraccionario.
      FILAS_MUNDO fija cuánto mundo entra en el lado corto: más filas = cámara más lejos */
   const corto = Math.min(ANCHO, ALTO);
+  /* RES: px del lienzo por px de CSS. El lienzo NO va a la resolución del aparato: va al mundo × m (m divide a
+     PXd) y el CSS lo agranda con image-rendering:pixelated, que es gratis. Así cada píxel del mundo sigue
+     midiendo PXd píxeles del aparato, pero se pintan (m/PXd)² de los píxeles: con PXd 4 y m 2, la cuarta parte. */
+  let RES;
   if(PIXELADO){ const PXd = Math.max(2, Math.round(corto*DPR/FILAS_MUNDO)); PX = PXd/DPR;
-    PXH = Math.max(2, Math.round(Math.max(2, Math.round(corto/212))*DPR))/DPR; }
-  else { PX = 1; PXH = 1; }
+    let m = 1; for(let k=1; k<=PXd; k++) if(PXd%k===0 && k <= PXd*RES_LIENZO) m = k;
+    RES = m/PX;
+    const hs = Math.max(1, Math.round(Math.max(2, Math.round(corto/212))*RES));   /* px de lienzo por px del HUD */
+    PXH = hs/RES; }
+  else { PX = 1; PXH = 1; RES = Math.min(DPR, 1.5); }
+  cv.width  = Math.round(ANCHO*RES);
+  cv.height = Math.round(ALTO*RES);
+  cxP.setTransform(RES,0,0,RES,0,0);
+  cxP.imageSmoothingEnabled = false;
   ANCHO_M = Math.ceil(ANCHO/PX); ALTO_M = Math.ceil(ALTO/PX);
   ANCHO_H = Math.ceil(ANCHO/PXH); ALTO_H = Math.ceil(ALTO/PXH);
   cvM.width = ANCHO_M; cvM.height = ALTO_M;
@@ -400,7 +407,7 @@ function medir(){
   J.cam.esc = PX;                       /* ANCHO/esc sigue siendo el ancho visible del mundo */
   ZONA_MANDOS = Math.round((ANCHO > ALTO ? 118 : 190)/PX);   /* alto de mundo debajo de los mandos */
   ZONA_H = Math.round((ANCHO > ALTO ? 118 : 190)/PXH);
-  cvH.width = ANCHO_H; cvH.height = ALTO_H; cxH.imageSmoothingEnabled = false;
+  cvH.width = ANCHO_H; cvH.height = ALTO_H; cxH.imageSmoothingEnabled = false; HUD_Y1 = 9999;
   cacheFondo.clave = '';                /* el fondo se rehace al tamaño nuevo */
 }
 window.addEventListener('resize', medir);
@@ -2555,11 +2562,22 @@ function hacerFondo(){
     const tira = document.createElement('canvas'); tira.width=anchoTira; tira.height=ALTO_M;
     const tc = tira.getContext('2d');
     PINTORES[T.id](tc, anchoTira, ALTO_M, col, capa, semi, (a)=>{ a.p=pp; a.w=anchoTira; cacheFondo.anim.push(a); });
-    capas.push({cv:tira, p:pp, w:anchoTira});
+    capas.push(Object.assign({cv:tira, p:pp, w:anchoTira}, filasUsadas(tira)));
   }
   cacheFondo.capas = capas;
 }
 
+/* filas con algo pintado: las tiras son casi todas transparentes arriba y dibujarlas enteras
+   era pintar la pantalla dos veces de más en cada cuadro */
+function filasUsadas(c){
+  const d = c.getContext('2d').getImageData(0,0,c.width,c.height).data, W = c.width;
+  let y0 = c.height, y1 = 0;
+  for(let y=0; y<c.height; y++){ const f = y*W*4;
+    for(let x=3; x<W*4; x+=4) if(d[f+x]){ if(y<y0) y0=y; y1=y; break; } }
+  return y1<y0 ? {y0:0, h:0} : {y0, h:y1-y0+1};
+}
+function tiraPx(cp, x, y){ if(cp.h===undefined) cx.drawImage(cp.cv, x, y);
+  else if(cp.h) cx.drawImage(cp.cv, 0, cp.y0, cp.w, cp.h, x, y+cp.y0, cp.w, cp.h); }
 /* ---------- pintores de fondo, uno por tema (pixel art a escala 1) ---------- */
 function rectPx(g,x,y,w,h,c){ g.fillStyle=c; g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h)); }
 function ventanas(g,x,y,w,h,paso,prob,r,col,apagada){
@@ -2701,8 +2719,8 @@ function fondo(){
     if(!capa.p){ cx.drawImage(capa.cv, 0, 0); continue; }
     const desp = ((-c.x*capa.p) % capa.w + capa.w) % capa.w;
     const dy = (c.y*0.18)|0;
-    cx.drawImage(capa.cv, desp-capa.w, dy);
-    cx.drawImage(capa.cv, desp, dy);
+    tiraPx(capa, desp-capa.w, dy);
+    tiraPx(capa, desp, dy);
   }
   animFondo();
   if(T.id==='torre'){
@@ -3064,14 +3082,21 @@ function dibujarEntidades(){
   dibujarPeleador(p);
 }
 /* oscuridad del subte */
-function oscuridad(){
-  if(!T.oscuro) return;
+/* velos de pantalla completa (oscuridad, niebla, tintes): van al lienzo del mundo, antes de agrandarlo.
+   Pintados sobre la pantalla grande costaban un relleno entero de más por cada uno. */
+function velos(e, W, H){
   const p = J.jug, c = J.cam;
-  const px = (p.x - c.x)*c.esc, py = (p.y-18 - c.y)*c.esc;
-  const g = cx.createRadialGradient(px, py, 10*c.esc, px, py, 100*c.esc);   /* radio en mundo, no en pantalla */
-  g.addColorStop(0,'rgba(255,240,200,0.20)'); g.addColorStop(0.42,'rgba(10,12,18,0.30)');
-  g.addColorStop(1,'rgba(4,5,9,0.88)');
-  cx.fillStyle=g; cx.fillRect(0,0,ANCHO,ALTO);
+  if(T.oscuro){
+    const px = (p.x - c.x)*e, py = (p.y-18 - c.y)*e;
+    const g = cx.createRadialGradient(px, py, 10*e, px, py, 100*e);   /* radio en mundo, no en pantalla */
+    g.addColorStop(0,'rgba(255,240,200,0.20)'); g.addColorStop(0.42,'rgba(10,12,18,0.30)');
+    g.addColorStop(1,'rgba(4,5,9,0.88)');
+    cx.fillStyle=g; cx.fillRect(0,0,W,H);
+  }
+  if(T.niebla){ cx.fillStyle=T.niebla; cx.fillRect(0,0,W,H); }
+  if(p.enFuria>0){ cx.fillStyle='rgba(255,90,30,0.07)'; cx.fillRect(0,0,W,H); }
+  if(J.lento>0){ cx.fillStyle='rgba(120,220,255,0.05)'; cx.fillRect(0,0,W,H); }
+  if(p.inv>20 && !p.muerto){ cx.fillStyle='rgba(255,40,40,0.09)'; cx.fillRect(0,0,W,H); }
 }
 
 /* ---------- HUD ---------- */
@@ -3207,7 +3232,7 @@ function barraPx(g, x, y, w, h, v, a, b, fondo){
 }
 function hud(){
   const g = cxH, p = J.jug, W = ANCHO_H;
-  g.clearRect(0,0,cvH.width,cvH.height);
+  g.clearRect(0,0,cvH.width,Math.min(cvH.height, HUD_Y1)); HUD_Y1 = 82;   /* combo y oleada llegan hasta ~78 */
   /* --- retrato + vida --- */
   const v = p.vida/p.vidaMax;
   const aro = v>0.5 ? ['#3fb03a','#9cf07a'] : (v>0.25 ? ['#d8a818','#fff08a'] : ['#d03838','#ff9a8a']);
@@ -3257,7 +3282,7 @@ function hud(){
   if(z) tx(g, 'OLEADA '+z.ola+'/'+z.oleadas.length+' · QUEDAN '+vivosDeZona(z), W>>1, 50, 1, GRAD.oro, 'cen');
   /* --- jefe o flecha al objetivo --- */
   if(J.jefe && !J.jefe.muerto){
-    const j = J.jefe, yb = ALTO_H - ZONA_H - 18;
+    const j = J.jefe, yb = ALTO_H - ZONA_H - 18; HUD_Y1 = ALTO_H;
     tx(g, j.nom+'  ·  FASE '+j.fase, W>>1, yb-12, 1, GRAD.rojo, 'cen');
     barraPx(g, 20, yb, W-40, 6, j.vida/j.vidaMax, '#e8404a', '#a02030', '#2a1420');
     barraPx(g, 20, yb+10, W-40, 2, j.quiebre/j.quiebreMax, '#ffd24a', '#c9901a', '#1c2033');
@@ -3266,14 +3291,14 @@ function hud(){
     const obj = J.mundo.zonas.find(q=>q.estado!=='limpia');
     const destino = obj ? obj.x1 : J.mundo.salida.x;
     if(Math.abs(destino - p.x) > 120 && (J.t>>4)%2===0){
-      const d = sig(destino-p.x), ax = d>0 ? W-10 : 10, ay = Math.round(ALTO_H*0.42);
+      const d = sig(destino-p.x), ax = d>0 ? W-10 : 10, ay = Math.round(ALTO_H*0.42); HUD_Y1 = Math.max(HUD_Y1, ay+16);
       for(let i=0;i<5;i++) rectPx(g, ax - d*i, ay-4+i, 1, 9-i*2, '#141018');
       for(let i=0;i<4;i++) rectPx(g, ax - d*(i+1), ay-3+i, 1, 7-i*2, '#ffd24a');
     }
   }
   /* --- cartel de presentación del jefe --- */
   if(J.cartel){
-    const c = J.cartel, y0 = Math.round(ALTO_H*0.28);
+    const c = J.cartel, y0 = Math.round(ALTO_H*0.28); HUD_Y1 = Math.max(HUD_Y1, y0+60);
     if(((110-c.t)>2 && c.t>2) || (J.t%2)){
       rectPx(g, 0, y0, W, 58, 'rgba(8,8,14,0.85)'); rectPx(g, 0, y0, W, 2, '#ff5a50'); rectPx(g, 0, y0+56, W, 2, '#ff5a50');
       const kj = TIPO_KIT[c.k];
@@ -3313,18 +3338,16 @@ function dibujar(){
   dibujarEfectos();
   cx.restore();
   if(PIXELADO){
+    velos(1, ANCHO_M, ALTO_M);
     cx = cxP;
     cxP.imageSmoothingEnabled = false;
     cxP.drawImage(cvM, 0, 0, ANCHO_M*PX, ALTO_M*PX);
-  }
-  oscuridad();
-  if(T.niebla){ cx.fillStyle=T.niebla; cx.fillRect(0,0,ANCHO,ALTO); }
-  if(J.jug.enFuria>0){ cx.fillStyle='rgba(255,90,30,0.07)'; cx.fillRect(0,0,ANCHO,ALTO); }
-  if(J.lento>0){ cx.fillStyle='rgba(120,220,255,0.05)'; cx.fillRect(0,0,ANCHO,ALTO); }
-  if(J.jug.inv>20 && !J.jug.muerto){ cx.fillStyle='rgba(255,40,40,0.09)'; cx.fillRect(0,0,ANCHO,ALTO); }
+  } else velos(J.cam.esc, ANCHO, ALTO);
   hud();
+  /* el HUD se agranda sólo hasta donde se dibujó: sin jefe ni cartel es la franja de arriba */
+  const hh = Math.min(ALTO_H, HUD_Y1);
   cxP.imageSmoothingEnabled = false;
-  cxP.drawImage(cvH, 0, 0, ANCHO_H*PXH, ALTO_H*PXH);
+  cxP.drawImage(cvH, 0, 0, ANCHO_H, hh, 0, 0, ANCHO_H*PXH, hh*PXH);
 }
 let acum=0, ultimo=0;
 function bucle(ts){
@@ -3339,6 +3362,7 @@ function bucle(ts){
     if(J.lento>0 && (J.t%2===0)){ J.t++; pasarEfectos(); J.lento--; continue; }
     pasar();
   }
+  if(!pasos) return;                    /* en pantallas de 90/120 Hz no se redibuja un cuadro que no cambió */
   if(J.t%15===0) revisarMedida();
   if(escenaMenu()) dibujarMenu();
   else if(J.mundo && J.jug) dibujar();
@@ -3693,7 +3717,7 @@ function dibujarMenu(){
   const caps = cacheFondo.capas, suelo = Math.floor(ALTO_M*(ANCHO_M>ALTO_M ? 0.60 : 0.52)), dy = suelo - Math.floor(ALTO_M*0.84);
   cx.drawImage(caps[0].cv, 0, 0);
   for(let i=1;i<caps.length;i++){ const cp = caps[i], d = ((-E.camx*cp.p) % cp.w + cp.w) % cp.w;
-    cx.drawImage(cp.cv, Math.round(d-cp.w), dy); cx.drawImage(cp.cv, Math.round(d), dy); }
+    tiraPx(cp, Math.round(d-cp.w), dy); tiraPx(cp, Math.round(d), dy); }
   const gx = J.cam.x, gy = J.cam.y; J.cam.x = E.camx; J.cam.y = dy/0.18; animFondo(); J.cam.x = gx; J.cam.y = gy;
   /* piso de la escena */
   cx.save(); cx.translate(-(Math.round(E.camx)%96), 0); cx.fillStyle = tierraDe(T);
