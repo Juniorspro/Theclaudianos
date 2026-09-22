@@ -416,3 +416,36 @@ el visor con viñeta. Afuera se vuelve a volar con la palanca y el botón de env
 La soga vuelve a 16 m (se había estirado a 26 sólo para que la ruta de agarraderas llegara).
 Probado: entrar, despegar, salir, empujar 16 m hasta que la soga tensa, y volver a entrar — sin
 errores de consola, 33 draw calls.
+
+### 2026-09-22 (n) — el carrete se vende
+**Pedido textual:** «Ahora haz que las fotos que el jugador saque (solo podrá sacar 3) pueda
+venderlas en una computadora que estará en el primer piso (dependiendo de la rareza del alien será
+más o menos pagado). El dinero le servirá para comprarse mejores cámaras y mejoras dentro de la
+nave».
+
+**El carrete tiene 3 fotos.** Cada disparo anota la copia: nombre del bicho, rareza, galaxia y
+cuánto paga. Con el carrete lleno el botón dice `CARRETE LLENO` y `sacarFoto` devuelve nulo — hay
+que volver a vender. Una placa sin nada adentro también gasta una foto y paga cero.
+
+**Precio:** `(55 + rareza×48) × 4,2 si es colosal × encuadre × calidad de la cámara`. El encuadre
+sale de la caja del bicho proyectada a pantalla, así que llenar el cuadro paga casi el triple que
+un puntito en un rincón. Medido con tres bichos de rareza 0: 39, 49 y 65 créditos.
+
+**La terminal** va en la bodega, sobre la banda de estribor a 1,5 m de las escaleras: escritorio,
+torre y monitor verde que muestra créditos, carrete y `[ HAY QUE VENDER ]`. Acercándose sale el
+botón `COMPUTADORA` y se abre el panel: la lista de lo que traés con su precio, `VENDER TODO`, las
+cámaras y las mejoras.
+
+**Cámaras** (la comprada se puede poner y sacar): de mano (3 fotos, alcance 75 m), réflex de 6×6
+(1.400 cr, 5 fotos, alcance 130 m, paga 55% más) y teleobjetivo 600 (5.200 cr, 8 fotos, alcance
+340 m, paga 130% más — es la que llega a los colosos).
+
+**Mejoras de la nave**, cada una con efecto medible: luces de bodega (800 cr, las lámparas pasan de
+0,95 a 1,9 de intensidad), soga larga (1.600 cr, de 16 a 28 m) e impulsores del traje (2.600 cr,
+empuje de 7 a 12).
+
+Lo que costó una vuelta:
+- **El alcance de la cámara estaba clavado en 75 m** adentro de `bichoEnCuadro`: sin sacarlo a la
+  ficha de la cámara, el teleobjetivo no se notaría en nada.
+- La sonda leía `FOTO.lleno`, que sólo se recalcula en el HUD: justo después de vender decía
+  «lleno» con el carrete vacío. El estado se calcula en el momento, no se lee del cachito del HUD.

@@ -46,24 +46,24 @@
     box-shadow:0 8px 24px rgba(0,0,0,.4)}
   #panelb.ver{opacity:1;visibility:visible}
   #panelb.on{transform:scale(.93)}
-  #galaxias{position:fixed;inset:0;z-index:27;display:none;align-items:center;justify-content:center;
+  #galaxias,#compu{position:fixed;inset:0;z-index:27;display:none;align-items:center;justify-content:center;
     background:rgba(3,5,12,.80);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);padding:18px}
-  #galaxias.ver{display:flex}
-  #galaxias .caja{width:100%;max-width:360px;max-height:82vh;overflow:auto;
+  #galaxias.ver,#compu.ver{display:flex}
+  #galaxias .caja,#compu .caja{width:100%;max-width:360px;max-height:82vh;overflow:auto;
     border:1px solid rgba(150,190,255,.22);border-radius:16px;padding:14px;
     background:linear-gradient(180deg,rgba(14,20,34,.96),rgba(8,10,18,.96));
     box-shadow:0 24px 60px rgba(0,0,0,.6)}
-  #galaxias h3{font-size:11px;letter-spacing:.24em;color:#9fd8ff;margin-bottom:2px;font-weight:800}
-  #galaxias .sub{font-size:10px;color:#7d8ea0;margin-bottom:12px;letter-spacing:.08em}
-  #galaxias .fila{display:block;width:100%;text-align:left;padding:11px 12px;margin-bottom:8px;
+  #galaxias h3,#compu h3{font-size:11px;letter-spacing:.24em;color:#9fd8ff;margin-bottom:2px;font-weight:800}
+  #galaxias .sub,#compu .sub{font-size:10px;color:#7d8ea0;margin-bottom:12px;letter-spacing:.08em}
+  #galaxias .fila,#compu .fila{display:block;width:100%;text-align:left;padding:11px 12px;margin-bottom:8px;
     border-radius:12px;border:1px solid rgba(140,180,220,.20);background:rgba(255,255,255,.03);
     color:#dfe9f4;pointer-events:auto;cursor:pointer}
-  #galaxias .fila.aca{border-color:rgba(255,190,110,.55);background:rgba(255,170,80,.10)}
-  #galaxias .fila b{display:block;font-size:13px;letter-spacing:.14em;font-weight:800}
-  #galaxias .fila i{display:block;font-style:normal;font-size:11px;color:#8ea2b6;margin-top:3px}
-  #galaxias .fila u{display:block;text-decoration:none;font-size:10px;color:#ffc98a;margin-top:6px;
+  #galaxias .fila.aca,#compu .fila.aca{border-color:rgba(255,190,110,.55);background:rgba(255,170,80,.10)}
+  #galaxias .fila b,#compu .fila b{display:block;font-size:13px;letter-spacing:.14em;font-weight:800}
+  #galaxias .fila i,#compu .fila i{display:block;font-style:normal;font-size:11px;color:#8ea2b6;margin-top:3px}
+  #galaxias .fila u,#compu .fila u{display:block;text-decoration:none;font-size:10px;color:#ffc98a;margin-top:6px;
     letter-spacing:.12em}
-  #galaxias .cerrar{display:block;width:100%;text-align:center;padding:10px;margin-top:4px;
+  #galaxias .cerrar,#compu .cerrar{display:block;width:100%;text-align:center;padding:10px;margin-top:4px;
     border-radius:10px;border:1px solid rgba(140,180,220,.18);color:#9fb0c0;font-size:11px;
     letter-spacing:.18em;pointer-events:auto;cursor:pointer;background:transparent}
   #galnom{position:absolute;top:calc(env(safe-area-inset-top,0px) + 52px);right:14px;
@@ -130,6 +130,29 @@
   #casco .ref{position:absolute;inset:0;opacity:.07;
     background:linear-gradient(166deg,#fff 0%,rgba(255,255,255,0) 30%),
                radial-gradient(ellipse 38% 24% at 24% 15%, rgba(255,255,255,.45), rgba(255,255,255,0) 72%)}
+  #compu .fila.no{opacity:.45}
+  #compu .fila.puesta{border-color:rgba(130,255,180,.5);background:rgba(60,255,150,.07)}
+  #compu .tit{font-size:10px;letter-spacing:.2em;color:#7fd8ff;margin:12px 2px 7px;font-weight:800}
+  #compu .vender{display:block;width:100%;text-align:center;padding:12px;margin:4px 0 2px;
+    border-radius:12px;border:1px solid rgba(130,255,180,.45);background:rgba(50,220,140,.12);
+    color:#b9ffd8;font-size:12px;letter-spacing:.16em;font-weight:800;pointer-events:auto;cursor:pointer}
+  #compu .vender.no{opacity:.4;border-color:rgba(140,180,220,.2);background:transparent;color:#8ea2b6}
+  #plata{position:absolute;top:calc(env(safe-area-inset-top,0px) + 84px);left:14px;
+    padding:6px 12px;border-radius:999px;font-size:10px;letter-spacing:.14em;font-weight:800;
+    color:#ffe6a8;background:rgba(28,20,6,.5);border:1px solid rgba(255,210,120,.34);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  #rollo{position:absolute;top:calc(env(safe-area-inset-top,0px) + 116px);left:14px;
+    padding:5px 11px;border-radius:999px;font-size:10px;letter-spacing:.14em;font-weight:800;
+    color:#cfe3ff;background:rgba(10,16,28,.46);border:1px solid rgba(150,200,255,.28);
+    opacity:0;transition:opacity .3s}
+  #rollo.ver{opacity:1}
+  #compub{position:absolute;right:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 270px);
+    padding:11px 18px;border-radius:999px;pointer-events:auto;opacity:0;visibility:hidden;
+    transition:opacity .25s,transform .09s;font-size:11px;font-weight:800;letter-spacing:.14em;
+    color:#b9ffd8;white-space:nowrap;background:linear-gradient(180deg,rgba(60,220,140,.24),rgba(6,24,16,.55));
+    border:1.5px solid rgba(120,255,180,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  #compub.ver{opacity:1;visibility:visible}
+  #compub.on{transform:scale(.93)}
   #carga{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:#0b0d14;
     color:#7fd8ff;font-size:12px;letter-spacing:.2em;transition:opacity .5s}
 </style>
@@ -142,6 +165,9 @@
   <div id="pista">izquierda: mover<br>derecha: mirar<br>botón: saltar</div>
   <div id="base"></div><div id="puno"></div>
   <div id="panelb">PANEL</div>
+  <div id="compub">COMPUTADORA</div>
+  <div id="plata">◈ 0</div>
+  <div id="rollo">CARRETE 0/3</div>
   <div id="galnom">VEGA ROTA</div>
   <div id="aviso">MASA COLOSAL EN APROXIMACIÓN</div>
   <div id="usar">TOMAR CÁMARA</div>
@@ -151,6 +177,7 @@
   <div id="casco"><div class="ref"></div><div class="vin"></div></div>
 </div>
 <div id="galaxias"><div class="caja"><h3>CARTA DE NAVEGACIÓN</h3><div class="sub">elegí a dónde saltar</div><div id="listagal"></div><div class="cerrar" id="cerrargal">CERRAR</div></div></div>
+<div id="compu"><div class="caja"><h3>TERMINAL DE CARGA</h3><div class="sub" id="compusub">vender lo que trajiste</div><div id="listacompu"></div><div class="cerrar" id="cerrarcompu">CERRAR</div></div></div>
 <div id="peligro"></div>
 <div id="fogonazo"></div>
 <div id="copia"><canvas id="papel"></canvas><small>TOCÁ PARA CERRAR</small></div>
@@ -167,7 +194,7 @@ const CFG = {
   grav:-26, salto:9.2, saltoDoble:7.6, saltosMax:2,
   camDist:5.7, camAlto:0.40, camMira:1.24, camSuave:7.5, camGiro:0.0055,
   camDistCorrer:1.2, fovBase:60, fovCorrer:68,
-  ojo:1.58, pitchMax:1.45,                    /* altura de los ojos y tope del cogote */
+  ojo:1.58, pitchMax:1.45, empuje:7.0,                    /* altura de los ojos y tope del cogote */
   sombraLado:14, mundo:3000, corral:120,
   escalaForzada:0          /* sólo para el A/B del patinaje: 0 = automática */
 };
@@ -402,7 +429,8 @@ N.escZ1 = N.esc.z + N.esc.n*N.esc.hondo;
 
 const MESA = {x:-4.0, z:24.5, alto:0.92};     /* dónde queda la cámara de fotos */
 const PANEL = {x:-2.7, z:30.6, abierto:false};  /* el pupitre de navegación */
-const PISOS = [], RAMPAS = [], MUROS = [];
+const COMPU = {x:4.55, z:20.3, abierto:false};  /* la terminal donde se venden las fotos */
+const PISOS = [], RAMPAS = [], MUROS = [], LAMPARAS = [];
 const piso = (x0,x1,z0,z1,y) => PISOS.push({x0,x1,z0,z1,y});
 const muro = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1});
 
@@ -698,7 +726,7 @@ const MAT_NAVE = {
   for(const f of [0.3, 0.72])       faroles.push([0xe6eef6, N.y1 + 2.0, N.z2 + (N.z3-N.z2)*f]);
   faroles.forEach(([c, y, z]) => {
     const l = new THREE.PointLight(col(c), 0.95, 22, 1.2);
-    l.position.set(0, y, z); esc.add(l);
+    l.position.set(0, y, z); esc.add(l); LAMPARAS.push(l);
   });
 })();
 
@@ -862,7 +890,7 @@ function pasoVuelo(dt){
 
 
 /* ------------------------------------------------------- cámara de fotos */
-const FOTO = { tiene:false, cerca:false, carrete:0, abierta:false };
+const FOTO = { tiene:false, cerca:false, carrete:0, abierta:false, rollo:[], lleno:false };
 
 const camaraObj = (function(){
   const g = new THREE.Group();
@@ -955,7 +983,7 @@ function bichoEnCuadro(){
     const u = v.x*0.5 + 0.5, w = -v.y*0.5 + 0.5;
     if(u < 0.06 || u > 0.94 || w < 0.05 || w > 0.84) continue;
     const d = b.position.distanceTo(cam.position);
-    if(d > 75 || d > mejorD) continue;
+    if(d > camAct().alcance || d > mejorD) continue;
     mejorD = d; mejor = b;
   }
   return mejor;
@@ -963,8 +991,15 @@ function bichoEnCuadro(){
 
 function sacarFoto(){
   if(!FOTO.tiene || FOTO.abierta) return null;
+  if(FOTO.rollo.length >= camAct().carrete) return null;   /* carrete lleno: hay que ir a vender */
   const presa = bichoEnCuadro();
+  let anota = {nombre:'PLACA VELADA', detalle:'no entró nada en el cuadro', precio:0};
   if(presa){
+    const cob = cobertura(presa);
+    anota = {nombre:presa.userData.nombre,
+             detalle:'rareza ' + presa.userData.rareza.toFixed(1) + ' · ' +
+                     GALAXIAS[GAL.actual].nombre + (presa.userData.colosal ? ' · COLOSAL' : ''),
+             precio:precioFoto(presa.userData, cob)};
     presa.userData.capturado = 0.0001;
     BICHOS.cazados++;
     BICHOS.nivel = Math.min(BICHOS.nivel + 1, 12);
@@ -1096,11 +1131,13 @@ function sacarFoto(){
   p.globalCompositeOperation = 'source-over';
 
   FOTO.carrete++;
+  FOTO.rollo.push(anota);
+  terminal.dicho = ''; pintarTerminal();
   FOTO.abierta = true;
   dCopia.classList.add('ver');
   dFogo.style.transition = 'none'; dFogo.style.opacity = '0.92';
   requestAnimationFrame(() => { dFogo.style.transition = 'opacity .45s'; dFogo.style.opacity = '0'; });
-  return {ancho:dPapel.width, alto:dPapel.height, carrete:FOTO.carrete};
+  return {ancho:dPapel.width, alto:dPapel.height, carrete:FOTO.carrete, foto:anota};
 }
 function cerrarFoto(){ FOTO.abierta = false; dCopia.classList.remove('ver'); }
 dCopia.addEventListener('pointerdown', e => { e.stopPropagation(); cerrarFoto(); });
@@ -2313,7 +2350,7 @@ function pasoEva(dt, ix, iy, mag, salto){
   /* cero gravedad: la palanca empuja en el plano de la cámara y el botón da un envión para arriba */
   _dirEva.set(Math.sin(camYaw), 0, Math.cos(camYaw));
   const derX = -_dirEva.z, derZ = _dirEva.x;
-  const emp = 7.0;
+  const emp = CFG.empuje;
   if(mag > 0.05){
     jug.vel.x += (derX*ix + _dirEva.x*(-iy))*emp*dt;
     jug.vel.z += (derZ*ix + _dirEva.z*(-iy))*emp*dt;
@@ -2644,6 +2681,9 @@ const dEspecies = document.getElementById('especies');
 const dPanelB = document.getElementById('panelb'), dGal = document.getElementById('galaxias');
 const dPeligro = document.getElementById('peligro'), dAviso = document.getElementById('aviso');
 const dListaGal = document.getElementById('listagal'), dGalNom = document.getElementById('galnom');
+const dCompu = document.getElementById('compu'), dCompuB = document.getElementById('compub');
+const dListaCompu = document.getElementById('listacompu'), dCompuSub = document.getElementById('compusub');
+const dPlata = document.getElementById('plata'), dRollo = document.getElementById('rollo');
 const dCasco = document.getElementById('casco');
 
 function pintarPanel(){
@@ -2671,8 +2711,9 @@ function pintarPalanca(px, py, vis){
 }
 addEventListener('pointerdown', e => {
   if(FOTO.abierta) return;                    /* con la copia abierta no se arma la palanca */
-  if(PANEL.abierto) return;
-  if(e.target === dSalto || e.target === dVolar || e.target === dUsar || e.target === dPanelB) return;
+  if(PANEL.abierto || COMPU.abierto) return;
+  if(e.target === dSalto || e.target === dVolar || e.target === dUsar || e.target === dPanelB ||
+     e.target === dCompuB) return;
   if(e.clientX < innerWidth*0.52 && idPalanca === null){
     idPalanca = e.pointerId; oX = e.clientX; oY = e.clientY;
     pintarPalanca(oX, oY, true);
@@ -2855,11 +2896,25 @@ function hud(){
   const b = camaraObj.userData.bombita;
   if(b) b.emissiveIntensity = FOTO.tiene ? 0.5
         : (FOTO.cerca ? 1.6 + 1.5*Math.abs(Math.sin(ahoraVuelo*3.4)) : 0.7);
+  FOTO.lleno = FOTO.rollo.length >= camAct().carrete;
   const verUsar = FOTO.tiene || FOTO.cerca;
   if(verUsar !== dUsar.classList.contains('ver')) dUsar.classList.toggle('ver', verUsar);
-  const txtUsar = FOTO.tiene ? 'FOTO' : 'TOMAR CÁMARA';
+  const txtUsar = FOTO.tiene ? (FOTO.lleno ? 'CARRETE LLENO' : 'FOTO') : 'TOMAR CÁMARA';
   if(dUsar.textContent !== txtUsar) dUsar.textContent = txtUsar;
   if(FOTO.tiene !== dVisor.classList.contains('ver')) dVisor.classList.toggle('ver', FOTO.tiene);
+
+  /* la terminal: sólo en la bodega y cerca del escritorio */
+  const cercaCompu = !EVA.activa && jug.pos.y < N.y1 - 0.5 &&
+    Math.hypot(jug.pos.x - COMPU.x, jug.pos.z - COMPU.z) < 2.6;
+  if(cercaCompu !== dCompuB.classList.contains('ver')) dCompuB.classList.toggle('ver', cercaCompu);
+  const txtPlata = '◈ ' + PLATA.creditos;
+  if(dPlata.textContent !== txtPlata) dPlata.textContent = txtPlata;
+  const verRollo = FOTO.tiene;
+  if(verRollo !== dRollo.classList.contains('ver')) dRollo.classList.toggle('ver', verRollo);
+  if(verRollo){
+    const t = 'CARRETE ' + FOTO.rollo.length + '/' + camAct().carrete;
+    if(dRollo.textContent !== t) dRollo.textContent = t;
+  }
 
   const cercaPanel = !EVA.activa && jug.pos.y > N.y1 - 0.5 &&
     Math.hypot(jug.pos.x - PANEL.x, jug.pos.z - PANEL.z) < 2.5;
@@ -3012,6 +3067,188 @@ function marco(ahora){
 const linterna = new THREE.SpotLight(col(0xdfeaf2), 0.0, 26, 0.72, 0.62, 1.7);
 cam.add(linterna); cam.add(linterna.target); linterna.target.position.set(0, 0, -1);
 
+/* ======================================================== plata: vender y comprar
+   Tres fotos por carrete. Se venden en la terminal de la bodega y con eso se compran
+   cámaras mejores y mejoras de la nave. */
+const CAMARAS = [
+  {id:'mano',   nombre:'CÁMARA DE MANO',   carrete:3, calidad:1.00, alcance:75,  precio:0,
+   linea:'la que estaba sobre la mesa'},
+  {id:'reflex', nombre:'RÉFLEX DE 6×6',    carrete:5, calidad:1.55, alcance:130, precio:1400,
+   linea:'negativo grande: cada copia paga mucho más'},
+  {id:'tele',   nombre:'TELEOBJETIVO 600', carrete:8, calidad:2.30, alcance:340, precio:5200,
+   linea:'llega a los colosos sin tener que acercarse'}
+];
+const MEJORAS = [
+  {id:'luces',      nombre:'LUCES DE BODEGA',      precio:800,  linea:'el doble de luz adentro de la nave'},
+  {id:'soga',       nombre:'SOGA LARGA',           precio:1600, linea:'28 m en vez de 16 para alejarse'},
+  {id:'impulsores', nombre:'IMPULSORES DEL TRAJE', precio:2600, linea:'empuje 7 → 12 en caminata espacial'}
+];
+const PLATA = {creditos:0, camara:0, compradas:{}, ultimaVenta:0};
+const camAct = () => CAMARAS[PLATA.camara];
+
+/* -------------------------------------------------------------- la terminal */
+const terminal = (function(){
+  const g = new THREE.Group();
+  g.position.set(COMPU.x, N.y0, COMPU.z);
+  g.rotation.y = -Math.PI/2;                      /* la pantalla mira al medio de la bodega */
+  const met = MAT_NAVE.oscuro, cl = MAT_NAVE.casco;
+  const tablero = new THREE.Mesh(new THREE.BoxGeometry(1.40, 0.07, 0.72), cl);
+  tablero.position.y = 0.78; g.add(tablero);
+  for(const sx of [-1, 1]) for(const sz of [-1, 1]){
+    const pata = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.76, 8), met);
+    pata.position.set(sx*0.62, 0.38, sz*0.28); g.add(pata);
+  }
+  const torre = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.52, 0.34), met);
+  torre.position.set(-0.52, 1.07, -0.06); g.add(torre);
+  const teclado = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.035, 0.20), met);
+  teclado.position.set(0.10, 0.83, 0.22); teclado.rotation.x = -0.06; g.add(teclado);
+  const marco = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.56, 0.06), met);
+  marco.position.set(0.10, 1.22, -0.10); marco.rotation.x = -0.16; g.add(marco);
+
+  const lienzoT = document.createElement('canvas'); lienzoT.width = 256; lienzoT.height = 192;
+  const cx = lienzoT.getContext('2d');
+  const tex = new THREE.CanvasTexture(lienzoT); tex.encoding = THREE.sRGBEncoding;
+  const pant = new THREE.Mesh(new THREE.PlaneGeometry(0.66, 0.48),
+    new THREE.MeshBasicMaterial({map:tex}));
+  pant.position.set(0.10, 1.22, -0.065); pant.rotation.x = -0.16; g.add(pant);
+  esc.add(g);
+  return {g, cx, tex, dicho:''};
+})();
+function pintarTerminal(){
+  const c = terminal.cx, W = 256, H = 192;
+  const cam = camAct(), n = FOTO.rollo.length;
+  const firma = PLATA.creditos + '|' + n + '|' + cam.id;
+  if(firma === terminal.dicho) return;
+  terminal.dicho = firma;
+  c.fillStyle = '#04070a'; c.fillRect(0, 0, W, H);
+  c.fillStyle = 'rgba(60,255,160,0.05)';
+  for(let y = 0; y < H; y += 4) c.fillRect(0, y, W, 2);      /* rayas del tubo */
+  c.textAlign = 'center';
+  c.fillStyle = '#7fe6a8'; c.font = 'bold 15px ui-monospace, monospace';
+  c.fillText('TERMINAL DE CARGA', W/2, 34);
+  c.fillStyle = '#ffd24a'; c.font = 'bold 22px ui-monospace, monospace';
+  c.fillText(PLATA.creditos + ' cr', W/2, 76);
+  c.fillStyle = '#c8ff6a'; c.font = '14px ui-monospace, monospace';
+  c.fillText('CARRETE ' + n + '/' + cam.carrete, W/2, 110);
+  c.fillStyle = '#6d8a58'; c.font = '12px ui-monospace, monospace';
+  c.fillText(cam.nombre, W/2, 134);
+  c.fillStyle = n ? '#8dff9f' : '#40563c'; c.font = 'bold 13px ui-monospace, monospace';
+  c.fillText(n ? '[ HAY QUE VENDER ]' : '[ SIN MATERIAL ]', W/2, 162);
+  c.strokeStyle = 'rgba(140,255,120,.3)'; c.lineWidth = 2; c.strokeRect(12, 12, W-24, H-24);
+  terminal.tex.needsUpdate = true;
+}
+pintarTerminal();
+
+/* --------------------------------------------- cuánto paga una foto */
+const _cajaFoto = new THREE.Box3(), _vFoto = new THREE.Vector3();
+function cobertura(b){            /* qué tajada del cuadro ocupa el bicho: encuadrar paga */
+  _cajaFoto.setFromObject(b);
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for(let i = 0; i < 8; i++){
+    _vFoto.set(i&1 ? _cajaFoto.max.x : _cajaFoto.min.x,
+               i&2 ? _cajaFoto.max.y : _cajaFoto.min.y,
+               i&4 ? _cajaFoto.max.z : _cajaFoto.min.z).project(cam);
+    x0 = Math.min(x0, _vFoto.x); x1 = Math.max(x1, _vFoto.x);
+    y0 = Math.min(y0, _vFoto.y); y1 = Math.max(y1, _vFoto.y);
+  }
+  const a = (Math.min(x1,1) - Math.max(x0,-1))*(Math.min(y1,1) - Math.max(y0,-1));
+  return clamp(a/4, 0, 1);
+}
+function precioFoto(u, cob){
+  const base = 55 + u.rareza*48;
+  const col = u.colosal ? 4.2 : 1;
+  const enc = 0.5 + 1.1*Math.sqrt(clamp(cob, 0, 1));
+  return Math.round(base*col*enc*camAct().calidad);
+}
+
+/* ------------------------------------------------------- panel de la terminal */
+function abrirCompu(){ if(COMPU.abierto) return; COMPU.abierto = true; pintarCompu(); dCompu.classList.add('ver'); }
+function cerrarCompu(){ COMPU.abierto = false; dCompu.classList.remove('ver'); }
+function pintarCompu(){
+  const total = FOTO.rollo.reduce((a, f) => a + f.precio, 0);
+  let h = '';
+  h += '<div class="tit">CARRETE — ' + FOTO.rollo.length + '/' + camAct().carrete + '</div>';
+  if(!FOTO.rollo.length){
+    h += '<div class="fila no"><b>SIN FOTOS</b><i>salí al espacio y traé algo</i></div>';
+  } else {
+    for(const f of FOTO.rollo){
+      h += '<div class="fila"><b>' + f.nombre + '</b><i>' + f.detalle + '</i>' +
+           '<u>' + (f.precio ? f.precio + ' cr' : 'no paga nada') + '</u></div>';
+    }
+  }
+  h += '<button class="vender' + (total ? '' : ' no') + '" data-v="1">' +
+       (total ? 'VENDER TODO · ' + total + ' cr' : 'NADA QUE VENDER') + '</button>';
+  h += '<div class="tit">CÁMARAS</div>';
+  CAMARAS.forEach((c, i) => {
+    const puesta = i === PLATA.camara, tiene = i === 0 || PLATA.compradas['cam_' + c.id];
+    const puede = tiene || PLATA.creditos >= c.precio;
+    h += '<div class="fila' + (puesta ? ' puesta' : (puede ? '' : ' no')) + '" data-c="' + i + '">' +
+         '<b>' + c.nombre + '</b><i>' + c.linea + '</i>' +
+         '<u>' + (puesta ? 'EN USO' : (tiene ? 'TOCÁ PARA PONERLA' : c.precio + ' cr')) +
+         ' · carrete ' + c.carrete + ' · alcance ' + c.alcance + ' m</u></div>';
+  });
+  h += '<div class="tit">MEJORAS DE LA NAVE</div>';
+  for(const m of MEJORAS){
+    const tiene = !!PLATA.compradas[m.id], puede = PLATA.creditos >= m.precio;
+    h += '<div class="fila' + (tiene ? ' puesta' : (puede ? '' : ' no')) + '" data-m="' + m.id + '">' +
+         '<b>' + m.nombre + '</b><i>' + m.linea + '</i>' +
+         '<u>' + (tiene ? 'PUESTA' : m.precio + ' cr') + '</u></div>';
+  }
+  dCompuSub.textContent = PLATA.creditos + ' créditos' +
+    (PLATA.ultimaVenta ? ' · última venta ' + PLATA.ultimaVenta + ' cr' : '');
+  dListaCompu.innerHTML = h;
+}
+function venderTodo(){
+  const total = FOTO.rollo.reduce((a, f) => a + f.precio, 0);
+  if(!total && !FOTO.rollo.length) return 0;
+  PLATA.creditos += total; PLATA.ultimaVenta = total;
+  FOTO.rollo.length = 0;
+  pintarCompu(); pintarTerminal();
+  return total;
+}
+function ponerCamara(i){
+  const c = CAMARAS[i];
+  const tiene = i === 0 || PLATA.compradas['cam_' + c.id];
+  if(!tiene){
+    if(PLATA.creditos < c.precio) return false;
+    PLATA.creditos -= c.precio; PLATA.compradas['cam_' + c.id] = true;
+  }
+  /* el carrete no se achica con la cámara: lo que sobra se pierde */
+  PLATA.camara = i;
+  if(FOTO.rollo.length > c.carrete) FOTO.rollo.length = c.carrete;
+  pintarCompu(); pintarTerminal();
+  return true;
+}
+function comprarMejora(id){
+  const m = MEJORAS.find(x => x.id === id);
+  if(!m || PLATA.compradas[id] || PLATA.creditos < m.precio) return false;
+  PLATA.creditos -= m.precio; PLATA.compradas[id] = true;
+  aplicarMejora(id);
+  pintarCompu(); pintarTerminal();
+  return true;
+}
+function aplicarMejora(id){
+  if(id === 'luces')      LAMPARAS.forEach(l => { l.intensity = 1.9; l.distance = 28; });
+  if(id === 'soga')       EVA.largo = 28;
+  if(id === 'impulsores') CFG.empuje = 12.0;
+}
+dListaCompu.addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  const fila = e.target.closest('[data-c],[data-m],[data-v]');
+  if(!fila) return;
+  if(fila.dataset.v) venderTodo();
+  else if(fila.dataset.c !== undefined) ponerCamara(+fila.dataset.c);
+  else comprarMejora(fila.dataset.m);
+}, {passive:true});
+document.getElementById('cerrarcompu').addEventListener('pointerdown', e => {
+  e.stopPropagation(); cerrarCompu();
+}, {passive:true});
+dCompu.addEventListener('pointerdown', e => {
+  e.stopPropagation(); if(e.target === dCompu) cerrarCompu();
+}, {passive:true});
+dCompuB.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); abrirCompu(); }, {passive:false});
+dCompuB.addEventListener('mousedown',  e => { e.preventDefault(); e.stopPropagation(); abrirCompu(); });
+
 /* ----------------------------------------------------------------- sondas */
 window.__A = {
   CFG, jug, cam, esc, MAT, hueso, mezcla,
@@ -3057,6 +3294,14 @@ window.__A = {
   fotos(){ return {tiene:FOTO.tiene, cerca:FOTO.cerca, carrete:FOTO.carrete, abierta:FOTO.abierta,
     boton:dUsar.classList.contains('ver'), texto:dUsar.textContent,
     camaraEn: camaraObj.parent ? camaraObj.parent.name || camaraObj.parent.type : null}; },
+  plata(){ return {creditos:PLATA.creditos, camara:camAct().id, carrete:camAct().carrete,
+    alcance:camAct().alcance, rollo:FOTO.rollo.slice(),
+    lleno:FOTO.rollo.length >= camAct().carrete,
+    compradas:Object.keys(PLATA.compradas), boton:dCompuB.classList.contains('ver'),
+    abierto:COMPU.abierto, soga:EVA.largo, empuje:CFG.empuje,
+    luz:LAMPARAS.length ? LAMPARAS[0].intensity : 0}; },
+  abrirCompu, cerrarCompu, vender:venderTodo, ponerCamara, comprarMejora,
+  regalar(n){ PLATA.creditos += n; pintarTerminal(); return PLATA.creditos; },
   tomar:tomarCamara, disparar:sacarFoto, cerrarFoto, papel:dPapel,
   vuelo(){ return {estado:VUELO.estado, t:+VUELO.t.toFixed(2), caida:+VUELO.caida.toFixed(1),
     espacio:+VUELO.espacio.toFixed(3), mundo:mundo.visible, mundoY:+mundo.position.y.toFixed(1),
