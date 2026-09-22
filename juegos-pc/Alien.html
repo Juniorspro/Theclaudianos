@@ -517,6 +517,19 @@ const POST = (function(){
     ? new THREE.WebGLMultisampleRenderTarget(4, 4, Object.assign(prof, base))
     : new THREE.WebGLRenderTarget(4, 4, Object.assign(prof, base));
   if(esc3d.isWebGLMultisampleRenderTarget) esc3d.samples = 4;
+  /* LA PROFUNDIDAD SALE DEL MISMO DIBUJO: con una textura de profundidad en el target, three la
+     copia al resolver la multimuestra (mismo formato: 24 bits con stencil). Sin otra pasada de
+     geometría, que con diez personas y la base serían otras cien llamadas. */
+  const conProf = w2 || !!gl.getExtension('WEBGL_depth_texture');
+  if(conProf){
+    const dt = new THREE.DepthTexture(4, 4);
+    dt.format = THREE.DepthStencilFormat; dt.type = THREE.UnsignedInt248Type;
+    esc3d.depthTexture = dt;
+  }
+  const bajo = {type:THREE.UnsignedByteType, format:THREE.RGBAFormat, minFilter:THREE.LinearFilter,
+                magFilter:THREE.LinearFilter, depthBuffer:false};
+  const ao = new THREE.WebGLRenderTarget(4, 4, bajo), aoB = new THREE.WebGLRenderTarget(4, 4, bajo);
+  const blanco1 = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1); blanco1.needsUpdate = true;
   const chico = () => new THREE.WebGLRenderTarget(4, 4, Object.assign({depthBuffer:false}, base));
   /* cadena de mitades: un borrón ralo a 1/4 dibuja copias sueltas de cada punto (se ve una
      cuadrícula); ½ -> ¼ -> ⅛ con gaussiano en cada escala queda liso */
@@ -550,11 +563,61 @@ const POST = (function(){
       c += (texture2D(t, vUv + uPaso*3.2308).rgb + texture2D(t, vUv - uPaso*3.2308).rgb) * 0.0703;
       gl_FragColor = vec4(c, 1.0);
     }`);
-  const U = {t:{value:null}, tBrillo:{value:null}, tBrillo2:{value:null}, uExpo:{value:1.06}, uBloom:{value:0.34},
+  /* OCLUSIÓN AMBIENTAL (SSAO): la sombra que se junta en rincones, contactos y debajo de las cosas,
+     la que no depende del sol. A media resolución: 8 muestras en una semiesfera alrededor de la
+     normal (sacada de los vecinos de menor salto, así no se inventa en los bordes), giradas por
+     pixel con ruido de gradiente intercalado. Se apaga con la distancia: lejos manda la niebla. */
+  const mAO = mk({tProf:{value:null}, uProjInv:{value:new THREE.Matrix4()}, uProj:{value:new THREE.Matrix4()},
+                  uTexel:{value:new THREE.Vector2()}, uRadio:{value:1.1}, uLejos:{value:new THREE.Vector2(26, 75)}}, `
+    uniform sampler2D tProf; uniform mat4 uProjInv, uProj; uniform vec2 uTexel, uLejos; uniform float uRadio;
+    varying vec2 vUv;
+    vec3 vista(vec2 uv){ float z = texture2D(tProf, uv).x*2.0 - 1.0; vec4 v = uProjInv*vec4(uv*2.0 - 1.0, z, 1.0); return v.xyz/v.w; }
+    float ign(vec2 p){ return fract(52.9829189*fract(dot(p, vec2(0.06711056, 0.00583715)))); }
+    void main(){
+      if(texture2D(tProf, vUv).x >= 0.99999){ gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0); return; }
+      vec3 p = vista(vUv);
+      vec3 pR = vista(vUv + vec2(uTexel.x, 0.0)), pL = vista(vUv - vec2(uTexel.x, 0.0));
+      vec3 pU = vista(vUv + vec2(0.0, uTexel.y)), pD = vista(vUv - vec2(0.0, uTexel.y));
+      vec3 dx = abs(pR.z - p.z) < abs(p.z - pL.z) ? pR - p : p - pL;
+      vec3 dy = abs(pU.z - p.z) < abs(p.z - pD.z) ? pU - p : p - pD;
+      vec3 n = normalize(cross(dx, dy));
+      float a = ign(gl_FragCoord.xy)*6.2831853;
+      vec3 r = normalize(vec3(cos(a), sin(a), 0.37));
+      vec3 t = normalize(r - n*dot(r, n)), b = cross(n, t);
+      float oc = 0.0;
+      for(int i = 0; i < 8; i++){
+        float fi = float(i), u = (fi + 0.5)/8.0, rd = sqrt(u), an = fi*2.3999632;
+        vec3 dir = t*(cos(an)*rd) + b*(sin(an)*rd) + n*sqrt(max(0.0, 1.0 - u));
+        float k = (fi + 1.0)/8.0;
+        vec3 q = p + dir*uRadio*(0.15 + 0.85*k*k);
+        vec4 c = uProj*vec4(q, 1.0);
+        float sz = vista(c.xy/c.w*0.5 + 0.5).z;
+        float rango = smoothstep(0.0, 1.0, uRadio/max(abs(p.z - sz), 1e-3));
+        oc += step(q.z + 0.025, sz)*rango;
+      }
+      float o = pow(1.0 - oc/8.0, 1.5), dist = -p.z;          /* más hondo en el rincón, igual en lo abierto */
+      o = mix(o, 1.0, smoothstep(uLejos.x, uLejos.y, dist));
+      gl_FragColor = vec4(o, clamp(dist/200.0, 0.0, 1.0), 0.0, 1.0);
+    }`);
+  /* borrón que no cruza bordes de profundidad: si no, la sombra de la nave se corre al cielo */
+  const mAOBorron = mk({t:{value:null}, uPaso:{value:new THREE.Vector2()}}, `
+    uniform sampler2D t; uniform vec2 uPaso; varying vec2 vUv;
+    void main(){
+      vec2 c0 = texture2D(t, vUv).rg; float suma = c0.r, peso = 1.0;
+      for(int i = -3; i <= 3; i++){
+        if(i == 0) continue;
+        vec2 c = texture2D(t, vUv + uPaso*float(i)).rg;
+        float w = exp(-abs(c.g - c0.g)*600.0)*(1.0 - abs(float(i))*0.12);
+        suma += c.r*w; peso += w;
+      }
+      gl_FragColor = vec4(suma/peso, c0.g, 0.0, 1.0);
+    }`);
+  const U = {t:{value:null}, tBrillo:{value:null}, tBrillo2:{value:null}, tAO:{value:null}, uAO:{value:0.9},
+             uExpo:{value:1.06}, uBloom:{value:0.34},
              uGrano:{value:1.0}, uTiempo:{value:0}, uVineta:{value:0.28}, uAberr:{value:0.0014},
              uRes:{value:new THREE.Vector2(4, 4)}};
   const mFinal = mk(U, `
-    uniform sampler2D t, tBrillo, tBrillo2; uniform float uExpo, uBloom, uGrano, uTiempo, uVineta, uAberr;
+    uniform sampler2D t, tBrillo, tBrillo2, tAO; uniform float uExpo, uBloom, uGrano, uTiempo, uVineta, uAberr, uAO;
     uniform vec2 uRes; varying vec2 vUv;
     /* el ACES de three (ajuste de Hill con sus dos matrices), para que el tono sea el de siempre */
     vec3 rrt(vec3 v){ return (v*(v + 0.0245786) - 0.000090537) / (v*(0.983729*v + 0.4329510) + 0.238081); }
@@ -569,6 +632,7 @@ const POST = (function(){
       vec2 d = vUv - 0.5;
       vec2 ab = d * uAberr * length(d) * 2.0;                  /* el lente separa un pelo los bordes */
       vec3 c = vec3(texture2D(t, vUv + ab).r, texture2D(t, vUv).g, texture2D(t, vUv - ab).b);
+      c *= mix(1.0, texture2D(tAO, vUv).r, uAO);                /* la oclusión va antes del brillo */
       c = c * uExpo + (texture2D(tBrillo, vUv).rgb * 0.55 + texture2D(tBrillo2, vUv).rgb * 0.45) * uBloom;
       c = aSRGB(aces(c));
       float v = smoothstep(0.85, 0.25, length(d * vec2(uRes.x/uRes.y, 1.0)) * 0.72);
@@ -585,6 +649,7 @@ const POST = (function(){
     medio.setSize(Math.max(2, W >> 1), Math.max(2, H >> 1));
     cuarto.setSize(Math.max(2, W >> 2), Math.max(2, H >> 2)); cuartoB.setSize(Math.max(2, W >> 2), Math.max(2, H >> 2));
     octavo.setSize(Math.max(2, W >> 3), Math.max(2, H >> 3)); octavoB.setSize(Math.max(2, W >> 3), Math.max(2, H >> 3));
+    ao.setSize(Math.max(2, W >> 1), Math.max(2, H >> 1)); aoB.setSize(Math.max(2, W >> 1), Math.max(2, H >> 1));
     U.uRes.value.set(W, H);
   }
   function pasada(mat, destino){ quad.material = mat; rend.setRenderTarget(destino); rend.render(escPost, camPost); }
@@ -601,10 +666,19 @@ const POST = (function(){
     pasada(mUmbral, medio);
     bajar(medio, cuarto);  borrar(cuarto, cuartoB);
     bajar(cuarto, octavo); borrar(octavo, octavoB);
+    if(conProf && U.uAO.value > 0.001){
+      const A = mAO.uniforms;
+      A.tProf.value = esc3d.depthTexture; A.uTexel.value.set(1/W, 1/H);
+      A.uProjInv.value.copy(camara.projectionMatrixInverse); A.uProj.value.copy(camara.projectionMatrix);
+      pasada(mAO, ao);
+      mAOBorron.uniforms.t.value = ao.texture;  mAOBorron.uniforms.uPaso.value.set(1/ao.width, 0);  pasada(mAOBorron, aoB);
+      mAOBorron.uniforms.t.value = aoB.texture; mAOBorron.uniforms.uPaso.value.set(0, 1/aoB.height); pasada(mAOBorron, ao);
+      U.tAO.value = ao.texture;
+    } else U.tAO.value = blanco1;
     U.t.value = esc3d.texture; U.tBrillo.value = cuarto.texture; U.tBrillo2.value = octavo.texture;
     pasada(mFinal, null);
   }
-  return {tam, revelar, U, mUmbral, hdr, msaa: !!esc3d.isWebGLMultisampleRenderTarget, esc3d};
+  return {tam, revelar, U, mUmbral, mAO, hdr, msaa: !!esc3d.isWebGLMultisampleRenderTarget, esc3d, ao, conProf};
 })();
 
 const esc = new THREE.Scene();
@@ -3087,6 +3161,7 @@ function soltarBicho(){
   b.position.set(ANCLA.x + Math.sin(a)*d*Math.cos(el),
                  ANCLA.y + Math.sin(el)*d*0.8 + 2,
                  ANCLA.z - 4 - Math.abs(Math.cos(a))*d*0.7);
+  if(!b.userData.colosal) b.traverse(o => { if(o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
   esc.add(b); BICHOS.vivos.push(b);
   SON.fx('presencia', {pos:b.position, grande:!!b.userData.colosal, cada:3});
   return b;
@@ -4084,7 +4159,7 @@ function armarGente(raizBase, clips){
   GENTE.lista.forEach(n => { if(n.def.charla !== undefined){ const o = GENTE.lista[n.def.charla];
     n.yaw = n.mira = Math.atan2(o.pos.x - n.pos.x, o.pos.z - n.pos.z); } });
   sombrear(mundo); nieblar(mundo);
-  GENTE.lista.forEach(n => n.g.traverse(o => { if(o.userData.accesorio) o.castShadow = false; }));
+  GENTE.lista.forEach(n => n.g.traverse(o => { if(o.userData.accesorio){ o.castShadow = false; o.receiveShadow = true; } }));
 }
 
 /* ¿hay alguien adelante? el jugador, otro de la base o el remolcador */
@@ -4165,13 +4240,13 @@ function pasoGente(dt){
   for(const n of GENTE.lista){
     const dc = cam.position.distanceTo(n.pos);
     _gEs.center.set(n.pos.x, n.pos.y + 1.0, n.pos.z);
-    let ve = ver && dc < 85 && (dc < 28 || _gFr.intersectsSphere(_gEs));
+    let ve = ver && dc < 85 && (dc < 38 || _gFr.intersectsSphere(_gEs));
     if(ve && adentro) ve = cruza(_gEs.center, 12.0, 2.6, N.y0 - 0.5, N.y0 + N.dintel + 0.2) ||
                            cruza(_gEs.center, 38.6, 4.0, N.y1 + 1.0, N.y1 + 2.8);
     n.g.visible = ve;
     n.g.position.copy(n.pos); n.g.rotation.y = n.yaw;
     if(!n.g.visible) continue;
-    const sombra = dc < 28;                              /* de lejos no hace falta en el mapa de sombra */
+    const sombra = dc < 38;                              /* la caja de sombra llega a 40: más allá no cae en ningún lado */
     if(n.sombra !== sombra){ n.sombra = sombra; n.mallas.forEach(o => { o.castShadow = sombra; }); }
     ponerClipNPC(n, n.v > 2.4 ? 'run' : n.v > 0.2 ? 'walk' : 'idle', 0.3);
     const cl = n.acc[n.actual].getClip(), propia = cl.userData ? cl.userData.vel : 0;

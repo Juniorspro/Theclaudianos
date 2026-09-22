@@ -805,3 +805,31 @@ Lo que costó una vuelta cada uno:
   las pisadas de la gente se hubieran seguido oyendo en el espacio.
 
 Auditoría completa y 80 toques al azar sin errores.
+
+### 2026-09-22 (x) — oclusión ambiental: la sombra que no depende del sol
+**Pedido textual:** «Hey agrega sombras con eso servirá para hacerlo ver 3A ya».
+
+Las sombras del sol ya estaban desde la vuelta (v). Lo que faltaba para el look AAA es la otra
+mitad: la **oclusión ambiental**, la sombra que se junta en rincones, contactos y debajo de las
+cosas aunque no les pegue el sol. Va en pantalla (SSAO), a media resolución: 8 muestras en una
+semiesfera alrededor de la normal de cada pixel, giradas con ruido de gradiente intercalado, de
+1,1 m de radio, con curva 1,5 para que el rincón quede hondo y lo abierto igual, un borrón que no
+cruza bordes de profundidad, y apagada entre 26 y 75 m (lejos manda la niebla). Se aplica en
+lineal, antes del brillo.
+
+También: los bichos chicos proyectan y reciben sombra (en el espacio la base no está y el
+presupuesto sobra), la sombra de la gente llega a 38 m (la caja de sombra llega a 40), y los
+accesorios reciben sombra aunque no la proyecten.
+
+Medido: en la bodega el mapa de oclusión da mínimo 16 sobre 255 en los rincones y limpio en el
+piso plano; las fotos siguen saliendo (papel 145,8 en tierra, 95,9 en el espacio); tres llamadas
+de dibujo más por cuadro, todas a media resolución.
+
+Lo que costó una vuelta:
+- **La profundidad sale del mismo dibujo.** Con una `DepthTexture` (24 bits con stencil, el mismo
+  formato del renderbuffer) colgada del target con multimuestra, three la copia al resolver: no
+  hace falta otra pasada de geometría, que con diez personas y la base serían otras cien llamadas.
+- **La normal se saca del vecino de menor salto** (a la derecha o a la izquierda, arriba o abajo):
+  con la diferencia de un solo lado, cada borde de un objeto inventaba oclusión en el fondo.
+
+Auditoría completa y 80 toques al azar sin errores.
