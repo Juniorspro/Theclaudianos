@@ -354,3 +354,11 @@ Trampas que costaron una vuelta:
 Medido: piloto automático invencible 14/15 (3 semillas × 5; la que perdió fue un dominio 99 a 100), sin invencibilidad
 5/15 (el piloto corre sin sigilo y no rodea al jefe). Toques reales por CDP: mover, correr/sigilo, apuntar con el segundo
 dedo, habilidad, pausa. Sondas: `window.__A` — `iniciar(n,sem)`, `anda(n)`, `autopiloto(v)`, `dios(v)`, `est()`, `mapaAscii()`.
+
+### 2026-09-23 (8) — Rezona sigue sin cobrar
+**Pedido textual:** «Ya anda Rezona? Proba generar una imagen de perro».
+
+La key guardada daba `PAT_INACTIVE` (revocada). Login nuevo con `npx rezona@latest login --no-browser` corriendo en segundo
+plano con `nohup timeout 1500` (con `timeout 25` el proceso muere antes de que el usuario apruebe y el código queda inservible).
+Con la key nueva `list_projects` anda, pero `submit_image_generation` en «perro-prueba» vuelve dos veces con
+`CREDIT_RESERVE_FAILED`: el cobro del backend de juegos sigue caído, igual que el 22.
