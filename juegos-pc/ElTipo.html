@@ -12,7 +12,7 @@
 html,body{width:100%;height:100%;overflow:hidden;background:#07070c;
   font-family:"Trebuchet MS","Verdana",sans-serif;color:#fff;touch-action:none;overscroll-behavior:none}
 #pantalla{position:fixed;inset:0;display:flex;flex-direction:column}
-#lienzo{display:block;width:100%;flex:1 1 auto;background:#0a0a12}
+#lienzo{display:block;width:100%;flex:1 1 0;min-height:0;background:#0a0a12}   /* sin el tamaño propio del canvas trabando el flex */
 
 /* ---------- mandos: flotan sobre el juego, como en Dan The Man ---------- */
 #mandos{position:absolute;left:0;right:0;bottom:0;height:200px;display:flex;pointer-events:none;z-index:3}
@@ -74,6 +74,26 @@ table.res td:last-child{text-align:right;color:#fff;font-weight:bold}
 #capaTitulo{background-size:auto 46%;background-position:center 58%;background-repeat:no-repeat}
 .aviso{position:absolute;left:0;right:0;bottom:300px;text-align:center;font-size:12px;
   color:#ffd24a;text-shadow:0 2px 4px #000;z-index:4;pointer-events:none;opacity:0;transition:opacity .25s}
+
+/* ====== todo en horizontal ====== */
+.apaisado #mandos{height:150px}
+.apaisado #pad{width:30%;height:160px}
+.apaisado #bIzq{left:20px;bottom:18px}.apaisado #bDer{left:108px;bottom:18px}
+.apaisado #bB{right:112px;bottom:12px}.apaisado #bA{right:20px;bottom:20px}
+.apaisado #bD{right:236px;bottom:28px}.apaisado #bF{right:236px;bottom:104px}
+.apaisado .pista{left:86px}.apaisado #pArr{bottom:98px}.apaisado #pAba{bottom:0}
+.apaisado .aviso{bottom:auto;top:22%}
+.apaisado .capa{flex-direction:row;flex-wrap:wrap;align-content:center;justify-content:center;padding:12px 24px}
+.apaisado .capa > h2,.apaisado .capa > p,.apaisado .capa > .fila,.apaisado #listaTienda,
+.apaisado .capa > .hueco,.apaisado #txProgreso{flex-basis:100%}
+.apaisado #capaTitulo{align-content:flex-end;padding-bottom:14px}
+.apaisado .boton{min-width:190px;margin:5px 8px;padding:9px 12px 11px}
+.apaisado #listaTienda{flex-direction:row!important;flex-wrap:wrap;justify-content:center;gap:0 10px}
+.apaisado .tarjeta{width:47%;max-width:420px;margin:4px 0}
+.apaisado #capaComo p.sub{max-width:820px!important;font-size:11px;padding:10px 14px}
+.apaisado #rango{margin:0 22px 0 0;align-self:center}
+.apaisado table.res{align-self:center}
+.apaisado h2{margin:2px 0 8px}
 
 /* ====== menús en pixel art ====== */
 canvas.px{display:block;image-rendering:pixelated;image-rendering:crisp-edges;pointer-events:none}
@@ -155,6 +175,7 @@ table.res td canvas.px{margin-left:auto}
     <div class="boton gris" id="btNiveles">NIVELES</div>
     <div class="boton gris" id="btComo">CÓMO SE JUEGA</div>
     <div class="boton gris" id="btSemilla">SEMILLA: —</div>
+    <div class="boton gris" id="btGiro">DAR VUELTA PANTALLA</div>
     <p class="sub" style="margin-top:14px;font-size:11px" id="txProgreso"></p>
   </div>
 
@@ -307,27 +328,48 @@ let ANCHO=412, ALTO=700, DPR=1, PX=2, ANCHO_M=206, ALTO_M=346, ZONA_MANDOS=95;
 const cvH = document.createElement('canvas');          /* HUD: pixel art, encima de todo */
 const cxH = cvH.getContext('2d');
 const PIXELADO = true;      /* false = mundo dibujado directo a resolución de pantalla */
+/* ---------- el juego va siempre en horizontal: si el teléfono está parado, giramos todo 90° ---------- */
+let GIRO = 90, ROT = 0, APAISADO = true;
+try{ const gg = +localStorage.getItem('eltipo.giro'); if(gg===90 || gg===-90) GIRO = gg; }catch(e){}
+function orientar(){
+  const vw = innerWidth, vh = innerHeight, p = document.getElementById('pantalla');
+  const girar = vh > vw;
+  ROT = girar ? GIRO : 0;
+  APAISADO = true;
+  document.body.classList.add('apaisado');
+  if(girar){
+    Object.assign(p.style, {left:'0px', top:'0px', right:'auto', bottom:'auto',
+      width:vh+'px', height:vw+'px', transformOrigin:'0 0',
+      transform: GIRO===90 ? 'translate('+vw+'px,0) rotate(90deg)' : 'translate(0,'+vh+'px) rotate(-90deg)'});
+  } else Object.assign(p.style, {left:'', top:'', right:'', bottom:'', width:'', height:'', transform:''});
+}
+/* de coordenadas de la pantalla física a las del juego (girado) */
+function aLocal(sx, sy){
+  if(ROT===90) return {x: sy, y: innerWidth - sx};
+  if(ROT===-90) return {x: innerHeight - sy, y: sx};
+  return {x: sx, y: sy};
+}
 function medir(){
   DPR = Math.min(window.devicePixelRatio||1, 1.5);
-  const r = cv.getBoundingClientRect();
-  ANCHO = Math.max(240, Math.round(r.width));
-  ALTO  = Math.max(240, Math.round(r.height));
+  /* clientWidth/Height: el tamaño en el juego; getBoundingClientRect daría la caja ya girada */
+  ANCHO = Math.max(240, Math.round(cv.clientWidth));
+  ALTO  = Math.max(200, Math.round(cv.clientHeight));
   cv.width  = Math.round(ANCHO*DPR);
   cv.height = Math.round(ALTO*DPR);
   cxP.setTransform(DPR,0,0,DPR,0,0);
   cxP.imageSmoothingEnabled = false;
   /* escala entera: el píxel del mundo mide PX píxeles de pantalla, sin medios píxeles */
-  PX = PIXELADO ? Math.max(2, Math.round(ANCHO/212)) : 1;
+  PX = PIXELADO ? Math.max(2, Math.round(Math.min(ANCHO, ALTO)/212)) : 1;
   ANCHO_M = Math.ceil(ANCHO/PX); ALTO_M = Math.ceil(ALTO/PX);
   cvM.width = ANCHO_M; cvM.height = ALTO_M;
   cxM.imageSmoothingEnabled = false;
   J.cam.esc = PX;                       /* ANCHO/esc sigue siendo el ancho visible del mundo */
-  ZONA_MANDOS = Math.round(190/PX);     /* alto de mundo que queda debajo de los mandos */
+  ZONA_MANDOS = Math.round((ANCHO > ALTO ? 118 : 190)/PX);   /* alto de mundo debajo de los mandos */
   cvH.width = ANCHO_M; cvH.height = ALTO_M; cxH.imageSmoothingEnabled = false;
   cacheFondo.clave = '';                /* el fondo se rehace al tamaño nuevo */
 }
-window.addEventListener('resize', medir);
-window.addEventListener('orientationchange', ()=> setTimeout(medir,120));
+window.addEventListener('resize', ()=>{ orientar(); medir(); });
+window.addEventListener('orientationchange', ()=> setTimeout(()=>{ orientar(); medir(); },120));
 if(window.ResizeObserver) new ResizeObserver(medir).observe(cv);
 function revisarMedida(){
   const w = Math.round(cv.clientWidth), h = Math.round(cv.clientHeight);
@@ -362,7 +404,7 @@ document.querySelectorAll('.bt[data-k]').forEach(b=>{
 const pad = document.getElementById('pad'), bIzq = document.getElementById('bIzq'), bDer = document.getElementById('bDer');
 const toquesPad = new Map();
 let ladoPrevio = null, tPrevio = 0;
-function ladoDe(x){ const a = bIzq.getBoundingClientRect(), b = bDer.getBoundingClientRect(); return x < (a.right+b.left)/2 ? 'izq':'der'; }
+function ladoDe(x){ return x < (bIzq.offsetLeft + bIzq.offsetWidth + bDer.offsetLeft)/2 ? 'izq':'der'; }
 function padRecalcular(){
   const e = {izq:0, der:0, arr:0, aba:0};
   for(const t of toquesPad.values()){
@@ -384,13 +426,13 @@ function padMueve(id, x, y){ const t = toquesPad.get(id); if(!t) return;
   t.x = x; t.y = y; t.lado = ladoDe(x); padRecalcular(); }
 function padTermina(id){ toquesPad.delete(id); padRecalcular(); }
 pad.addEventListener('touchstart', e=>{ e.preventDefault(); audioListo();
-  for(const t of e.changedTouches) padEmpieza(t.identifier, t.clientX, t.clientY); }, {passive:false});
+  for(const t of e.changedTouches){ const q = aLocal(t.clientX, t.clientY); padEmpieza(t.identifier, q.x, q.y); } }, {passive:false});
 pad.addEventListener('touchmove', e=>{ e.preventDefault();
-  for(const t of e.changedTouches) padMueve(t.identifier, t.clientX, t.clientY); }, {passive:false});
+  for(const t of e.changedTouches){ const q = aLocal(t.clientX, t.clientY); padMueve(t.identifier, q.x, q.y); } }, {passive:false});
 for(const ev of ['touchend','touchcancel']) pad.addEventListener(ev, e=>{ e.preventDefault();
   for(const t of e.changedTouches) padTermina(t.identifier); }, {passive:false});
-pad.addEventListener('mousedown', e=>{ padEmpieza('m', e.clientX, e.clientY); });
-addEventListener('mousemove', e=>{ if(toquesPad.has('m')) padMueve('m', e.clientX, e.clientY); });
+pad.addEventListener('mousedown', e=>{ const q = aLocal(e.clientX, e.clientY); padEmpieza('m', q.x, q.y); });
+addEventListener('mousemove', e=>{ if(toquesPad.has('m')){ const q = aLocal(e.clientX, e.clientY); padMueve('m', q.x, q.y); } });
 addEventListener('mouseup', ()=>{ if(toquesPad.has('m')) padTermina('m'); });
 /* puño: tocar = golpe; deslizar arriba = gancho; deslizar abajo = plancha */
 const bB = document.getElementById('bB');
@@ -400,11 +442,11 @@ function puñoMueve(id, y){ if(!gestoB || gestoB.id!==id || gestoB.hecho) return
   const dy = y - gestoB.y0;
   if(dy < -26){ gestoB.hecho = true; EDGE.G = 2; } else if(dy > 26){ gestoB.hecho = true; EDGE.S = 2; } }
 function puñoTermina(){ gestoB = null; bB.classList.remove('on'); pulsar('B',0); }
-bB.addEventListener('touchstart', e=>{ e.preventDefault(); const t=e.changedTouches[0]; puñoEmpieza(t.identifier, t.clientY); }, {passive:false});
-bB.addEventListener('touchmove', e=>{ e.preventDefault(); for(const t of e.changedTouches) puñoMueve(t.identifier, t.clientY); }, {passive:false});
+bB.addEventListener('touchstart', e=>{ e.preventDefault(); const t=e.changedTouches[0]; puñoEmpieza(t.identifier, aLocal(t.clientX,t.clientY).y); }, {passive:false});
+bB.addEventListener('touchmove', e=>{ e.preventDefault(); for(const t of e.changedTouches) puñoMueve(t.identifier, aLocal(t.clientX,t.clientY).y); }, {passive:false});
 for(const ev of ['touchend','touchcancel']) bB.addEventListener(ev, e=>{ e.preventDefault(); puñoTermina(); }, {passive:false});
-bB.addEventListener('mousedown', e=>{ puñoEmpieza('m', e.clientY); });
-addEventListener('mousemove', e=>{ if(gestoB && gestoB.id==='m') puñoMueve('m', e.clientY); });
+bB.addEventListener('mousedown', e=>{ puñoEmpieza('m', aLocal(e.clientX,e.clientY).y); });
+addEventListener('mousemove', e=>{ if(gestoB && gestoB.id==='m') puñoMueve('m', aLocal(e.clientX,e.clientY).y); });
 addEventListener('mouseup', ()=>{ if(gestoB && gestoB.id==='m') puñoTermina(); });
 
 const TECLAS = {ArrowLeft:'izq',ArrowRight:'der',ArrowUp:'arr',ArrowDown:'aba',
@@ -783,6 +825,7 @@ function dibujarPx(e, F){
   const hT = [HOX-7+tor[0], HOY-21+tor[1]], puT = [HOX-7.5+mt[0], HOY-17+mt[1]];
   capsulaPx(g, hT[0],hT[1], puT[0],puT[1], 3, F.brazo[1]);
   pinta('PUNO_T', mt[0], mt[1]);
+  if(F.escudo && e.tieneEscudo && !e.escudo) g.drawImage(F.escudo, Math.round(puT[0]-5), Math.round(puT[1]-3));
   pinta('TORSO', tor[0], tor[1]);
   const hD = [HOX+7+tor[0], HOY-21+tor[1]], puD = [HOX+11+md[0], HOY-17+md[1]];
   const tapaCara = puD[0] < HOX+16+cab[0] && puD[1] < HOY-24+cab[1];
@@ -1347,8 +1390,7 @@ function pasarJugador(p){
       if(e.muerto||e.aliado) continue;
       if(Math.abs(e.x-p.x)<20 && Math.abs(e.y-p.y)<30 && !p.golpeados.has(e.id)){
         p.golpeados.add(e.id);
-        if(e.escudo){ e.escudo=0; e.aturdido=90; texto(e.x,e.y-40,'¡ESCUDO ROTO!','#ffd24a',11);
-          chorro(e.x,e.y-20,10,'#9aa0b2',3); SFX.fuerte(); congelar(5); }
+        if(e.escudo){ romperEscudo(e); congelar(5); }
         dañar(e, 7*(p.enFuria>0?2:1), p, {emp:1.4});
       }
     }
@@ -1494,8 +1536,8 @@ function cajaAtaque(p, a){
       const mult = (p.enFuria>0?2:1) * (1 + J.mejoras.daño*0.18);
       const bloqueado = e.escudo && sig(e.x-p.x)===e.dir*-1 && !a.sube && !e.aturdido;
       if(bloqueado){
-        texto(e.x, e.y-38, 'BLOQUEÓ', '#9aa0b2', 10); SFX.fallo(); congelar(2);
-        chorro(hx,hy,5,'#c9cede',2); empujar(p, -p.dir*1.4, 0);
+        golpeAlEscudo(e, a.daño*mult, p, hx, hy);
+        empujar(p, -p.dir*1.4, 0); congelar(2);
       } else {
         dañar(e, a.daño*mult, p, {emp:a.emp, lanza:a.lanza, juggle:a.juggle});
         congelar(a.hs + (p.enFuria>0?2:0)); sacudir(a.daño>14?6:2.6);
@@ -1606,7 +1648,7 @@ function dañar(e, cant, desde, o){
   if(!e.esJug){
     e.golpeadoT = 12;
     e.aturdido = Math.max(e.aturdido||0, o.aturde|| (cant>=15? 46 : 18));
-    if(e.escudo && o.romper) e.escudo=0;
+    if(e.escudo && o.romper) romperEscudo(e);
   }
   if(e.vida<=0) morir(e, desde);
   return true;
@@ -1628,6 +1670,21 @@ function morir(e, desde){
   texto(e.x, e.y-40, e.jefe?'¡LISTO!':'K.O.', '#ffd24a', e.jefe?18:12);
 }
 
+/* ---------- escudos ---------- */
+function romperEscudo(e){
+  e.escudo = 0; e.tieneEscudo = 0; e.bloqT = 0; e.aturdido = Math.max(e.aturdido||0, 90);
+  texto(e.x, e.y-e.h-8, '¡ESCUDO ROTO!', '#ffd24a', 11);
+  chorro(e.x, e.y-20, 12, '#9aa0b2', 3.2); SFX.fuerte(); sacudir(4);
+}
+function golpeAlEscudo(e, daño, desde, hx, hy){
+  e.escudoHP = (e.escudoHP===undefined ? 3 : e.escudoHP) - 1;
+  if(e.escudoHP <= 0){ romperEscudo(e); dañar(e, daño*0.5, desde, {emp:1.6}); return; }
+  /* el escudo frena, pero algo pasa: nunca un golpe en vano */
+  dañar(e, Math.max(1, daño*0.25), desde, {emp:0.6, aturde:4});
+  texto(e.x, e.y-e.h-8, e.escudoHP===1 ? '¡CRACK!' : 'BLOQUEÓ', e.escudoHP===1 ? '#ffb43a' : '#9aa0b2', 10);
+  chorro(hx, hy, 6, '#c9cede', 2); SFX.fallo();
+}
+
 /* ---------- enemigos ---------- */
 const ENEMIGOS = {
   guardia:   {vida:44,  vel:1.18, daño:9,  alc:28, cad:66, pal:'guardia', pts:6},
@@ -1646,6 +1703,7 @@ function crearEnemigo(tipo, x, y, extra){
     daño:Math.round(d.daño*esc), vel:d.vel, alc:d.alc, cadMax:Math.round(d.cad*(1-(J.nivel-1)*0.04)),
     cad:rint(20,60), est:'quieto', an:0, anMax:0, variante:1, aturdido:0, inv:0,
     enSuelo:false, escudo:d.escudo||0, gordo:d.gordo||0, superArm:d.superArm||0,
+    tieneEscudo:d.escudo||0, escArriba:1, escT:rint(110,170), escudoHP:3, bloqT:0,
     salta:d.salta||0, esquiva:d.esquiva||0, bloquea:d.bloquea||0, doble:d.doble||0,
     carga:d.carga||0, tira:d.tira||null, dist:d.dist||0, pts:d.pts, dormido:true,
     golpeados:null, volando:0, tt:rint(0,60) };
@@ -1667,6 +1725,12 @@ function pasarEnemigo(e){
   }
   if(e.inv>0) e.inv--;
   if(e.golpeadoT>0) e.golpeadoT--;
+  /* el escudo no es eterno: sube y baja en ciclos, se baja para pegar y el elite lo sostiene un rato */
+  if(e.tieneEscudo){
+    if(--e.escT <= 0){ e.escArriba = e.escArriba ? 0 : 1; e.escT = e.escArriba ? rint(120,170) : rint(80,110);
+      if(!e.escArriba) texto(e.x, e.y-e.h-8, '¡AHORA!', '#9cffae', 9); }
+    e.escudo = (e.escArriba && e.est!=='ataque' && !(e.aturdido>0)) ? 1 : 0;
+  } else if(e.bloqT>0){ if(--e.bloqT<=0) e.escudo = 0; }
   if(e.enAgarre){ return; }
   if(e.volando>0){
     e.volando--; e.est='volando'; e.vy += G*0.86; moverEnt(e);
@@ -1735,7 +1799,7 @@ function pasarEnemigo(e){
       for(let i=0;i<5;i++) particula(e.x,e.y-16,vrango(-1,1),vrango(-1,0),'#8f7fff',14,2,0.05);
     }
     /* bloqueo del elite */
-    if(e.bloquea && p.est==='golpe' && adx<46 && chance(.05)) e.escudo=1;
+    if(e.bloquea && !e.escudo && p.est==='golpe' && adx<46 && chance(.05)){ e.escudo=1; e.bloqT=45; e.escudoHP=2; }
     /* atacar */
     if(e.cad<=0 && ady<36){
       if(e.tira && adx>52 && adx<e.dist){ tirarCuchillo(e); e.cad=e.cadMax; }
@@ -1807,7 +1871,7 @@ function pasarBalas(){
         for(const e of J.ents){
           if(e.muerto||e.aliado) continue;
           if(Math.abs(e.x-b.x)<e.w/2+4 && b.y > e.y-e.h && b.y < e.y){
-            if(e.escudo && sig(b.vx)!==e.dir){ texto(e.x,e.y-38,'TING','#9aa0b2',10); SFX.fallo(); }
+            if(e.escudo && sig(b.vx)!==e.dir){ golpeAlEscudo(e, b.daño, {x:b.x-b.vx, y:b.y}, b.x, b.y); }
             else { dañar(e, b.daño, {x:b.x-b.vx, y:b.y}, {emp:1.2}); sumarCombo(p); }
             fuera=true; break;
           }
@@ -2388,7 +2452,7 @@ function pasarCamara(){
   c.x = lim(c.x, 0, Math.max(0, J.mundo.ancho - vistaW));
   /* los mandos tapan la franja de abajo: se encuadra sobre lo que queda libre */
   const util = vistaH - ZONA_MANDOS;
-  const anclaje = p.enSuelo ? p.y - util*0.74 : p.y - util*0.62;
+  const anclaje = p.enSuelo ? p.y - util*(ANCHO>ALTO ? 0.80 : 0.74) : p.y - util*0.62;
   const objY = lim(anclaje, -10, Math.max(-10, MUNDO_ALTO + ZONA_MANDOS + 10 - vistaH));
   c.y += (objY - c.y) * (Math.abs(objY-c.y)>90 ? 0.2 : 0.08);
 }
@@ -3474,7 +3538,8 @@ function iconoPx(nombre, col, S){
 }
 function pixelarCapa(id){
   const c = document.getElementById(id); if(!c) return;
-  c.querySelectorAll('.boton').forEach(b=> pixelar(b, 3, {grad: b.classList.contains('gris')? GRAD.gris : GRAD.blanco}));
+  const SB = ANCHO>ALTO ? 2 : 3;                    /* en horizontal, botones más bajos: el alto es poco */
+  c.querySelectorAll('.boton').forEach(b=> pixelar(b, SB, {grad: b.classList.contains('gris')? GRAD.gris : GRAD.blanco}));
   c.querySelectorAll('h2').forEach(h=> pixelar(h, 3, {grad: h.dataset.grad? GRAD[h.dataset.grad] : GRAD.oro}));
   c.querySelectorAll('table.res td').forEach(td=> pixelar(td, 2, {grad: td.cellIndex? GRAD.blanco : GRAD.gris}));
   c.querySelectorAll('.tarjeta .tt').forEach(e=> pixelar(e, 2, {grad:GRAD.blanco}));
@@ -3482,7 +3547,7 @@ function pixelarCapa(id){
   c.querySelectorAll('#niveles .n b').forEach(e=> pixelar(e, 2, {grad:GRAD.blanco}));
   c.querySelectorAll('#niveles .n small').forEach(e=> pixelar(e, 2, {grad:GRAD.gris}));
   c.querySelectorAll('#niveles .n .rg').forEach(e=> pixelar(e, 4, {grad: GRAD_RANGO[e.textContent.trim()] || GRAD.gris}));
-  const r = c.querySelector('#rango'); if(r) pixelar(r, 10, {grad: GRAD_RANGO[r.textContent.trim()] || GRAD.oro});
+  const r = c.querySelector('#rango'); if(r) pixelar(r, ANCHO>ALTO ? 7 : 10, {grad: GRAD_RANGO[(r.textContent.trim()||r.dataset.px||'').trim()] || GRAD.oro});
   const pr = c.querySelector('#txProgreso'); if(pr) pixelar(pr, 2, {grad:GRAD.gris});
 }
 
@@ -3492,7 +3557,7 @@ const RIVALES_MENU = ['guardia','escudero','ninja','pesado','elite','cuchillero'
 function rivalMenu(tipo){
   const d = ENEMIGOS[tipo];
   const e = {x:ANCHO_M+34, y:0, vx:0, vy:0, dir:-1, est:'corre', an:0, anMax:0, variante:1, enAire:false,
-    tipo, col:PAL[d.pal], w:17, h:34, gordo:d.gordo||0, escudo:d.escudo||0, golpeadoT:0};
+    tipo, col:PAL[d.pal], w:17, h:34, gordo:d.gordo||0, escudo:d.escudo||0, tieneEscudo:d.escudo||0, golpeadoT:0};
   if(d.arma) e.arma = {k:d.arma, muni:1};
   return e;
 }
@@ -3508,7 +3573,7 @@ function pasarMenu(){
       E.rival = rivalMenu(RIVALES_MENU[E.idx]); E.fase = 'corre'; E.tf = 0; }
     if(E.fundido>=36) E.fundido = 0; }
   if(E.parada>0){ E.parada--; return; }                     /* hit-stop también en el menú */
-  const suelo = Math.floor(ALTO_M*0.52);
+  const suelo = Math.floor(ALTO_M*(ANCHO_M>ALTO_M ? 0.60 : 0.52));
   if(!E.heroe){ E.heroe = {x:0,y:0,vx:0,vy:0,dir:1,est:'corre',an:0,anMax:0,variante:1,enAire:false,col:PAL.tipo,w:17,h:34};
                 E.rival = rivalMenu(RIVALES_MENU[E.idx]); }
   const h = E.heroe, r = E.rival;
@@ -3548,7 +3613,7 @@ function pasarMenu(){
 }
 const TITULO_PX = 'EL TIPO';
 function dibujarTituloPx(E){
-  const S = Math.max(3, Math.min(5, Math.floor(ANCHO_M/46)));
+  const S = ANCHO_M>ALTO_M ? 4 : Math.max(3, Math.min(5, Math.floor(ANCHO_M/46)));
   const {w} = puntosTexto(TITULO_PX);
   const x0 = Math.floor((ANCHO_M - w*S)/2), y0 = Math.floor(ALTO_M*0.07);
   const celdas = []; let x = 0, i = 0;
@@ -3590,7 +3655,7 @@ function dibujarMenu(){
   cx = PIXELADO? cxM : cxP; if(PIXELADO) cx.setTransform(1,0,0,1,0,0);
   T = TEMAS[E.tema];
   hacerFondo();
-  const caps = cacheFondo.capas, suelo = Math.floor(ALTO_M*0.52), dy = suelo - Math.floor(ALTO_M*0.84);
+  const caps = cacheFondo.capas, suelo = Math.floor(ALTO_M*(ANCHO_M>ALTO_M ? 0.60 : 0.52)), dy = suelo - Math.floor(ALTO_M*0.84);
   cx.drawImage(caps[0].cv, 0, 0);
   for(let i=1;i<caps.length;i++){ const cp = caps[i], d = ((-E.camx*cp.p) % cp.w + cp.w) % cp.w;
     cx.drawImage(cp.cv, Math.round(d-cp.w), dy); cx.drawImage(cp.cv, Math.round(d), dy); }
@@ -3679,7 +3744,7 @@ function nuevaSemilla(tx){
   J.semillaTx = tx || (Math.random().toString(36).slice(2,8).toUpperCase());
   const b = document.getElementById('btSemilla');
   b.textContent = 'SEMILLA: '+J.semillaTx;
-  if(document.getElementById('capaTitulo').classList.contains('ver')) pixelar(b, 3, {grad:GRAD.gris});
+  if(document.getElementById('capaTitulo').classList.contains('ver')) pixelar(b, ANCHO>ALTO ? 2 : 3, {grad:GRAD.gris});
   guardar();
 }
 function menu(){
@@ -3697,6 +3762,7 @@ clic('btNivelesOk', menu);
 clic('btComo', ()=> capa('capaComo'));
 clic('btComoOk', menu);
 clic('btSemilla', ()=>{ nuevaSemilla(); avisar('semilla nueva: '+J.semillaTx); });
+clic('btGiro', ()=>{ GIRO = -GIRO; try{ localStorage.setItem('eltipo.giro', GIRO); }catch(e){} orientar(); medir(); });
 clic('btFinOk', ()=>{ if(J.nivel>=5){ menu(); } else { J.modo='tienda'; reiniciarEscena(); pintarTienda(); capa('capaTienda'); } });
 clic('btFinMenu', menu);
 clic('btSeguir', ()=> empezarNivel(Math.min(5, J.nivel+1)));
@@ -3741,6 +3807,7 @@ window.__T = {
 
 /* ---------- arranque ---------- */
 cargar();
+orientar();
 medir();
 cargarAssets();
 pintarTitulo();

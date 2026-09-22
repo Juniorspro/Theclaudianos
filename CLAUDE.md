@@ -1,7 +1,7 @@
 # Theclaudianos — bitácora y reglas
 
 Repo de juegos web. Un juego = **un HTML autocontenido** en `juegos-pc/`, three.js desde CDN,
-se prueba **en el celular, en vertical (412×892)**.
+se prueba **en el celular, en vertical (412×892)**. EL TIPO se juega **acostado**: con el teléfono parado, gira todo 90°.
 
 ## Qué hay acá
 
@@ -230,3 +230,34 @@ la esquina izquierda con el logo redondo de la cara del personaje» (captura del
   del arma con munición, moneda con contador de cuatro dígitos y pausa cuadrada.
 - Probado con toques reales por CDP (`Input.dispatchTouchEvent`), varios dedos a la vez: los nueve
   gestos andan. Los eventos sintéticos de Playwright no traen `changedTouches` y no sirven para el pad.
+
+### 2026-09-23 (2) — pantalla girada y escudos que no son eternos
+**Pedido textual:** «quiero que gires la pantalla 90°, en horizontal, sin la necesidad de poner el teléfono
+en vertical, hay un enemigo que tiene un escudo, por más que lo pegue no le hace daño, debería tener
+sólo por un tiempo el escudo o no todo el tiempo».
+
+**Giro.** Si el visor está parado (`innerHeight > innerWidth`), `orientar()` le da a `#pantalla` el tamaño
+acostado y la gira con `translate(vw,0) rotate(90deg)` (o `-90deg`, botón «DAR VUELTA PANTALLA», guardado).
+En un navegador ya horizontal no gira nada. Todo el layout pasa a la clase `.apaisado`.
+
+- **Trampa:** `getBoundingClientRect` devuelve la caja **ya girada**. El lienzo se mide con
+  `clientWidth/clientHeight` y el pad con `offsetLeft/offsetWidth`.
+- **Trampa:** los toques llegan en coordenadas de la pantalla física. `aLocal(sx,sy)` los pasa al juego:
+  con 90°, `x = sy`, `y = innerWidth − sx`. Con el teléfono parado, «arriba» del juego es hacia la derecha.
+- **Trampa:** un `<canvas>` con `flex:1 1 auto` queda trabado en su tamaño propio (medía 446 en una
+  pantalla de 412 y se cortaba la tierra). `flex:1 1 0; min-height:0`.
+- `PX` sale del lado corto (`min(ANCHO,ALTO)/212`) → 2 en 892×412, se ven 446×206 de mundo.
+  `ZONA_MANDOS` baja a 118 px en horizontal y la cámara ancla los pies al 80 %.
+- Menús en horizontal: las capas pasan a filas con salto (`flex-wrap`), los botones van de a varios por fila
+  y con texto a escala 2; la tienda en dos columnas, el rango al lado de la tabla.
+- Las capturas del banco salen giradas: enderezar con `Image.rotate(90, expand=True)`. Los gestos en el
+  test por CDP también van girados (deslizar «arriba» = +x en la pantalla física).
+
+**Escudos.** Había dos culpables: el escudero sólo perdía el escudo con dash, gancho o plancha (nadie lo
+explica), y el **elite, al bloquear, se quedaba con el escudo para siempre** (se ponía en 1 y nada lo bajaba).
+
+- El escudero **baja el escudo en ciclos** (≈ un tercio del tiempo, avisa «¡AHORA!») y siempre que ataca.
+- Cada golpe al escudo **araña un 25 % de vida** y lo gasta: al tercero se rompe y queda mareado
+  (`golpeAlEscudo`, `romperEscudo`). Dash, gancho y plancha lo siguen rompiendo de una.
+- El bloqueo del elite dura 45 cuadros y se va solo.
+- Medido: 400 → 398 → 395 → roto a 386; 309 de 900 cuadros sin escudo; el elite vuelve a 0.
