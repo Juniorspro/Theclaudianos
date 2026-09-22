@@ -670,3 +670,58 @@ Lo que costó una vuelta:
 - **Las capturas del banco salen giradas**, igual que en el Bosque: se enderezan con
   `Image.rotate(90, expand=True)` antes de mirarlas. Y las cajas del HUD se miden con `offset*`,
   no con `getBoundingClientRect`, que en un marco girado infla la caja.
+
+### 2026-09-22 (v) — la guía: luz, niebla, revelado y sombras
+**Pedido textual:** «Con esta guía mejora el juego en un 100% si necesitas la key de Rezona dámelo
+y no uses highsfield» (con `GUIA-JUEGOS.md` adjunta) y, a mitad de camino, «Le hace falta sombras
+JAJAJJ».
+
+**Rezona volvió a fallar** con la credencial andando: `CREDIT_RESERVE_FAILED` en imagen y en audio
+(el de audio se aceptó y falló después, como en `perro/`). No hace falta otra llave. Se siguió el
+plan B de la guía (sección 8): todo lo que no cuesta créditos, y nada de Higgsfield.
+
+**Luz que sale del sol pintado.** Se midió el sol en el panorama (1,8° de alto, dirección
+(0,203; 0,032; −0,979)): el panorama sube 8° y la luz va con el mismo acimut a 16°, así las
+sombras son largas y vienen de donde se ve el sol. Sol 6,4, cielo 0,30, contraluz 0,18. En el
+mismo pedazo de piso con el sol prendido y apagado, el sol aportaba 0,51 veces el ambiente y
+ahora 1,26 (la guía pide que nunca gane el ambiente).
+
+**Niebla con el color medido** de la bruma del horizonte (`e08853`, dorada `e8a55a` hacia el sol),
+exponencial 0,0018 más una bruma baja de 0,0048 que cae cada 9 m, integrada a lo largo del rayo.
+Los parches van encadenados con su clave de caché, una sola vez por material.
+
+**Revelado en HDR**: la escena se dibuja en coma flotante con multimuestra ×4, el brillo sale de
+una cadena ½ → ¼ → ⅛ con gaussiano en cada escala, y al final el ACES de three (la misma curva de
+antes), grano, viñeta y un pelo de aberración. El umbral del brillo se acomoda como el ojo: 4,0 al
+sol (la chapa al sol llega a 4-6 lineal y no puede encandilar entera) y 2,2 adentro o en el
+espacio, donde lo que pasa de ahí son lámparas, ojos y estrellas. Las fotos siguen saliendo: el
+papel promedia 144,6 en tierra y 99,4 en el espacio.
+
+**Sombras** — tenía razón: casi nada proyectaba. La nave tenía `castShadow = false`, la base entera
+sólo recibía, y el cuerpo del jugador estaba en `visible = false`, que para three también lo saca
+del mapa de sombra. Encima, como la nave no tapaba el sol, **la bodega estaba iluminada por el sol
+a través del techo**. Ahora todo lo sólido proyecta y recibe con `DoubleSide` (si no, las caras
+sueltas de la cáscara no tapan nada), el cuerpo escribe sin color ni profundidad para que sólo
+quede su sombra, la caja de sombra pasó a ±40 m con el sol a 110 m (la torre a 70 m también
+cuenta), y el sesgo bajó a −0,00022 porque con 240 m de fondo el de antes despegaba la sombra
+14 cm del pie. Medido en el piso: detrás de la nave 18 contra 88 al sol, detrás del hangar 27
+contra 66. El sol bajo entra por la compuerta de popa y deja una mancha de luz larga en la bodega.
+Adentro las lámparas no proyectan (una puntual con sombra son seis pasadas de toda la nave):
+van **sombras de contacto** debajo de mesa, terminal, cajones, escalera, consolas y asientos, y
+una franja al pie de los racks — medido, el piso ahí baja de 67 a 31. Llamadas de dibujo en
+tierra: de 38 a 83, por la pasada de sombra.
+
+Lo que costó una vuelta cada uno:
+- **Sin stencil, three le da a un target profundidad de 16 bits.** Con `stencilBuffer:true` pasa a 24.
+- **Un borrón ralo a ¼ dibuja copias sueltas de cada punto**: un reflejo de 113 en el puente salía
+  como una cuadrícula. Va la cadena de mitades y un tope de 24 a lo que entra al brillo.
+- **El ACES de Narkowicz no es el de three**: sin las matrices satura las luces y la base salía
+  amarilla. Se copió el de three.
+- **La plataforma a veces no se dibujaba** (1 de cada 4 cargas, también en la versión anterior): el
+  suelo eran dos triángulos de 3 km y no alcanzaban para separar 3 cm de asfalto. Suelo partido en
+  celdas de 125 m y corrimiento de profundidad en los calcos: 8 de 8 cargas bien.
+- El `dt` nunca negativo, el lienzo se cambia de tamaño al empezar el cuadro, y al perder el foco
+  se sueltan palanca, mirada y teclas.
+
+Auditoría completa (pasto, escaleras, fotos, terminal, paneles, soga, seis galaxias) sin errores
+ni avisos.
