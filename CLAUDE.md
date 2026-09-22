@@ -264,3 +264,32 @@ con la geometría trasladada a ese pivote para que gire donde corresponde.
 Medido: 1,1 a 5,4 m de recorrido en cuatro segundos según la especie, 7 pisos de torre moviéndose
 hasta 1,5 rad y las mandíbulas 0,53 rad. Además los bichos se frenan a 3,2 m del jugador y se
 empujan afuera si quedan encima de la nave.
+
+### 2026-09-22 (i) — carta de navegación y cinco galaxias
+**Pedido textual:** «Ahora haz que en el piso de arriba de la nave haya un panel de control en el
+que se podrá elegir a que galaxia ir (Deberán haber distintos aliens en cada galaxia así que
+piensa bien cada alien, que no sea repetitivo y único, confío en ti)».
+
+Pupitre de navegación en la cubierta alta: acercándose aparece `PANEL` y se abre la carta con las
+cinco galaxias, su frase y cuántas especies de cada una llevás en la cámara. En el espacio,
+elegir una dispara el salto (fogonazo, cambio de cielo y bichos nuevos); en tierra sólo deja el
+rumbo puesto para el próximo despegue.
+
+Cada galaxia tiene **cielo, luz y especies propias, sin repetir ninguna**:
+- **Vega Rota** — polvo violeta, sol apagado: acechante, insecto, medusa.
+- **El Hervidero** — naranja denso y estrellas encimadas: fauces, **forja** (planchas soldadas con
+  costuras al rojo), **enjambre** (seis cúmulos que respiran y se separan).
+- **La Quietud** — azul casi negro, sin estrellas: hueco, **peregrino** (un aro enorme y lentísimo),
+  **vela** (una membrana que ondea y se deja llevar).
+- **Coral Profundo** — verde bioluminiscente: colonia, vigía, **farol** (cuerpo oscuro con un cebo
+  encendido en una caña), **raíz** (un árbol dado vuelta que camina con las raíces).
+- **El Reverso** — magenta: torre, **espejo** (dos mitades que se copian y cada tanto se alinean),
+  **nudo** (aros trabados que giran cada uno por su lado).
+
+Lo que costó una vuelta:
+- **`const` no se puede usar antes de declararlo aunque esté en el mismo archivo.** `PANEL` se
+  declaraba en el bloque de galaxias pero `construirNave()` —que corre al evaluar el script— ya lo
+  usaba para armar el pupitre: la página entera moría con «Cannot access 'PANEL' before
+  initialization» y `window.__A` nunca existía. Las constantes de posición van arriba de todo.
+- Que no se repita el arquetipo anterior no alcanza cuando hay tres bichos vivos y tres especies:
+  también hay que descartar los que ya están dando vueltas.

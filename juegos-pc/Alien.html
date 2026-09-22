@@ -37,6 +37,40 @@
     background:radial-gradient(circle at 38% 32%,rgba(226,252,255,.96),rgba(86,206,255,.80) 46%,rgba(30,120,180,.70));
     box-shadow:0 6px 20px rgba(0,0,0,.42),0 0 22px rgba(90,220,255,.50)}
   /* botón salto */
+  #panelb{position:absolute;right:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 270px);
+    padding:11px 18px;border-radius:999px;pointer-events:auto;opacity:0;visibility:hidden;
+    transition:opacity .25s,transform .09s,background .09s;
+    font-size:11px;font-weight:800;letter-spacing:.14em;color:#e8d9ff;white-space:nowrap;
+    background:linear-gradient(180deg,rgba(180,140,255,.26),rgba(16,10,30,.55));
+    border:1.5px solid rgba(200,160,255,.52);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #panelb.ver{opacity:1;visibility:visible}
+  #panelb.on{transform:scale(.93)}
+  #galaxias{position:fixed;inset:0;z-index:27;display:none;align-items:center;justify-content:center;
+    background:rgba(3,5,12,.80);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);padding:18px}
+  #galaxias.ver{display:flex}
+  #galaxias .caja{width:100%;max-width:360px;max-height:82vh;overflow:auto;
+    border:1px solid rgba(150,190,255,.22);border-radius:16px;padding:14px;
+    background:linear-gradient(180deg,rgba(14,20,34,.96),rgba(8,10,18,.96));
+    box-shadow:0 24px 60px rgba(0,0,0,.6)}
+  #galaxias h3{font-size:11px;letter-spacing:.24em;color:#9fd8ff;margin-bottom:2px;font-weight:800}
+  #galaxias .sub{font-size:10px;color:#7d8ea0;margin-bottom:12px;letter-spacing:.08em}
+  #galaxias .fila{display:block;width:100%;text-align:left;padding:11px 12px;margin-bottom:8px;
+    border-radius:12px;border:1px solid rgba(140,180,220,.20);background:rgba(255,255,255,.03);
+    color:#dfe9f4;pointer-events:auto;cursor:pointer}
+  #galaxias .fila.aca{border-color:rgba(255,190,110,.55);background:rgba(255,170,80,.10)}
+  #galaxias .fila b{display:block;font-size:13px;letter-spacing:.14em;font-weight:800}
+  #galaxias .fila i{display:block;font-style:normal;font-size:11px;color:#8ea2b6;margin-top:3px}
+  #galaxias .fila u{display:block;text-decoration:none;font-size:10px;color:#ffc98a;margin-top:6px;
+    letter-spacing:.12em}
+  #galaxias .cerrar{display:block;width:100%;text-align:center;padding:10px;margin-top:4px;
+    border-radius:10px;border:1px solid rgba(140,180,220,.18);color:#9fb0c0;font-size:11px;
+    letter-spacing:.18em;pointer-events:auto;cursor:pointer;background:transparent}
+  #galnom{position:absolute;top:calc(env(safe-area-inset-top,0px) + 52px);right:14px;
+    padding:6px 12px;border-radius:999px;font-size:10px;letter-spacing:.18em;font-weight:800;
+    color:#cfe3ff;background:rgba(10,16,28,.46);border:1px solid rgba(150,200,255,.30);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity .3s}
+  #galnom.ver{opacity:1}
   #usar{position:absolute;right:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 214px);
     padding:11px 18px;border-radius:999px;pointer-events:auto;opacity:0;visibility:hidden;
     transition:opacity .25s,transform .09s,background .09s;
@@ -93,11 +127,14 @@
   <div id="especies">ESPECIES 0</div>
   <div id="pista">izquierda: mover<br>derecha: mirar<br>botón: saltar</div>
   <div id="base"></div><div id="puno"></div>
+  <div id="panelb">PANEL</div>
+  <div id="galnom">VEGA ROTA</div>
   <div id="usar">TOMAR CÁMARA</div>
   <div id="volar">DESPEGAR</div>
   <div id="visor"><i></i><i></i><i></i><i></i><b>REC</b></div>
   <div id="salto">SALTO</div>
 </div>
+<div id="galaxias"><div class="caja"><h3>CARTA DE NAVEGACIÓN</h3><div class="sub">elegí a dónde saltar</div><div id="listagal"></div><div class="cerrar" id="cerrargal">CERRAR</div></div></div>
 <div id="fogonazo"></div>
 <div id="copia"><canvas id="papel"></canvas><small>TOCÁ PARA CERRAR</small></div>
 <div id="carga">CARGANDO</div>
@@ -147,7 +184,12 @@ esc.add(cam);
 /* ------------------------------------------------------------------ cielo */
 const uCielo = {
   uMapa:{value:null}, uTieneMapa:{value:0}, uSol:{value:new THREE.Vector3(0.62,0.20,-0.76).normalize()},
-  uNiebla:{value:col(HORIZONTE)}, uEspacio:{value:0}
+  uNiebla:{value:col(HORIZONTE)}, uEspacio:{value:0},
+  uGbase:{value:new THREE.Vector3(0.004,0.006,0.017)},
+  uGneb1:{value:new THREE.Vector3(0.120,0.041,0.175)},
+  uGneb2:{value:new THREE.Vector3(0.017,0.051,0.102)},
+  uGsol:{value:new THREE.Vector3(1.0,0.96,0.88)},
+  uGestrellas:{value:1.0}
 };
 const cielo = new THREE.Mesh(
   new THREE.SphereGeometry(460, 48, 32),
@@ -160,6 +202,7 @@ const cielo = new THREE.Mesh(
       varying vec3 vDir;
       uniform sampler2D uMapa; uniform float uTieneMapa; uniform vec3 uSol; uniform vec3 uNiebla;
       uniform float uEspacio;
+      uniform vec3 uGbase, uGneb1, uGneb2, uGsol; uniform float uGestrellas;
       const float PI = 3.14159265;
       float hash(vec3 p){ p = fract(p*0.3183099+vec3(0.71,0.113,0.419)); p *= 17.0;
         return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
@@ -207,19 +250,19 @@ const cielo = new THREE.Mesh(
           c = mix(c, uNiebla, smoothstep(0.0,-0.18,h)*0.95);
         }
         if(uEspacio > 0.001){                         /* afuera de la atmósfera */
-          vec3 e = vec3(0.004, 0.006, 0.017);
+          vec3 e = uGbase;
           float est = hash(floor(d*900.0));
-          e += vec3(0.85,0.90,1.00)*smoothstep(0.9980, 1.0, est)*2.6;
+          e += vec3(0.85,0.90,1.00)*smoothstep(1.0 - 0.0020*uGestrellas, 1.0, est)*2.6;
           float est2 = hash(floor(d*2100.0));
-          e += vec3(0.70,0.78,1.00)*smoothstep(0.9994, 1.0, est2)*1.6;
+          e += vec3(0.70,0.78,1.00)*smoothstep(1.0 - 0.0006*uGestrellas, 1.0, est2)*1.6;
           float neb = ruido(d*2.6)*0.58 + ruido(d*6.1)*0.28 + ruido(d*13.0)*0.14;
-          e += vec3(0.26,0.09,0.38)*smoothstep(0.58, 0.97, neb)*0.46;
+          e += uGneb1*smoothstep(0.58, 0.97, neb);
           float neb2 = ruido(d*1.9 + 17.0)*0.7 + ruido(d*4.7 + 3.0)*0.3;
-          e += vec3(0.05,0.15,0.30)*smoothstep(0.60, 0.98, neb2)*0.34;
+          e += uGneb2*smoothstep(0.60, 0.98, neb2);
           e *= 0.88 + 0.26*ruido(d*1.3 + 41.0);
           float s = max(dot(d, uSol), 0.0);
-          e += vec3(1.00,0.96,0.88)*pow(s, 1200.0)*7.0;
-          e += vec3(0.55,0.68,1.00)*pow(s, 9.0)*0.045;
+          e += uGsol*pow(s, 1200.0)*7.0;
+          e += uGsol*pow(s, 9.0)*0.045;
           c = mix(c, e, uEspacio);
         }
         gl_FragColor = vec4(c, 1.0);
@@ -340,6 +383,7 @@ N.esc.alto = (N.y1 - N.y0)/N.esc.n;                  /* el escalón sale de los 
 N.escZ1 = N.esc.z + N.esc.n*N.esc.hondo;
 
 const MESA = {x:-4.0, z:24.5, alto:0.92};     /* dónde queda la cámara de fotos */
+const PANEL = {x:-2.7, z:30.6, abierto:false};  /* el pupitre de navegación */
 const PISOS = [], RAMPAS = [], MUROS = [];
 const piso = (x0,x1,z0,z1,y) => PISOS.push({x0,x1,z0,z1,y});
 const muro = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1});
@@ -580,6 +624,16 @@ const MAT_NAVE = {
   }
   oscuro.push(cajaP(4.6, 0.30, 0.5, 0, N.y1 + 1.55, N.z3 - 0.5));
   plafon.push(cajaP(4.2, 0.08, 0.36, 0, N.y1 + 1.40, N.z3 - 0.52));
+  /* pupitre de navegación: desde acá se elige la galaxia */
+  oscuro.push(cajaP(1.50, 0.95, 0.70, PANEL.x, N.y1 + 0.48, PANEL.z));
+  oscuro.push(cajaP(1.62, 0.10, 0.82, PANEL.x, N.y1 + 0.98, PANEL.z));
+  oscuro.push(cajaP(1.50, 0.62, 0.14, PANEL.x, N.y1 + 1.28, PANEL.z - 0.26, -0.55));
+  plafon.push(cajaP(1.30, 0.50, 0.04, PANEL.x, N.y1 + 1.29, PANEL.z - 0.19, -0.55));
+  luces.push(cajaP(1.40, 0.05, 0.05, PANEL.x, N.y1 + 1.02, PANEL.z + 0.30));
+  for(let i = 0; i < 5; i++)
+    luces.push(cajaP(0.07, 0.03, 0.07, PANEL.x - 0.55 + i*0.27, N.y1 + 1.04, PANEL.z + 0.12));
+  luces.push(cil(0.22, 0.05, PANEL.x, N.y1 + 1.06, PANEL.z - 0.02, 'y'));
+  muro(PANEL.x - 0.85, PANEL.x + 0.85, PANEL.z - 0.45, PANEL.z + 0.45, N.y1, N.y1 + 1.0);
 
   /* plafones del techo en las dos cubiertas */
   for(const d of [{x:N.x, z0:N.z0, z1:N.z1, y:N.y0, a:N.alto}, {x:N.x2, z0:N.z2, z1:N.z3, y:N.y1, a:N.alto2}]){
@@ -772,6 +826,7 @@ function pasoVuelo(dt){
   hemi.intensity = lerp(0.55, 0.16, e.espacio);
   MAT_NAVE.tobera.emissiveIntensity = 1.5 + 3.2*(e.estado === 'tierra' ? 0 : 1)*clamp(e.t/1.5, 0, 1);
 
+  if(GAL.saltando > 0) GAL.saltando = Math.max(0, GAL.saltando - dt);
   pasoBichos(dt, ahoraVuelo);
   polvo.visible = e.espacio > 0.02;
   polvo.material.opacity = e.espacio*0.95;
@@ -896,6 +951,8 @@ function sacarFoto(){
     BICHOS.nivel = Math.min(BICHOS.nivel + 1, 12);
     BICHOS.ultimo = {nombre:presa.userData.nombre, nivel:presa.userData.nivel,
                      rareza:+presa.userData.rareza.toFixed(2)};
+    const gid = GALAXIAS[GAL.actual].id;
+    (GAL.vistos[gid] || (GAL.vistos[gid] = {}))[presa.userData.arq] = true;
     dEspecies.textContent = 'ESPECIES ' + BICHOS.cazados;
     dEspecies.classList.add('ver');
   }
@@ -1273,6 +1330,189 @@ const ARQ = [
       y += h*1.55;
     }
   }}
+,
+{ id:'forja', min:0, alto:[3.4, 5.0], mote:['al rojo','soldado','que humea','de una pieza'],
+  hacer(rnd, r, P){
+    let y = 0.30;
+    for(let i = 0; i < 5; i++){                                  /* planchas soldadas, desfasadas */
+      const w = 0.86 - i*0.08, h = 0.26, gir = (rnd()-0.5)*0.5;
+      P.duro.push(pz(_cajaG, w, h, w*0.8, (rnd()-0.5)*0.10, y, (rnd()-0.5)*0.08, 0, gir, 0));
+      P.luz.push(pz(_cajaG, w*1.02, 0.035, w*0.82, 0, y + h*0.55, 0, 0, gir, 0));   /* costura */
+      y += h*1.22;
+    }
+    P.luz.push(pz(_cajaG, 0.50, 0.07, 0.05, 0, 0.92, 0.40));                        /* boca horno */
+    for(const l of [-1, 1]){
+      P.duro.push(pz(_cajaG, 0.22, 0.52, 0.22, l*0.60, 1.05, 0, 0, 0, l*0.22));     /* brazos */
+      P.duro.push(pz(_cajaG, 0.26, 0.30, 0.26, l*0.70, 0.62, 0.04));
+      P.luz.push(pz(_cajaG, 0.06, 0.34, 0.06, l*0.72, 1.05, 0.12));
+      ojoAr(P, l*0.16, 1.30, 0.30, 0.05);
+    }
+    P.duro.push(pz(_cajaG, 0.66, 0.24, 0.60, 0, 1.44, 0));                          /* casco */
+    for(let i = 0; i < 3 + Math.floor(r*4); i++)
+      P.luz.push(pz(_cajaG, 0.04, 0.04, 0.22, (rnd()-0.5)*0.8, 0.5 + rnd()*0.9, 0.34));
+  }},
+
+{ id:'enjambre', min:0, alto:[3.0, 4.6], mote:['que no es uno','de a muchos','que zumba','partido'],
+  hacer(rnd, r, P){
+    const nc = 6;
+    for(let c = 0; c < nc; c++){                                 /* seis cúmulos que se mueven */
+      const a = (c/nc)*6.2832, R = 0.55 + rnd()*0.35;
+      const cx = Math.sin(a)*R, cy = 1.0 + (rnd()-0.5)*1.1, cz = Math.cos(a)*R;
+      const S = P.sub('cumulo' + c, cx, cy, cz);
+      const nb = 3 + Math.floor(rnd()*3 + r*2);
+      for(let i = 0; i < nb; i++){
+        const x = cx + (rnd()-0.5)*0.34, y = cy + (rnd()-0.5)*0.34, z = cz + (rnd()-0.5)*0.34;
+        const e = 0.07 + rnd()*0.07;
+        esfAr(S.piel, e, e*1.5, e, x, y, z, rnd()*3, rnd()*3, 0);
+        segAr(S.duro, x, y, z, x + (rnd()-0.5)*0.2, y - 0.12 - rnd()*0.1, z + (rnd()-0.5)*0.2, 0.012);
+        if(rnd() < 0.5) S.luz.push(pz(_esferaG, e*0.4, e*0.4, e*0.4, x, y + e, z));
+      }
+    }
+    esfAr(P.piel, 0.16, 0.20, 0.16, 0, 1.0, 0);                  /* el que manda, en el medio */
+    ojoAr(P, 0, 1.08, 0.13, 0.055);
+  }},
+
+{ id:'peregrino', min:0, alto:[7.0, 11.0], mote:['que pasa','viejo','sin apuro','que no vuelve'],
+  hacer(rnd, r, P){
+    P.piel.push(pz(_toroG, 1.00, 1.00, 1.00, 0, 1.0, 0, 0, 0, 0));           /* aro grande */
+    P.duro.push(pz(_toroG, 0.62, 0.62, 0.62, 0, 1.0, 0, 0, 0, 0.3));
+    const nr = 6 + Math.floor(r*4);
+    for(let i = 0; i < nr; i++){                                             /* radios finos */
+      const a = (i/nr)*6.2832;
+      segAr(P.duro, Math.cos(a)*0.62, 1.0 + Math.sin(a)*0.62, 0,
+                    Math.cos(a)*1.00, 1.0 + Math.sin(a)*1.00, 0, 0.022);
+    }
+    esfAr(P.piel, 0.20, 0.20, 0.13, 0, 1.0, 0);
+    for(let i = 0; i < 3; i++){
+      const a = i*2.09;
+      P.luz.push(pz(_esferaG, 0.045, 0.045, 0.045, Math.cos(a)*0.80, 1.0 + Math.sin(a)*0.80, 0.02));
+    }
+    for(let i = 0; i < 2 + Math.floor(r*3); i++){                            /* colgajos */
+      const a = rnd()*6.2832;
+      let x = Math.cos(a)*1.0, y = 1.0 + Math.sin(a)*1.0, z = 0;
+      for(let k = 0; k < 5; k++){
+        const nx = x + (rnd()-0.5)*0.12, ny = y - 0.22, nz = z + (rnd()-0.5)*0.12;
+        segAr(P.piel, x, y, z, nx, ny, nz, 0.024);
+        x = nx; y = ny; z = nz;
+      }
+    }
+  }},
+
+{ id:'vela', min:0, alto:[4.0, 6.0], mote:['que se deja llevar','fino','de papel','callado'],
+  hacer(rnd, r, P){
+    const L = P.sub('lona', 0, 1.0, 0);
+    const nh = 9;
+    for(let i = 0; i < nh; i++){                                  /* la tela: tablillas curvadas */
+      const t = i/(nh-1), x = (t - 0.5)*1.9;
+      const comba = Math.cos((t - 0.5)*3.1)*0.36;
+      L.piel.push(pz(_cajaG, 1.9/nh*1.05, 1.5 + Math.sin(t*3.1)*0.5, 0.02,
+                     x, 1.1, comba, 0, (t - 0.5)*0.7, 0));
+    }
+    for(const l of [-1, 1])
+      segAr(P.duro, l*0.95, 0.30, 0.30, l*0.95, 1.95, -0.12, 0.030);          /* mástiles */
+    segAr(P.duro, -0.95, 1.95, -0.12, 0.95, 1.95, -0.12, 0.024);
+    esfAr(P.piel, 0.20, 0.26, 0.18, 0, 0.26, 0.04);                           /* cuerpito */
+    ojoAr(P, -0.07, 0.34, 0.18, 0.038);
+    ojoAr(P,  0.07, 0.34, 0.18, 0.038);
+    for(let i = 0; i < 3 + Math.floor(r*4); i++){
+      const x = (rnd()-0.5)*1.7;
+      P.luz.push(pz(_cajaG, 0.03, 0.03, 0.03, x, 0.5 + rnd()*1.2, 0.20));
+    }
+  }},
+
+{ id:'farol', min:0, alto:[2.6, 4.0], mote:['que alumbra','con cebo','de boca grande','paciente'],
+  hacer(rnd, r, P){
+    esfAr(P.piel, 0.52, 0.42, 0.62, 0, 1.0, 0);                               /* cuerpo */
+    esfAr(P.piel, 0.34, 0.26, 0.30, 0, 0.92, 0.52);
+    const nd = 8 + Math.floor(r*8);
+    for(let i = 0; i < nd; i++){                                              /* dientes finos */
+      const a = -1.1 + (i/(nd-1))*2.2;
+      conoAr(P.luz, Math.sin(a)*0.30, 0.92 + Math.cos(a)*0.06, 0.74, 0.022, 0.20, 1.5708, 0, 0);
+    }
+    ojoAr(P, -0.18, 1.14, 0.42, 0.06);
+    ojoAr(P,  0.18, 1.14, 0.42, 0.06);
+    const S = P.sub('senuelo', 0, 1.42, 0.10);                                /* caña con cebo */
+    let x = 0, y = 1.42, z = 0.10;
+    for(let k = 0; k < 6; k++){
+      const ny = y + 0.20 - k*0.02, nz = z + 0.10 + k*0.05;
+      segAr(S.duro, x, y, z, x, ny, nz, 0.020 - k*0.002);
+      y = ny; z = nz;
+    }
+    S.luz.push(pz(_esferaG, 0.10, 0.10, 0.10, x, y, z));
+    for(let i = 0; i < 4; i++)
+      segAr(P.piel, 0.30*(i%2?1:-1), 0.72, -0.2 - i*0.1, 0.55*(i%2?1:-1), 0.40, -0.5 - i*0.15, 0.030);
+  }},
+
+{ id:'raiz', min:0, alto:[3.0, 5.0], mote:['dado vuelta','que camina','sin tierra','torcido'],
+  hacer(rnd, r, P){
+    segAr(P.piel, 0, 0.75, 0, 0, 1.75, 0, 0.13);                              /* tronco */
+    const nc = 5 + Math.floor(r*4);
+    for(let i = 0; i < nc; i++){                                              /* copa arriba */
+      const a = (i/nc)*6.2832;
+      let x = 0, y = 1.75, z = 0, dx = Math.sin(a)*0.18, dz = Math.cos(a)*0.18;
+      for(let k = 0; k < 4; k++){
+        const nx = x + dx, ny = y + 0.16 - k*0.03, nz = z + dz;
+        segAr(P.piel, x, y, z, nx, ny, nz, 0.055 - k*0.010);
+        x = nx; y = ny; z = nz; dx *= 1.15; dz *= 1.15;
+      }
+      if(i % 2 === 0) ojoAr(P, x, y, z, 0.038);
+    }
+    const np = 4;
+    for(let i = 0; i < np; i++){                                              /* patas de raíz */
+      const a = (i/np)*6.2832 + 0.4;
+      const S = P.sub('pata' + i, 0, 0.75, 0);
+      let x = 0, y = 0.75, z = 0;
+      const dx = Math.sin(a)*0.22, dz = Math.cos(a)*0.22;
+      for(let k = 0; k < 4; k++){
+        const nx = x + dx*(1 + k*0.2), ny = y - 0.20, nz = z + dz*(1 + k*0.2);
+        segAr(S.duro, x, y, z, nx, ny, nz, 0.075 - k*0.013);
+        x = nx; y = ny; z = nz;
+      }
+    }
+    for(let i = 0; i < 2 + Math.floor(r*3); i++)
+      ojoAr(P, (rnd()-0.5)*0.2, 0.95 + rnd()*0.7, 0.13, 0.042);
+  }},
+
+{ id:'espejo', min:0, alto:[2.6, 4.0], mote:['al revés','que se copia','partido al medio','doble'],
+  hacer(rnd, r, P){
+    for(const l of [-1, 1]){
+      const M = P.sub(l > 0 ? 'mitadA' : 'mitadB', l*0.34, 1.0, 0);
+      const x0 = l*0.34;
+      esfAr(M.piel, 0.24, 0.52, 0.22, x0, 1.05, 0);                            /* medio torso */
+      esfAr(M.piel, 0.17, 0.19, 0.16, x0, 1.58, 0);                            /* media cabeza */
+      ojoAr(M, x0 + l*0.02, 1.60, 0.14, 0.06);
+      segAr(M.duro, x0, 1.36, 0, x0 + l*0.34, 1.05, 0.06, 0.042);              /* un brazo */
+      segAr(M.duro, x0 + l*0.34, 1.05, 0.06, x0 + l*0.30, 0.66, 0.02, 0.036);
+      segAr(M.duro, x0, 0.76, 0, x0 + l*0.10, 0.40, 0.02, 0.050);              /* una pierna */
+      segAr(M.duro, x0 + l*0.10, 0.40, 0.02, x0 + l*0.08, 0.04, 0.06, 0.044);
+      for(let i = 0; i < Math.floor(r*4); i++)
+        ojoAr(M, x0 + l*0.10, 1.10 + i*0.18, 0.14, 0.032);
+    }
+    P.luz.push(pz(_cajaG, 0.03, 1.5, 0.03, 0, 1.05, 0));                       /* la costura */
+  }},
+
+{ id:'nudo', min:0, alto:[3.0, 5.0], mote:['que no se desata','enredado','sin punta','que vuelve'],
+  hacer(rnd, r, P){
+    const na = 3 + Math.floor(r*2);
+    for(let i = 0; i < na; i++){
+      const A = P.sub('aro' + i, 0, 1.1, 0);
+      const e = 0.85 - i*0.10;
+      A.duro.push(pz(_toroG, e, e, e, 0, 1.1, 0, rnd()*3.14, rnd()*3.14, rnd()*3.14));
+      const no = 2 + Math.floor(r*3);
+      for(let k = 0; k < no; k++){
+        const a = rnd()*6.2832;
+        ojoAr(A, Math.sin(a)*e*0.45, 1.1 + Math.cos(a)*e*0.45, (rnd()-0.5)*0.3, 0.05);
+      }
+    }
+    let x = 0, y = 0.4, z = 0;                                                  /* un tubo que cruza */
+    for(let k = 0; k < 10; k++){
+      const nx = Math.sin(k*1.1)*0.7, ny = 0.4 + k*0.16, nz = Math.cos(k*0.9)*0.6;
+      segAr(P.piel, x, y, z, nx, ny, nz, 0.085);
+      x = nx; y = ny; z = nz;
+    }
+    P.luz.push(pz(_esferaG, 0.09, 0.09, 0.09, x, y, z));
+  }}
+
 ];
 
 function ojoAr(P, x, y, z, t){
@@ -1304,8 +1544,12 @@ function crearBicho(nivel, semilla){
   };
 
   /* qué especies andan dando vueltas a esta altura, sin repetir la anterior */
-  let posibles = ARQ.filter(a => a.min <= nivel);
-  const sinRepetir = posibles.filter(a => a.id !== BICHOS.ultimoArq);
+  const gal = GALAXIAS[GAL.actual];
+  let posibles = ARQ.filter(a => gal.especies.indexOf(a.id) >= 0);
+  /* ni repetir el anterior ni repetir uno que ya esté dando vueltas */
+  const dandoVueltas = BICHOS.vivos.map(x => x.userData.arq);
+  let sinRepetir = posibles.filter(a => a.id !== BICHOS.ultimoArq && dandoVueltas.indexOf(a.id) < 0);
+  if(!sinRepetir.length) sinRepetir = posibles.filter(a => a.id !== BICHOS.ultimoArq);
   if(sinRepetir.length) posibles = sinRepetir;
   const arq = posibles[(rnd()*posibles.length)|0] || ARQ[0];
   BICHOS.ultimoArq = arq.id;
@@ -1370,6 +1614,7 @@ function crearBicho(nivel, semilla){
     }
   }
 
+  g.userData.matLuz = matLuz;
   g.userData.nivel = nivel;
   g.userData.arq = arq.id;
   g.userData.nombre = nombreBicho(rnd, nivel, arq);
@@ -1497,6 +1742,108 @@ const CONDUCTA = {
     b.position.addScaledVector(u.imp, dt);
     u.imp.multiplyScalar(1 - Math.min(dt*3, 0.95));
   },
+  forja(b, u, t, dt, a, d){
+    u.mirar = 1;
+    if(d > 11) b.position.addScaledVector(a, 1.0*dt);                /* pesado y decidido */
+    if(d < 5.5) b.position.addScaledVector(a, -0.8*dt);
+    b.position.y += Math.sin(t*0.4 + u.fase)*0.4*dt;
+    b.rotation.z = Math.sin(t*0.7 + u.fase)*0.05;
+    if(u.matLuz) u.matLuz.emissiveIntensity = 1.6 + 1.9*(0.5 + 0.5*Math.sin(t*2.6 + u.fase));
+  },
+  enjambre(b, u, t, dt, a, d){
+    let i = 0;
+    const cierra = 0.55 + 0.45*Math.sin(t*0.55 + u.fase);            /* respira: se junta y se abre */
+    for(const k in u.partes){
+      const o = u.partes[k], base = o.userData.base;
+      const f = t*0.9 + i*1.7 + u.fase;
+      o.position.set(base.x*cierra + Math.sin(f)*0.20,
+                     base.y*cierra + Math.sin(f*0.7 + 1)*0.24,
+                     base.z*cierra + Math.cos(f)*0.20);
+      o.rotation.y = f*0.6;
+      i++;
+    }
+    b.position.addScaledVector(u.rumbo, 1.6*dt);
+    u.rumbo.x += (Math.random()-0.5)*dt*0.9; u.rumbo.z += (Math.random()-0.5)*dt*0.9;
+    u.rumbo.normalize();
+    if(d > 16) b.position.addScaledVector(a, 1.4*dt);
+    b.rotation.y += dt*0.5;
+  },
+  peregrino(b, u, t, dt, a, d){
+    b.rotation.z += dt*0.09;                                         /* enorme y lentísimo */
+    b.rotation.y += dt*0.03;
+    b.position.addScaledVector(u.rumbo, 0.55*dt);
+    b.position.y += Math.sin(t*0.16 + u.fase)*0.5*dt;
+    if(u.matLuz) u.matLuz.emissiveIntensity = 1.4 + 0.5*Math.sin(t*0.5 + u.fase);
+  },
+  vela(b, u, t, dt, a, d){
+    const L = u.partes.lona;
+    if(L){                                                           /* la tela ondea */
+      L.rotation.z = Math.sin(t*1.1 + u.fase)*0.22;
+      L.rotation.y = Math.sin(t*0.8 + u.fase*1.3)*0.30;
+      L.scale.set(1 + Math.sin(t*1.4 + u.fase)*0.06, 1, 1);
+    }
+    b.rotation.y += dt*0.18;
+    b.rotation.x = Math.sin(t*0.5 + u.fase)*0.12;
+    _lado.set(-a.z, 0, a.x);
+    b.position.addScaledVector(_lado, 1.5*dt).addScaledVector(u.rumbo, 0.8*dt);
+    b.position.y += Math.sin(t*0.42 + u.fase)*1.1*dt;
+  },
+  farol(b, u, t, dt, a, d){
+    u.mirar = 1;
+    const S = u.partes.senuelo;
+    if(S){
+      S.rotation.x = Math.sin(t*1.3 + u.fase)*0.26;                  /* el cebo se balancea */
+      S.rotation.z = Math.sin(t*0.9 + u.fase*1.6)*0.22;
+    }
+    if(u.matLuz) u.matLuz.emissiveIntensity = 1.9 + 1.4*(0.5 + 0.5*Math.sin(t*1.7 + u.fase));
+    u.reloj -= dt;
+    if(u.reloj <= 0){ u.reloj = 4 + Math.random()*5; if(d > 7) u.envion = 1; }
+    if(u.envion > 0){ b.position.addScaledVector(a, 2.8*dt*u.envion); u.envion = Math.max(0, u.envion - dt*1.1); }
+    else if(d > 14) b.position.addScaledVector(a, 0.5*dt);
+    b.position.y += Math.sin(t*0.6 + u.fase)*0.5*dt;
+  },
+  raiz(b, u, t, dt, a, d){
+    let i = 0, empuje = 0;
+    for(const k in u.partes){                                        /* camina alternando patas */
+      const o = u.partes[k];
+      const f = Math.sin(t*1.6 + i*1.57 + u.fase);
+      o.rotation.x = f*0.30;
+      o.rotation.z = Math.cos(t*1.6 + i*1.57 + u.fase)*0.16;
+      empuje += Math.max(0, f);
+      i++;
+    }
+    b.position.addScaledVector(a, Math.min(empuje*0.10, 0.5)*dt*(d > 9 ? 1 : -0.6));
+    b.rotation.y += dt*0.22;
+    b.rotation.z = Math.sin(t*1.6 + u.fase)*0.07;
+    b.position.y += Math.sin(t*1.6 + u.fase)*0.5*dt;
+  },
+  espejo(b, u, t, dt, a, d){
+    u.reloj -= dt;
+    const calza = u.reloj < 0.8 ? 1 - u.reloj/0.8 : 0;                /* cada tanto se alinean */
+    if(u.reloj <= 0) u.reloj = 4 + Math.random()*4;
+    const A = u.partes.mitadA, B = u.partes.mitadB;
+    const g1 = Math.sin(t*0.8 + u.fase)*0.9*(1 - calza);
+    if(A) A.rotation.y = g1;
+    if(B) B.rotation.y = -g1;
+    if(A) A.position.x = A.userData.base.x + Math.sin(t*0.5)*0.10*(1 - calza);
+    if(B) B.position.x = B.userData.base.x - Math.sin(t*0.5)*0.10*(1 - calza);
+    b.rotation.y += dt*0.35;
+    b.position.addScaledVector(u.deriva, dt*1.1);
+    if(d > 15) b.position.addScaledVector(a, 0.7*dt);
+  },
+  nudo(b, u, t, dt, a, d){
+    let i = 0;
+    for(const k in u.partes){                                        /* cada aro por su lado */
+      const o = u.partes[k];
+      o.rotation.x += dt*(0.5 + i*0.25);
+      o.rotation.y += dt*(0.35 - i*0.12);
+      i++;
+    }
+    b.rotation.z += dt*0.15;
+    b.position.addScaledVector(u.rumbo, 1.0*dt);
+    if(d > 17) b.position.addScaledVector(a, 0.7*dt);
+    b.position.y += Math.sin(t*0.5 + u.fase)*0.7*dt;
+  },
   torre(b, u, t, dt, a, d){
     let i = 0;
     for(const k in u.partes){
@@ -1570,6 +1917,59 @@ function pasoBichos(dt, t){
       esc.remove(b); BICHOS.vivos.splice(i, 1);
     }
   }
+}
+
+
+/* ----------------------------------------------------------------- galaxias */
+/* Cada galaxia tiene su cielo, su luz y SUS especies: ninguna se repite entre galaxias. */
+const GALAXIAS = [
+  {id:'vega', nombre:'VEGA ROTA', linea:'Polvo viejo y un sol que ya no calienta.',
+   cielo:{base:[0.004,0.006,0.017], neb1:[0.120,0.041,0.175], neb2:[0.017,0.051,0.102],
+          sol:[1.00,0.96,0.88], est:1.0}, luz:0xcfe0ff,
+   especies:['acechante','insecto','medusa']},
+  {id:'hervidero', nombre:'EL HERVIDERO', linea:'Demasiado cerca de algo que arde.',
+   cielo:{base:[0.032,0.009,0.004], neb1:[0.300,0.075,0.020], neb2:[0.170,0.040,0.010],
+          sol:[1.00,0.55,0.20], est:2.2}, luz:0xffb070,
+   especies:['fauces','forja','enjambre']},
+  {id:'quietud', nombre:'LA QUIETUD', linea:'No hay nada, y sin embargo algo pasa.',
+   cielo:{base:[0.002,0.004,0.011], neb1:[0.020,0.030,0.062], neb2:[0.010,0.014,0.030],
+          sol:[0.70,0.80,1.00], est:0.35}, luz:0x9fc0e8,
+   especies:['hueco','peregrino','vela']},
+  {id:'coral', nombre:'CORAL PROFUNDO', linea:'Lo que se ve, se ve porque brilla solo.',
+   cielo:{base:[0.004,0.016,0.014], neb1:[0.030,0.170,0.120], neb2:[0.010,0.090,0.140],
+          sol:[0.70,1.00,0.85], est:1.4}, luz:0x8fffd0,
+   especies:['colonia','vigia','farol','raiz']},
+  {id:'reverso', nombre:'EL REVERSO', linea:'Las cosas vuelven antes de haber ido.',
+   cielo:{base:[0.016,0.004,0.020], neb1:[0.230,0.060,0.230], neb2:[0.120,0.115,0.040],
+          sol:[1.00,0.80,1.00], est:1.8}, luz:0xe9a0ff,
+   especies:['torre','espejo','nudo']}
+];
+const GAL = {actual:0, saltando:0, vistos:{}};
+
+function aplicarGalaxia(i){
+  const g = GALAXIAS[i];
+  GAL.actual = i;
+  uCielo.uGbase.value.fromArray(g.cielo.base);
+  uCielo.uGneb1.value.fromArray(g.cielo.neb1);
+  uCielo.uGneb2.value.fromArray(g.cielo.neb2);
+  uCielo.uGsol.value.fromArray(g.cielo.sol);
+  uCielo.uGestrellas.value = g.cielo.est;
+  contra.color.copy(col(g.luz));
+  polvo.material.color.copy(col(g.luz));
+  limpiarBichos();
+  BICHOS.ultimoArq = null;
+  if(dGalNom) dGalNom.textContent = g.nombre;
+}
+function viajarA(i){
+  if(GAL.saltando > 0) return;
+  cerrarPanel();
+  if(VUELO.estado !== 'espacio'){ aplicarGalaxia(i); return; }   /* en tierra queda el rumbo puesto */
+  GAL.saltando = 1.6;
+  dFogo.style.transition = 'none'; dFogo.style.opacity = '1';
+  setTimeout(() => {
+    aplicarGalaxia(i);
+    dFogo.style.transition = 'opacity 1s'; dFogo.style.opacity = '0';
+  }, 420);
 }
 
 /* ------------------------------------------------------------ caminata espacial */
@@ -1946,6 +2346,24 @@ const dSalto = document.getElementById('salto'), dPista = document.getElementByI
 const dVolar = document.getElementById('volar');
 const dUsar = document.getElementById('usar'), dVisor = document.getElementById('visor');
 const dEspecies = document.getElementById('especies');
+const dPanelB = document.getElementById('panelb'), dGal = document.getElementById('galaxias');
+const dListaGal = document.getElementById('listagal'), dGalNom = document.getElementById('galnom');
+
+function pintarPanel(){
+  dListaGal.innerHTML = '';
+  GALAXIAS.forEach((g, i) => {
+    const vistas = Object.keys(GAL.vistos[g.id] || {}).length;
+    const b = document.createElement('div');
+    b.className = 'fila' + (i === GAL.actual ? ' aca' : '');
+    b.innerHTML = '<b>' + g.nombre + '</b><i>' + g.linea + '</i><u>' +
+      (i === GAL.actual ? 'ESTÁS ACÁ · ' : '') + vistas + ' de ' + g.especies.length +
+      ' especies en la cámara</u>';
+    b.addEventListener('pointerdown', e => { e.stopPropagation(); viajarA(i); });
+    dListaGal.appendChild(b);
+  });
+}
+function abrirPanel(){ if(PANEL.abierto) return; PANEL.abierto = true; pintarPanel(); dGal.classList.add('ver'); }
+function cerrarPanel(){ PANEL.abierto = false; dGal.classList.remove('ver'); }
 let idPalanca = null, idMira = null, oX = 0, oY = 0, mX = 0, mY = 0;
 const RADIO = 58;
 
@@ -1956,7 +2374,8 @@ function pintarPalanca(px, py, vis){
 }
 addEventListener('pointerdown', e => {
   if(FOTO.abierta) return;                    /* con la copia abierta no se arma la palanca */
-  if(e.target === dSalto || e.target === dVolar || e.target === dUsar) return;
+  if(PANEL.abierto) return;
+  if(e.target === dSalto || e.target === dVolar || e.target === dUsar || e.target === dPanelB) return;
   if(e.clientX < innerWidth*0.52 && idPalanca === null){
     idPalanca = e.pointerId; oX = e.clientX; oY = e.clientY;
     pintarPalanca(oX, oY, true);
@@ -1998,6 +2417,15 @@ function tocarVolar(e){
   else if(q === 'ENTRAR') entrarDeNuevo();
 }
 function soltarVolar(){ dVolar.classList.remove('on'); }
+function tocarPanel(e){ e.preventDefault(); dPanelB.classList.add('on'); abrirPanel(); }
+function soltarPanel(){ dPanelB.classList.remove('on'); }
+dPanelB.addEventListener('touchstart', tocarPanel, {passive:false});
+dPanelB.addEventListener('touchend', soltarPanel, {passive:true});
+dPanelB.addEventListener('mousedown', tocarPanel);
+dPanelB.addEventListener('mouseup', soltarPanel);
+document.getElementById('cerrargal').addEventListener('pointerdown', e => { e.stopPropagation(); cerrarPanel(); });
+dGal.addEventListener('pointerdown', e => { e.stopPropagation(); cerrarPanel(); });
+
 function tocarUsar(e){
   e.preventDefault();
   dUsar.classList.add('on');
@@ -2134,6 +2562,12 @@ function hud(){
   const txtUsar = FOTO.tiene ? 'FOTO' : 'TOMAR CÁMARA';
   if(dUsar.textContent !== txtUsar) dUsar.textContent = txtUsar;
   if(FOTO.tiene !== dVisor.classList.contains('ver')) dVisor.classList.toggle('ver', FOTO.tiene);
+
+  const cercaPanel = !EVA.activa && jug.pos.y > N.y1 - 0.5 &&
+    Math.hypot(jug.pos.x - PANEL.x, jug.pos.z - PANEL.z) < 2.5;
+  if(cercaPanel !== dPanelB.classList.contains('ver')) dPanelB.classList.toggle('ver', cercaPanel);
+  const verGal = VUELO.espacio > 0.5;
+  if(verGal !== dGalNom.classList.contains('ver')) dGalNom.classList.toggle('ver', verGal);
 
   const aBordo = !!enNave(jug.pos.x, jug.pos.y, jug.pos.z);
   const enEsclusa = VUELO.estado === 'espacio' && cercaDeLaEsclusa();
@@ -2347,6 +2781,11 @@ window.__A = {
     cerca:cercaDeLaEsclusa(), soga:soga.visible, boton:dVolar.textContent,
     pos:jug.pos.toArray().map(v => +v.toFixed(2))}; },
   salir:salirAlEspacio, entrar:entrarDeNuevo,
+  galaxia(){ return {actual:GALAXIAS[GAL.actual].id, nombre:GALAXIAS[GAL.actual].nombre,
+    saltando:+GAL.saltando.toFixed(2), abierto:!!PANEL.abierto, vistos:GAL.vistos,
+    boton:dPanelB.classList.contains('ver'),
+    especies:BICHOS.vivos.map(b => b.userData.arq)}; },
+  viajar:viajarA, abrirPanel, cerrarPanel, GALAXIAS,
   ponerNivel(n){ BICHOS.nivel = n; limpiarBichos(); return BICHOS.nivel; },
   fotos(){ return {tiene:FOTO.tiene, cerca:FOTO.cerca, carrete:FOTO.carrete, abierta:FOTO.abierta,
     boton:dUsar.classList.contains('ver'), texto:dUsar.textContent,
