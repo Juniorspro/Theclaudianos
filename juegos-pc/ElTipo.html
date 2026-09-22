@@ -243,7 +243,7 @@ const J = {
   modo:'titulo',            // titulo | juega | pausa | fin | muerte | tienda
   nivel:1, semillaTx:'',
   mundo:null, jug:null,
-  ents:[], balas:[], part:[], objetos:[], textos:[], ondas:[],
+  ents:[], balas:[], part:[], objetos:[], textos:[], ondas:[], golpazos:[],
   cam:{x:0,y:0,esc:1,sx:0,sy:0,zoom:1},
   t:0, congelado:0, lento:0, fin:0,
   guita:0, combo:0, comboT:0, comboMax:0, golpes:0, recibido:0, tiempo:0,
@@ -413,7 +413,11 @@ function musica(){
   musPaso++;
 }
 
-/* ---------- efectos: partículas, textos, ondas, sacudida ---------- */
+/* ---------- efectos: partículas, textos, ondas, sacudida ----------
+   Ojo: los efectos usan Math.random, NO el rng del nivel. Si consumen `rnd()`
+   corren la secuencia y una misma semilla deja de dar la misma partida.      */
+const vrango = (a,b)=> a + Math.random()*(b-a);
+const vint   = (a,b)=> a + Math.floor(Math.random()*(b-a+1));
 const MAX_PART = 190;
 function particula(x,y,vx,vy,col,vida,tam,grav){
   if(J.part.length>MAX_PART) J.part.shift();
@@ -421,16 +425,17 @@ function particula(x,y,vx,vy,col,vida,tam,grav){
 }
 function chorro(x,y,n,col,fuerza,arriba){
   for(let i=0;i<n;i++){
-    const a = arriba? -Math.PI/2 + rango(-1.1,1.1) : rango(0,Math.PI*2);
-    const v = rango(0.6,1)*fuerza;
-    particula(x,y,Math.cos(a)*v,Math.sin(a)*v - (arriba?1:0), col, rint(16,30), rango(1.5,3.5));
+    const a = arriba? -Math.PI/2 + vrango(-1.1,1.1) : vrango(0,Math.PI*2);
+    const v = vrango(0.6,1)*fuerza;
+    particula(x,y,Math.cos(a)*v,Math.sin(a)*v - (arriba?1:0), col, vint(16,30), vrango(1.5,3.5));
   }
 }
 function polvo(x,y,n,col){
-  for(let i=0;i<n;i++) particula(x+rango(-5,5),y,rango(-1,1),rango(-1.4,-0.2),col||'#6b6f86',rint(14,26),rango(1.5,3),0.08);
+  for(let i=0;i<n;i++) particula(x+vrango(-5,5),y,vrango(-1,1),vrango(-1.4,-0.2),col||'#6b6f86',vint(14,26),vrango(1.5,3),0.08);
 }
 function texto(x,y,tx,col,tam){ J.textos.push({x,y,tx,col:col||'#fff',tam:tam||11,vida:46,vy:-1.1}); }
 function onda(x,y,r,col,ancho){ J.ondas.push({x,y,r:4,rmax:r,col:col||'#fff',vida:18,w:ancho||3}); }
+function impacto(x,y,tam,col){ J.golpazos.push({x,y,tam,col:col||'#fff',vida:9,giro:Math.random()*6.28}); }
 function sacudir(f){ J.cam.sx = Math.max(J.cam.sx, f); }
 function congelar(f){ J.congelado = Math.max(J.congelado, f); }
 
@@ -440,6 +445,7 @@ function pasarEfectos(){
     if(p.y>MUNDO_ALTO+40||p.vida<=0) J.part.splice(i,1); }
   for(let i=J.textos.length-1;i>=0;i--){ const t=J.textos[i];
     t.y+=t.vy; t.vy*=0.93; t.vida--; if(t.vida<=0) J.textos.splice(i,1); }
+  for(let i=J.golpazos.length-1;i>=0;i--){ if(--J.golpazos[i].vida<=0) J.golpazos.splice(i,1); }
   for(let i=J.ondas.length-1;i>=0;i--){ const o=J.ondas[i];
     o.r += (o.rmax-o.r)*0.28; o.vida--; if(o.vida<=0) J.ondas.splice(i,1); }
   J.cam.sx *= 0.86; if(J.cam.sx<0.2) J.cam.sx=0;
@@ -590,10 +596,19 @@ function dibujarPeleador(e){
   if(e.parpadeo && (J.t>>1)%2===0) cx.globalAlpha=0.45;
 
   const gr = e.gordo? 6.6 : 4.6;       /* grosor de miembro */
+  const zapa = (x,y,mira)=>{            /* zapatilla: el pie apunta hacia adelante */
+    cx.save(); cx.translate(x,y+1.2);
+    cx.fillStyle = col.zapa||'#1a1a22'; cx.strokeStyle='#0b0b12'; cx.lineWidth=1.8;
+    rectR(mira>0? -2.4 : -4.6, -2.4, 7, 4.6, 2); cx.fill(); cx.stroke();
+    cx.restore();
+  };
   /* piernas (detrás) */
-  miembro(p.cadX-2, p.cadY, p.pIx, p.pIy, 8, 8, 1, gr, col.pierna);
+  const pi = miembro(p.cadX-2, p.cadY, p.pIx, p.pIy, 8, 8, 1, gr, col.pierna);
+  zapa(pi.fx, pi.fy, 1);
   /* brazo de atrás */
-  miembro(p.homX-2, p.homY, p.mIx, p.mIy, 8, 8, 1, gr-0.6, col.brazoAtras||col.brazo);
+  const ba = miembro(p.homX-2, p.homY, p.mIx, p.mIy, 8, 8, 1, gr-0.6, col.brazoAtras||col.brazo);
+  cx.fillStyle = col.guanteAtras||col.guante||col.piel; cx.strokeStyle='#0b0b12'; cx.lineWidth=1.6;
+  cx.beginPath(); cx.arc(ba.fx, ba.fy, e.gordo?3.6:2.7, 0, 7); cx.fill(); cx.stroke();
   /* torso */
   cx.beginPath();
   cx.moveTo(p.homX-7, p.homY-2); cx.lineTo(p.homX+7, p.homY-2);
@@ -602,8 +617,13 @@ function dibujarPeleador(e){
   if(col.franja){ cx.beginPath(); cx.moveTo(p.homX-6,p.homY+3); cx.lineTo(p.homX+6,p.homY+3);
     cx.lineTo(p.cadX+4.6,p.cadY-1); cx.lineTo(p.cadX-4.6,p.cadY-1); cx.closePath();
     cx.fillStyle=col.franja; cx.fill(); }
+  /* cinturón */
+  cx.fillStyle = col.cinto||'#1d1d26'; cx.strokeStyle='#0b0b12'; cx.lineWidth=1.4;
+  rectR(p.cadX-6, p.cadY-1.6, 12, 4, 1.4); cx.fill(); cx.stroke();
+  if(col.hebilla){ cx.fillStyle=col.hebilla; cx.fillRect(p.cadX-1.6, p.cadY-1, 3.4, 2.6); }
   /* pierna delantera */
-  miembro(p.cadX+2, p.cadY, p.pDx, p.pDy, 8, 8, 1, gr, col.pierna);
+  const pd = miembro(p.cadX+2, p.cadY, p.pDx, p.pDy, 8, 8, 1, gr, col.pierna);
+  zapa(pd.fx, pd.fy, 1);
   /* cabeza */
   cx.save(); cx.translate(p.cabX, p.cabY);
   cx.fillStyle=col.piel; cx.strokeStyle='#0b0b12'; cx.lineWidth=2.2;
@@ -641,12 +661,12 @@ const ARMAS = {
 function dibujarArma(a,x,y){
   cx.save(); cx.translate(x,y);
   cx.strokeStyle='#0b0b12'; cx.lineWidth=2;
-  if(a.k==='caño'){ cx.fillStyle='#9aa3b5'; rectR(-2,-2.4,30,4.6,2); cx.fill(); cx.stroke();
-    cx.fillStyle='#5c6475'; cx.fillRect(20,-3.4,6,6.6); }
-  else if(a.k==='escopeta'){ cx.fillStyle='#5b3a26'; rectR(-6,-2,12,5,1.5); cx.fill(); cx.stroke();
-    cx.fillStyle='#2f333d'; rectR(4,-2.6,22,4.4,1.5); cx.fill(); cx.stroke(); }
-  else if(a.k==='fusil'){ cx.fillStyle='#2f333d'; rectR(-7,-2.6,30,5,1.5); cx.fill(); cx.stroke();
-    cx.fillStyle='#454b58'; cx.fillRect(6,-6,4,4); }
+  if(a.k==='caño'){ cx.fillStyle='#9aa3b5'; rectR(-2,-2.2,23,4.2,2); cx.fill(); cx.stroke();
+    cx.fillStyle='#5c6475'; cx.fillRect(15,-3.2,5,6.2); }
+  else if(a.k==='escopeta'){ cx.fillStyle='#5b3a26'; rectR(-5,-2,9,4.6,1.5); cx.fill(); cx.stroke();
+    cx.fillStyle='#2f333d'; rectR(3,-2.4,15,4,1.5); cx.fill(); cx.stroke(); }
+  else if(a.k==='fusil'){ cx.fillStyle='#2f333d'; rectR(-6,-2.4,21,4.6,1.5); cx.fill(); cx.stroke();
+    cx.fillStyle='#454b58'; cx.fillRect(5,-5.4,3.6,3.6); }
   else { cx.fillStyle='#33383f'; rectR(-3,-2.6,15,5,1.6); cx.fill(); cx.stroke();
     cx.fillRect(-1,0,4,6); cx.strokeRect(-1,0,4,6); }
   cx.restore();
@@ -914,7 +934,8 @@ function monedas(m,x,y,n){ for(let i=0;i<n;i++) (m.semillas||(m.semillas=[])).pu
 /* ---------- paletas de personajes ---------- */
 const PAL = {
   tipo:    {torso:'#2f6fd0', franja:'#e8eef7', pierna:'#26324a', brazo:'#2f6fd0', brazoAtras:'#24559e',
-            piel:'#f0b287', pelo:'#2b2118', guante:'#e8eef7'},
+            piel:'#f0b287', pelo:'#2b2118', guante:'#e8eef7', guanteAtras:'#cdd5e4',
+            zapa:'#e8eef7', cinto:'#1d2436', hebilla:'#ffd24a'},
   guardia: {torso:'#b03a34', franja:'#7d2622', pierna:'#3a3038', brazo:'#b03a34', brazoAtras:'#8a2c27',
             piel:'#d79b6d', casco:'#6e6a78', guante:'#3a3038'},
   escudero:{torso:'#7a7f92', franja:'#5a5f70', pierna:'#33363f', brazo:'#7a7f92', brazoAtras:'#5f6473',
@@ -922,7 +943,7 @@ const PAL = {
   cuchillero:{torso:'#4a8f5d', pierna:'#2a3a32', brazo:'#4a8f5d', brazoAtras:'#3a7049',
             piel:'#e0a878', gorra:'#2e5c3c', guante:'#243028'},
   pesado:  {torso:'#8a5a2e', franja:'#6b4521', pierna:'#3b2d20', brazo:'#8a5a2e', brazoAtras:'#6d4623',
-            piel:'#d99b62', barba:'#3a2a1c', guante:'#2a2018'},
+            piel:'#d99b62', barba:'#3a2a1c', guante:'#2a2018', zapa:'#241a12', cinto:'#2a1f14', hebilla:'#c9a13a'},
   ninja:   {torso:'#3b2f55', franja:'#241c38', pierna:'#241c38', brazo:'#3b2f55', brazoAtras:'#2c2242',
             piel:'#2a2438', ojoRojo:'#ff4d6a', guante:'#171226'},
   tirador: {torso:'#5f6b3a', franja:'#454e2a', pierna:'#2f3522', brazo:'#5f6b3a', brazoAtras:'#4a5430',
@@ -972,8 +993,8 @@ function pasarJugador(p){
   if(p.cadArma>0) p.cadArma--;
   if(p.comboVent>0) p.comboVent--; else p.comboPaso=0;
   if(p.enFuria>0){ p.enFuria--;
-    if(J.t%3===0) particula(p.x+rango(-8,8), p.y-rango(2,30), rango(-.4,.4), -rango(.5,1.4),
-      chance(.5)?'#ff7a2f':'#ffd24a', 18, rango(2,3.6), 0);
+    if(J.t%3===0) particula(p.x+vrango(-8,8), p.y-vrango(2,30), vrango(-.4,.4), -vrango(.5,1.4),
+      Math.random()<.5?'#ff7a2f':'#ffd24a', 18, vrango(2,3.6), 0);
     if(p.enFuria===0){ texto(p.x,p.y-44,'SE ACABÓ','#ff7a2f',12); }
   }
   const quieto = p.est==='golpe'||p.est==='slam'||p.est==='agarrado'||p.retro>0;
@@ -999,8 +1020,8 @@ function pasarJugador(p){
   if(recien('C') && p.dashCD<=0 && p.dashT<=0 && !p.muerto && p.est!=='agarrado'){
     p.dashT = 12; p.dashCD = Math.max(16, 42 - mj.dash*9); p.inv = 13; p.est='dash';
     p.vy = 0; p.golpeados = new Set(); SFX.dash();
-    for(let i=0;i<8;i++) particula(p.x-p.dir*6, p.y-rango(4,28), -p.dir*rango(.4,1.6), rango(-.4,.4),
-      '#9fd8ff', 16, rango(1.6,3), 0.02);
+    for(let i=0;i<8;i++) particula(p.x-p.dir*6, p.y-vrango(4,28), -p.dir*vrango(.4,1.6), vrango(-.4,.4),
+      '#9fd8ff', 16, vrango(1.6,3), 0.02);
   }
   if(p.dashT>0){
     p.dashT--; p.vx = p.dir*7.2; p.vy = 0; p.est='dash';
@@ -1032,10 +1053,10 @@ function pasarJugador(p){
       SFX.salto(); polvo(p.x+p.dir*-8,p.y-16,6,'#cfd4e6');
     }
     else if(p.saltos<1+1){ p.vy = SALTO2; p.saltos++; SFX.salto();
-      for(let i=0;i<8;i++) particula(p.x+rango(-8,8),p.y-2,rango(-1,1),rango(0,1),'#cfd4e6',14,2,0.05); }
+      for(let i=0;i<8;i++) particula(p.x+vrango(-8,8),p.y-2,vrango(-1,1),vrango(0,1),'#cfd4e6',14,2,0.05); }
   }
   if(pegadoPared){ p.vy = Math.min(p.vy, 1.8); p.paredCD=6;
-    if(J.t%4===0) particula(p.x+p.enPared*7, p.y-rango(6,26), 0, -0.4,'#8e95ab',12,2,0); }
+    if(J.t%4===0) particula(p.x+p.enPared*7, p.y-vrango(6,26), 0, -0.4,'#8e95ab',12,2,0); }
   else if(p.paredCD>0) p.paredCD--;
 
   /* --- ataques --- */
@@ -1138,7 +1159,7 @@ function iniciarAtaque(p, clave){
 }
 function iniciarSlam(p){
   p.est='slam'; p.golpeados=new Set(); p.vy=6;
-  for(let i=0;i<6;i++) particula(p.x,p.y-16,rango(-1,1),-rango(.5,1.5),'#ffd24a',14,2,0.06);
+  for(let i=0;i<6;i++) particula(p.x,p.y-16,vrango(-1,1),-vrango(.5,1.5),'#ffd24a',14,2,0.06);
 }
 function cajaAtaque(p, a){
   const hx = p.x + p.dir*(a.w/2+4), hy = p.y + a.dy;
@@ -1154,6 +1175,7 @@ function cajaAtaque(p, a){
       } else {
         dañar(e, a.daño*mult, p, {emp:a.emp, lanza:a.lanza, juggle:a.juggle});
         congelar(a.hs + (p.enFuria>0?2:0)); sacudir(a.daño>14?6:2.6);
+        impacto(hx, hy, a.daño>14?26:17, p.enFuria>0?'#ff7a2f':'#ffe9b0');
         SFX[a.sfx] && SFX[a.sfx]();
         chorro(hx, hy, a.daño>14?12:7, '#ff4d5a', a.daño>14?3.4:2.2);
         sumarCombo(p);
@@ -1218,7 +1240,7 @@ function curar(e, cant){
   const antes = e.vida;
   e.vida = Math.min(e.vidaMax, e.vida+cant);
   if(e.vida>antes){ texto(e.x, e.y-42, '+'+Math.round(e.vida-antes), '#63d98a', 12);
-    for(let i=0;i<6;i++) particula(e.x+rango(-8,8), e.y-rango(6,28), rango(-.3,.3), -rango(.6,1.4), '#63d98a', 20, 2.4, 0); }
+    for(let i=0;i<6;i++) particula(e.x+vrango(-8,8), e.y-vrango(6,28), vrango(-.3,.3), -vrango(.6,1.4), '#63d98a', 20, 2.4, 0); }
 }
 
 /* ---------- daño y empuje ---------- */
@@ -1335,7 +1357,7 @@ function pasarEnemigo(e){
   }
   if(e.aturdido>0){
     e.aturdido--; e.est='aturdido'; e.vx*=0.84; e.vy+=G; moverEnt(e);
-    if(J.t%7===0) particula(e.x+rango(-8,8), e.y-e.h-4, rango(-.3,.3), -0.5, '#ffd24a', 16, 2, 0);
+    if(J.t%7===0) particula(e.x+vrango(-8,8), e.y-e.h-4, vrango(-.3,.3), -0.5, '#ffd24a', 16, 2, 0);
     return;
   }
   const dx = p.x - e.x, adx = Math.abs(dx), ady = Math.abs(p.y - e.y);
@@ -1386,7 +1408,7 @@ function pasarEnemigo(e){
     /* esquive del ninja */
     if(e.esquiva && p.est==='golpe' && adx<48 && chance(.06)){
       e.vx = -sig(dx)*4.4; e.vy=-4; e.inv=12;
-      for(let i=0;i<5;i++) particula(e.x,e.y-16,rango(-1,1),rango(-1,0),'#8f7fff',14,2,0.05);
+      for(let i=0;i<5;i++) particula(e.x,e.y-16,vrango(-1,1),vrango(-1,0),'#8f7fff',14,2,0.05);
     }
     /* bloqueo del elite */
     if(e.bloquea && p.est==='golpe' && adx<46 && chance(.05)) e.escudo=1;
@@ -1943,8 +1965,8 @@ function pasarMundo(){
       if(h.on && !p.muerto && Math.abs(p.x-(h.x+h.w/2))<h.w/2+4 && p.y>h.y-h.h-6 && p.y<h.y+6 && p.inv<=0){
         dañar(p, 11, null, {emp:1.4, dirEmp:sig(p.x-h.x)}); p.inv=36;
       }
-      if(h.on && J.t%3===0) particula(h.x+h.w/2+rango(-7,7), h.y-rango(0,h.h), rango(-.3,.3),
-        -rango(1,2.4), chance(.5)?'#ff9d4a':'#ffd24a', 16, rango(2,4), -0.02);
+      if(h.on && J.t%3===0) particula(h.x+h.w/2+vrango(-7,7), h.y-vrango(0,h.h), vrango(-.3,.3),
+        -vrango(1,2.4), Math.random()<.5?'#ff9d4a':'#ffd24a', 16, vrango(2,4), -0.02);
     }
   }
   /* --- lava (nivel 5) --- */
@@ -1955,8 +1977,8 @@ function pasarMundo(){
     if(!p.muerto && p.y > M.lava.y && p.inv<=0){
       dañar(p, 9, null, {emp:0}); p.vy = -6; p.inv=40; SFX.explo();
     }
-    if(J.t%4===0) particula(p.x+rango(-160,160), M.lava.y, rango(-.3,.3), -rango(.4,1.6),
-      chance(.5)?'#ff5a1f':'#ffb03a', 24, rango(2,4), -0.03);
+    if(J.t%4===0) particula(p.x+vrango(-160,160), M.lava.y, vrango(-.3,.3), -vrango(.4,1.6),
+      Math.random()<.5?'#ff5a1f':'#ffb03a', 24, vrango(2,4), -0.03);
   }
   /* --- plataformas caedizas --- */
   for(const o of M.oneway){
@@ -2124,8 +2146,8 @@ function hacerLuz(){
 }
 function mundoADibujo(){ const c=J.cam;
   cx.save(); cx.scale(c.esc, c.esc);
-  cx.translate(-c.x + (J.cam.sx? rango(-J.cam.sx,J.cam.sx):0)/c.esc,
-               -c.y + (J.cam.sx? rango(-J.cam.sx,J.cam.sx):0)/c.esc); }
+  cx.translate(-c.x + (J.cam.sx? vrango(-J.cam.sx,J.cam.sx):0)/c.esc,
+               -c.y + (J.cam.sx? vrango(-J.cam.sx,J.cam.sx):0)/c.esc); }
 
 function dibujarMundo(){
   const M = J.mundo, c = J.cam;
@@ -2309,6 +2331,21 @@ function dibujarEfectos(){
   for(const p of J.part){
     cx.globalAlpha = Math.min(1, p.vida/p.vmax*1.6);
     cx.fillStyle = p.col; cx.fillRect(p.x-p.tam/2, p.y-p.tam/2, p.tam, p.tam);
+  }
+  cx.globalAlpha=1;
+  for(const g of J.golpazos){                        /* estrella de impacto */
+    const f = g.vida/9, r = g.tam*(1.25-f*0.45);
+    cx.save(); cx.translate(g.x,g.y); cx.rotate(g.giro);
+    cx.globalAlpha = Math.min(1, f*1.5);
+    cx.beginPath();
+    for(let i=0;i<10;i++){
+      const a = i*Math.PI/5, rr = (i%2? r*0.42 : r);
+      cx[i?'lineTo':'moveTo'](Math.cos(a)*rr, Math.sin(a)*rr);
+    }
+    cx.closePath();
+    cx.fillStyle = g.col; cx.fill();
+    cx.strokeStyle='#0b0b12'; cx.lineWidth=2; cx.stroke();
+    cx.restore();
   }
   cx.globalAlpha=1;
   for(const o of J.ondas){
@@ -2557,7 +2594,7 @@ function bucle(ts){
 /* ---------- arranque y cierre de nivel ---------- */
 function empezarNivel(n){
   J.nivel = n;
-  J.ents=[]; J.balas=[]; J.part=[]; J.objetos=[]; J.textos=[]; J.ondas=[];
+  J.ents=[]; J.balas=[]; J.part=[]; J.objetos=[]; J.textos=[]; J.ondas=[]; J.golpazos=[];
   J.combo=0; J.comboMax=0; J.golpes=0; J.recibido=0; J.tiempo=0; J.jefe=null; J.oleada=null;
   J.congelado=0; J.lento=0; J.t=0; musPaso=0; J.finNivel=0; J.finMuerte=0;
   const m = generarNivel(n, J.semillaTx);
