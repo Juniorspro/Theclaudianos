@@ -10,6 +10,13 @@
   html,body{height:100%;overflow:hidden;background:#0b0d14;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
     -webkit-user-select:none;user-select:none;touch-action:none;overscroll-behavior:none}
+  /* Escenario girado 90°: con el celular vertical se juega apaisado. Todo lo que es
+     position:fixed adentro de #stage queda referido a él, porque un transform le arma
+     el bloque contenedor a sus hijos fijos. */
+  #stage{position:fixed;top:50%;left:50%;width:100vh;height:100vw;
+    transform:translate(-50%,-50%) rotate(90deg);transform-origin:50% 50%;
+    overflow:hidden;background:#0b0d14}
+  @media (min-aspect-ratio:1/1){#stage{width:100vw;height:100vh;transform:translate(-50%,-50%) rotate(0deg)}}
   #lienzo{position:fixed;inset:0;display:block;width:100%;height:100%}
   #ui{position:fixed;inset:0;pointer-events:none;z-index:5}
   .chip{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);left:14px;
@@ -49,7 +56,7 @@
   #galaxias,#compu,#album{position:fixed;inset:0;z-index:27;display:none;align-items:center;justify-content:center;
     background:rgba(3,5,12,.80);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);padding:18px}
   #galaxias.ver,#compu.ver,#album.ver{display:flex}
-  #galaxias .caja,#compu .caja,#album .caja{width:100%;max-width:360px;max-height:82vh;overflow:auto;
+  #galaxias .caja,#compu .caja,#album .caja{width:100%;max-width:360px;max-height:86%;overflow:auto;
     border:1px solid rgba(150,190,255,.22);border-radius:16px;padding:14px;
     background:linear-gradient(180deg,rgba(14,20,34,.96),rgba(8,10,18,.96));
     box-shadow:0 24px 60px rgba(0,0,0,.6)}
@@ -102,7 +109,9 @@
   #copia{position:fixed;inset:0;z-index:28;display:none;place-items:center;
     background:rgba(4,6,10,.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
   #copia.ver{display:grid}
-  #copia canvas{max-width:84vw;max-height:74vh;transform:rotate(-1.6deg);
+  /* vmin/vmax: el escenario siempre mide lado largo x lado corto, gire o no; un % acá no
+     agarra porque la fila de la grilla no tiene alto definido */
+  #copia canvas{max-width:84vmax;max-height:74vmin;transform:rotate(-1.6deg);
     box-shadow:0 22px 50px rgba(0,0,0,.6);border-radius:2px}
   #copia small{position:absolute;bottom:9%;left:0;right:0;text-align:center;font-size:10px;
     letter-spacing:.2em;color:#9fb0bf}
@@ -179,6 +188,7 @@
 </style>
 </head>
 <body>
+<div id="stage">
 <canvas id="lienzo"></canvas>
 <div id="ui">
   <div class="chip">ALIEN GRID</div>
@@ -204,6 +214,7 @@
 <div id="fogonazo"></div>
 <div id="copia"><canvas id="papel"></canvas><small>TOCÁ PARA CERRAR</small></div>
 <div id="carga">CARGANDO</div>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
@@ -3183,26 +3194,29 @@ addEventListener('pointerdown', e => {
   if(PANEL.abierto || COMPU.abierto || ALBUM_ABIERTO.v) return;
   if(e.target === dSalto || e.target === dVolar || e.target === dUsar || e.target === dPanelB ||
      e.target === dCompuB || e.target === dEspecies) return;
-  if(e.clientX < innerWidth*0.52 && idPalanca === null){
-    idPalanca = e.pointerId; oX = e.clientX; oY = e.clientY;
+  const L = aLocal(e.clientX, e.clientY);
+  if(L.x < anchoStage()*0.52 && idPalanca === null){
+    idPalanca = e.pointerId; oX = L.x; oY = L.y;
     pintarPalanca(oX, oY, true);
     if(dPista) dPista.style.opacity = '0';
   } else if(idMira === null){
-    idMira = e.pointerId; mX = e.clientX; mY = e.clientY;
+    idMira = e.pointerId; mX = L.x; mY = L.y;
   }
 }, {passive:true});
 addEventListener('pointermove', e => {
   if(e.pointerId === idPalanca){
-    let dx = e.clientX - oX, dy = e.clientY - oY;
+    const L = aLocal(e.clientX, e.clientY);
+    let dx = L.x - oX, dy = L.y - oY;
     const d = Math.hypot(dx, dy) || 1;
     const k = Math.min(d, RADIO);
     ent.x = (dx/d)*(k/RADIO); ent.y = (dy/d)*(k/RADIO); ent.mag = k/RADIO;
     pintarPalanca(oX + (dx/d)*k, oY + (dy/d)*k, true);
   } else if(e.pointerId === idMira){
-    camYaw -= (e.clientX - mX)*CFG.camGiro;
+    const L = aLocal(e.clientX, e.clientY);
+    camYaw -= (L.x - mX)*CFG.camGiro;
     /* en primera persona el dedo para abajo mira para abajo, y el tope es el cogote */
-    camPitch = clamp(camPitch - (e.clientY - mY)*CFG.camGiro*0.8, -CFG.pitchMax, CFG.pitchMax);
-    mX = e.clientX; mY = e.clientY;
+    camPitch = clamp(camPitch - (L.y - mY)*CFG.camGiro*0.8, -CFG.pitchMax, CFG.pitchMax);
+    mX = L.x; mY = L.y;
   }
 }, {passive:true});
 function soltar(e){
@@ -3516,12 +3530,33 @@ function camara(dt){
 }
 
 /* ------------------------------------------------------------------ marco */
+const stage = document.getElementById('stage');
+function medida(){
+  const vv = window.visualViewport;
+  return {w:Math.round(vv ? vv.width : innerWidth), h:Math.round(vv ? vv.height : innerHeight)};
+}
+const girado = () => { const m = medida(); return m.h > m.w; };
+const anchoStage = () => { const m = medida(); return m.h > m.w ? m.h : m.w; };
+/* del toque en pantalla al punto en el escenario: girado 90° a la derecha, (x, y) -> (y, W - x) */
+function aLocal(px, py){
+  const m = medida();
+  return m.h > m.w ? {x:py, y:m.w - px} : {x:px, y:py};
+}
 function medir(){
-  const w = innerWidth, h = innerHeight;
+  const m = medida(), vertical = m.h > m.w;
+  const w = vertical ? m.h : m.w, h = vertical ? m.w : m.h;
+  stage.style.width = w + 'px'; stage.style.height = h + 'px';
+  stage.style.transform = 'translate(-50%,-50%) rotate(' + (vertical ? 90 : 0) + 'deg)';
+  /* apaisado, 60° verticales dan 103° de horizontal: ojo de pez. Con 54 quedan 95 */
+  const apaisado = w/h > 1.2;
+  CFG.fovBase = apaisado ? 54 : 60; CFG.fovCorrer = apaisado ? 62 : 68;
+
   rend.setSize(w, h, false);
   cam.aspect = w/h; cam.updateProjectionMatrix();
 }
 addEventListener('resize', medir);
+addEventListener('orientationchange', () => setTimeout(medir, 220));
+if(window.visualViewport) visualViewport.addEventListener('resize', medir);
 medir();
 
 let ultimo = performance.now(), suavems = 16, dpr = Math.min(devicePixelRatio||1, 2);

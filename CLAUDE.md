@@ -8,7 +8,7 @@ se prueba **en el celular, en vertical (412×892)**.
 | ruta | qué es |
 |---|---|
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. |
-| `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil: base militar de arranque, nave de dos cubiertas que se recorre por dentro, seis galaxias que se ganan, caminata espacial con soga, fotos que se venden y álbum de 21 especies. |
+| `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil, **escenario girado 90°** (se juega apaisado): base militar de arranque, nave de dos cubiertas que se recorre por dentro, seis galaxias que se ganan, caminata espacial con soga, fotos que se venden y álbum de 21 especies. |
 | `herramientas/glb/` | `juntar_anim.py` (varios GLB del mismo rig → uno con todos los clips) y `hornear.py` (achicar texturas y recompactar para meterlo en un HTML). |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -638,3 +638,35 @@ Lo que costó una vuelta:
 Medido: al hangar se entra y el piso da 0,15; el costado frena en x −17,58; el portón deja pasar y el
 cerco al lado frena en z −29,28; ningún pilar quedó adentro del cerco. Auditoría completa (pasto,
 escaleras, fotos, terminal, seis galaxias, aterrizaje) **sin errores**, 56 a 61 llamadas de dibujo.
+
+### 2026-09-22 (u) — el juego se juega apaisado
+**Pedido textual:** «Puedes girar el juego 90°».
+
+Mismo patrón que el Bosque: todo el juego (lienzo, HUD, paneles, copia de la foto, pantalla de
+carga) vive adentro de un `#stage` que se gira 90° cuando la pantalla está vertical, así que con el
+celular parado se juega acostado. Con la pantalla ya horizontal no se gira.
+
+- `medir()` mide en píxeles reales con `visualViewport` y escribe a mano el ancho, el alto y el giro
+  del escenario (`vh`/`vw` mienten en el celular). Escucha `resize`, `orientationchange` y el
+  `resize` del `visualViewport`.
+- **Cada toque se pasa a coordenadas del escenario**: girado 90° a la derecha, `(x, y) → (y, W − x)`.
+  La palanca sigue en la mitad izquierda *del escenario*, y la mirada y la palanca usan los mismos
+  ejes que antes.
+- **El campo visual se ajusta**: 60° verticales en apaisado son 103° de horizontal, ojo de pez. Va
+  54 (95° de horizontal) y 62 corriendo.
+
+Medido a 412 × 892: escenario 892 × 412 girado, aspecto 2,165; arrastre hacia la derecha del
+escenario → yaw −0,55; hacia abajo → mirada −0,43; palanca adelante → 4,56 m hacia adelante y 0 de
+costado. Acostando el celular en caliente el escenario queda 892 × 412 sin girar, y al pararlo
+vuelve a girar. Auditoría completa y 70 toques al azar sin errores.
+
+Lo que costó una vuelta:
+- **`vh`/`vw` miden la pantalla, no el escenario girado**: los paneles tenían `max-height:82vh` =
+  731 px en un escenario de 412. Van en `%` del contenedor fijo.
+- **La copia de la foto se salía por abajo** (terminaba en 566 con 412 de alto): un `%` en el
+  `max-height` de un ítem de grilla no agarra porque la fila no tiene alto definido. Va en
+  `vmin`/`vmax`, que son el lado corto y el largo de la pantalla — justo el alto y el ancho del
+  escenario, gire o no.
+- **Las capturas del banco salen giradas**, igual que en el Bosque: se enderezan con
+  `Image.rotate(90, expand=True)` antes de mirarlas. Y las cajas del HUD se miden con `offset*`,
+  no con `getBoundingClientRect`, que en un marco girado infla la caja.
