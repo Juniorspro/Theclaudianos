@@ -8,7 +8,7 @@ se prueba **en el celular, en vertical (412×892)**.
 | ruta | qué es |
 |---|---|
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. |
-| `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil: mundo grid, cielo 360, nave de dos cubiertas que se recorre por dentro, seis galaxias y caminata espacial con soga. |
+| `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil: base militar de arranque, nave de dos cubiertas que se recorre por dentro, seis galaxias que se ganan, caminata espacial con soga, fotos que se venden y álbum de 21 especies. |
 | `herramientas/glb/` | `juntar_anim.py` (varios GLB del mismo rig → uno con todos los clips) y `hornear.py` (achicar texturas y recompactar para meterlo en un HTML). |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -547,3 +547,38 @@ Banco: recorrido completo (pasto, escaleras ×3, fotos en tierra, vender vacío,
 paneles encimados, deriva con soga, seis galaxias con fotos y ventas, aterrizaje y segundo
 despegue) más 70 toques y arrastres al azar — **cero errores de consola**, ningún NaN, ningún
 crédito negativo, el carrete nunca se pasa y el jugador nunca se cae del mundo.
+
+### 2026-09-22 (s) — base militar en el planeta de arranque
+**Pedido textual:** «Ahora quiero que hagas que en el planeta inicial (el planeta donde empieza el
+juego) esté decorado como si fuese una base militar me explico? (Osea que esa nave la que usa el
+jugador es una nave militar, solo quiero que adornes y coloques piso y todo eso en ese planeta
+inicial, captas?)».
+
+El descampado con grilla pasó a ser **BASE ALFA**, y todo cuelga de `mundo`, así que se hunde y se
+apaga igual que el suelo al despegar.
+
+- **Plataforma pintada de una sola vez**: 80 × 98 m de asfalto dibujado en un lienzo de 1024, con
+  juntas de losa cada 8 m, grano y manchas de aceite, el **círculo de aterrizaje** centrado en la
+  nave con sus cuatro marcas de eje, «ALFA-3», los chevrones de peligro atrás de la rampa, el
+  pasillo de rodaje amarillo hasta el portón, cajones de estacionamiento y los carteles pintados
+  «BASE ALFA · PLATAFORMA 03» y «ACCESO CONTROLADO — ALTO EN LA BARRERA».
+- **Hangar** de 26 × 22 × 12 con nervios de techo, portón oscuro con costillas y umbral pintado.
+- **Torre de control** de 19 m con cabina vidriada, alero, mástil y baliza.
+- **Tres tanques de combustible** adentro de su dique, con caños.
+- **Seis contenedores apilados**, cajones, bidones y **tres camiones** estacionados.
+- **Cuatro torres de luz** de 13 m en las esquinas de la plataforma, **radar que gira**, manga de
+  viento, bandera, puesto de guardia con bolsas de arena, dos barreras y **pórtico de entrada**.
+- **Cerco perimetral** de 104 m de lado con postes cada 5,2 m y tres alambres, con el hueco del
+  portón.
+
+Todo se funde por material: siete mallas y el radar aparte. Medido: **47 a 54 llamadas de dibujo**
+en tierra (antes 33-38), 29.712 triángulos, sin errores.
+
+Lo que costó una vuelta:
+- Las marcas pintadas salieron de **1 a 1,5 m de ancho**: una línea de rodaje de verdad tiene 15 a
+  35 cm. El ancho se calcula en metros × píxeles por metro, no en píxeles a ojo.
+- Los muros de la base **no pueden frenar al que está volando**: va la bandera `soloTierra`, al
+  revés de la `soloVuelo` de la compuerta. Medido: en tierra el cerco frena en z −103,6 y en
+  caminata espacial no frena nada.
+- `MAT_NAVE` se declara después de los pilares, así que el bloque de la base va **después** de
+  construir la nave o revienta con un TDZ, como ya pasó con `PANEL`.

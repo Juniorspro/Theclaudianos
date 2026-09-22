@@ -453,6 +453,7 @@ const MESA = {x:-4.0, z:24.5, alto:0.92};     /* dónde queda la cámara de foto
 const PANEL = {x:-2.7, z:30.6, abierto:false};  /* el pupitre de navegación */
 const COMPU = {x:4.55, z:20.3, abierto:false};  /* la terminal donde se venden las fotos */
 const PISOS = [], RAMPAS = [], MUROS = [], LAMPARAS = [];
+const BASE = {radar:null};
 const piso = (x0,x1,z0,z1,y) => PISOS.push({x0,x1,z0,z1,y});
 const muro = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1});
 
@@ -752,6 +753,268 @@ const MAT_NAVE = {
   });
 })();
 
+/* ============================================================ base militar
+   El planeta de arranque no es un descampado: es la base de donde sale la nave.
+   Todo cuelga de `mundo`, así que se hunde y se apaga igual que el suelo al despegar. */
+const MAT_BASE = {
+  hormigon: new THREE.MeshStandardMaterial({color:col(0x6a6d70), roughness:0.95, metalness:0.03}),
+  metal:    new THREE.MeshStandardMaterial({color:col(0x5d6168), roughness:0.55, metalness:0.62}),
+  oscuro:   new THREE.MeshStandardMaterial({color:col(0x2a2e34), roughness:0.7,  metalness:0.35}),
+  verde:    new THREE.MeshStandardMaterial({color:col(0x4a5240), roughness:0.86, metalness:0.08}),
+  pintura:  new THREE.MeshStandardMaterial({color:col(0x0d0a04), emissive:col(0xffb23c),
+                                            emissiveIntensity:0.9, roughness:0.6}),
+  farol:    new THREE.MeshStandardMaterial({color:col(0x0b0f14), emissive:col(0xffe9c4),
+                                            emissiveIntensity:2.2, roughness:0.4}),
+  vidrio:   new THREE.MeshStandardMaterial({color:col(0x0b1622), emissive:col(0x1a4f7a),
+                                            emissiveIntensity:0.8, roughness:0.15, metalness:0.85})
+};
+const MUROS_TIERRA = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1, soloTierra:true});
+
+/* ------------------------------------------------- la plataforma, pintada de una */
+(function plataforma(){
+  const X0 = -40, X1 = 40, Z0 = -36, Z1 = 62, W = X1-X0, D = Z1-Z0, S = 1024;
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  const px = x => (x - X0)/W*S, pz = z => (z - Z0)/D*S, esc1 = S/W;
+
+  g.fillStyle = '#34363a'; g.fillRect(0, 0, S, S);         /* asfalto */
+  for(let i = 0; i < 26000; i++){                          /* grano y manchas de aceite */
+    const a = Math.random()*0.10;
+    g.fillStyle = 'rgba(' + (Math.random()<0.5?'0,0,0,':'255,255,255,') + a.toFixed(3) + ')';
+    g.fillRect(Math.random()*S, Math.random()*S, 2 + Math.random()*5, 2 + Math.random()*5);
+  }
+  g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 3;      /* juntas de las losas, cada 8 m */
+  for(let x = X0; x <= X1; x += 8){ g.beginPath(); g.moveTo(px(x), 0); g.lineTo(px(x), S); g.stroke(); }
+  for(let z = Z0; z <= Z1; z += 8){ g.beginPath(); g.moveTo(0, pz(z)); g.lineTo(S, pz(z)); g.stroke(); }
+
+  /* el círculo de aterrizaje, centrado en la nave */
+  const cx = px(0), cz = pz(27), rad = 26*esc1;
+  g.strokeStyle = '#e8e2cf'; g.lineWidth = 0.55*esc1;
+  g.beginPath(); g.arc(cx, cz, rad, 0, 7); g.stroke();
+  g.lineWidth = 0.30*esc1;
+  g.beginPath(); g.arc(cx, cz, rad*0.86, 0, 7); g.stroke();
+  g.lineWidth = 0.50*esc1;
+  for(let k = 0; k < 4; k++){                              /* las cuatro marcas de eje */
+    const a = k*Math.PI/2 + Math.PI/4;
+    g.beginPath();
+    g.moveTo(cx + Math.cos(a)*rad*0.30, cz + Math.sin(a)*rad*0.30);
+    g.lineTo(cx + Math.cos(a)*rad*0.72, cz + Math.sin(a)*rad*0.72);
+    g.stroke();
+  }
+  g.fillStyle = '#e8e2cf'; g.textAlign = 'center';
+  g.font = 'bold ' + Math.round(13*esc1) + 'px ui-monospace, monospace';
+  g.save(); g.translate(cx, pz(11)); g.fillText('ALFA-3', 0, 0); g.restore();
+  g.font = 'bold ' + Math.round(6*esc1) + 'px ui-monospace, monospace';
+  g.fillText('BASE ALFA · PLATAFORMA 03', cx, pz(-13));
+  g.fillText('ACCESO CONTROLADO — ALTO EN LA BARRERA', cx, pz(-26));
+  g.fillText('CARGA — NO ESTACIONAR', cx, pz(58));
+
+  /* pasillo de rodaje hacia el portón */
+  g.strokeStyle = '#d8c23c'; g.lineWidth = 0.35*esc1;
+  g.beginPath(); g.moveTo(px(0), pz(0)); g.lineTo(px(0), pz(-34)); g.stroke();
+  g.lineWidth = 0.22*esc1; g.setLineDash([2.2*esc1, 1.8*esc1]);
+  g.beginPath(); g.moveTo(px(-4.2), pz(1)); g.lineTo(px(-4.2), pz(-34)); g.stroke();
+  g.beginPath(); g.moveTo(px( 4.2), pz(1)); g.lineTo(px( 4.2), pz(-34)); g.stroke();
+  g.setLineDash([]);
+  /* chevrones de peligro atrás de la rampa */
+  g.save(); g.beginPath(); g.rect(px(-9), pz(-2), 18*esc1, 7*esc1); g.clip();
+  for(let k = -6; k < 14; k++){
+    g.strokeStyle = k % 2 ? '#d8c23c' : '#1a1a1a'; g.lineWidth = 1.1*esc1;
+    g.beginPath(); g.moveTo(px(-10) + k*3.4*esc1, pz(5)); g.lineTo(px(-10) + k*3.4*esc1 + 6*esc1, pz(-2)); g.stroke();
+  }
+  g.restore();
+  /* cajones de estacionamiento a los costados */
+  g.strokeStyle = '#cfc9b4'; g.lineWidth = 0.22*esc1;
+  for(let k = 0; k < 5; k++){
+    const z = 34 + k*5.5;
+    g.beginPath(); g.moveTo(px(-38), pz(z)); g.lineTo(px(-28), pz(z)); g.stroke();
+    g.beginPath(); g.moveTo(px( 28), pz(z)); g.lineTo(px( 38), pz(z)); g.stroke();
+  }
+
+  const t = new THREE.CanvasTexture(c);
+  t.encoding = THREE.sRGBEncoding; t.anisotropy = rend.capabilities.getMaxAnisotropy();
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(W, D),
+    new THREE.MeshStandardMaterial({map:t, roughness:0.93, metalness:0.04}));
+  m.rotation.x = -Math.PI/2;
+  m.position.set((X0+X1)/2, 0.03, (Z0+Z1)/2);
+  m.receiveShadow = true;
+  mundo.add(m);
+})();
+
+/* ------------------------------------------------- todo lo que se construye */
+(function base(){
+  const horm = [], met = [], osc = [], verde = [], pint = [], luces = [], vid = [];
+  const caja = (w,h,d,x,y,z,rz) => cajaP(w,h,d,x,y,z,rz);
+  const cil2 = (r,h,x,y,z,eje) => cil(r,h,x,y,z,eje);
+
+  /* ---- hangar: nave de arco con portón oscuro y nervios ---- */
+  const HX = -31, HZ = 22, HW = 26, HD = 22, HH = 12;
+  horm.push(caja(HW+1.2, 0.5, HD+1.2, HX, 0.25, HZ));                 /* zócalo */
+  met.push(caja(HW, HH, 0.9, HX, HH/2, HZ - HD/2));                    /* frente */
+  met.push(caja(HW, HH, 0.9, HX, HH/2, HZ + HD/2));                    /* fondo */
+  met.push(caja(0.9, HH, HD, HX - HW/2, HH/2, HZ));
+  met.push(caja(0.9, HH, HD, HX + HW/2, HH/2, HZ));
+  met.push(caja(HW+0.6, 0.8, HD+0.6, HX, HH, HZ));                     /* techo */
+  for(let k = -4; k <= 4; k++) osc.push(caja(0.5, 0.45, HD+0.7, HX + k*2.6, HH + 0.5, HZ));
+  osc.push(caja(15, 9.4, 1.2, HX, 4.7, HZ - HD/2 - 0.3));              /* portón */
+  for(let k = -3; k <= 3; k++) met.push(caja(0.35, 9.0, 0.25, HX + k*2.1, 4.7, HZ - HD/2 - 0.95));
+  pint.push(caja(15.4, 0.35, 0.3, HX, 0.35, HZ - HD/2 - 1.0));
+  luces.push(caja(1.8, 0.35, 0.25, HX - 5.5, 10.2, HZ - HD/2 - 0.7));
+  luces.push(caja(1.8, 0.35, 0.25, HX + 5.5, 10.2, HZ - HD/2 - 0.7));
+  MUROS_TIERRA(HX-HW/2-0.5, HX+HW/2+0.5, HZ-HD/2-0.6, HZ+HD/2+0.6, 0, HH);
+
+  /* ---- torre de control ---- */
+  const TX = 33, TZ = 50;
+  horm.push(caja(9, 0.5, 9, TX, 0.25, TZ));
+  met.push(caja(5.4, 15, 5.4, TX, 7.5, TZ));
+  for(let k = 1; k < 5; k++) osc.push(caja(5.8, 0.3, 5.8, TX, k*3, TZ));
+  met.push(caja(8.4, 0.6, 8.4, TX, 15.3, TZ));                         /* piso de la cabina */
+  vid.push(caja(7.6, 2.6, 7.6, TX, 17.0, TZ));
+  met.push(caja(8.8, 0.7, 8.8, TX, 18.5, TZ));                         /* alero */
+  met.push(cil2(0.14, 5.0, TX, 21.2, TZ, 'y'));                        /* mástil */
+  luces.push(caja(0.6, 0.6, 0.6, TX, 19.2, TZ));                       /* baliza */
+  MUROS_TIERRA(TX-4.4, TX+4.4, TZ-4.4, TZ+4.4, 0, 19);
+
+  /* ---- tanques de combustible con su dique ---- */
+  const QX = 34, QZ = 6;
+  horm.push(caja(22, 0.9, 16, QX, 0.45, QZ));
+  for(const [dx, dz] of [[-6,-4],[0,3],[6,-4]]){
+    met.push(cil2(3.2, 8.0, QX+dx, 4.9, QZ+dz, 'y'));
+    osc.push(cil2(3.35, 0.4, QX+dx, 8.9, QZ+dz, 'y'));
+    pint.push(cil2(3.3, 0.35, QX+dx, 2.4, QZ+dz, 'y'));
+    MUROS_TIERRA(QX+dx-3.3, QX+dx+3.3, QZ+dz-3.3, QZ+dz+3.3, 0, 9);
+  }
+  osc.push(caja(20, 1.4, 0.7, QX, 1.6, QZ - 8));                       /* murete del dique */
+  osc.push(caja(20, 1.4, 0.7, QX, 1.6, QZ + 8));
+  osc.push(caja(0.7, 1.4, 16, QX - 11, 1.6, QZ));
+  osc.push(caja(0.7, 1.4, 16, QX + 11, 1.6, QZ));
+  for(let k = 0; k < 6; k++) met.push(cil2(0.16, 12, QX - 8 + k*0.5, 8.2 + k*0.02, QZ - 9 - k*0.6, 'z'));
+
+  /* ---- contenedores apilados ---- */
+  const CX = -30, CZ = 50;
+  for(let f = 0; f < 3; f++) for(let a = 0; a < 2; a++){
+    const x = CX + f*7.0, y = 1.35 + a*2.7, z = CZ + (f%2)*0.4;
+    (a ? verde : osc).push(caja(6.4, 2.6, 2.5, x, y, z));
+    met.push(caja(0.25, 2.7, 2.6, x - 3.2, y, z));
+    met.push(caja(0.25, 2.7, 2.6, x + 3.2, y, z));
+    if(!a) MUROS_TIERRA(x-3.3, x+3.3, z-1.4, z+1.4, 0, 5.5);
+  }
+  /* ---- cajones sueltos y bidones ---- */
+  for(const [x, z, r] of [[-14,-6,0.3],[-11.5,-6.4,0],[-13,-9,0.6],[16,52,0.2],[19,50,0.5]]){
+    verde.push(caja(1.6, 1.2, 1.2, x, 0.6, z, r));
+    osc.push(caja(1.7, 0.12, 1.3, x, 1.22, z, r));
+  }
+  for(const [x, z] of [[-17,-4],[-18.4,-5.6],[-16.2,-6.8],[22,54],[23.5,52.6]]){
+    osc.push(cil2(0.42, 1.1, x, 0.55, z, 'y'));
+    pint.push(cil2(0.44, 0.14, x, 0.85, z, 'y'));
+  }
+
+  /* ---- camiones estacionados ---- */
+  for(const [x, z, gir] of [[-14, 44, 0], [-14, 39, 0], [24, 40, Math.PI]]){
+    verde.push(caja(2.6, 1.5, 3.2, x, 1.85, z));                        /* caja */
+    verde.push(caja(2.4, 1.3, 2.0, x, 1.65, z - 2.6));                  /* cabina */
+    osc.push(caja(2.5, 0.5, 5.6, x, 0.95, z - 1.0));                    /* chasis */
+    vid.push(caja(2.0, 0.7, 0.2, x, 1.95, z - 3.55));
+    for(const [dx, dz] of [[-1.25,-2.9],[1.25,-2.9],[-1.25,0.4],[1.25,0.4],[-1.25,1.6],[1.25,1.6]])
+      osc.push(cil2(0.55, 0.42, x+dx, 0.55, z+dz, 'x'));
+    MUROS_TIERRA(x-1.5, x+1.5, z-4, z+2, 0, 3);
+  }
+
+  /* ---- torres de luz: la base se lee de noche por esto ---- */
+  const FAROS = [[-34, -6], [34, -6], [-34, 58], [34, 58]];
+  for(const [x, z] of FAROS){
+    horm.push(caja(2.2, 0.6, 2.2, x, 0.3, z));
+    met.push(cil2(0.22, 13, x, 6.8, z, 'y'));
+    met.push(caja(3.0, 0.3, 1.0, x, 13.3, z));
+    for(let k = -1; k <= 1; k++) luces.push(caja(0.85, 0.5, 0.55, x + k*1.0, 13.0, z - 0.1));
+    MUROS_TIERRA(x-0.6, x+0.6, z-0.6, z+0.6, 0, 13);
+  }
+
+  /* ---- manga de viento y bandera ---- */
+  met.push(cil2(0.13, 9, 17, 4.5, -8, 'y'));
+  pint.push(cil2(0.55, 2.6, 17.9, 8.6, -8, 'x'));
+  met.push(cil2(0.12, 11, -12, 5.5, -9, 'y'));
+  verde.push(caja(2.6, 1.6, 0.08, -10.6, 10.1, -9));
+
+  /* ---- puesto de guardia y portón ---- */
+  const GZ = -30;
+  horm.push(caja(14, 0.4, 7, 0, 0.2, GZ));
+  met.push(caja(3.0, 3.0, 3.0, 6.2, 1.5, GZ));
+  vid.push(caja(2.2, 1.1, 0.12, 6.2, 2.1, GZ - 1.55));
+  luces.push(caja(1.2, 0.18, 0.5, 6.2, 3.1, GZ - 1.4));
+  MUROS_TIERRA(4.6, 7.8, GZ-1.6, GZ+1.6, 0, 3.2);
+  /* pórtico del portón: es lo que se lee de lejos y dice que esto es una base */
+  for(const l of [-1, 1]){
+    met.push(caja(1.0, 6.6, 1.0, l*9.5, 3.3, GZ));
+    osc.push(caja(1.4, 0.5, 1.4, l*9.5, 0.35, GZ));
+    MUROS_TIERRA(l*9.5-0.7, l*9.5+0.7, GZ-0.7, GZ+0.7, 0, 6.6);
+  }
+  met.push(caja(20.0, 1.0, 0.8, 0, 6.3, GZ));
+  pint.push(caja(13.0, 1.5, 0.28, 0, 6.3, GZ - 0.5));
+  luces.push(caja(0.7, 0.5, 0.3, -6.5, 5.5, GZ - 0.5));
+  luces.push(caja(0.7, 0.5, 0.3,  6.5, 5.5, GZ - 0.5));
+  for(const l of [-1, 1]){                                              /* barreras */
+    met.push(cil2(0.16, 3.4, l*4.2, 1.7, GZ, 'y'));
+    pint.push(caja(8.0, 0.22, 0.22, l*8.4, 1.9, GZ));
+  }
+  for(const [x, z] of [[-9,-27],[-9.6,-28.6],[-8.2,-29.2],[9,-27],[9.6,-28.6]]){   /* bolsas de arena */
+    verde.push(caja(1.3, 0.45, 0.8, x, 0.22, z, 0.1));
+    verde.push(caja(1.2, 0.45, 0.75, x + 0.2, 0.67, z - 0.1, -0.08));
+  }
+
+  /* ---- cerco perimetral con postes ---- */
+  const L = 104;
+  for(const eje of ['x', 'z']){
+    for(let k = -L; k <= L; k += 5.2){
+      if(eje === 'z' && Math.abs(k) < 9) continue;                      /* el hueco del portón */
+      for(const s2 of [-1, 1]){
+        const x = eje === 'x' ? k : s2*L, z = eje === 'x' ? s2*L : k;
+        if(eje === 'z' && s2 === -1 && Math.abs(k) < 9) continue;
+        met.push(cil2(0.09, 3.0, x, 1.5, z, 'y'));
+      }
+    }
+    /* los tres alambres: un tirante largo por lado */
+    for(const s2 of [-1, 1]) for(const y of [0.7, 1.6, 2.5]){
+      if(eje === 'x') osc.push(caja(L*2, 0.06, 0.06, 0, y, s2*L));
+      else            osc.push(caja(0.06, 0.06, L*2, s2*L, y, 0));
+    }
+  }
+  MUROS_TIERRA(-L-0.6, L+0.6, -L-0.6, -L+0.6, 0, 3);
+  MUROS_TIERRA(-L-0.6, L+0.6,  L-0.6,  L+0.6, 0, 3);
+  MUROS_TIERRA(-L-0.6, -L+0.6, -L-0.6, L+0.6, 0, 3);
+  MUROS_TIERRA( L-0.6,  L+0.6, -L-0.6, L+0.6, 0, 3);
+
+  const grupos = [[horm, MAT_BASE.hormigon, 4.0], [met, MAT_BASE.metal, 3.0],
+                  [osc, MAT_BASE.oscuro, 2.0], [verde, MAT_BASE.verde, 2.0],
+                  [pint, MAT_BASE.pintura, 2.0], [luces, MAT_BASE.farol, 2.0],
+                  [vid, MAT_BASE.vidrio, 3.0]];
+  grupos.forEach(([piezas, mat, metros]) => {
+    if(!piezas.length) return;
+    const m = new THREE.Mesh(fundir(piezas, metros), mat);
+    m.receiveShadow = true; mundo.add(m);
+  });
+
+  /* el radar gira: es lo único que se mueve en la base */
+  const radar = new THREE.Group(); radar.position.set(44, 0, 34);
+  const pie = new THREE.Mesh(fundir([cil(0.5, 7, 0, 3.5, 0, 'y'), cajaP(3, 0.5, 3, 0, 0.25, 0)], 3), MAT_BASE.metal);
+  radar.add(pie);
+  const plato = new THREE.Group(); plato.position.y = 7.2; radar.add(plato);
+  const cuenco = new THREE.Mesh(new THREE.SphereGeometry(2.4, 20, 10, 0, Math.PI*2, 0, Math.PI*0.4),
+    new THREE.MeshStandardMaterial({color:col(0x7f858c), roughness:0.6, metalness:0.35, side:THREE.DoubleSide}));
+  cuenco.rotation.x = -Math.PI/2.4; plato.add(cuenco);
+  const brazo = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.2, 6), MAT_BASE.oscuro);
+  brazo.rotation.x = Math.PI/2.4; brazo.position.set(0, 0.9, 1.1); plato.add(brazo);
+  mundo.add(radar);
+  BASE.radar = plato;
+  MUROS_TIERRA(42.5, 45.5, 32.5, 35.5, 0, 7);
+
+  /* dos luces de verdad: sin esto la base de noche es una silueta plana */
+  for(const [x, z] of [[-34, -6], [34, 58]]){
+    const l = new THREE.PointLight(col(0xffe3b8), 1.35, 62, 1.5);
+    l.position.set(x, 12.6, z); mundo.add(l);
+  }
+})();
+
 /* dónde está parado el jugador: devuelve la caja de la cubierta o null */
 function enNave(x, y, z){
   if(EVA.activa) return null;
@@ -787,6 +1050,7 @@ function resolverMuros(){
   for(let i = 0; i < MUROS.length; i++){
     const m = MUROS[i];
     if(m.soloVuelo && (VUELO.estado === 'tierra' || EVA.activa)) continue;
+    if(m.soloTierra && (VUELO.estado !== 'tierra' || EVA.activa)) continue;
     if(jug.pos.y + ALTO_CUERPO < m.y0 || jug.pos.y > m.y1) continue;
     if(jug.pos.x <= m.x0 - RADIO_CUERPO || jug.pos.x >= m.x1 + RADIO_CUERPO) continue;
     if(jug.pos.z <= m.z0 - RADIO_CUERPO || jug.pos.z >= m.z1 + RADIO_CUERPO) continue;
@@ -859,6 +1123,7 @@ function aterrizar(){ if(VUELO.estado === 'espacio'){ VUELO.estado = 'bajando'; 
 
 function pasoVuelo(dt){
   const e = VUELO;
+  if(BASE.radar && e.estado === 'tierra') BASE.radar.rotation.y += dt*0.42;   /* la antena barre */
   if(e.estado === 'subiendo'){
     e.t += dt;
     e.vel = Math.min(e.vel + 11*dt, 75);
