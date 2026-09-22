@@ -92,6 +92,12 @@
   #visor b::before{content:"";width:8px;height:8px;border-radius:50%;background:#ff4b3e;
     animation:lat 1.2s infinite}
   @keyframes lat{0%,100%{opacity:1}50%{opacity:.25}}
+  #peligro{position:fixed;inset:0;pointer-events:none;z-index:6;opacity:0;
+    background:radial-gradient(ellipse at center,rgba(0,0,0,0) 32%,rgba(120,8,8,.55) 78%,rgba(60,0,0,.85) 100%)}
+  #aviso{position:absolute;top:calc(env(safe-area-inset-top,0px) + 86px);left:0;right:0;
+    text-align:center;font-size:11px;letter-spacing:.24em;font-weight:800;color:#ff9a86;
+    opacity:0;transition:opacity .25s;text-shadow:0 0 12px rgba(255,60,40,.6)}
+  #aviso.ver{opacity:1;animation:lat 1s infinite}
   #fogonazo{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:30}
   #copia{position:fixed;inset:0;z-index:28;display:none;place-items:center;
     background:rgba(4,6,10,.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
@@ -129,12 +135,14 @@
   <div id="base"></div><div id="puno"></div>
   <div id="panelb">PANEL</div>
   <div id="galnom">VEGA ROTA</div>
+  <div id="aviso">MASA COLOSAL EN APROXIMACIÓN</div>
   <div id="usar">TOMAR CÁMARA</div>
   <div id="volar">DESPEGAR</div>
   <div id="visor"><i></i><i></i><i></i><i></i><b>REC</b></div>
   <div id="salto">SALTO</div>
 </div>
 <div id="galaxias"><div class="caja"><h3>CARTA DE NAVEGACIÓN</h3><div class="sub">elegí a dónde saltar</div><div id="listagal"></div><div class="cerrar" id="cerrargal">CERRAR</div></div></div>
+<div id="peligro"></div>
 <div id="fogonazo"></div>
 <div id="copia"><canvas id="papel"></canvas><small>TOCÁ PARA CERRAR</small></div>
 <div id="carga">CARGANDO</div>
@@ -821,9 +829,10 @@ function pasoVuelo(dt){
   esc.fog.color.copy(CIELO_TIERRA).lerp(CIELO_ESPACIO, e.espacio);
   esc.fog.near = lerp(120, 400, e.espacio);
   esc.fog.far  = lerp(300, 2000, e.espacio);
-  clave.intensity = lerp(1.65, 0.50, e.espacio);
-  contra.intensity = lerp(1.05, 0.75, e.espacio);
-  hemi.intensity = lerp(0.55, 0.16, e.espacio);
+  const amb = GALAXIAS[GAL.actual].amb || 1;
+  clave.intensity = lerp(1.65, 0.50*amb, e.espacio);
+  contra.intensity = lerp(1.05, 0.75*amb, e.espacio);
+  hemi.intensity = lerp(0.55, 0.16*amb, e.espacio);
   MAT_NAVE.tobera.emissiveIntensity = 1.5 + 3.2*(e.estado === 'tierra' ? 0 : 1)*clamp(e.t/1.5, 0, 1);
 
   if(GAL.saltando > 0) GAL.saltando = Math.max(0, GAL.saltando - dt);
@@ -1090,7 +1099,7 @@ dCopia.addEventListener('pointerdown', e => { e.stopPropagation(); cerrarFoto();
 /* --------------------------------------------------- bichos del espacio */
 /* Se arman por código con una semilla. La rareza sube con cada uno fotografiado: al principio
    son casi normales y después dejan de tener sentido. */
-const BICHOS = { vivos:[], nivel:0, cazados:0, sem:20260922, ultimo:null, ultimoArq:null };
+const BICHOS = { vivos:[], nivel:0, cazados:0, sem:20260922, ultimo:null, ultimoArq:null, peligro:0 };
 const ANCLA = new THREE.Vector3(0, N.y0 + 0.9, N.z0 - 1.2);   /* la soga sale de la compuerta */
 
 function sembrar(s){
@@ -1512,6 +1521,192 @@ const ARQ = [
     }
     P.luz.push(pz(_esferaG, 0.09, 0.09, 0.09, x, y, z));
   }}
+,
+/* ---- EL VACÍO: cinco colosos. El detalle repetido (ventanas, costillas, dientes) es lo que
+   hace leer el tamaño: sin algo chico que contar, una cosa grande parece una cosa chica. ---- */
+{ id:'segador', min:0, alto:[95, 145], colosal:true,
+  mote:['que corta despacio','de un solo filo','que ya pasó','sin vuelta'],
+  hacer(rnd, r, P){
+    const NS = 16, H = P.sub('hoja', 0, 0.6, 0);
+    let px = 0, py = 0.60, pzz = 0;
+    for(let i = 0; i < NS; i++){                       /* la hoja: un arco que se afina */
+      const t = i/(NS-1), a = -0.25 + t*2.25;
+      const nx = Math.sin(a)*(0.30 + t*1.15), ny = 0.60 + Math.cos(a)*(0.30 + t*1.25), nz = t*0.10;
+      const g = 0.115*(1 - t*0.82), L = Math.hypot(nx-px, ny-py);
+      H.piel.push(pz(_cajaG, g*2.4, L*1.15, g*0.9,
+                     (px+nx)/2, (py+ny)/2, (pzz+nz)/2, 0, 0, -Math.atan2(nx-px, ny-py)));
+      H.luz.push(pz(_cajaG, 0.016, L*1.1, 0.02,                       /* el filo, encendido */
+                    (px+nx)/2 + g*1.15, (py+ny)/2, (pzz+nz)/2 + 0.03, 0, 0, -Math.atan2(nx-px, ny-py)));
+      if(i % 2 === 0)                                                 /* nervaduras: dan la escala */
+        H.duro.push(pz(_cajaG, g*2.7, 0.030, g*1.3, nx, ny, nz, 0, 0, -a));
+      px = nx; py = ny; pzz = nz;
+    }
+    esfAr(P.piel, 0.42, 0.50, 0.40, 0, 0.42, 0);                      /* la base, donde mira */
+    P.duro.push(pz(_toroG, 0.46, 0.46, 0.34, 0, 0.52, 0, 1.5708, 0, 0));
+    const NO = 12 + Math.floor(r*8);
+    for(let i = 0; i < NO; i++){
+      const a = (i/NO)*6.2832;
+      ojoAr(P, Math.sin(a)*0.40, 0.52 + Math.cos(a)*0.10, Math.cos(a)*0.34, 0.036);
+    }
+    for(let i = 0; i < 8; i++){                                       /* filamentos que arrastra */
+      const a = (i/8)*6.2832;
+      let x = Math.sin(a)*0.22, y = 0.10, z = Math.cos(a)*0.20;
+      let dx = Math.sin(a)*0.05, dz = Math.cos(a)*0.05;
+      for(let k = 0; k < 10; k++){
+        const ny = y - 0.14;
+        segAr(P.piel, x, y, z, x + dx, ny, z + dz, 0.022 - k*0.0016);
+        x += dx; z += dz; y = ny;
+        dx += (rnd()-0.5)*0.05; dz += (rnd()-0.5)*0.05;
+      }
+    }
+  }},
+
+{ id:'catedral', min:0, alto:[140, 205], colosal:true,
+  mote:['que reza sola','de mil ventanas','que estuvo siempre','que no abre'],
+  hacer(rnd, r, P){
+    const NT = 6;
+    for(let t = 0; t < NT; t++){                                      /* cuerpos apilados */
+      const y0 = 0.10 + t*0.34, R = 0.52 - t*0.062, NC = 12 - t;
+      const T = P.sub('cuerpo' + t, 0, y0 + 0.17, 0);
+      for(let i = 0; i < NC; i++){                                    /* columnas y arcos */
+        const a = (i/NC)*6.2832;
+        const x = Math.sin(a)*R, z = Math.cos(a)*R;
+        segAr(T.duro, x, y0, z, x, y0 + 0.30, z, 0.026);
+        T.duro.push(pz(_toroG, R*0.30, R*0.30, 0.10, x*0.86, y0 + 0.31, z*0.86, 1.5708, a, 0));
+        for(let k = 0; k < 4; k++)                                    /* ventanas: se cuentan */
+          T.luz.push(pz(_cajaG, 0.020, 0.040, 0.012,
+                        x*0.93, y0 + 0.05 + k*0.065, z*0.93, 0, a, 0));
+      }
+      T.duro.push(pz(_toroG, R*1.04, R*1.04, 0.10, 0, y0 + 0.33, 0, 1.5708, 0, 0));
+      T.piel.push(pz(_cilG, R*0.80, 0.30, R*0.80, 0, y0 + 0.15, 0));
+    }
+    for(let i = 0; i < 6; i++){                                       /* contrafuertes */
+      const a = (i/6)*6.2832;
+      segAr(P.duro, Math.sin(a)*0.80, 0.02, Math.cos(a)*0.80,
+                    Math.sin(a)*0.36, 1.10, Math.cos(a)*0.36, 0.040);
+      for(let k = 0; k < 5; k++){
+        const u = k/5;
+        P.duro.push(pz(_cajaG, 0.07, 0.024, 0.07,
+                       Math.sin(a)*(0.80 - u*0.44), 0.02 + u*1.08, Math.cos(a)*(0.80 - u*0.44)));
+      }
+    }
+    const A = P.sub('rosa', 0, 2.22, 0);                              /* el rosetón */
+    A.duro.push(pz(_toroG, 0.30, 0.30, 0.22, 0, 2.22, 0, 0, 0, 0));
+    const NR = 16;
+    for(let i = 0; i < NR; i++){
+      const a = (i/NR)*6.2832;
+      segAr(A.duro, 0, 2.22, 0, Math.cos(a)*0.30, 2.22 + Math.sin(a)*0.30, 0, 0.014);
+      A.luz.push(pz(_cajaG, 0.03, 0.03, 0.012, Math.cos(a)*0.21, 2.22 + Math.sin(a)*0.21, 0.03));
+    }
+    ojoAr(P, 0, 2.22, 0.10, 0.11);
+    esfAr(P.piel, 0.30, 0.16, 0.30, 0, 2.05, 0);
+  }},
+
+{ id:'desollado', min:0, alto:[115, 170], colosal:true,
+  mote:['sin cuero','de tres bocas','que se acuerda','abierto'],
+  hacer(rnd, r, P){
+    for(let i = 0; i < 12; i++){                                      /* columna */
+      const y = 0.55 + i*0.105;
+      P.duro.push(pz(_toroG, 0.075, 0.075, 0.10, 0, y, -0.03, 1.5708, 0, 0));
+      esfAr(P.duro, 0.055, 0.045, 0.055, 0, y + 0.05, -0.03);
+    }
+    for(let i = 0; i < 9; i++){                                       /* costillas abiertas */
+      const y = 0.66 + i*0.115, an = 0.30 - Math.abs(i - 3.5)*0.028;
+      for(const l of [-1, 1]){
+        segAr(P.duro, 0, y, -0.03, l*an, y + 0.05, 0.14, 0.024);
+        segAr(P.duro, l*an, y + 0.05, 0.14, l*an*0.80, y - 0.02, 0.34, 0.021);
+        segAr(P.duro, l*an*0.80, y - 0.02, 0.34, l*an*0.30, y - 0.10, 0.40, 0.017);
+      }
+    }
+    P.duro.push(pz(_toroG, 0.26, 0.26, 0.18, 0, 0.52, 0, 1.5708, 0, 0));
+    for(const l of [-1, 1]){                                          /* brazos larguísimos */
+      let x = l*0.30, y = 1.72, z = 0, g = 0.055;
+      [[l*0.62, 1.30, 0.10], [l*0.80, 0.80, 0.22], [l*0.70, 0.36, 0.30]].forEach(q => {
+        segAr(P.duro, x, y, z, q[0], q[1], q[2], g); g *= 0.82; x = q[0]; y = q[1]; z = q[2];
+      });
+      for(let d = 0; d < 5; d++){
+        const a = -0.5 + d*0.25;
+        segAr(P.duro, x, y, z, x + Math.sin(a)*0.16*l, y - 0.22, z + Math.cos(a)*0.10, 0.013);
+      }
+      P.duro.push(pz(_toroG, 0.13, 0.13, 0.12, l*0.30, 1.74, 0, 1.5708, 0, 0));
+    }
+    const C = P.sub('craneo', 0, 1.96, 0);                            /* cráneo, tres mandíbulas */
+    esfAr(C.piel, 0.20, 0.26, 0.24, 0, 2.02, 0.02);
+    esfAr(C.duro, 0.16, 0.12, 0.20, 0, 1.92, 0.12);
+    for(let m = 0; m < 3; m++){
+      const yy = 1.90 - m*0.085, an = 0.18 - m*0.03;
+      C.duro.push(pz(_toroG, an, an, 0.10, 0, yy, 0.10, 1.5708, 0, 0));
+      for(let d = 0; d < 10; d++){
+        const a = -1.1 + (d/9)*2.2;
+        conoAr(C.luz, Math.sin(a)*an*0.9, yy, 0.10 + Math.cos(a)*an*0.5, 0.012, 0.055, 1.5708, 0, 0);
+      }
+    }
+    for(let i = 0; i < 4; i++)
+      ojoAr(C, (i < 2 ? -1 : 1)*0.075, 2.06 + (i % 2)*0.07, 0.18, 0.040);
+    for(let i = 0; i < 10; i++){                                      /* termina en hilachas */
+      const a = (i/10)*6.2832;
+      let x = Math.sin(a)*0.18, y = 0.48, z = Math.cos(a)*0.16;
+      for(let k = 0; k < 8; k++){
+        const ny = y - 0.085;
+        segAr(P.piel, x, y, z, x + Math.sin(a)*0.04, ny, z + Math.cos(a)*0.04, 0.018 - k*0.0016);
+        x += Math.sin(a)*0.04; z += Math.cos(a)*0.04; y = ny;
+      }
+    }
+  }},
+
+{ id:'pozo', min:0, alto:[85, 125], colosal:true,
+  mote:['que traga','sin fondo','que llama','abierto para abajo'],
+  hacer(rnd, r, P){
+    esfAr(P.ojo, 0.46, 0.46, 0.46, 0, 1.0, 0);                        /* el agujero */
+    P.luz.push(pz(_esferaG, 0.14, 0.14, 0.14, 0, 1.0, 0));
+    for(let k = 0; k < 4; k++){                                       /* aros de dientes */
+      const A = P.sub('aro' + k, 0, 1.0, 0);
+      const R = 0.60 + k*0.19, incl = k*0.42;
+      A.duro.push(pz(_toroG, R, R, R, 0, 1.0, 0, 1.5708 + incl, k*0.5, 0));
+      const nd = 18 + k*4;
+      for(let i = 0; i < nd; i++){
+        const a = (i/nd)*6.2832, x = Math.cos(a)*R, z = Math.sin(a)*R;
+        conoAr(A.luz, x, 1.0, z, 0.026, 0.20 + (i % 3)*0.05, 0, 0, Math.atan2(x, z) + 1.5708);
+        if(i % 3 === 0) A.duro.push(pz(_cajaG, 0.05, 0.05, 0.14, x*1.05, 1.0, z*1.05, 0, -a, 0));
+      }
+    }
+    for(let i = 0; i < 20; i++){                                      /* brazos radiales */
+      const a = (i/20)*6.2832;
+      segAr(P.piel, Math.cos(a)*0.45, 1.0, Math.sin(a)*0.45,
+                    Math.cos(a)*1.22, 1.0 + (rnd()-0.5)*0.12, Math.sin(a)*1.22, 0.020);
+      if(i % 2 === 0) ojoAr(P, Math.cos(a)*1.22, 1.0, Math.sin(a)*1.22, 0.030);
+    }
+  }},
+
+{ id:'marea', min:0, alto:[80, 120], colosal:true,
+  mote:['que sube','de muchos hilos','que no se corta','pareja'],
+  hacer(rnd, r, P){
+    const NC = 5;
+    for(let c = 0; c < NC; c++){                                      /* paños desfasados */
+      const x0 = (c/(NC-1) - 0.5)*2.6;
+      const S = P.sub('pano' + c, x0, 1.55, 0);
+      S.duro.push(pz(_cajaG, 2.6/NC*1.05, 0.10, 0.22, x0, 1.55, 0));
+      const NH = 7;
+      let ux = x0;
+      for(let h = 0; h < NH; h++){
+        const hx = x0 + ((h/(NH-1)) - 0.5)*(2.6/NC)*0.9;
+        let x = hx, y = 1.50, z = (rnd()-0.5)*0.12;
+        for(let k = 0; k < 11; k++){
+          const ny = y - 0.135;
+          const nx = x + Math.sin(k*0.7 + h)*0.020, nz = z + Math.cos(k*0.6 + c)*0.018;
+          segAr(S.piel, x, y, z, nx, ny, nz, 0.026 - k*0.0018);
+          if(k === 3 && h % 2 === 0) S.luz.push(pz(_esferaG, 0.024, 0.024, 0.024, nx, ny, nz));
+          x = nx; y = ny; z = nz;
+        }
+        ux = x;
+      }
+      for(let i = 0; i < 6; i++)                                      /* ojos en la cresta */
+        ojoAr(S, x0 + ((i/5) - 0.5)*(2.6/NC)*0.8, 1.62, 0.10, 0.030);
+    }
+    P.duro.push(pz(_cajaG, 2.75, 0.14, 0.30, 0, 1.68, -0.04));
+    for(let i = 0; i < 14; i++)
+      P.luz.push(pz(_cajaG, 0.03, 0.03, 0.03, (i/13 - 0.5)*2.6, 1.75, 0.10));
+  }}
 
 ];
 
@@ -1557,18 +1752,22 @@ function crearBicho(nivel, semilla){
 
   /* piel apagada y ojos que brillan: lo que asusta es que te miren desde lo oscuro */
   const tono = rnd();
+  /* un coloso a 300 m en una galaxia sin luz es un agujero: se alumbra solo */
+  const col0 = arq.colosal ? 1 : 0;
   const matPiel = new THREE.MeshStandardMaterial({roughness:0.68, metalness:0.06});
-  matPiel.color.setHSL(tono, 0.10 + r*0.24, 0.20 + rnd()*0.10).convertSRGBToLinear();
-  matPiel.emissive.setHSL(tono, 0.5, 0.020 + r*0.045).convertSRGBToLinear();
+  matPiel.color.setHSL(tono, 0.10 + r*0.24, 0.20 + rnd()*0.10 + col0*0.06).convertSRGBToLinear();
+  matPiel.emissive.setHSL(tono, 0.5, 0.020 + r*0.045 + col0*0.30).convertSRGBToLinear();
+  matPiel.emissiveIntensity = 1 + col0*0.7;
   const matDuro = new THREE.MeshStandardMaterial({roughness:0.45, metalness:0.38});
-  matDuro.color.setHSL((tono + 0.06) % 1, 0.08 + r*0.18, 0.15 + rnd()*0.08).convertSRGBToLinear();
-  matDuro.emissive.setHSL(tono, 0.4, 0.012 + r*0.03).convertSRGBToLinear();
+  matDuro.color.setHSL((tono + 0.06) % 1, 0.08 + r*0.18, 0.15 + rnd()*0.08 + col0*0.05).convertSRGBToLinear();
+  matDuro.emissive.setHSL(tono, 0.4, 0.012 + r*0.03 + col0*0.26).convertSRGBToLinear();
+  matDuro.emissiveIntensity = 1 + col0*0.7;
   const matOjo = new THREE.MeshStandardMaterial({color:col(0x05050a), roughness:0.08, metalness:0.1});
   const acento = (tono + 0.42 + rnd()*0.20) % 1;
   const matLuz = new THREE.MeshStandardMaterial({roughness:0.4});
   matLuz.color.setHSL(acento, 0.85, 0.06).convertSRGBToLinear();
   matLuz.emissive.setHSL(acento, 1.0, 0.52).convertSRGBToLinear();
-  matLuz.emissiveIntensity = 1.8 + r*1.8;
+  matLuz.emissiveIntensity = 1.8 + r*1.8 + col0*3.2;
 
   const mats = [['piel', matPiel], ['duro', matDuro], ['ojo', matOjo], ['luz', matLuz]];
   function armar(destino, bolsa, pivote){
@@ -1601,6 +1800,12 @@ function crearBicho(nivel, semilla){
   const escala = objetivo/altoLocal;
   g.scale.setScalar(escala);
   g.userData.escBase = escala;
+  if(arq.colosal){                       /* se alumbra a sí mismo: de otro modo es un agujero */
+    /* la intensidad tiene que ir con el tamaño: 9 en un cuerpo de 160 m no alumbra nada */
+    const foco = new THREE.PointLight(matLuz.emissive.clone(), objetivo*0.55, objetivo*3.0, 1.0);
+    foco.position.set(0, altoLocal*0.55, 0);
+    g.add(foco);
+  }
 
   g.userData.sueltos = [];
   if(r > 0.72){                                    /* pedazos sueltos sólo en los peores */
@@ -1617,6 +1822,7 @@ function crearBicho(nivel, semilla){
   g.userData.matLuz = matLuz;
   g.userData.nivel = nivel;
   g.userData.arq = arq.id;
+  g.userData.colosal = !!arq.colosal;
   g.userData.nombre = nombreBicho(rnd, nivel, arq);
   g.userData.rareza = r;
   g.userData.gira = new THREE.Vector3((rnd()-0.5)*0.18, (rnd()-0.5)*0.42, (rnd()-0.5)*0.14);
@@ -1638,7 +1844,10 @@ function soltarBicho(){
   const b = crearBicho(BICHOS.nivel, BICHOS.sem);
   const rnd = sembrar(BICHOS.sem ^ 0x9e37);
   /* los chicos se acercan y los grandes se quedan lejos: si no, un bicho de 1,5 m es un punto */
-  const a = rnd()*6.2832, el = (rnd()-0.45)*1.1, d = 9 + b.userData.radio*2.6 + rnd()*11;
+  const gal = GALAXIAS[GAL.actual];
+  const a = rnd()*6.2832, el = (rnd()-0.45)*1.1;
+  const d = gal.cerca ? gal.cerca[0] + rnd()*(gal.cerca[1] - gal.cerca[0])
+                      : 9 + b.userData.radio*2.6 + rnd()*11;
   b.position.set(ANCLA.x + Math.sin(a)*d*Math.cos(el),
                  ANCLA.y + Math.sin(el)*d*0.8 + 2,
                  ANCLA.z - 4 - Math.abs(Math.cos(a))*d*0.7);
@@ -1844,6 +2053,65 @@ const CONDUCTA = {
     if(d > 17) b.position.addScaledVector(a, 0.7*dt);
     b.position.y += Math.sin(t*0.5 + u.fase)*0.7*dt;
   },
+  segador(b, u, t, dt, a, d){
+    b.rotation.y += dt*0.055;                          /* barre despacio, como una hoz */
+    b.rotation.z = Math.sin(t*0.18 + u.fase)*0.16;
+    const H = u.partes.hoja;
+    if(H) H.rotation.z = Math.sin(t*0.24 + u.fase)*0.10;
+    if(d > 60) b.position.addScaledVector(a, 1.6*dt);  /* siempre viene */
+    b.position.y += Math.sin(t*0.12 + u.fase)*1.6*dt;
+    if(u.matLuz) u.matLuz.emissiveIntensity = 2.0 + 1.2*Math.sin(t*0.9 + u.fase);
+  },
+  catedral(b, u, t, dt, a, d){
+    let i = 0;
+    for(const k in u.partes){                          /* los cuerpos giran desfasados */
+      const o = u.partes[k];
+      o.rotation.y = Math.sin(t*(0.06 + i*0.013) + i*0.9 + u.fase)*0.42;
+      i++;
+    }
+    if(u.partes.rosa) u.partes.rosa.rotation.z += dt*0.08;
+    b.rotation.y += dt*0.012;
+    if(d > 90) b.position.addScaledVector(a, 0.9*dt);
+    if(u.matLuz){                                      /* las ventanas titilan de a pedazos */
+      const f = Math.sin(t*2.7 + u.fase)*Math.sin(t*0.7 + u.fase*2);
+      u.matLuz.emissiveIntensity = 1.6 + 1.4*Math.max(0, f);
+    }
+  },
+  desollado(b, u, t, dt, a, d){
+    u.mirar = 1;
+    const C = u.partes.craneo;
+    if(C){ C.rotation.y = Math.sin(t*0.22 + u.fase)*0.30; C.rotation.x = Math.sin(t*0.17)*0.12; }
+    b.rotation.z = Math.sin(t*0.14 + u.fase)*0.10;
+    if(d > 55) b.position.addScaledVector(a, 2.2*dt);
+    b.position.y += Math.sin(t*0.13 + u.fase)*2.0*dt;
+  },
+  pozo(b, u, t, dt, a, d){
+    let i = 0;
+    for(const k in u.partes){                          /* los aros giran en contra */
+      const o = u.partes[k];
+      o.rotation.y += dt*(0.22 - i*0.09)*(i % 2 ? -1 : 1);
+      o.rotation.x += dt*(0.06 + i*0.03)*(i % 2 ? 1 : -1);
+      i++;
+    }
+    if(d > 70) b.position.addScaledVector(a, 1.4*dt);
+    if(d < 110 && EVA.activa)                          /* tira del que está afuera */
+      jug.vel.addScaledVector(_aJug, -(1 - d/110)*5.0*dt);
+    if(u.matLuz) u.matLuz.emissiveIntensity = 2.2 + 1.6*(0.5 + 0.5*Math.sin(t*0.6 + u.fase));
+  },
+  marea(b, u, t, dt, a, d){
+    let i = 0;
+    for(const k in u.partes){                          /* los paños ondean uno atrás del otro */
+      const o = u.partes[k];
+      o.rotation.z = Math.sin(t*0.55 + i*0.9 + u.fase)*0.22;
+      o.rotation.x = Math.sin(t*0.42 + i*0.7)*0.14;
+      o.position.y = o.userData.base.y + Math.sin(t*0.5 + i*0.8)*0.05;
+      i++;
+    }
+    _lado.set(-a.z, 0, a.x);
+    b.position.addScaledVector(_lado, 2.4*dt);
+    if(d > 70) b.position.addScaledVector(a, 1.1*dt);
+    b.rotation.y += dt*0.03;
+  },
   torre(b, u, t, dt, a, d){
     let i = 0;
     for(const k in u.partes){
@@ -1863,7 +2131,9 @@ const CONDUCTA = {
 function pasoBichos(dt, t){
   const enEspacio = VUELO.espacio > 0.6;
   if(!enEspacio){ if(BICHOS.vivos.length) limpiarBichos(); return; }
-  while(BICHOS.vivos.length < 3) soltarBicho();
+  const galAct = GALAXIAS[GAL.actual];
+  while(BICHOS.vivos.length < (galAct.cuantos || 3)) soltarBicho();
+  BICHOS.peligro = 0;
   for(let i = BICHOS.vivos.length - 1; i >= 0; i--){
     const b = BICHOS.vivos[i], u = b.userData;
     _aJug.copy(jug.pos).sub(b.position);
@@ -1885,9 +2155,13 @@ function pasoBichos(dt, t){
         while(dd < -Math.PI) dd += Math.PI*2;
         b.rotation.y += dd*(1 - Math.exp(-1.6*dt));
       }
-      if(d < 3.2) b.position.addScaledVector(_aJug, -(3.2 - d)*2.4*dt);   /* no se le encima */
+      if(!u.colosal && d < 3.2) b.position.addScaledVector(_aJug, -(3.2 - d)*2.4*dt);
+      if(u.colosal){                                   /* lo que mide 150 m se siente antes de verse */
+        const p = clamp(1 - d/160, 0, 1);
+        if(p > BICHOS.peligro) BICHOS.peligro = p;
+      }
       /* que no se metan adentro de la nave */
-      for(let k = 0; k < BULTOS.length; k++){
+      if(!u.colosal) for(let k = 0; k < BULTOS.length; k++){
         const c2 = BULTOS[k];
         if(b.position.x > c2.x0 - 2 && b.position.x < c2.x1 + 2 &&
            b.position.y > c2.y0 - 2 && b.position.y < c2.y1 + 2 &&
@@ -1913,7 +2187,7 @@ function pasoBichos(dt, t){
       u.escBase *= 1 - dt*0.55;
       b.scale.setScalar(u.escBase);
       if(u.capturado > 2.2){ esc.remove(b); BICHOS.vivos.splice(i, 1); }
-    } else if(b.position.distanceTo(ANCLA) > 70){
+    } else if(b.position.distanceTo(ANCLA) > (galAct.lejos || 70)){
       esc.remove(b); BICHOS.vivos.splice(i, 1);
     }
   }
@@ -1942,7 +2216,12 @@ const GALAXIAS = [
   {id:'reverso', nombre:'EL REVERSO', linea:'Las cosas vuelven antes de haber ido.',
    cielo:{base:[0.016,0.004,0.020], neb1:[0.230,0.060,0.230], neb2:[0.120,0.115,0.040],
           sol:[1.00,0.80,1.00], est:1.8}, luz:0xe9a0ff,
-   especies:['torre','espejo','nudo']}
+   especies:['torre','espejo','nudo']},
+  {id:'vacio', nombre:'EL VACÍO', linea:'No vuelvas. Igual vas a volver.', peligrosa:true,
+   cielo:{base:[0.0012,0.0010,0.0016], neb1:[0.014,0.004,0.006], neb2:[0.006,0.002,0.003],
+          sol:[0.55,0.10,0.08], est:0.12}, luz:0xd06a5a,
+   cuantos:2, cerca:[170, 420], lejos:900, amb:3.4,
+   especies:['segador','catedral','desollado','pozo','marea']}
 ];
 const GAL = {actual:0, saltando:0, vistos:{}};
 
@@ -2347,6 +2626,7 @@ const dVolar = document.getElementById('volar');
 const dUsar = document.getElementById('usar'), dVisor = document.getElementById('visor');
 const dEspecies = document.getElementById('especies');
 const dPanelB = document.getElementById('panelb'), dGal = document.getElementById('galaxias');
+const dPeligro = document.getElementById('peligro'), dAviso = document.getElementById('aviso');
 const dListaGal = document.getElementById('listagal'), dGalNom = document.getElementById('galnom');
 
 function pintarPanel(){
@@ -2566,6 +2846,11 @@ function hud(){
   const cercaPanel = !EVA.activa && jug.pos.y > N.y1 - 0.5 &&
     Math.hypot(jug.pos.x - PANEL.x, jug.pos.z - PANEL.z) < 2.5;
   if(cercaPanel !== dPanelB.classList.contains('ver')) dPanelB.classList.toggle('ver', cercaPanel);
+  const pel = BICHOS.peligro;
+  dPeligro.style.opacity = (pel*0.9).toFixed(3);
+  const hayAviso = pel > 0.12;
+  if(hayAviso !== dAviso.classList.contains('ver')) dAviso.classList.toggle('ver', hayAviso);
+
   const verGal = VUELO.espacio > 0.5;
   if(verGal !== dGalNom.classList.contains('ver')) dGalNom.classList.toggle('ver', verGal);
 
@@ -2705,8 +2990,9 @@ function camara(dt){
     camPos.y = clamp(camPos.y, cubierta.y0 + 0.45, cubierta.y1 - 0.30);
   }
   cam.position.copy(camPos);
-  if(VUELO.sacude > 0.001){                 /* el despegue se siente en la cámara */
-    const a = VUELO.sacude*0.085;
+  const tiembla = VUELO.sacude + BICHOS.peligro*0.9;
+  if(tiembla > 0.001){                     /* el despegue y lo que se acerca se sienten */
+    const a = tiembla*0.085;
     cam.position.x += Math.sin(ahoraVuelo*37.0)*a;
     cam.position.y += Math.sin(ahoraVuelo*53.0)*a;
     cam.position.z += Math.sin(ahoraVuelo*41.0)*a*0.6;
@@ -2781,6 +3067,8 @@ window.__A = {
     cerca:cercaDeLaEsclusa(), soga:soga.visible, boton:dVolar.textContent,
     pos:jug.pos.toArray().map(v => +v.toFixed(2))}; },
   salir:salirAlEspacio, entrar:entrarDeNuevo,
+  peligro(){ return {nivel:+BICHOS.peligro.toFixed(3), aviso:dAviso.classList.contains('ver'),
+    velo:+dPeligro.style.opacity || 0}; },
   galaxia(){ return {actual:GALAXIAS[GAL.actual].id, nombre:GALAXIAS[GAL.actual].nombre,
     saltando:+GAL.saltando.toFixed(2), abierto:!!PANEL.abierto, vistos:GAL.vistos,
     boton:dPanelB.classList.contains('ver'),

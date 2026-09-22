@@ -293,3 +293,42 @@ Lo que costó una vuelta:
   initialization» y `window.__A` nunca existía. Las constantes de posición van arriba de todo.
 - Que no se repita el arquetipo anterior no alcanza cuando hay tres bichos vivos y tres especies:
   también hay que descartar los que ya están dando vueltas.
+
+### 2026-09-22 (j) — EL VACÍO, la galaxia de los colosos
+**Pedido textual:** «Ahora agrega una nueva galaxia, esta será la más peligrosa de todas, se llamara
+"el vacio" en esta galaxia solo habrán 5 aliens pero serán de tamaño enorme, colosal, se verán de
+lejos aunque se podrán acercar, hazlos bien detallados y que realmente provoquen miedo, esfuérzate
+yo confío en ti».
+
+Sexta galaxia en la carta, marcada como peligrosa: cielo casi negro con un sol rojo apagado, dos
+bichos vivos a la vez, y las cinco especies son **sólo de ella**. Medidos en el banco: 93 a 165 m
+de alto, apareciendo entre 170 y 420 m y sin borrarse hasta los 900 (las otras galaxias borran a
+los 70). Se ven de lejos y se puede llegar hasta ellos con la soga.
+
+- **El Segador** — un arco de 16 tramos con el filo encendido, cabeza bulbosa con doce ojos y
+  filamentos que arrastra; barre despacio, como una guadaña que ya pasó.
+- **La Catedral** — seis pisos de columnas y arcos con retículas de ventanas que titilan,
+  contrafuertes y un rosetón con un ojo en el medio. Cada piso gira con su propia fase.
+- **El Desollado** — doce vértebras, nueve pares de costillas abiertas, brazos enormes con dedos y
+  una calavera de tres mandíbulas dentadas que **se da vuelta a mirar al jugador**.
+- **El Pozo** — esfera oscura con cuatro anillos dentados que giran al revés uno del otro y tiran
+  del jugador cuando está en caminata espacial.
+- **La Marea** — cinco cortinas de tentáculos desfasadas, con ojos a lo largo de la cresta, que
+  ondean como una ola.
+
+Sistema de peligro nuevo: `BICHOS.peligro` sube a medida que un coloso se acerca (1 a los 0 m, 0 a
+los 160), y con eso se prende un velo rojo en los bordes, parpadea «MASA COLOSAL EN APROXIMACIÓN» y
+la cámara empieza a temblar: el temblor del despegue y el del miedo son el mismo número sumado.
+
+Lo que costó una vuelta cada uno:
+- **Un coloso a 300 m en una galaxia sin luz es un agujero.** Con el cielo casi negro y la luz
+  ambiente baja, el bicho no se veía: proyectando su caja a pantalla y leyendo esos píxeles daba
+  **20,1 sobre 255**. Se alumbra solo — emisivo mucho más alto en piel y caparazón.
+- **La intensidad tiene que ir con el tamaño.** Un `PointLight` de 9 en un cuerpo de 160 m no
+  alumbra nada: el alcance y la intensidad se calculan del alto del bicho (`objetivo*0.55`,
+  `objetivo*3.0`). Después de eso, 34,2 sobre 255.
+- **El borrado por distancia era fijo en 70 m.** Con eso, un coloso que nace a 400 m se borra antes
+  de dibujarse. El alcance pasó a ser por galaxia (`lejos`).
+- En el banco, **al jugador lo tira la soga**: mover al jugador para encuadrar no sirve, vuelve solo
+  a los 16 m del ancla. Se encuadra moviendo al BICHO delante de la cámara, y la distancia buena no
+  se calcula: se mide la caja proyectada en píxeles y se corrige.
