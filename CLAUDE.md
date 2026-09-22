@@ -162,3 +162,26 @@ Lo que costó una vuelta cada uno:
 - La compuerta cerrada tiene que **bloquear de verdad**: va un muro con bandera `soloVuelo`, que se
   saltea mientras la nave está en tierra.
 - Bajar a 8 m/s desde 270 m son treinta segundos de aterrizaje: el piso de velocidad va en 22.
+
+### 2026-09-22 (e) — cámara de fotos en la bodega
+**Pedido textual:** «Haz que en la primera planta de la nave haya una cámara arriba de una mesa
+que el jugador podrá tomar y usarla para sacar fotos (Las fotos de la cámara deben verse como si
+fuesen viejas, casi arruinadas)».
+
+Mesa en la bodega con una cámara encima. Acercándose aparece `TOMAR CÁMARA`; agarrada, la cámara
+se cuelga del hueso `RightHand`, sale el visor con REC y el botón pasa a `FOTO`. El disparo
+revela una copia gastada sobre papel amarillento que se cierra tocando.
+
+Lo que costó una vuelta cada uno:
+- **Se dibuja y se captura en el MISMO turno.** Sin `preserveDrawingBuffer`, un `drawImage` del
+  lienzo de WebGL en cualquier otro momento da negro. Se mide el promedio del papel para saberlo
+  (quedó en 150 sobre 255, con mínimo 3 y máximo 241).
+- **Colgar algo de un hueso hereda su escala**: el esqueleto vive a 0,0093, así que la cámara hay
+  que dividirla por la escala del hueso en el mundo. Medido: escala final 1,0 y 21 cm de lado.
+- **El círculo perfecto se lee a agujero de cartulina.** Las manchas de humedad y las mordidas del
+  borde van con un contorno irregular, no con `arc`.
+- Con la copia abierta hay que **cortar el `pointerdown`** del juego, si no el dedo que cierra la
+  foto arma la palanca abajo.
+- El envejecido que funciona: sepia sucio con un resto de color, negros levantados, desvanecido
+  desparejo por campo de ruido, viñeta, grano, halación por encima, humedad, rayas, polvo y
+  emulsión comida en los bordes. Y el papel también manchado y mordido.
