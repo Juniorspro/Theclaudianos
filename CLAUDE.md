@@ -206,3 +206,26 @@ nombré este escrito en pixels que tengan animaciones de colores o algo etc».
   el rango del fin de nivel cicla colores con `hue-rotate`, íconos de la tienda y retratos de jefes en
   la lista de niveles sacados del mismo kit de piezas; candado en los cerrados.
 - Música de menú propia (triángulo, más lenta) y blip al tocar botones.
+
+### 2026-09-23 — mandos y HUD como en Dan The Man
+**Pedido textual:** «quiero que los controles sean igual que el de la imágen, también la barra de vida en
+la esquina izquierda con el logo redondo de la cara del personaje» (captura del juego original).
+
+- **Mandos flotantes** sobre la tierra, sin panel negro: dos flechas grandes a la izquierda, puño azul
+  redondo y flecha de salto a la derecha, íconos en pixel art dibujados por código (`ICONO_BOTON`,
+  `lienzoForma`). El puño se dibujó **a mano**: con fórmulas (rectángulo redondeado con líneas) se leía
+  como una carita.
+- Con sólo dos botones de acción no se pierde nada: **puño deslizando arriba = gancho** (cancela el
+  directo recién tirado), **abajo en el aire = plancha**, **doble toque en una flecha = dash**, y
+  deslizar el dedo sobre las flechas da ▲/▼ (bajar de tabla: ▼ + salto). Escudo y furia quedan como
+  botones chicos. `EDGE.G` y `EDGE.S` son los pulsos de gesto.
+- **El botón de FURIA nunca se mostraba** en el celu: nada lo prendía y sólo andaba con la tecla F.
+  Ahora aparece, late, y se dispara al tocarlo.
+- **La cámara** encuadra sobre lo que dejan libre los mandos (`ZONA_MANDOS`) y el piso tiene tierra
+  hasta el borde de abajo (sólidos y fondos de fosa de 320 de profundidad).
+- **HUD en pixel art** en su propio lienzo chico (`cvH`), encima de oscuridad y tintes: retrato redondo
+  con la cara del héroe recortada en círculo píxel por píxel (sin `clip()`, que suaviza el borde), aro
+  verde/amarillo/rojo según la vida, barra con rastro blanco del último golpe, furia debajo, ranura
+  del arma con munición, moneda con contador de cuatro dígitos y pausa cuadrada.
+- Probado con toques reales por CDP (`Input.dispatchTouchEvent`), varios dedos a la vez: los nueve
+  gestos andan. Los eventos sintéticos de Playwright no traen `changedTouches` y no sirven para el pad.

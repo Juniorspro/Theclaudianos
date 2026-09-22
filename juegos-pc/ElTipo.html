@@ -14,28 +14,22 @@ html,body{width:100%;height:100%;overflow:hidden;background:#07070c;
 #pantalla{position:fixed;inset:0;display:flex;flex-direction:column}
 #lienzo{display:block;width:100%;flex:1 1 auto;background:#0a0a12}
 
-/* ---------- mandos ---------- */
-#mandos{position:relative;flex:0 0 auto;height:200px;display:flex;justify-content:space-between;
-  align-items:flex-end;padding:8px 10px 14px;background:linear-gradient(#0c0c16,#05050a)}
-.bt{position:absolute;display:flex;align-items:center;justify-content:center;
-  border-radius:50%;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.16);
-  font-weight:bold;font-size:13px;letter-spacing:.5px;color:#cfd4e6;text-shadow:0 1px 0 #000}
-.bt.on{background:rgba(255,255,255,.3);border-color:#fff;color:#fff;transform:scale(.94)}
-#cruz{position:relative;width:168px;height:168px}
-#cruz .bt{width:62px;height:62px;font-size:20px}
-#bIzq{left:0;top:53px}#bDer{left:106px;top:53px}#bArr{left:53px;top:0}#bAba{left:53px;top:106px}
-#acciones{position:relative;width:186px;height:186px}
-#acciones .bt{width:70px;height:70px}
-#bB{right:0;top:58px;background:rgba(255,90,80,.22);border-color:rgba(255,120,110,.5);font-size:15px}
-#bA{right:64px;top:118px;background:rgba(90,200,255,.2);border-color:rgba(120,210,255,.5);font-size:15px}
-#bC{right:110px;top:36px;background:rgba(255,210,90,.16);border-color:rgba(255,220,120,.42);font-size:12px}
-#bD{right:36px;top:0;background:rgba(150,255,170,.14);border-color:rgba(160,255,180,.4);font-size:12px}
-#bF{left:44px;top:-6px;width:80px;height:80px;font-size:14px;color:#fff;
-  background:radial-gradient(circle,#ff7a2f,#c22b00);border-color:#ffd08a;
-  box-shadow:0 0 18px rgba(255,120,40,.7);display:none;animation:lat .6s infinite alternate}
-@keyframes lat{from{transform:scale(1)}to{transform:scale(1.07)}}
-#bPausa{position:fixed;right:8px;top:8px;width:38px;height:38px;font-size:14px;z-index:4;
-  background:rgba(10,12,20,.55);border-color:rgba(255,255,255,.25)}
+/* ---------- mandos: flotan sobre el juego, como en Dan The Man ---------- */
+#mandos{position:absolute;left:0;right:0;bottom:0;height:200px;display:flex;pointer-events:none;z-index:3}
+.bt{position:absolute;display:flex;align-items:center;justify-content:center;pointer-events:auto}
+.bt.ico{opacity:.78;transition:none}
+.bt.ico.on{opacity:1;transform:scale(.92)}
+#pad{position:absolute;left:0;bottom:0;width:45%;height:196px;pointer-events:auto}
+#bIzq{left:8px;bottom:40px}#bDer{left:94px;bottom:40px}
+#bB{right:94px;bottom:22px}
+#bA{right:8px;bottom:36px}
+#bD{right:122px;bottom:138px;opacity:.72}
+#bF{right:12px;bottom:150px;display:none;opacity:1;animation:lat .5s steps(2) infinite}
+@keyframes lat{from{transform:scale(1)}to{transform:scale(1.1)}}
+.pista{position:absolute;left:80px;pointer-events:none;display:none;opacity:.8}
+#pArr{bottom:118px}#pAba{bottom:14px}
+.pista.on{display:block}
+#bPausa{position:fixed;right:6px;top:6px;z-index:4;opacity:.9}
 
 /* ---------- capas de menu ---------- */
 .capa{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
@@ -141,21 +135,18 @@ table.res td canvas.px{margin-left:auto}
   <div class="aviso" id="aviso"></div>
 
   <div id="mandos">
-    <div id="cruz">
-      <div class="bt" id="bIzq" data-k="izq">◀</div>
-      <div class="bt" id="bDer" data-k="der">▶</div>
-      <div class="bt" id="bArr" data-k="arr">▲</div>
-      <div class="bt" id="bAba" data-k="aba">▼</div>
-      <div class="bt" id="bF" data-k="F">FURIA</div>
+    <div id="pad">
+      <div class="bt ico" id="bIzq"></div>
+      <div class="bt ico" id="bDer"></div>
+      <div class="pista" id="pArr"></div>
+      <div class="pista" id="pAba"></div>
     </div>
-    <div id="acciones">
-      <div class="bt" id="bB" data-k="B">GOLPE</div>
-      <div class="bt" id="bA" data-k="A">SALTO</div>
-      <div class="bt" id="bC" data-k="C">DASH</div>
-      <div class="bt" id="bD" data-k="D">GUARD</div>
-    </div>
-    <div class="bt" id="bPausa" data-k="P">II</div>
+    <div class="bt ico" id="bB"></div>
+    <div class="bt ico" id="bA" data-k="A"></div>
+    <div class="bt ico" id="bD" data-k="D"></div>
+    <div class="bt ico" id="bF" data-k="F"></div>
   </div>
+  <div class="bt ico" id="bPausa" data-k="P"></div>
 
   <!-- ====== capas ====== -->
   <div class="capa ver" id="capaTitulo">
@@ -171,12 +162,13 @@ table.res td canvas.px{margin-left:auto}
     <h2>CÓMO SE JUEGA</h2>
     <p class="sub" style="text-align:left;max-width:360px">
       <b style="color:#ff8a7a">GOLPE</b> — combo de tres. El tercero manda a volar.<br>
-      <b style="color:#ff8a7a">▲ + GOLPE</b> — gancho: lo levanta por el aire.<br>
+      <b style="color:#ff8a7a">PUÑO deslizando ARRIBA</b> — gancho: lo levanta por el aire.<br>
       <b style="color:#ff8a7a">GOLPE en el aire</b> — patada voladora; encadenás en el aire.<br>
-      <b style="color:#ff8a7a">▼ + GOLPE en el aire</b> — plancha: onda expansiva al caer.<br>
+      <b style="color:#ff8a7a">PUÑO deslizando ABAJO en el aire</b> — plancha: onda expansiva al caer.<br>
       <b style="color:#5ac8ff">SALTO ×2</b> — doble salto. Contra una pared, rebote.<br>
-      <b style="color:#ffd24a">DASH</b> — invencible un instante. Cruza escudos y los rompe.<br>
-      <b style="color:#9cffae">GUARD</b> — bloquea. Si soltás el bloqueo justo en el impacto,
+      <b style="color:#ffd24a">DOBLE TOQUE en una flecha</b> — dash: invencible un instante, cruza escudos y los rompe.<br>
+      <b style="color:#5ac8ff">Deslizar el dedo en las flechas</b> — arriba o abajo cuenta como ▲ o ▼ (bajar de una tabla: ▼ + SALTO).<br>
+      <b style="color:#9cffae">ESCUDO</b> — bloquea. Si soltás el bloqueo justo en el impacto,
       <b>parry</b>: tiempo lento y contragolpe.<br>
       <b style="color:#ff8a7a">GOLPE</b> pegado a uno mareado — lo agarrás y lo tirás contra los otros.<br>
       <b style="color:#ff7a2f">FURIA</b> — se llena pegando combos. Doble daño y golpes imparables.<br>
@@ -311,7 +303,9 @@ const cxP = cv.getContext('2d', {alpha:false});        /* pantalla: HUD nítido 
 const cvM = document.createElement('canvas');          /* mundo: baja resolución */
 const cxM = cvM.getContext('2d', {alpha:false});
 let cx = cxP;                                          /* contexto activo */
-let ANCHO=412, ALTO=700, DPR=1, PX=2, ANCHO_M=206, ALTO_M=346;
+let ANCHO=412, ALTO=700, DPR=1, PX=2, ANCHO_M=206, ALTO_M=346, ZONA_MANDOS=95;
+const cvH = document.createElement('canvas');          /* HUD: pixel art, encima de todo */
+const cxH = cvH.getContext('2d');
 const PIXELADO = true;      /* false = mundo dibujado directo a resolución de pantalla */
 function medir(){
   DPR = Math.min(window.devicePixelRatio||1, 1.5);
@@ -328,6 +322,8 @@ function medir(){
   cvM.width = ANCHO_M; cvM.height = ALTO_M;
   cxM.imageSmoothingEnabled = false;
   J.cam.esc = PX;                       /* ANCHO/esc sigue siendo el ancho visible del mundo */
+  ZONA_MANDOS = Math.round(190/PX);     /* alto de mundo que queda debajo de los mandos */
+  cvH.width = ANCHO_M; cvH.height = ALTO_M; cxH.imageSmoothingEnabled = false;
   cacheFondo.clave = '';                /* el fondo se rehace al tamaño nuevo */
 }
 window.addEventListener('resize', medir);
@@ -340,7 +336,7 @@ function revisarMedida(){
 
 /* ---------- entrada ---------- */
 const IN = {izq:0,der:0,arr:0,aba:0,A:0,B:0,C:0,D:0,F:0};
-const EDGE = {A:0,B:0,C:0,D:0,F:0};          // recién presionado (1 cuadro)
+const EDGE = {A:0,B:0,C:0,D:0,F:0,G:0,S:0};  // recién presionado (1 cuadro); G/S = gesto arriba/abajo
 const SOLT = {D:0};                           // recién soltado
 const MANT = {D:0};                           // cuadros sostenido
 function pulsar(k,v){
@@ -351,7 +347,7 @@ function pulsar(k,v){
   IN[k]=v?1:0;
   if(v) audioListo();
 }
-document.querySelectorAll('.bt').forEach(b=>{
+document.querySelectorAll('.bt[data-k]').forEach(b=>{
   const k=b.dataset.k;
   const on=e=>{ e.preventDefault(); b.classList.add('on'); pulsar(k,1); };
   const off=e=>{ e.preventDefault(); b.classList.remove('on'); pulsar(k,0); };
@@ -362,19 +358,54 @@ document.querySelectorAll('.bt').forEach(b=>{
   b.addEventListener('mouseup',off);
   b.addEventListener('mouseleave',e=>{ if(IN[k]) off(e); });
 });
-/* deslizar el dedo entre botones del d-pad sin levantarlo */
-const cruz = document.getElementById('cruz');
-cruz.addEventListener('touchmove', e=>{
-  e.preventDefault();
-  const dirs=['izq','der','arr','aba']; const tocados={};
-  for(const t of e.touches){
-    const el=document.elementFromPoint(t.clientX,t.clientY);
-    if(el && el.dataset && el.dataset.k) tocados[el.dataset.k]=1;
+/* flechas: un solo pad que sigue los dedos. Deslizar arriba/abajo = ▲/▼; doble toque = dash */
+const pad = document.getElementById('pad'), bIzq = document.getElementById('bIzq'), bDer = document.getElementById('bDer');
+const toquesPad = new Map();
+let ladoPrevio = null, tPrevio = 0;
+function ladoDe(x){ const a = bIzq.getBoundingClientRect(), b = bDer.getBoundingClientRect(); return x < (a.right+b.left)/2 ? 'izq':'der'; }
+function padRecalcular(){
+  const e = {izq:0, der:0, arr:0, aba:0};
+  for(const t of toquesPad.values()){
+    e[t.lado] = 1;
+    if(t.y - t.y0 < -30) e.arr = 1; else if(t.y - t.y0 > 30) e.aba = 1;
   }
-  for(const d of dirs){ const q=!!tocados[d];
-    const el=document.querySelector('[data-k="'+d+'"]');
-    if(q!==!!IN[d]){ pulsar(d,q?1:0); el.classList.toggle('on',q); } }
-},{passive:false});
+  for(const k in e) if(!!IN[k] !== !!e[k]) pulsar(k, e[k]);
+  bIzq.classList.toggle('on', !!e.izq); bDer.classList.toggle('on', !!e.der);
+  document.getElementById('pArr').classList.toggle('on', !!e.arr);
+  document.getElementById('pAba').classList.toggle('on', !!e.aba);
+}
+function padEmpieza(id, x, y){
+  const lado = ladoDe(x), ahora = performance.now();
+  if(lado===ladoPrevio && ahora-tPrevio < 270){ pulsar('C',1); setTimeout(()=>pulsar('C',0), 60); }
+  ladoPrevio = lado; tPrevio = ahora;
+  toquesPad.set(id, {x, y, x0:x, y0:y, lado}); padRecalcular();
+}
+function padMueve(id, x, y){ const t = toquesPad.get(id); if(!t) return;
+  t.x = x; t.y = y; t.lado = ladoDe(x); padRecalcular(); }
+function padTermina(id){ toquesPad.delete(id); padRecalcular(); }
+pad.addEventListener('touchstart', e=>{ e.preventDefault(); audioListo();
+  for(const t of e.changedTouches) padEmpieza(t.identifier, t.clientX, t.clientY); }, {passive:false});
+pad.addEventListener('touchmove', e=>{ e.preventDefault();
+  for(const t of e.changedTouches) padMueve(t.identifier, t.clientX, t.clientY); }, {passive:false});
+for(const ev of ['touchend','touchcancel']) pad.addEventListener(ev, e=>{ e.preventDefault();
+  for(const t of e.changedTouches) padTermina(t.identifier); }, {passive:false});
+pad.addEventListener('mousedown', e=>{ padEmpieza('m', e.clientX, e.clientY); });
+addEventListener('mousemove', e=>{ if(toquesPad.has('m')) padMueve('m', e.clientX, e.clientY); });
+addEventListener('mouseup', ()=>{ if(toquesPad.has('m')) padTermina('m'); });
+/* puño: tocar = golpe; deslizar arriba = gancho; deslizar abajo = plancha */
+const bB = document.getElementById('bB');
+let gestoB = null;
+function puñoEmpieza(id, y){ gestoB = {id, y0:y, hecho:false}; bB.classList.add('on'); pulsar('B',1); }
+function puñoMueve(id, y){ if(!gestoB || gestoB.id!==id || gestoB.hecho) return;
+  const dy = y - gestoB.y0;
+  if(dy < -26){ gestoB.hecho = true; EDGE.G = 2; } else if(dy > 26){ gestoB.hecho = true; EDGE.S = 2; } }
+function puñoTermina(){ gestoB = null; bB.classList.remove('on'); pulsar('B',0); }
+bB.addEventListener('touchstart', e=>{ e.preventDefault(); const t=e.changedTouches[0]; puñoEmpieza(t.identifier, t.clientY); }, {passive:false});
+bB.addEventListener('touchmove', e=>{ e.preventDefault(); for(const t of e.changedTouches) puñoMueve(t.identifier, t.clientY); }, {passive:false});
+for(const ev of ['touchend','touchcancel']) bB.addEventListener(ev, e=>{ e.preventDefault(); puñoTermina(); }, {passive:false});
+bB.addEventListener('mousedown', e=>{ puñoEmpieza('m', e.clientY); });
+addEventListener('mousemove', e=>{ if(gestoB && gestoB.id==='m') puñoMueve('m', e.clientY); });
+addEventListener('mouseup', ()=>{ if(gestoB && gestoB.id==='m') puñoTermina(); });
 
 const TECLAS = {ArrowLeft:'izq',ArrowRight:'der',ArrowUp:'arr',ArrowDown:'aba',
   a:'izq',d:'der',w:'arr',s:'aba',j:'B',k:'A',l:'C',i:'D',' ':'A',f:'F',Escape:'P'};
@@ -1003,10 +1034,10 @@ const NIVELES = [
 ];
 const ALTURAS = [SUELO_Y, SUELO_Y-74, SUELO_Y-146, SUELO_Y-216];
 
-function piso(m,x,w,y){ m.solidos.push({x:x,y:(y===undefined?SUELO_Y:y),w:w,h:MUNDO_ALTO-(y===undefined?SUELO_Y:y)+40,mat:'piso'}); }
+function piso(m,x,w,y){ m.solidos.push({x:x,y:(y===undefined?SUELO_Y:y),w:w,h:MUNDO_ALTO-(y===undefined?SUELO_Y:y)+320,mat:'piso'}); }
 /* fosa: fondo a 34 de profundidad (se sale de un salto) y pinchos adentro */
 function fosa(m,x,w,conPinchos){
-  m.solidos.push({x:x, y:MUNDO_ALTO, w:w, h:40, mat:'fondo'});
+  m.solidos.push({x:x, y:MUNDO_ALTO, w:w, h:320, mat:'fondo'});
   if(conPinchos) m.peligros.push({t:'pinchos', x:x+3, y:MUNDO_ALTO-13, w:w-6, h:14});
 }
 function bloque(m,x,y,w,h,mat){ m.solidos.push({x,y,w,h,mat:mat||'bloque'}); }
@@ -1363,6 +1394,13 @@ function pasarJugador(p){
       }
     }
   }
+
+  /* --- gestos del puño: arriba = gancho (cancela el directo recién tirado), abajo = plancha --- */
+  if(recien('G') && !p.muerto && p.dashT<=0 && p.retro<=0 && !p.agarre && p.enSuelo &&
+     (p.est!=='golpe' || (p.atk && p.atk!==ATAQUES.up && p.anMax-p.an < 10))){
+    iniciarAtaque(p, 'up'); p.comboPaso = 0;
+  }
+  if(recien('S') && !p.muerto && !p.enSuelo && p.est!=='slam' && p.dashT<=0 && !p.agarre) iniciarSlam(p);
 
   /* --- furia --- */
   if(recien('F') && p.furia>=100 && p.enFuria<=0){
@@ -2348,12 +2386,10 @@ function pasarCamara(){
   if(z) objX = lim(objX, z.x-10, z.x+z.w-vistaW+10);
   c.x += (objX - c.x) * 0.12;
   c.x = lim(c.x, 0, Math.max(0, J.mundo.ancho - vistaW));
-  let objY;
-  if(vistaH >= MUNDO_ALTO) objY = MUNDO_ALTO - vistaH;
-  else {
-    const anclaje = p.enSuelo ? p.y - vistaH*0.70 : p.y - vistaH*0.58;
-    objY = lim(anclaje, -10, MUNDO_ALTO - vistaH);
-  }
+  /* los mandos tapan la franja de abajo: se encuadra sobre lo que queda libre */
+  const util = vistaH - ZONA_MANDOS;
+  const anclaje = p.enSuelo ? p.y - util*0.74 : p.y - util*0.62;
+  const objY = lim(anclaje, -10, Math.max(-10, MUNDO_ALTO + ZONA_MANDOS + 10 - vistaH));
   c.y += (objY - c.y) * (Math.abs(objY-c.y)>90 ? 0.2 : 0.08);
 }
 
@@ -2665,7 +2701,7 @@ function dibujarMundo(){
   const alfaPat = hay(kp) ? 0.72 : 1;
   for(const s of M.solidos){
     if(s.roto || s.x>x1 || s.x+s.w<x0) continue;
-    const altoS = Math.min(s.h, MUNDO_ALTO-s.y+20);
+    const altoS = Math.min(s.h, MUNDO_ALTO-s.y+320);
     cx.fillStyle = s.mat==='quebradizo' ? '#6b4030' : T.piso;
     cx.fillRect(s.x, s.y, s.w, altoS);
     if(pat && s.mat!=='quebradizo'){
@@ -2674,7 +2710,7 @@ function dibujarMundo(){
     }
     cx.fillStyle = T.pisoAlto; cx.fillRect(s.x, s.y, s.w, 5);
     cx.strokeStyle = T.borde; cx.lineWidth=2;
-    cx.strokeRect(s.x, s.y, s.w, Math.min(s.h, MUNDO_ALTO-s.y+20));
+    cx.strokeRect(s.x, s.y, s.w, altoS);
     /* juntas */
     cx.fillStyle='rgba(0,0,0,0.16)';
     for(let jx=s.x+16; jx<s.x+s.w-8; jx+=26) cx.fillRect(jx, s.y+7, 2, Math.min(s.h-9, 30));
@@ -2746,7 +2782,7 @@ function dibujarMundo(){
     cx.fillStyle=g;
     cx.beginPath(); cx.moveTo(x0, y+Math.sin(J.t*0.05)*2);
     for(let lx=x0; lx<x1; lx+=18) cx.lineTo(lx, y + Math.sin(J.t*0.06+lx*0.05)*2.6);
-    cx.lineTo(x1, MUNDO_ALTO+40); cx.lineTo(x0, MUNDO_ALTO+40); cx.closePath(); cx.fill();
+    cx.lineTo(x1, MUNDO_ALTO+320); cx.lineTo(x0, MUNDO_ALTO+320); cx.closePath(); cx.fill();
   }
   /* rejas de arena */
   for(const r of M.rejas){
@@ -2946,86 +2982,207 @@ function barra(x,y,w,h,v,col,fondo){
   cx.fillStyle = col; cx.fillRect(x,y,Math.max(0,w*lim(v,0,1)),h);
   cx.strokeStyle='rgba(255,255,255,0.22)'; cx.lineWidth=1; cx.strokeRect(x-0.5,y-0.5,w+1,h+1);
 }
+/* ---------- formas en pixel art (íconos de mandos y HUD) ---------- */
+function lienzoForma(w, h, dentro, color, sombra){
+  const c = document.createElement('canvas'); c.width = w+2; c.height = h+3;
+  const g = c.getContext('2d');
+  const D = (x,y)=> x>=0 && y>=0 && x<w && y<h && dentro(x,y);
+  const cerca = (x,y)=> D(x-1,y)||D(x+1,y)||D(x,y-1)||D(x,y+1)||D(x-1,y-1)||D(x+1,y+1)||D(x-1,y+1)||D(x+1,y-1);
+  if(sombra!==false){ g.fillStyle = 'rgba(10,6,16,0.5)';
+    for(let y=-1;y<=h;y++) for(let x=-1;x<=w;x++) if(D(x,y)||cerca(x,y)) g.fillRect(x+1, y+3, 1, 1); }
+  g.fillStyle = '#141018';
+  for(let y=-1;y<=h;y++) for(let x=-1;x<=w;x++) if(!D(x,y) && cerca(x,y)) g.fillRect(x+1, y+1, 1, 1);
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++) if(D(x,y)){ g.fillStyle = color(x,y); g.fillRect(x+1, y+1, 1, 1); }
+  return c;
+}
+const flechaDentro = (x,y)=> (x>=9 && x<=20 && y>=5 && y<=12) || (x>=1 && x<=10 && Math.abs(y-8.5) <= (x-1)*0.95+0.5);
+const colFlecha = (x,y)=> y<=6 ? '#ffffff' : (y>=11 ? '#aeb5cf' : '#e6eaf5');
+const ICONO_BOTON = {
+  izq: ()=> lienzoForma(22,18, flechaDentro, colFlecha),
+  der: ()=> lienzoForma(22,18, (x,y)=>flechaDentro(21-x,y), colFlecha),
+  salto: ()=> lienzoForma(18,22, (x,y)=>flechaDentro(y,x), (x,y)=> x<=6 ? '#ffffff' : (x>=11 ? '#aeb5cf' : '#e6eaf5')),
+  arr: ()=> lienzoForma(9,5, (x,y)=> Math.abs(x-4) <= y, ()=> '#ffffff'),
+  aba: ()=> lienzoForma(9,5, (x,y)=> Math.abs(x-4) <= 4-y, ()=> '#ffffff'),
+  puño: ()=>{
+    /* puño de frente, dibujado a mano: cuatro dedos, pulgar cruzado y la muñeca */
+    const P = ["...kkkkkkkkk..",
+               "..kWWkWWkWWkk.",
+               ".kWWWkWWkWWWWk",
+               ".kWWWkWWkWWWWk",
+               "kWWWWkWWkWWWWk",
+               "kWggkkkkkkggWk",
+               "kWWWWWWWWkWWWk",
+               "kgWWWWWWWkWWgk",
+               ".kgggggggkggk.",
+               "..kkkkkkkkkk.."];
+    const ox = 5, oy = 7;
+    const cel = (x,y)=>{ const fx=x-ox, fy=y-oy; return (fy>=0&&fy<P.length&&fx>=0&&fx<P[0].length) ? P[fy][fx] : '.'; };
+    const estallido = (x,y)=>{ const a = Math.atan2(y-11.5,x-11.5), d = Math.hypot(x-11.5,y-11.5);
+      return d < 7.6 + 2.4*Math.cos(8*a+0.4); };
+    return lienzoForma(24,24, (x,y)=> Math.hypot(x-11.5,y-11.5) <= 11.6, (x,y)=>{
+      const c = cel(x,y);
+      if(c==='W') return '#ffffff';
+      if(c==='g') return '#c9d3ea';
+      if(c==='k') return '#141018';
+      if(Math.hypot(x-11.5,y-11.5) > 9.8) return y<10 ? '#6aa0ff' : '#1e3f78';
+      if(estallido(x,y)) return '#9cc4ff';
+      return y<8 ? '#3a74c8' : '#2f5f9e'; });
+  },
+  guardia: ()=>{
+    const en = (x,y)=> x>=5&&x<=12&&y>=4&&y<=12 && !(y>=10 && (x-5<y-10 || 12-x<y-10));
+    const borde = (x,y)=> !en(x,y) && (en(x-1,y)||en(x+1,y)||en(x,y-1)||en(x,y+1));
+    return lienzoForma(18,18, (x,y)=> Math.hypot(x-8.5,y-8.5) <= 8.7, (x,y)=>{
+      if(en(x,y)) return (x===8||x===9) ? '#ffd24a' : (x<8 ? '#ffffff' : '#c9d3ea');
+      if(borde(x,y)) return '#141018';
+      if(Math.hypot(x-8.5,y-8.5) > 6.9) return y<8 ? '#7ee8a8' : '#1d6b44';
+      return '#2f8a5a'; });
+  },
+  furia: ()=>{
+    const llama = (x,y)=>{ if(y<3||y>16) return false;
+      const w = y<7 ? (y-2)*0.7 : (y<13 ? 2.8+(y-7)*0.4 : 5.2-(y-13)*1.1);
+      return Math.abs(x - 9.5 + (y<9 ? (9-y)*0.35 : 0)) <= w; };
+    const nucleo = (x,y)=> y>=10 && y<=15 && Math.abs(x-9.5) <= 2.2-(15-y)*0.25;
+    return lienzoForma(20,20, (x,y)=> Math.hypot(x-9.5,y-9.5) <= 9.7, (x,y)=>{
+      if(nucleo(x,y)) return '#fff6b0';
+      if(llama(x,y)) return '#ffd24a';
+      if(Math.hypot(x-9.5,y-9.5) > 7.8) return y<9 ? '#ffb46a' : '#a8300c';
+      return '#e8561a'; });
+  },
+  pausa: ()=> lienzoForma(14,14, ()=>true, (x,y)=> ((x===4||x===5||x===8||x===9) && y>=3 && y<=10) ? '#ffffff'
+      : (x===0||y===0 ? '#4a4f6a' : '#2a2d3e')),
+  moneda: ()=> lienzoForma(14,14, (x,y)=> Math.hypot(x-6.5,y-6.5) <= 6.6, (x,y)=>{
+      const d = Math.hypot(x-6.5,y-6.5);
+      if(d > 5.2) return y<6 ? '#ffe98a' : '#c9901a';
+      if((x===6||x===7) && y>=3 && y<=10) return '#c9901a';
+      return (x<6 && y<6) ? '#fff6c0' : '#ffd24a'; }),
+};
+const cacheIco = {};
+const icoBoton = k => cacheIco[k] || (cacheIco[k] = ICONO_BOTON[k]());
+function ponerIcono(id, clave, S){
+  const el = document.getElementById(id), src = icoBoton(clave), c = document.createElement('canvas');
+  c.width = src.width; c.height = src.height; c.getContext('2d').drawImage(src,0,0);
+  c.className = 'px'; c.style.width = (src.width*S)+'px'; c.style.height = (src.height*S)+'px';
+  el.innerHTML = ''; el.appendChild(c);
+}
+function ponerIconosMandos(){
+  ponerIcono('bIzq','izq',3); ponerIcono('bDer','der',3);
+  ponerIcono('bB','puño',4); ponerIcono('bA','salto',4);
+  ponerIcono('bD','guardia',3); ponerIcono('bF','furia',3);
+  ponerIcono('bPausa','pausa',3);
+  ponerIcono('pArr','arr',3); ponerIcono('pAba','aba',3);
+}
+
+/* ---------- HUD en pixel art: retrato redondo, vida, guita ---------- */
+const cacheRetrato = {};
+function retratoHeroe(aro){
+  if(cacheRetrato[aro[0]]) return cacheRetrato[aro[0]];
+  const N = 34, m = 16.5, c = document.createElement('canvas'); c.width = c.height = N;
+  const g = c.getContext('2d'), src = HPX.CABEZA;
+  const px = src.getContext('2d').getImageData(0,0,src.width,src.height).data;
+  for(let y=0;y<N;y++) for(let x=0;x<N;x++){
+    const d = Math.hypot(x-m, y-m); let col = null;
+    if(d <= 13.2){
+      col = '#26344f';
+      const sx = x-5, sy = y-5;                         /* la cara del héroe, recortada en círculo */
+      if(sx>=0 && sy>=0 && sx<src.width && sy<src.height){ const i=(sy*src.width+sx)*4;
+        if(px[i+3]>0) col = 'rgb('+px[i]+','+px[i+1]+','+px[i+2]+')'; }
+    } else if(d <= 15.6) col = y < m-3 ? aro[1] : aro[0];
+    else if(d <= 16.8) col = '#141018';
+    if(col){ g.fillStyle = col; g.fillRect(x,y,1,1); }
+  }
+  return (cacheRetrato[aro[0]] = c);
+}
+function tx(g, str, x, y, S, grad, al){             /* y = borde de arriba de las mayúsculas */
+  const c = lienzoTexto(str, {grad}), w = c.width*S;
+  const xx = al==='der' ? x-w : (al==='cen' ? x-(w>>1) : x);
+  g.drawImage(c, Math.round(xx - S), Math.round(y - 4*S), w, c.height*S);
+  return w;
+}
+function barraPx(g, x, y, w, h, v, a, b, fondo){
+  rectPx(g, x-2, y-2, w+4, h+4, '#141018');
+  rectPx(g, x-1, y-1, w+2, h+2, '#4a4f6a');
+  rectPx(g, x, y, w, h, fondo || '#3a1424');
+  const f = Math.round(w*lim(v,0,1));
+  if(f>0){ rectPx(g, x, y, f, h, a); rectPx(g, x, y+Math.ceil(h*0.6), f, Math.floor(h*0.4), b);
+    rectPx(g, x, y+1, f, 1, 'rgba(255,255,255,0.5)'); }
+}
 function hud(){
-  const p = J.jug;
-  cx.textAlign='left';
-  /* vida */
-  const vv = p.vida/p.vidaMax;
-  barra(12, 12, 132, 13, vv, vv>0.5?'#63d98a':(vv>0.25?'#ffd24a':'#ff5a50'));
-  cx.font='bold 10px "Trebuchet MS",sans-serif'; cx.fillStyle='#fff';
-  cx.fillText(Math.max(0,Math.ceil(p.vida))+'/'+p.vidaMax, 16, 22);
-  /* furia */
-  barra(12, 30, 132, 7, p.furia/100, p.enFuria>0? '#ff4d6a' : '#ff7a2f');
-  cx.font='bold 8px "Trebuchet MS",sans-serif'; cx.fillStyle='#ffd7b0';
-  cx.fillText(p.enFuria>0? 'FURIA '+Math.ceil(p.enFuria/60)+'s' : (p.furia>=100?'¡FURIA LISTA!':'FURIA'), 14, 36.5);
-  /* guita y nivel */
-  cx.textAlign='right'; cx.font='bold 13px "Trebuchet MS",sans-serif';
-  cx.fillStyle='#ffd24a'; cx.fillText('◉ '+J.guita, ANCHO-56, 22);
-  cx.font='bold 9px "Trebuchet MS",sans-serif'; cx.fillStyle='#98a0bb';
-  cx.fillText('NIVEL '+J.nivel+' — '+J.mundo.nom, ANCHO-12, 66);
-  /* progreso del nivel */
-  const prog = lim((p.x)/(J.mundo.ancho-60),0,1);
-  barra(ANCHO-92, 72, 80, 4, prog, '#5ac8ff');
-  /* combo */
-  if(J.combo>1){
-    cx.textAlign='right'; const s = 1+Math.min(0.5, J.combo*0.02);
-    cx.save(); cx.translate(ANCHO-14, 116); cx.scale(s,s);
-    cx.font='bold 26px "Trebuchet MS",sans-serif';
-    cx.lineWidth=4; cx.strokeStyle='#0b0b12'; cx.strokeText(J.combo+'', 0,0);
-    cx.fillStyle = J.combo>=15?'#ff4d6a':(J.combo>=8?'#ffd24a':'#fff'); cx.fillText(J.combo+'', 0,0);
-    cx.restore();
-    cx.font='bold 10px "Trebuchet MS",sans-serif'; cx.lineWidth=3; cx.strokeStyle='#0b0b12';
-    cx.strokeText('GOLPES', ANCHO-14, 128); cx.fillStyle='#cdd3e8'; cx.fillText('GOLPES', ANCHO-14, 128);
-    barra(ANCHO-78, 134, 64, 3, J.comboT/150, '#ff7a2f');
-  }
-  /* arma */
+  const g = cxH, p = J.jug, W = ANCHO_M;
+  g.clearRect(0,0,cvH.width,cvH.height);
+  /* --- retrato + vida --- */
+  const v = p.vida/p.vidaMax;
+  const aro = v>0.5 ? ['#3fb03a','#9cf07a'] : (v>0.25 ? ['#d8a818','#fff08a'] : ['#d03838','#ff9a8a']);
+  const bajo = v<=0.25 && (J.t>>3)%2===0;
+  g.drawImage(retratoHeroe(aro), 3, 3);
+  J.vidaF = (J.vidaF===undefined || J.vidaF < p.vida) ? p.vida : Math.max(p.vida, J.vidaF - 0.7);
+  const bx = 38, by = 9, bw = 66, bh = 9;
+  barraPx(g, bx, by, bw, bh, J.vidaF/p.vidaMax, '#fff6d0', '#e8d8a0');           /* rastro del golpe */
+  const colV = v>0.5 ? ['#7ee04a','#4aa032'] : (v>0.25 ? ['#ffd24a','#d09a20'] : ['#ff5a50','#b02a30']);
+  const f = Math.round(bw*lim(v,0,1));
+  if(f>0){ rectPx(g, bx, by, f, bh, bajo? '#ffffff' : colV[0]); rectPx(g, bx, by+6, f, 3, colV[1]);
+    rectPx(g, bx, by+1, f, 1, 'rgba(255,255,255,0.5)'); }
+  /* --- furia --- */
+  const listo = p.furia>=100 && p.enFuria<=0;
+  barraPx(g, bx, by+15, 56, 4, p.enFuria>0 ? p.enFuria/(60*8) : p.furia/100,
+    (listo && (J.t>>2)%2) ? '#ffd24a' : '#ff7a2f', '#c24a14', '#2a1420');
+  const bF = document.getElementById('bF');
+  if(bF._v !== listo){ bF._v = listo; bF.style.display = listo ? 'flex' : 'none'; }
+  /* --- arma en la ranura, como la poción del original --- */
   if(p.arma){
-    cx.textAlign='left'; cx.font='bold 10px "Trebuchet MS",sans-serif';
-    cx.fillStyle='rgba(0,0,0,0.5)'; cx.fillRect(10, ALTO-30, 108, 20);
-    cx.fillStyle='#ffd24a'; cx.fillText(ARMAS[p.arma.k].nom+' ×'+p.arma.muni, 16, ALTO-16);
+    rectPx(g, bx-1, by+22, 18, 14, '#141018'); rectPx(g, bx, by+23, 16, 12, '#2a2d3e'); rectPx(g, bx, by+23, 16, 1, '#4a4f6a');
+    const prev = cx; cx = g; cx.save(); cx.beginPath(); cx.rect(bx, by+23, 16, 12); cx.clip();
+    dibujarArma(p.arma, bx+3, by+29); cx.restore(); cx = prev;
+    tx(g, '×'+p.arma.muni, bx+19, by+25, 1, GRAD.oro);
   }
-  /* jefe */
-  if(J.jefe && !J.jefe.muerto){
-    const j = J.jefe, w = ANCHO-80;
-    cx.textAlign='center'; cx.font='bold 11px "Trebuchet MS",sans-serif';
-    cx.fillStyle='#ffd7b0'; cx.fillText(j.nom+'   ·   FASE '+j.fase, ANCHO/2, ALTO-38);
-    barra(40, ALTO-32, w, 11, j.vida/j.vidaMax, '#e8404a');
-    barra(40, ALTO-19, w, 4, j.quiebre/j.quiebreMax, '#ffd24a');
-    if(j.quebrado){ cx.fillStyle='#ffd24a'; cx.font='bold 10px "Trebuchet MS",sans-serif';
-      cx.fillText('¡TAMBALEA! PEGALE', ANCHO/2, ALTO-8); }
-  } else {
-    /* flecha al objetivo */
-    const obj = J.mundo.zonas.find(z=>z.estado!=='limpia');
-    const destino = obj? obj.x1 : J.mundo.salida.x;
-    if(Math.abs(destino - p.x) > 120){
-      const d = sig(destino-p.x);
-      cx.save(); cx.translate(ANCHO/2 + d*(ANCHO/2-26), 62); cx.scale(d,1);
-      cx.globalAlpha = 0.5+Math.sin(J.t*0.1)*0.2;
-      cx.fillStyle='#ffd24a'; cx.beginPath();
-      cx.moveTo(-6,-8); cx.lineTo(8,0); cx.lineTo(-6,8); cx.closePath(); cx.fill();
-      cx.restore(); cx.globalAlpha=1;
-    }
+  /* --- guita arriba a la derecha, al lado de la pausa --- */
+  const px2 = W - 28, dig = String(Math.min(J.guita, 99999)).padStart(4,'0');
+  const anchoDig = dig.length*6*2 + 4;
+  rectPx(g, px2-anchoDig-2, 4, anchoDig+4, 18, '#141018'); rectPx(g, px2-anchoDig-1, 5, anchoDig+2, 16, '#1c2033');
+  rectPx(g, px2-anchoDig-1, 5, anchoDig+2, 1, '#3a4058');
+  tx(g, dig, px2-2, 8, 2, GRAD.blanco, 'der');
+  g.drawImage(icoBoton('moneda'), px2-anchoDig-19, 4, 16, 17);
+  /* --- nivel y avance --- */
+  const prog = lim(p.x/(J.mundo.ancho-60),0,1);
+  tx(g, 'N'+J.nivel, px2-anchoDig-17, 28, 1, GRAD.gris);
+  barraPx(g, px2-anchoDig+2, 28, anchoDig-4, 3, prog, '#5ac8ff', '#2a88c8', '#1c2033');
+  /* --- combo --- */
+  if(J.combo>1){
+    const gr = J.combo>=15 ? GRAD.rojo : (J.combo>=8 ? GRAD.fuego : GRAD.blanco);
+    const S = J.combo>=10 ? 3 : 2;
+    tx(g, ''+J.combo, W-8, 40, S, gr, 'der');
+    tx(g, 'GOLPES', W-8, 40+7*S+4, 1, GRAD.gris, 'der');
+    barraPx(g, W-44, 40+7*S+14, 36, 2, J.comboT/150, '#ff7a2f', '#c24a14', '#1c2033');
   }
-  /* zona: oleada */
+  /* --- oleada --- */
   const z = J.mundo.zonas.find(q=>q.estado==='peleando' && q.t==='arena');
-  if(z){ cx.textAlign='center'; cx.font='bold 11px "Trebuchet MS",sans-serif'; cx.fillStyle='#ffd24a';
-    cx.fillText('OLEADA '+z.ola+'/'+z.oleadas.length+'   ·   QUEDAN '+vivosDeZona(z), ANCHO/2, 54); }
-  cx.textAlign='left';
-  /* cartel de presentación del jefe */
-  if(J.cartel){
-    const c = J.cartel, a = Math.min(1, (110-c.t)/12, c.t/16);
-    cx.save(); cx.globalAlpha = a;
-    cx.fillStyle='rgba(8,8,14,0.82)'; cx.fillRect(0, ALTO*0.30, ANCHO, 150);
-    cx.fillStyle='#ff5a50'; cx.fillRect(0, ALTO*0.30, ANCHO, 3); cx.fillRect(0, ALTO*0.30+147, ANCHO, 3);
-    if(hay(c.k)){
-      const im = IMG[c.k].img, h = 132, w = im.naturalWidth/im.naturalHeight*h;
-      cx.drawImage(im, 22, ALTO*0.30+9, w, h);
+  if(z) tx(g, 'OLEADA '+z.ola+'/'+z.oleadas.length+' · QUEDAN '+vivosDeZona(z), W>>1, 50, 1, GRAD.oro, 'cen');
+  /* --- jefe o flecha al objetivo --- */
+  if(J.jefe && !J.jefe.muerto){
+    const j = J.jefe, yb = ALTO_M - ZONA_MANDOS - 18;
+    tx(g, j.nom+'  ·  FASE '+j.fase, W>>1, yb-12, 1, GRAD.rojo, 'cen');
+    barraPx(g, 20, yb, W-40, 6, j.vida/j.vidaMax, '#e8404a', '#a02030', '#2a1420');
+    barraPx(g, 20, yb+10, W-40, 2, j.quiebre/j.quiebreMax, '#ffd24a', '#c9901a', '#1c2033');
+    if(j.quebrado && (J.t>>3)%2) tx(g, '¡TAMBALEA! PEGALE', W>>1, yb+17, 1, GRAD.oro, 'cen');
+  } else {
+    const obj = J.mundo.zonas.find(q=>q.estado!=='limpia');
+    const destino = obj ? obj.x1 : J.mundo.salida.x;
+    if(Math.abs(destino - p.x) > 120 && (J.t>>4)%2===0){
+      const d = sig(destino-p.x), ax = d>0 ? W-10 : 10, ay = Math.round(ALTO_M*0.42);
+      for(let i=0;i<5;i++) rectPx(g, ax - d*i, ay-4+i, 1, 9-i*2, '#141018');
+      for(let i=0;i<4;i++) rectPx(g, ax - d*(i+1), ay-3+i, 1, 7-i*2, '#ffd24a');
     }
-    cx.textAlign='right'; cx.fillStyle='#ffd24a'; cx.font='bold 26px "Trebuchet MS",sans-serif';
-    cx.fillText(c.nom, ANCHO-20, ALTO*0.30+82);
-    cx.font='bold 12px "Trebuchet MS",sans-serif'; cx.fillStyle='#cdd3e8';
-    cx.fillText('NIVEL '+J.nivel+'  ·  A ROMPERLE', ANCHO-20, ALTO*0.30+104);
-    cx.restore(); cx.textAlign='left';
+  }
+  /* --- cartel de presentación del jefe --- */
+  if(J.cartel){
+    const c = J.cartel, y0 = Math.round(ALTO_M*0.28);
+    if(((110-c.t)>2 && c.t>2) || (J.t%2)){
+      rectPx(g, 0, y0, W, 58, 'rgba(8,8,14,0.85)'); rectPx(g, 0, y0, W, 2, '#ff5a50'); rectPx(g, 0, y0+56, W, 2, '#ff5a50');
+      const kj = TIPO_KIT[c.k];
+      const img = kj ? piezaEne(kj,'CABEZA') : iconoPx('robot','#ff7a2f',1);
+      g.drawImage(img, 10, y0+6, img.width*2, img.height*2);
+      tx(g, c.nom, W-8, y0+16, 2, GRAD.oro, 'der');
+      tx(g, 'NIVEL '+J.nivel+' · A ROMPERLE', W-8, y0+38, 1, GRAD.gris, 'der');
+    }
   }
 }
 
@@ -3067,6 +3224,8 @@ function dibujar(){
   if(J.lento>0){ cx.fillStyle='rgba(120,220,255,0.05)'; cx.fillRect(0,0,ANCHO,ALTO); }
   if(J.jug.inv>20 && !J.jug.muerto){ cx.fillStyle='rgba(255,40,40,0.09)'; cx.fillRect(0,0,ANCHO,ALTO); }
   hud();
+  cxP.imageSmoothingEnabled = false;
+  cxP.drawImage(cvH, 0, 0, ANCHO_M*PX, ALTO_M*PX);
 }
 let acum=0, ultimo=0;
 function bucle(ts){
@@ -3094,7 +3253,7 @@ function empezarNivel(n){
   J.nivel = n;
   J.ents=[]; J.balas=[]; J.part=[]; J.objetos=[]; J.textos=[]; J.ondas=[]; J.golpazos=[];
   J.combo=0; J.comboMax=0; J.golpes=0; J.recibido=0; J.tiempo=0; J.jefe=null; J.oleada=null;
-  J.congelado=0; J.lento=0; J.t=0; musPaso=0; J.finNivel=0; J.finMuerte=0;
+  J.congelado=0; J.lento=0; J.t=0; musPaso=0; J.finNivel=0; J.finMuerte=0; J.vidaF=undefined;
   const m = generarNivel(n, J.semillaTx);
   if(n===5) m.lava = {y: MUNDO_ALTO+80, vel:0.026};
   J.jug = crearJugador(m.spawn.x, m.spawn.y);
@@ -3549,7 +3708,7 @@ clic('btPausaMenu', menu);
 
 /* ---------- sondas para el banco ---------- */
 window.__T = {
-  J, IN, ENEMIGOS, JEFES, NIVELES, ARMAS, MEJORAS,
+  J, ENEMIGOS, JEFES, NIVELES, ARMAS, MEJORAS,
   empezarNivel, generarNivel, crearEnemigo, crearJefe, dañar, calcularRango,
   est(){ return {modo:J.modo, nivel:J.nivel, t:J.t, ancho:J.mundo?J.mundo.ancho:0,
     ents:J.ents.length, vivos:J.ents.filter(e=>!e.muerto).length, balas:J.balas.length,
@@ -3574,6 +3733,7 @@ window.__T = {
     r.__total = Object.keys(ASSETS).length; r.__kb = Math.round(Object.values(ASSETS).join('').length/1024);
     return r; },
   pose(e){ return pose(e || J.jug); },
+  get IN(){ return IN; },
   lienzoHeroe(){ return lienzoH.toDataURL(); },
   cuentaTipos(){ const c={}; for(const e of J.ents) c[e.tipo]=(c[e.tipo]||0)+1; return c; },
   listo:true,
@@ -3584,6 +3744,7 @@ cargar();
 medir();
 cargarAssets();
 pintarTitulo();
+ponerIconosMandos();
 if(!J.semillaTx) nuevaSemilla();
 document.getElementById('btSemilla').textContent = 'SEMILLA: '+J.semillaTx;
 menu();
