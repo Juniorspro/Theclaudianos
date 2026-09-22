@@ -757,3 +757,51 @@ Lo que costó una vuelta:
   el grano va en cero.
 
 Auditoría completa y 80 toques y arrastres al azar sin errores.
+
+### 2026-09-22 (w) — la base tiene gente
+**Pedido textual:** «Agrégale más cosas a la base de la tierra, npc's que caminen y le den vida,
+detallitos».
+
+**Diez personas con rutina propia**, todas del mismo militar riggeado del jugador:
+- dos **centinelas** con casco y fusil a la espalda que recorren el cerco (oeste y este);
+- dos **mecánicos** de chaleco naranja: uno va de la rampa al banco del hangar, el otro trabaja
+  al costado del casco (con su carro de herramientas) y va hasta los contenedores;
+- uno que **trota** una vuelta grande por el noreste de la plataforma;
+- el **guardia de la barrera**, que mira la ruta y cada tanto para otro lado;
+- **dos que charlan** al pie de la torre, mirándose;
+- el **señalero** frente a la nariz de la nave, con bastones de luz en las manos;
+- uno que trabaja en el **banco del hangar**.
+
+Te siguen con la cabeza cuando pasás cerca (hasta 1,1 rad), se dan vuelta si te les parás
+encima, frenan si les cortás el paso y no se atraviesan (quedás a 0,62 m). Sus pisadas se oyen
+donde están, y cada 14 a 34 s a alguno le habla la radio.
+
+**Detallitos:** remolcador amarillo que da vueltas por el frente de la plataforma con baliza
+giratoria, faros, ruedas que giran y motor que suena donde está (frena si le cortás el paso y a
+los 0,8 s toca bocina); balizas rojas de aviación en la torre, el hangar y las torres de luz
+(destello cada 1,4 s); **bandera** y **manga de viento** que flamean con el mismo viento que suena;
+siete **carroñeros** planeando en círculos que cada tanto aletean; conos con banda reflectiva,
+jeep al lado de la garita, cisterna de combustible, pallets con cajas y el carro del mecánico.
+
+Medido en el banco: 15 minutos de juego sin que nadie quede trabado más de medio segundo fuera
+de sus pausas (los centinelas completaron 41 y 45 tramos, los mecánicos 69 y 58, el que trota
+135), el remolcador dio 21 vueltas, y **ningún choque contra la base** muestreando cada medio
+segundo. Desde la entrada se ven 9 personas: 157 llamadas y 232 mil triángulos.
+
+Lo que costó una vuelta cada uno:
+- **`clone()` de un modelo riggeado comparte el esqueleto**: los diez bailarían con los huesos
+  del primero. Se clona el árbol y se arma un `Skeleton` nuevo con los huesos de la copia.
+- **Colgar algo de un hueso hereda su escala y su giro**: un intermedio los deshace en la pose de
+  armado (el muñeco en el origen y mirando +Z), y desde ahí todo va en metros y derecho.
+- **El abrazo mortal**: el centinela esperaba al remolcador y el remolcador al centinela, y no se
+  movían nunca más. El que ya está en el carril del remolcador sigue para despejarlo.
+- Cinco accesorios por persona eran **172 llamadas**: cada accesorio es una sola malla, no entra en
+  el mapa de sombra, y las personas fuera de cuadro no se dibujan (el cuerpo deformado no trae una
+  esfera confiable, se prueba una propia). Desde adentro de la nave el casco tapa todo: se dibuja
+  sólo a quien se vería por la compuerta o el ventanal — de 218 mil triángulos a 93 mil.
+- **Un problema de sonido no puede cortar el cuadro**: un NaN en el motor del remolcador tiraba una
+  excepción adentro del dibujo. Todas las entradas del sonido van envueltas.
+- La base baja con `mundo` al despegar pero sus posiciones son locales: el motor del remolcador y
+  las pisadas de la gente se hubieran seguido oyendo en el espacio.
+
+Auditoría completa y 80 toques al azar sin errores.
