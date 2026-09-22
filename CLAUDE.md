@@ -8,6 +8,7 @@ se prueba **en el celular, en vertical (412×892)**. EL TIPO se juega **acostado
 | ruta | qué es |
 |---|---|
 | `juegos-pc/ElTipo.html` | **EL TIPO.** Beat'em up de plataformas al estilo Dan The Man: canvas 2D, un archivo, sin red, 5 niveles procedurales con jefe cada uno. |
+| `juegos-pc/AOscuras.html` | **A OSCURAS.** Táctico de arriba estilo Bullet Echo: linterna en cono, ecos de pasos y tiros, 5 misiones procedurales (equipo, robo en sigilo, dominio, batalla real, jefe). Canvas 2D en píxeles, un archivo, sin red. |
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. De otra línea de trabajo. |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -317,3 +318,39 @@ bajó de 34 a **13 cuadros por segundo**.
   gestos 9/9, sin errores; capturas de n1, n3, n5 y jefe iguales a las de antes.
 - **Trampa del banco:** `Emulation.setCPUThrottlingRate` en headless también frena el rasterizado por software, así
   que el costo de rellenar píxeles aparece. Sin frenar, todo da 60 y no se ve nada.
+
+### 2026-09-23 (7) — A OSCURAS, estilo Bullet Echo
+**Pedido textual:** «GENERAME un juego HTML single, dónde el juego trate de una copia parecida a Bullet Echo, investiga todo
+sobre ese juego y dame 5 niveles completos procedural y de mecánicas goty de verdad y usa lo anterior aprendido de menú y
+modelos procedurales y hazlo incluso mejor». (Antes pidió un Subway Surfers y lo cortó dos veces: no quedó nada escrito.)
+
+`juegos-pc/AOscuras.html`, vertical, 1 px del lienzo = 1 px del mundo y el CSS lo agranda entero (`PXd` del aparato).
+Reusa de EL TIPO la fuente de píxeles, `pixelar`, `lienzoForma` y los botones de 16 bits.
+
+- **Visión:** polígono por DDA contra las paredes para cada linterna del equipo, cortado en una máscara con
+  `destination-out` y degradé cacheado por radio. Los compañeros comparten lo que ven (máscara de bits por equipo).
+  Lo que no se ve **no se dibuja**; sus pasos y tiros dejan **ecos** en el piso y flechas en el borde.
+- **Personajes de arriba por código:** grilla de roles → EPX ×2 → horneado girado en 32 direcciones (sin escaleras
+  en las diagonales) + pies animados aparte. Retratos de frente 16×16 recortados en círculo píxel por píxel.
+- **Mapas:** BSP con vueltas extra, columnas, cajas en grupitos validadas por BFS (nunca tapan el paso), vidrios en
+  paredes finas, charcos tóxicos, luces fijas horneadas con su polígono. El puerto es un patio con contenedores y agua.
+- **Misiones:** equipo 3v3, robo con alarma, dominio A/B/C con reaparición, batalla real con gas y cofres, jefe con
+  escudo de frente, granadas, carga y guardias por fase.
+- **IA:** ve con su linterna (reacción, puntería y giro por nivel), oye pasos y tiros del cuadro anterior, investiga,
+  busca, rodea con A*, usa habilidades. El jugador camina en sigilo con empuje corto; corriendo, lo oyen.
+
+Trampas que costaron una vuelta:
+- **El buscador de caminos no sabía de barriles ni cofres**: el piloto quedaba clavado contra un barril. Ahora hay
+  máscara `M.obst`, también para no cortar esquinas.
+- **Ir a romper un cofre = meta imposible**: el A* agotaba la búsqueda cada vez (la meta estaba tapada). La meta se acepta
+  aunque esté ocupada.
+- **Destino al azar en cada cuadro** (el gas) → A* por bot por cuadro. Destino fijo + recalcular cada 20 cuadros y
+  tope de 2 por cuadro en todo el mapa.
+- **Dibujar el mapa entero** en cada cuadro: sólo el recorte que se ve.
+- Con CPU ×6 la batalla real pasó de **6 a 60** cuadros por segundo; las otras misiones, 60.
+- Sin ajustar, el piloto moría a los 10–20 s: daño enemigo por nivel (`SK.dmg` 0,5→0,74) y blindaje que vuelve
+  tras 4,5 s sin recibir.
+
+Medido: piloto automático invencible 14/15 (3 semillas × 5; la que perdió fue un dominio 99 a 100), sin invencibilidad
+5/15 (el piloto corre sin sigilo y no rodea al jefe). Toques reales por CDP: mover, correr/sigilo, apuntar con el segundo
+dedo, habilidad, pausa. Sondas: `window.__A` — `iniciar(n,sem)`, `anda(n)`, `autopiloto(v)`, `dios(v)`, `est()`, `mapaAscii()`.
