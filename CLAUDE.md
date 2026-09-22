@@ -582,3 +582,59 @@ Lo que costó una vuelta:
   caminata espacial no frena nada.
 - `MAT_NAVE` se declara después de los pilares, así que el bloque de la base va **después** de
   construir la nave o revienta con un TDZ, como ya pasó con `PANEL`.
+
+### 2026-09-22 (t) — pasada de construcción: puerta, escalera, rampa y base
+**Pedido textual:** «Hey bro mejora la nave y estructuras la puerta está tapada y traspasable fíjate
+bien bien todo y arreglalo hay muchos errores de construcción recuerda que es un juego AAA».
+
+Todo se encontró **tirando rayos y caminando contra las cosas**, no mirando capturas.
+
+**La nave**
+- **La puerta estaba tapada por una losa maciza** de 5,1 × 3,55 m clavada en el hueco (z 11,44), sin
+  colisión: por eso se veía cerrada y se atravesaba. Y atrás de la losa, **la cara trasera de la
+  panza también cruzaba el hueco** (z 12,00). El rayo desde afuera chocaba a 3,44 m.
+- **El casco era dos ladrillos macizos** (panza y lomo). Pasó a ser una **cáscara**: cada cara va
+  sólo donde hay casco. La boca de popa es un túnel forrado y con luz hasta la puerta de adentro.
+  Ahora el rayo desde afuera llega a la pared del fondo de la bodega, a 29,84 m.
+- **La rampa estaba dibujada al revés** desde la vuelta (b): el giro positivo de `cajaP` baja el eje
+  largo hacia +Z, así que se veía alta afuera y baja en la puerta (el «trapecio negro» era su
+  panza). La colisión subía bien. Va con giro negativo, y una franja de peligro en la boca.
+- **El hueco de la escalera estaba tapado por los dos lados**: desde la bodega lo tapaba la panza
+  del lomo (y 5,40) y desde arriba el techo de la panza (y 5,60). Además **una viga del techo
+  cruzaba el hueco a la altura de la cabeza** (y 5,00). Las tres se fueron; ahora el rayo va del
+  escalón al techo de la cubierta alta sin chocar nada.
+- **El techo de la bodega tenía dos caras a 4 cm** (5,40 y 5,44): parpadeo seguro en el celular. Hay
+  un techo propio, con el hueco de la escalera y un brocal alrededor.
+- **Con doble salto la cabeza salía por el techo**: la cámara llega ahora hasta 4,87 con el techo en
+  5,20.
+- **El ventanal de proa era una pared** vista de afuera: el casco del lomo tiene el hueco de verdad,
+  forrado, con **vidrio transparente** y el marco abrazando el hueco que existe.
+- El marco encendido de la puerta flotaba medio metro delante del casco (estaba pegado a la losa):
+  ahora está pegado a la cara de popa.
+
+**La base**
+- **El hangar era un bloque macizo con un portón pintado.** Ahora se entra: hueco de 15 × 9,4, las
+  dos hojas corridas sobre su riel, piso pisable, cuatro paredes de colisión, tubos de luz, líneas
+  de seguridad, cajones y banco de trabajo. El techo salía negro porque el metal sin mapa de entorno
+  no devuelve la lámpara: va en panel pintado mate.
+- **`cajaP` gira en X y en Z, nunca en Y**: los cajones y las bolsas de arena salían volcados, y
+  `cil` acuesta en Z, así que **las ruedas de los camiones miraban para adelante como platos** y la
+  manga de viento apuntaba mal. Van `cajaY` y `cilX`.
+- **Las losas de 0,4 a 0,9 m te hundían los pies** (dique de 0,9, garita de 0,4, hangar de 0,5):
+  ahora son losas bajas con piso.
+- **El portón estaba 74 m adentro de un cerco sin hueco.** El frente del cerco pasa por el pórtico y
+  deja el paso entre los postes; las barreras están levantadas y la garita va al costado del paso.
+- **44 pilares viejos del mundo grilla** seguían tirados al azar entre 14 y 100 m, sin colisión: uno
+  estaba adentro del hangar. Son las **balizas del camino de acceso**, afuera del portón, con un
+  camino de asfalto nuevo de 16 m (a 256 × 1024: con 128 px para 16 m la raya del medio medía un metro).
+- Cajones, bidones, bolsas de arena, manga y bandera ahora frenan; los cajones de estacionamiento
+  pintados están donde están los camiones y no debajo de los contenedores.
+
+Lo que costó una vuelta:
+- **Dos TDZ más, esquivados antes de que salieran**: `MAT_FRANJA` y `MUROS` se declaran más abajo de
+  donde los necesitaban `construirNave` y los pilares. La franja usa un material propio de la nave y
+  la colisión de las balizas la carga la base, que corre después.
+
+Medido: al hangar se entra y el piso da 0,15; el costado frena en x −17,58; el portón deja pasar y el
+cerco al lado frena en z −29,28; ningún pilar quedó adentro del cerco. Auditoría completa (pasto,
+escaleras, fotos, terminal, seis galaxias, aterrizaje) **sin errores**, 56 a 61 llamadas de dibujo.

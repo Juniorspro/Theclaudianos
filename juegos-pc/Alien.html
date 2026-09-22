@@ -395,7 +395,7 @@ mundo.add(suelo);
 
 /* pilares: dos mallas instanciadas = dos llamadas, haya 1 o 40 */
 (function pilares(){
-  const n = 44;
+  const n = 44;                                        /* 22 por fila */
   const cuerpo = new THREE.InstancedMesh(
     new THREE.BoxGeometry(1,1,1),
     new THREE.MeshStandardMaterial({color:col(0x59616e), roughness:0.62, metalness:0.28}), n);
@@ -410,15 +410,16 @@ mundo.add(suelo);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
   let sem = 20250922;
   const rnd = () => (sem = (sem*1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  /* Eran pilares tirados al azar en un anillo de 14 a 100 m: con la base encima caían adentro
+     del hangar, entre los tanques y sobre la plataforma, y se atravesaban. Ahora son las luces
+     de aproximación del camino de acceso, afuera del portón, en dos filas y con colisión. */
   for(let i=0;i<n;i++){
-    let x = 0, z = 0;
-    for(let t = 0; t < 12; t++){                      /* ningún pilar adentro del casco */
-      const a = rnd()*Math.PI*2, r = 14 + rnd()*86;
-      x = Math.cos(a)*r; z = Math.sin(a)*r;
-      if(!(x > -12 && x < 12 && z > 4 && z < 46)) break;
-    }
-    const alto = 3.2 + rnd()*9.5, ancho = 0.9 + rnd()*1.5;
-    e.set(0, rnd()*Math.PI, 0); q.setFromEuler(e);
+    const fila = i % 2 ? 1 : -1, k = (i/2)|0;
+    const x = fila*(9.5 + (k % 2)*0.0), z = -40 - k*3.9;
+    const alto = 1.1 + k*0.05, ancho = 0.55;
+    e.set(0, 0, 0); q.setFromEuler(e);
+    /* MUROS todavía no existe acá (se declara más abajo): la colisión la carga la base */
+    (mundo.userData.balizas || (mundo.userData.balizas = [])).push([x, z, alto]);
     m.compose(new THREE.Vector3(x, alto/2, z), q, new THREE.Vector3(ancho, alto, ancho));
     cuerpo.setMatrixAt(i, m);
     m.compose(new THREE.Vector3(x, alto+0.20, z), q, new THREE.Vector3(ancho*1.04, 0.26, ancho*1.04));
@@ -453,7 +454,7 @@ const MESA = {x:-4.0, z:24.5, alto:0.92};     /* dónde queda la cámara de foto
 const PANEL = {x:-2.7, z:30.6, abierto:false};  /* el pupitre de navegación */
 const COMPU = {x:4.55, z:20.3, abierto:false};  /* la terminal donde se venden las fotos */
 const PISOS = [], RAMPAS = [], MUROS = [], LAMPARAS = [];
-const BASE = {radar:null};
+const BASE = {radar:null, hangar:null};
 const piso = (x0,x1,z0,z1,y) => PISOS.push({x0,x1,z0,z1,y});
 const muro = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1});
 
@@ -517,18 +518,57 @@ const MAT_NAVE = {
                                           emissiveIntensity:1.5, roughness:0.4}),
   tobera: new THREE.MeshStandardMaterial({color:col(0x1a0d08), emissive:col(0xff7a2e),
                                           emissiveIntensity:1.5, roughness:0.5}),
+  franja: new THREE.MeshStandardMaterial({color:col(0x0a0704), emissive:col(0xffa03c),
+                                          emissiveIntensity:1.0, roughness:0.5}),
+  cristal: new THREE.MeshStandardMaterial({color:col(0xa8d4f0), roughness:0.06, metalness:0.3,
+                                           transparent:true, opacity:0.16, depthWrite:false,
+                                           side:THREE.DoubleSide}),
   vidrio: new THREE.MeshStandardMaterial({color:col(0x0b1622), emissive:col(0x12406a),
                                           emissiveIntensity:0.9, roughness:0.12, metalness:0.9})
 };
 
 (function construirNave(){
   const casco = [], oscuro = [], luces = [], vidrio = [], dentro = [], suelo = [],
-        tobera = [], plafon = [];
+        tobera = [], plafon = [], cristal = [], pintura = [];
   const zc = (N.z0 + N.z1)/2, zc2 = (N.z2 + N.z3)/2;
 
   /* ---------------- casco: la silueta le gana al detalle ---------------- */
-  casco.push(cajaP(15.4, 4.6, 30.0, 0, 3.30, 27));          /* panza */
-  casco.push(cajaP(13.0, 4.0, 24.0, 0, 7.40, 27));          /* lomo */
+  /* El casco es una CÁSCARA, no dos ladrillos. Con las cajas macizas la cara trasera de la
+     panza tapaba la puerta por fuera, la panza del lomo tapaba el hueco de la escalera desde la
+     bodega y el techo de la panza lo tapaba desde arriba. Cada cara va sólo donde hay casco. */
+  const PX = 7.7, PT = 0.4, PY0 = 1.0, PY1 = 5.6, PZ0 = 12.0, PZ1 = 42.0;
+  const BOCA = N.rampa.x + 0.12;               /* la boca de popa, un poco más ancha que la rampa */
+  const ancho = PX - PT - BOCA;
+  for(const l of [-1,1]){
+    casco.push(cajaP(PT, PY1-PY0, PZ1-PZ0, l*(PX-PT/2), (PY0+PY1)/2, (PZ0+PZ1)/2));      /* costados */
+    casco.push(cajaP(ancho, PY1-PY0, PT, l*(BOCA+ancho/2), (PY0+PY1)/2, PZ0+PT/2));       /* popa, a los lados de la boca */
+    casco.push(cajaP(ancho, 0.3, 14.0-PZ0-PT, l*(BOCA+ancho/2), PY0+0.15, (PZ0+PT+14.0)/2)); /* fondo bajo el túnel */
+    casco.push(cajaP(0.8, 0.28, PZ1-PZ0-2*PT, l*6.9, PY1-0.14, (PZ0+PZ1)/2));             /* techo al costado del lomo */
+  }
+  casco.push(cajaP((PX-PT)*2, 0.3, PZ1-14.0, 0, PY0+0.15, (14.0+PZ1)/2));                  /* fondo */
+  casco.push(cajaP(BOCA*2, PY1-(N.y0+N.dintel), PT, 0, (N.y0+N.dintel+PY1)/2, PZ0+PT/2));  /* dintel de la boca */
+  casco.push(cajaP(13.0, 0.28, 15.0-PZ0-PT, 0, PY1-0.14, (PZ0+PT+15.0)/2));                /* techo de popa */
+  casco.push(cajaP(13.0, 0.28, PZ1-PT-39.0, 0, PY1-0.14, (39.0+PZ1-PT)/2));                /* techo de proa */
+  casco.push(cajaP((PX-PT)*2, PY1-PY0-0.3, PT, 0, (PY0+0.3+PY1)/2, PZ1-PT/2));             /* cierre de proa */
+  /* el túnel de la boca: sin forro, por la puerta se veía el hueco entre casco y bodega */
+  for(const l of [-1,1]) oscuro.push(cajaP(0.3, N.dintel+0.3, 14.0-PZ0, l*(BOCA+0.15), N.y0 + N.dintel/2 - 0.15, (PZ0+14.0)/2));
+  oscuro.push(cajaP(BOCA*2+0.6, 0.3, 14.0-PZ0, 0, N.y0 + N.dintel + 0.15, (PZ0+14.0)/2));
+  for(const l of [-1,1]) luces.push(cajaP(0.06, 0.06, 14.0-PZ0-0.2, l*(BOCA-0.03), N.y0 + N.dintel - 0.06, (PZ0+14.0)/2));
+
+  /* lomo: x ±6,5, y 5,4-9,4, z 15-39, con el ventanal de proa abierto de verdad */
+  const LX = 6.5, LY0 = 5.4, LY1 = 9.4, LZ0 = 15.0, LZ1 = 39.0, LT = 0.4, lx = LX - LT;
+  for(const l of [-1,1]) casco.push(cajaP(LT, LY1-LY0, LZ1-LZ0, l*(LX-LT/2), (LY0+LY1)/2, (LZ0+LZ1)/2));
+  casco.push(cajaP(lx*2, LT, LZ1-LZ0, 0, LY1-LT/2, (LZ0+LZ1)/2));                         /* techo */
+  casco.push(cajaP(lx*2, LY1-LT-LY0, LT, 0, (LY0+LY1-LT)/2, LZ0+LT/2));                    /* cierre de popa */
+  const VX = 3.9, VA = N.y1 + 1.10, VB = N.y1 + 2.70, fy1 = LY1 - LT;   /* el mismo hueco que la pared de adentro */
+  casco.push(cajaP(lx*2, VA-LY0, LT, 0, (LY0+VA)/2, LZ1-LT/2));                            /* antepecho */
+  casco.push(cajaP(lx*2, fy1-VB, LT, 0, (VB+fy1)/2, LZ1-LT/2));                            /* dintel */
+  for(const l of [-1,1]) casco.push(cajaP(lx-VX, VB-VA, LT, l*(VX+(lx-VX)/2), (VA+VB)/2, LZ1-LT/2));
+  const tz0 = N.z3, tz1 = LZ1 - LT, tl = tz1 - tz0, tcz = (tz0 + tz1)/2;                    /* túnel del ventanal */
+  oscuro.push(cajaP(VX*2+0.3, 0.15, tl, 0, VA-0.075, tcz));
+  oscuro.push(cajaP(VX*2+0.3, 0.15, tl, 0, VB+0.075, tcz));
+  for(const l of [-1,1]) oscuro.push(cajaP(0.15, VB-VA, tl, l*(VX+0.075), (VA+VB)/2, tcz));
+  cristal.push(cajaP(VX*2, VB-VA, 0.04, 0, (VA+VB)/2, LZ1-0.30));                          /* vidrio que se ve a través */
   casco.push(cajaP(10.4, 3.4,  4.0, 0, 3.60, 41.0));        /* proa */
   casco.push(cajaP( 6.0, 2.4,  3.0, 0, 3.70, 43.4));
   for(const l of [-1,1]){
@@ -549,15 +589,15 @@ const MAT_NAVE = {
   }
   oscuro.push(cajaP(8.0, 2.0, 6.0, 0, 10.35, 34.0));        /* puente */
   vidrio.push(cajaP(7.2, 1.25, 0.35, 0, 10.45, 30.9));
-  oscuro.push(cajaP(10.2, 0.45, 0.6, 0, 6.62, 39.0));       /* marco del ventanal de proa */
-  oscuro.push(cajaP(10.2, 0.45, 0.6, 0, 8.38, 39.0));
-  for(const l of [-1,1]) oscuro.push(cajaP(0.5, 2.2, 0.6, l*4.3, 7.50, 39.0));
+  oscuro.push(cajaP(8.6, 0.34, 0.30, 0, N.y1 + 1.10 - 0.17, 39.12));   /* marco del ventanal de proa */
+  oscuro.push(cajaP(8.6, 0.34, 0.30, 0, N.y1 + 2.70 + 0.17, 39.12));
+  for(const l of [-1,1]) oscuro.push(cajaP(0.34, 1.94, 0.30, l*4.07, N.y1 + 1.90, 39.12));
   for(const l of [-1,1]) vidrio.push(cajaP(0.35, 1.5, 6.0, l*6.55, 7.60, 32.0));
-  /* puerta: va POR DELANTE de la cara de popa, si no el casco la tapa */
-  oscuro.push(cajaP(N.puerta*2+0.7, N.dintel+0.35, 0.55, 0, N.y0 + N.dintel/2, 11.72));
-  for(const l of [-1,1]) luces.push(cajaP(0.18, N.dintel+0.25, 0.20, l*(N.puerta+0.34),
-                                          N.y0 + N.dintel/2, 11.44));
-  luces.push(cajaP(N.puerta*2+0.7, 0.18, 0.20, 0, N.y0 + N.dintel + 0.17, 11.44));
+  /* marco encendido de la boca: pegado a la cara de popa, no flotando delante de una losa */
+  for(const l of [-1,1]) luces.push(cajaP(0.18, N.dintel+0.40, 0.14, l*(BOCA+0.09), N.y0 + N.dintel/2 - 0.1, PZ0 - 0.07));
+  luces.push(cajaP(BOCA*2+0.36, 0.18, 0.14, 0, N.y0 + N.dintel + 0.09, PZ0 - 0.07));
+  pintura.push(cajaP(BOCA*2, 0.03, 0.5, 0, N.y0*(PZ0 - 0.25 - N.rampa.z0)/(N.rampa.z1 - N.rampa.z0) + 0.14,
+                      PZ0 - 0.25, -Math.atan2(N.y0, N.rampa.z1 - N.rampa.z0)));   /* franja de peligro en la boca */
   /* líneas de panel: un casco liso de 30 m se lee a pared */
   for(let z = 15.0; z <= 39.0; z += 4.0){
     oscuro.push(cajaP(15.55, 0.20, 0.55, 0, 4.70, z));
@@ -567,7 +607,9 @@ const MAT_NAVE = {
 
   /* rampa de embarque, tipo compuerta de popa */
   const lr = Math.hypot(N.rampa.z1 - N.rampa.z0, N.y0);
-  const ang = Math.atan2(N.y0, N.rampa.z1 - N.rampa.z0);
+  /* el giro va NEGATIVO: con +ang el eje largo de la caja baja hacia +Z y la rampa quedaba
+     dibujada al revés (alta afuera, baja en la puerta) mientras la colisión subía bien */
+  const ang = -Math.atan2(N.y0, N.rampa.z1 - N.rampa.z0);
   oscuro.push(cajaP(N.rampa.x*2, 0.26, lr, 0, N.y0/2, (N.rampa.z0+N.rampa.z1)/2, ang));
   for(const l of [-1,1]){
     luces.push(cajaP(0.16, 0.34, lr, l*(N.rampa.x-0.12), N.y0/2+0.18, (N.rampa.z0+N.rampa.z1)/2, ang));
@@ -629,6 +671,15 @@ const MAT_NAVE = {
   suelo.push(cajaP(N.x*2, 0.08, N.z1-N.z0, 0, N.y0 - 0.04, zc));
   piso(-N.x, N.x, N.z0, N.z1, N.y0);
   const hz0 = N.esc.z - 0.3, hz1 = N.escZ1;
+  /* techo de la bodega: antes lo hacía la panza del lomo, que además tapaba la escalera */
+  const tY = N.y0 + N.alto;
+  [[-N.x, N.esc.x0, N.z0, N.z1], [N.esc.x0, N.x, N.z0, hz0], [N.esc.x0, N.x, hz1, N.z1],
+   [N.x2, N.x, hz0, hz1]].forEach(t =>
+    dentro.push(cajaP(t[1]-t[0], 0.10, t[3]-t[2], (t[0]+t[1])/2, tY + 0.05, (t[2]+t[3])/2)));
+  /* brocal: la rendija entre el techo de abajo y el piso de arriba se veía desde la escalera */
+  oscuro.push(cajaP(0.08, N.y1 - tY, hz1-hz0, N.esc.x0 - 0.04, (tY+N.y1)/2, (hz0+hz1)/2));
+  oscuro.push(cajaP(0.08, N.y1 - tY, hz1-hz0, N.x2 + 0.04, (tY+N.y1)/2, (hz0+hz1)/2));
+  oscuro.push(cajaP(N.x2-N.esc.x0+0.16, N.y1 - tY, 0.08, (N.esc.x0+N.x2)/2, (tY+N.y1)/2, hz0 - 0.04));
   const tramos = [[-N.x2, N.esc.x0, N.z2, N.z3], [N.esc.x0, N.x2, N.z2, hz0], [N.esc.x0, N.x2, hz1, N.z3]];
   tramos.forEach(t => {
     suelo.push(cajaP(t[1]-t[0], 0.16, t[3]-t[2], (t[0]+t[1])/2, N.y1-0.08, (t[2]+t[3])/2));
@@ -708,7 +759,11 @@ const MAT_NAVE = {
   for(const d of [{x:N.x, z0:N.z0, z1:N.z1, y:N.y0, a:N.alto}, {x:N.x2, z0:N.z2, z1:N.z3, y:N.y1, a:N.alto2}]){
     const techo = d.y + d.a;
     for(let z = d.z0 + 2.0; z < d.z1 - 1.0; z += 3.2){
-      oscuro.push(cajaP(d.x*2 - 0.6, 0.20, 0.40, 0, techo - 0.10, z));
+      /* en la bodega las vigas que caen sobre el hueco de la escalera se cortan: una viga de
+         lado a lado cruzaba el hueco a la altura de la cabeza */
+      const sobreHueco = d.y === N.y0 && z > N.esc.z - 0.6 && z < N.escZ1 + 0.3;
+      const xa = -(d.x - 0.3), xb = sobreHueco ? N.esc.x0 - 0.08 : d.x - 0.3;
+      oscuro.push(cajaP(xb - xa, 0.20, 0.40, (xa + xb)/2, techo - 0.10, z));
       plafon.push(cajaP(2.2, 0.08, 0.40, 0, techo - 0.22, z));
     }
   }
@@ -735,7 +790,8 @@ const MAT_NAVE = {
   const grupos = [[casco, MAT_NAVE.casco, 6.0], [oscuro, MAT_NAVE.oscuro, 3.0],
                   [luces, MAT_NAVE.luz, 2.0], [tobera, MAT_NAVE.tobera, 2.0],
                   [plafon, MAT_NAVE.plafon, 2.0], [vidrio, MAT_NAVE.vidrio, 4.0],
-                  [dentro, MAT_NAVE.dentro, 2.4], [suelo, MAT_NAVE.suelo, 2.0]];
+                  [dentro, MAT_NAVE.dentro, 2.4], [suelo, MAT_NAVE.suelo, 2.0],
+                  [cristal, MAT_NAVE.cristal, 4.0], [pintura, MAT_NAVE.franja, 1.0]];
   grupos.forEach(([p, mat, metros]) => {
     if(!p.length) return;
     const m = new THREE.Mesh(fundir(p, metros), mat);
@@ -759,6 +815,8 @@ const MAT_NAVE = {
 const MAT_BASE = {
   hormigon: new THREE.MeshStandardMaterial({color:col(0x6a6d70), roughness:0.95, metalness:0.03}),
   metal:    new THREE.MeshStandardMaterial({color:col(0x5d6168), roughness:0.55, metalness:0.62}),
+  /* el hangar va en panel pintado: un metal sin mapa de entorno no devuelve la lámpara de adentro */
+  panel:    new THREE.MeshStandardMaterial({color:col(0x8b9097), roughness:0.82, metalness:0.08}),
   oscuro:   new THREE.MeshStandardMaterial({color:col(0x2a2e34), roughness:0.7,  metalness:0.35}),
   verde:    new THREE.MeshStandardMaterial({color:col(0x4a5240), roughness:0.86, metalness:0.08}),
   pintura:  new THREE.MeshStandardMaterial({color:col(0x0d0a04), emissive:col(0xffb23c),
@@ -824,11 +882,11 @@ const MUROS_TIERRA = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1, soloT
   }
   g.restore();
   /* cajones de estacionamiento a los costados */
+  /* cajones de estacionamiento: donde están los camiones, no debajo de los contenedores */
   g.strokeStyle = '#cfc9b4'; g.lineWidth = 0.22*esc1;
-  for(let k = 0; k < 5; k++){
-    const z = 34 + k*5.5;
-    g.beginPath(); g.moveTo(px(-38), pz(z)); g.lineTo(px(-28), pz(z)); g.stroke();
-    g.beginPath(); g.moveTo(px( 28), pz(z)); g.lineTo(px( 38), pz(z)); g.stroke();
+  for(const [x0, x1, zs] of [[-17.5, -10.5, [34, 40.5, 47]], [29.5, 36.5, [34, 41]]]){
+    for(const z of zs){ g.beginPath(); g.moveTo(px(x0), pz(z)); g.lineTo(px(x1), pz(z)); g.stroke(); }
+    g.beginPath(); g.moveTo(px(x0), pz(zs[0])); g.lineTo(px(x0), pz(zs[zs.length-1])); g.stroke();
   }
 
   const t = new THREE.CanvasTexture(c);
@@ -841,153 +899,249 @@ const MUROS_TIERRA = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1, soloT
   mundo.add(m);
 })();
 
+/* ------------------------------------------------- camino de acceso */
+(function camino(){
+  /* 16 px por metro de ancho: con 128 px para 16 m la raya del medio se veía de un metro */
+  const W = 16, Z0 = -120, Z1 = -36, D = Z1 - Z0, CW = 256, CH = 1024;
+  const c = document.createElement('canvas'); c.width = CW; c.height = CH;
+  const g = c.getContext('2d'), mx = CW/W, mz = CH/D;
+  g.fillStyle = '#2f3134'; g.fillRect(0, 0, CW, CH);
+  for(let i = 0; i < 14000; i++){
+    g.fillStyle = 'rgba(' + (Math.random()<0.5?'0,0,0,':'255,255,255,') + (Math.random()*0.08).toFixed(3) + ')';
+    g.fillRect(Math.random()*CW, Math.random()*CH, 1 + Math.random()*3, 1 + Math.random()*3);
+  }
+  g.fillStyle = 'rgba(0,0,0,.28)';                               /* juntas cada 6 m */
+  for(let z = 0; z < D; z += 6) g.fillRect(0, z*mz, CW, 2);
+  g.fillStyle = '#d6d0bb';                                       /* bordes de 20 cm, a 70 cm del filo */
+  g.fillRect(0.7*mx, 0, 0.2*mx, CH); g.fillRect(CW - 0.9*mx, 0, 0.2*mx, CH);
+  g.fillStyle = '#d8c23c';                                       /* eje de 15 cm, 3 m de raya y 3 de hueco */
+  for(let z = 0; z < D; z += 6) g.fillRect(CW/2 - 0.075*mx, z*mz, 0.15*mx, 3*mz);
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = rend.capabilities.getMaxAnisotropy();
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(W, D),
+    new THREE.MeshStandardMaterial({map:t, roughness:0.93, metalness:0.04}));
+  m.rotation.x = -Math.PI/2; m.position.set(0, 0.025, (Z0 + Z1)/2);
+  m.receiveShadow = true; mundo.add(m);
+})();
+
 /* ------------------------------------------------- todo lo que se construye */
 (function base(){
-  const horm = [], met = [], osc = [], verde = [], pint = [], luces = [], vid = [];
-  const caja = (w,h,d,x,y,z,rz) => cajaP(w,h,d,x,y,z,rz);
-  const cil2 = (r,h,x,y,z,eje) => cil(r,h,x,y,z,eje);
+  const horm = [], met = [], osc = [], verde = [], pint = [], luces = [], vid = [], pan = [];
+  /* cajaP gira en X y en Z, NUNCA en Y: por eso los cajones salían volcados. Para girar en
+     planta va cajaY, y para acostar un cilindro de costado va cilX (cil lo acuesta en Z). */
+  const caja = (w,h,d,x,y,z) => cajaP(w,h,d,x,y,z);
+  const cajaY = (w,h,d,x,y,z,ry) => {
+    const m = new THREE.Matrix4();
+    m.compose(new THREE.Vector3(x,y,z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry||0, 0)),
+              new THREE.Vector3(w,h,d));
+    return {geo:_cajaG, m};
+  };
+  const cilY = (r,h,x,y,z) => cil(r,h,x,y,z,'y');
+  const cilZ = (r,h,x,y,z) => cil(r,h,x,y,z,'z');
+  const cilX = (r,h,x,y,z) => {
+    const m = new THREE.Matrix4();
+    m.compose(new THREE.Vector3(x,y,z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.PI/2)),
+              new THREE.Vector3(r,h,r));
+    return {geo:_cilG, m};
+  };
+  /* losas bajas y pisables: con 0,4-0,9 m de alto el jugador caminaba con los pies adentro */
+  const losa = (w, d, x, z, alto) => { horm.push(caja(w, alto, d, x, alto/2, z));
+                                       piso(x - w/2, x + w/2, z - d/2, z + d/2, alto); };
 
-  /* ---- hangar: nave de arco con portón oscuro y nervios ---- */
-  const HX = -31, HZ = 22, HW = 26, HD = 22, HH = 12;
-  horm.push(caja(HW+1.2, 0.5, HD+1.2, HX, 0.25, HZ));                 /* zócalo */
-  met.push(caja(HW, HH, 0.9, HX, HH/2, HZ - HD/2));                    /* frente */
-  met.push(caja(HW, HH, 0.9, HX, HH/2, HZ + HD/2));                    /* fondo */
-  met.push(caja(0.9, HH, HD, HX - HW/2, HH/2, HZ));
-  met.push(caja(0.9, HH, HD, HX + HW/2, HH/2, HZ));
-  met.push(caja(HW+0.6, 0.8, HD+0.6, HX, HH, HZ));                     /* techo */
-  for(let k = -4; k <= 4; k++) osc.push(caja(0.5, 0.45, HD+0.7, HX + k*2.6, HH + 0.5, HZ));
-  osc.push(caja(15, 9.4, 1.2, HX, 4.7, HZ - HD/2 - 0.3));              /* portón */
-  for(let k = -3; k <= 3; k++) met.push(caja(0.35, 9.0, 0.25, HX + k*2.1, 4.7, HZ - HD/2 - 0.95));
-  pint.push(caja(15.4, 0.35, 0.3, HX, 0.35, HZ - HD/2 - 1.0));
-  luces.push(caja(1.8, 0.35, 0.25, HX - 5.5, 10.2, HZ - HD/2 - 0.7));
-  luces.push(caja(1.8, 0.35, 0.25, HX + 5.5, 10.2, HZ - HD/2 - 0.7));
-  MUROS_TIERRA(HX-HW/2-0.5, HX+HW/2+0.5, HZ-HD/2-0.6, HZ+HD/2+0.6, 0, HH);
+  /* ---- hangar: se entra de verdad ---- */
+  const HX = -31, HZ = 22, HW = 26, HD = 22, HH = 12, PA = 15.0, PH = 9.4;   /* portón de 15 x 9,4 */
+  const zF = HZ - HD/2, zB = HZ + HD/2, xL = HX - HW/2, xR = HX + HW/2, T = 0.6;
+  losa(HW + 1.2, HD + 1.2, HX, HZ, 0.15);
+  pan.push(caja(HW, HH, T, HX, HH/2, zB - T/2));                            /* fondo */
+  pan.push(caja(T, HH, HD, xL + T/2, HH/2, HZ));                            /* costados */
+  pan.push(caja(T, HH, HD, xR - T/2, HH/2, HZ));
+  const lado = (HW - PA)/2;                                                 /* frente con el hueco */
+  pan.push(caja(lado, HH, T, xL + lado/2, HH/2, zF + T/2));
+  pan.push(caja(lado, HH, T, xR - lado/2, HH/2, zF + T/2));
+  pan.push(caja(PA, HH - PH, T, HX, PH + (HH - PH)/2, zF + T/2));          /* dintel */
+  pan.push(caja(HW + 0.6, 0.8, HD + 0.6, HX, HH + 0.4, HZ));               /* techo */
+  for(let k = -4; k <= 4; k++) osc.push(caja(0.5, 0.45, HD + 0.7, HX + k*2.6, HH + 1.02, HZ));
+  /* las dos hojas del portón, corridas a los costados sobre sus rieles */
+  for(const l of [-1, 1]){
+    const cx = HX + l*(PA/2 + PA/4);
+    osc.push(caja(PA/2, PH, 0.5, cx, PH/2, zF - 0.4));
+    for(let k = 0; k < 4; k++) met.push(caja(0.22, PH - 0.4, 0.14, cx - PA/4 + 0.9 + k*1.9, PH/2, zF - 0.72));
+    pint.push(caja(PA/2, 0.3, 0.1, cx, 1.1, zF - 0.7));
+    met.push(caja(0.5, PH + 0.6, 0.6, HX + l*(PA + 0.25), (PH + 0.6)/2, zF - 0.4));   /* poste del riel */
+    MUROS_TIERRA(Math.min(cx - PA/4, HX + l*(PA + 0.5)), Math.max(cx + PA/4, HX + l*(PA + 0.5)), zF - 0.7, zF, 0, PH);
+  }
+  met.push(caja(PA*2 + 1.0, 0.4, 0.5, HX, PH + 0.25, zF - 0.4));           /* riel de arriba */
+  pint.push(caja(PA, 0.02, 0.35, HX, 0.16, zF + 0.5));                      /* umbral pintado */
+  luces.push(caja(1.8, 0.35, 0.25, HX - 5.5, PH + 1.2, zF - 0.1));
+  luces.push(caja(1.8, 0.35, 0.25, HX + 5.5, PH + 1.2, zF - 0.1));
+  /* adentro: tubos de luz, líneas de seguridad en el piso y lo que se guarda */
+  for(let k = 0; k < 3; k++) luces.push(caja(0.35, 0.12, HD - 4, HX - 7 + k*7, HH - 0.25, HZ));
+  for(const x of [HX - PA/2 + 0.3, HX + PA/2 - 0.3]) pint.push(caja(0.2, 0.02, HD - 2, x, 0.16, HZ));
+  pint.push(caja(PA - 0.4, 0.02, 0.2, HX, 0.16, zB - 3));
+  for(const [x, z, ry] of [[HX - 9, zB - 3.5, 0], [HX - 9, zB - 6, 0.2], [HX + 9, zB - 4, -0.3]]){
+    verde.push(cajaY(2.4, 1.8, 2.4, x, 0.15 + 0.9, z, ry));
+    verde.push(cajaY(2.0, 1.2, 2.0, x + 0.2, 0.15 + 2.4, z - 0.1, ry + 0.4));
+    MUROS_TIERRA(x - 1.4, x + 1.4, z - 1.4, z + 1.4, 0, 3);
+  }
+  osc.push(caja(4.0, 0.9, 1.2, HX + 8, 0.15 + 0.45, HZ - 2));              /* banco de trabajo */
+  met.push(caja(4.2, 0.08, 1.4, HX + 8, 0.15 + 0.94, HZ - 2));
+  MUROS_TIERRA(HX + 5.9, HX + 10.1, HZ - 2.7, HZ - 1.3, 0, 1.1);
+  /* colisión del hangar: cuatro paredes y el portón abierto, no un bloque macizo */
+  MUROS_TIERRA(xL, xR, zB - T, zB, 0, HH);
+  MUROS_TIERRA(xL, xL + T, zF, zB, 0, HH);
+  MUROS_TIERRA(xR - T, xR, zF, zB, 0, HH);
+  MUROS_TIERRA(xL, HX - PA/2, zF, zF + T, 0, HH);
+  MUROS_TIERRA(HX + PA/2, xR, zF, zF + T, 0, HH);
+  BASE.hangar = {x:HX, z:HZ, luz:[HX, HH - 1.5, HZ]};
 
   /* ---- torre de control ---- */
   const TX = 33, TZ = 50;
-  horm.push(caja(9, 0.5, 9, TX, 0.25, TZ));
+  losa(9, 9, TX, TZ, 0.15);
   met.push(caja(5.4, 15, 5.4, TX, 7.5, TZ));
   for(let k = 1; k < 5; k++) osc.push(caja(5.8, 0.3, 5.8, TX, k*3, TZ));
-  met.push(caja(8.4, 0.6, 8.4, TX, 15.3, TZ));                         /* piso de la cabina */
+  osc.push(caja(1.6, 2.4, 0.2, TX, 1.35, TZ - 2.75));                      /* puerta de servicio */
+  met.push(caja(8.4, 0.6, 8.4, TX, 15.3, TZ));
   vid.push(caja(7.6, 2.6, 7.6, TX, 17.0, TZ));
-  met.push(caja(8.8, 0.7, 8.8, TX, 18.5, TZ));                         /* alero */
-  met.push(cil2(0.14, 5.0, TX, 21.2, TZ, 'y'));                        /* mástil */
-  luces.push(caja(0.6, 0.6, 0.6, TX, 19.2, TZ));                       /* baliza */
-  MUROS_TIERRA(TX-4.4, TX+4.4, TZ-4.4, TZ+4.4, 0, 19);
+  met.push(caja(8.8, 0.7, 8.8, TX, 18.5, TZ));
+  met.push(cilY(0.14, 5.0, TX, 21.2, TZ));
+  luces.push(caja(0.6, 0.6, 0.6, TX, 23.9, TZ));                            /* baliza en la punta del mástil */
+  MUROS_TIERRA(TX - 2.9, TX + 2.9, TZ - 2.9, TZ + 2.9, 0, 19);
 
-  /* ---- tanques de combustible con su dique ---- */
+  /* ---- tanques: losa baja, dique con colisión, caños que llegan a algún lado ---- */
   const QX = 34, QZ = 6;
-  horm.push(caja(22, 0.9, 16, QX, 0.45, QZ));
-  for(const [dx, dz] of [[-6,-4],[0,3],[6,-4]]){
-    met.push(cil2(3.2, 8.0, QX+dx, 4.9, QZ+dz, 'y'));
-    osc.push(cil2(3.35, 0.4, QX+dx, 8.9, QZ+dz, 'y'));
-    pint.push(cil2(3.3, 0.35, QX+dx, 2.4, QZ+dz, 'y'));
-    MUROS_TIERRA(QX+dx-3.3, QX+dx+3.3, QZ+dz-3.3, QZ+dz+3.3, 0, 9);
+  losa(22, 16, QX, QZ, 0.12);
+  for(const [dx, dz] of [[-6,-3.5],[0,3],[6,-3.5]]){
+    met.push(cilY(3.2, 8.0, QX+dx, 4.12, QZ+dz));
+    osc.push(cilY(3.35, 0.4, QX+dx, 8.32, QZ+dz));
+    pint.push(cilY(3.25, 0.35, QX+dx, 2.2, QZ+dz));
+    osc.push(cilZ(0.22, 1.6, QX+dx, 0.9, QZ+dz - 3.9));                     /* boca de carga */
   }
-  osc.push(caja(20, 1.4, 0.7, QX, 1.6, QZ - 8));                       /* murete del dique */
-  osc.push(caja(20, 1.4, 0.7, QX, 1.6, QZ + 8));
-  osc.push(caja(0.7, 1.4, 16, QX - 11, 1.6, QZ));
-  osc.push(caja(0.7, 1.4, 16, QX + 11, 1.6, QZ));
-  for(let k = 0; k < 6; k++) met.push(cil2(0.16, 12, QX - 8 + k*0.5, 8.2 + k*0.02, QZ - 9 - k*0.6, 'z'));
+  const dique = [[22, 0.5, QX, QZ - 7.75], [22, 0.5, QX, QZ + 7.75], [0.5, 16, QX - 10.75, QZ], [0.5, 16, QX + 10.75, QZ]];
+  for(const [w, d, x, z] of dique){
+    osc.push(caja(w, 1.2, d, x, 0.72, z));
+    MUROS_TIERRA(x - w/2, x + w/2, z - d/2, z + d/2, 0, 1.3);
+  }
+  for(let k = 0; k < 3; k++){                                               /* caños al borde del dique */
+    met.push(cilX(0.16, 20, QX, 1.7 + k*0.45, QZ - 8.4));
+    met.push(caja(0.2, 1.8 + k*0.45, 0.2, QX - 9.5 + k*9.5, (1.8 + k*0.45)/2, QZ - 8.4));
+  }
 
-  /* ---- contenedores apilados ---- */
+  /* ---- contenedores apilados, parejos ---- */
   const CX = -30, CZ = 50;
-  for(let f = 0; f < 3; f++) for(let a = 0; a < 2; a++){
-    const x = CX + f*7.0, y = 1.35 + a*2.7, z = CZ + (f%2)*0.4;
-    (a ? verde : osc).push(caja(6.4, 2.6, 2.5, x, y, z));
-    met.push(caja(0.25, 2.7, 2.6, x - 3.2, y, z));
-    met.push(caja(0.25, 2.7, 2.6, x + 3.2, y, z));
-    if(!a) MUROS_TIERRA(x-3.3, x+3.3, z-1.4, z+1.4, 0, 5.5);
-  }
-  /* ---- cajones sueltos y bidones ---- */
-  for(const [x, z, r] of [[-14,-6,0.3],[-11.5,-6.4,0],[-13,-9,0.6],[16,52,0.2],[19,50,0.5]]){
-    verde.push(caja(1.6, 1.2, 1.2, x, 0.6, z, r));
-    osc.push(caja(1.7, 0.12, 1.3, x, 1.22, z, r));
-  }
-  for(const [x, z] of [[-17,-4],[-18.4,-5.6],[-16.2,-6.8],[22,54],[23.5,52.6]]){
-    osc.push(cil2(0.42, 1.1, x, 0.55, z, 'y'));
-    pint.push(cil2(0.44, 0.14, x, 0.85, z, 'y'));
+  for(let f = 0; f < 3; f++){
+    const x = CX + f*7.0, z = CZ;
+    for(let a = 0; a < 2; a++){
+      const y = 1.3 + a*2.62;
+      (a ? verde : osc).push(caja(6.1, 2.6, 2.44, x, y, z));
+      met.push(caja(0.16, 2.62, 2.5, x - 3.06, y, z));                       /* puertas y esquineros */
+      met.push(caja(0.16, 2.62, 2.5, x + 3.06, y, z));
+    }
+    MUROS_TIERRA(x - 3.2, x + 3.2, z - 1.3, z + 1.3, 0, 5.3);
   }
 
-  /* ---- camiones estacionados ---- */
-  for(const [x, z, gir] of [[-14, 44, 0], [-14, 39, 0], [24, 40, Math.PI]]){
-    verde.push(caja(2.6, 1.5, 3.2, x, 1.85, z));                        /* caja */
-    verde.push(caja(2.4, 1.3, 2.0, x, 1.65, z - 2.6));                  /* cabina */
-    osc.push(caja(2.5, 0.5, 5.6, x, 0.95, z - 1.0));                    /* chasis */
-    vid.push(caja(2.0, 0.7, 0.2, x, 1.95, z - 3.55));
-    for(const [dx, dz] of [[-1.25,-2.9],[1.25,-2.9],[-1.25,0.4],[1.25,0.4],[-1.25,1.6],[1.25,1.6]])
-      osc.push(cil2(0.55, 0.42, x+dx, 0.55, z+dz, 'x'));
-    MUROS_TIERRA(x-1.5, x+1.5, z-4, z+2, 0, 3);
+  /* ---- cajones y bidones: parados derechos y con colisión ---- */
+  for(const [x, z, ry] of [[-13, -6, 0.3], [-10.8, -6.8, 0], [-12.2, -9, 0.6], [17, 52, 0.2], [19.4, 50.5, 0.5]]){
+    verde.push(cajaY(1.6, 1.2, 1.2, x, 0.6, z, ry));
+    osc.push(cajaY(1.7, 0.12, 1.3, x, 1.26, z, ry));
+    MUROS_TIERRA(x - 0.95, x + 0.95, z - 0.95, z + 0.95, 0, 1.3);
+  }
+  for(const [x, z] of [[-16.5, -4], [-17.6, -5.3], [-16, -6.4], [22, 54], [23.3, 52.8]]){
+    osc.push(cilY(0.42, 1.1, x, 0.55, z));
+    pint.push(cilY(0.44, 0.14, x, 0.85, z));
+    MUROS_TIERRA(x - 0.45, x + 0.45, z - 0.45, z + 0.45, 0, 1.1);
   }
 
-  /* ---- torres de luz: la base se lee de noche por esto ---- */
-  const FAROS = [[-34, -6], [34, -6], [-34, 58], [34, 58]];
-  for(const [x, z] of FAROS){
-    horm.push(caja(2.2, 0.6, 2.2, x, 0.3, z));
-    met.push(cil2(0.22, 13, x, 6.8, z, 'y'));
+  /* ---- camiones en sus cajones, con las ruedas de canto ---- */
+  for(const [x, z] of [[-14, 37.5], [-14, 43.5], [33, 37.5]]){
+    verde.push(caja(2.6, 1.6, 3.4, x, 1.9, z + 0.4));                        /* caja */
+    verde.push(caja(2.4, 1.4, 1.9, x, 1.8, z - 2.3));                        /* cabina */
+    osc.push(caja(2.5, 0.5, 5.8, x, 0.95, z - 0.6));                         /* chasis */
+    vid.push(caja(2.0, 0.6, 0.06, x, 2.1, z - 3.26));                         /* parabrisas */
+    luces.push(caja(0.3, 0.16, 0.06, x - 0.9, 1.25, z - 3.52));
+    luces.push(caja(0.3, 0.16, 0.06, x + 0.9, 1.25, z - 3.52));
+    for(const [dx, dz] of [[-1.28,-2.6],[1.28,-2.6],[-1.28,0.6],[1.28,0.6],[-1.28,1.8],[1.28,1.8]])
+      osc.push(cilX(0.55, 0.42, x + dx, 0.55, z + dz));
+    MUROS_TIERRA(x - 1.5, x + 1.5, z - 3.6, z + 2.2, 0, 2.8);
+  }
+
+  /* ---- torres de luz ---- */
+  for(const [x, z] of [[-34, -6], [34, -16], [-34, 58], [34, 58]]){
+    losa(2.2, 2.2, x, z, 0.15);
+    met.push(cilY(0.22, 13, x, 6.65, z));
     met.push(caja(3.0, 0.3, 1.0, x, 13.3, z));
     for(let k = -1; k <= 1; k++) luces.push(caja(0.85, 0.5, 0.55, x + k*1.0, 13.0, z - 0.1));
-    MUROS_TIERRA(x-0.6, x+0.6, z-0.6, z+0.6, 0, 13);
+    MUROS_TIERRA(x - 0.4, x + 0.4, z - 0.4, z + 0.4, 0, 13);
   }
 
-  /* ---- manga de viento y bandera ---- */
-  met.push(cil2(0.13, 9, 17, 4.5, -8, 'y'));
-  pint.push(cil2(0.55, 2.6, 17.9, 8.6, -8, 'x'));
-  met.push(cil2(0.12, 11, -12, 5.5, -9, 'y'));
-  verde.push(caja(2.6, 1.6, 0.08, -10.6, 10.1, -9));
+  /* ---- manga de viento (de costado, no apuntando al piso) y bandera ---- */
+  met.push(cilY(0.13, 9, 17, 4.5, -8));
+  pint.push(cilX(0.5, 2.4, 18.3, 8.6, -8));
+  MUROS_TIERRA(16.8, 17.2, -8.2, -7.8, 0, 9);
+  met.push(cilY(0.12, 11, -12, 5.5, -12));
+  verde.push(caja(2.6, 1.6, 0.06, -10.6, 10.1, -12));
+  MUROS_TIERRA(-12.2, -11.8, -12.2, -11.8, 0, 11);
 
-  /* ---- puesto de guardia y portón ---- */
+  /* ---- portón: ahora ES la entrada del cerco, no un pórtico suelto 74 m adentro ---- */
   const GZ = -30;
-  horm.push(caja(14, 0.4, 7, 0, 0.2, GZ));
-  met.push(caja(3.0, 3.0, 3.0, 6.2, 1.5, GZ));
-  vid.push(caja(2.2, 1.1, 0.12, 6.2, 2.1, GZ - 1.55));
-  luces.push(caja(1.2, 0.18, 0.5, 6.2, 3.1, GZ - 1.4));
-  MUROS_TIERRA(4.6, 7.8, GZ-1.6, GZ+1.6, 0, 3.2);
-  /* pórtico del portón: es lo que se lee de lejos y dice que esto es una base */
   for(const l of [-1, 1]){
     met.push(caja(1.0, 6.6, 1.0, l*9.5, 3.3, GZ));
     osc.push(caja(1.4, 0.5, 1.4, l*9.5, 0.35, GZ));
-    MUROS_TIERRA(l*9.5-0.7, l*9.5+0.7, GZ-0.7, GZ+0.7, 0, 6.6);
+    MUROS_TIERRA(l*9.5 - 0.6, l*9.5 + 0.6, GZ - 0.6, GZ + 0.6, 0, 6.6);
+    /* barreras levantadas: se puede pasar, y se ve que se podría no poder */
+    const px = l*8.4, ang = 1.05, L = 7.2;
+    met.push(caja(0.5, 1.3, 0.5, px, 0.65, GZ + 1.2));
+    pint.push(cajaP(L, 0.2, 0.2, px - l*Math.cos(ang)*L/2, 1.3 + Math.sin(ang)*L/2, GZ + 1.2, 0, l*ang));
+    MUROS_TIERRA(px - 0.3, px + 0.3, GZ + 0.9, GZ + 1.5, 0, 1.3);
   }
   met.push(caja(20.0, 1.0, 0.8, 0, 6.3, GZ));
   pint.push(caja(13.0, 1.5, 0.28, 0, 6.3, GZ - 0.5));
   luces.push(caja(0.7, 0.5, 0.3, -6.5, 5.5, GZ - 0.5));
   luces.push(caja(0.7, 0.5, 0.3,  6.5, 5.5, GZ - 0.5));
-  for(const l of [-1, 1]){                                              /* barreras */
-    met.push(cil2(0.16, 3.4, l*4.2, 1.7, GZ, 'y'));
-    pint.push(caja(8.0, 0.22, 0.22, l*8.4, 1.9, GZ));
-  }
-  for(const [x, z] of [[-9,-27],[-9.6,-28.6],[-8.2,-29.2],[9,-27],[9.6,-28.6]]){   /* bolsas de arena */
-    verde.push(caja(1.3, 0.45, 0.8, x, 0.22, z, 0.1));
-    verde.push(caja(1.2, 0.45, 0.75, x + 0.2, 0.67, z - 0.1, -0.08));
+  /* garita adentro, al costado del paso */
+  const GX = -14, GZ2 = GZ + 4;
+  losa(5, 5, GX, GZ2, 0.12);
+  met.push(caja(3.0, 2.8, 3.0, GX, 0.12 + 1.4, GZ2));
+  vid.push(caja(2.2, 1.0, 0.06, GX, 1.9, GZ2 - 1.52));
+  vid.push(caja(0.06, 1.0, 2.2, GX + 1.52, 1.9, GZ2));
+  met.push(caja(3.4, 0.2, 3.4, GX, 3.02, GZ2));
+  luces.push(caja(1.2, 0.18, 0.4, GX, 2.8, GZ2 - 1.6));
+  MUROS_TIERRA(GX - 1.55, GX + 1.55, GZ2 - 1.55, GZ2 + 1.55, 0, 3.1);
+  for(const [x, z, ry] of [[GX + 3.2, GZ2 - 1.4, 0.1], [GX + 3.3, GZ2 + 0.1, -0.05], [GX + 3.1, GZ2 + 1.5, 0.12]]){
+    verde.push(cajaY(0.8, 0.45, 1.3, x, 0.35, z, ry));
+    verde.push(cajaY(0.75, 0.45, 1.2, x - 0.05, 0.8, z + 0.1, ry - 0.08));
+    MUROS_TIERRA(x - 0.5, x + 0.5, z - 0.75, z + 0.75, 0, 1.0);
   }
 
-  /* ---- cerco perimetral con postes ---- */
-  const L = 104;
-  for(const eje of ['x', 'z']){
-    for(let k = -L; k <= L; k += 5.2){
-      if(eje === 'z' && Math.abs(k) < 9) continue;                      /* el hueco del portón */
-      for(const s2 of [-1, 1]){
-        const x = eje === 'x' ? k : s2*L, z = eje === 'x' ? s2*L : k;
-        if(eje === 'z' && s2 === -1 && Math.abs(k) < 9) continue;
-        met.push(cil2(0.09, 3.0, x, 1.5, z, 'y'));
-      }
-    }
-    /* los tres alambres: un tirante largo por lado */
-    for(const s2 of [-1, 1]) for(const y of [0.7, 1.6, 2.5]){
-      if(eje === 'x') osc.push(caja(L*2, 0.06, 0.06, 0, y, s2*L));
-      else            osc.push(caja(0.06, 0.06, L*2, s2*L, y, 0));
-    }
+  /* ---- cerco: el frente pasa por el portón y deja el hueco entre los postes ---- */
+  const L = 104, ZF = GZ, pos = new Set();
+  const poste = (x, z) => { const k = x.toFixed(1) + ',' + z.toFixed(1);
+                            if(pos.has(k)) return; pos.add(k); met.push(cilY(0.09, 3.0, x, 1.5, z)); };
+  for(let x = -L; x <= L + 0.01; x += 5.2){
+    poste(x, L);
+    if(Math.abs(x) > 9.6) poste(x, ZF);
   }
-  MUROS_TIERRA(-L-0.6, L+0.6, -L-0.6, -L+0.6, 0, 3);
-  MUROS_TIERRA(-L-0.6, L+0.6,  L-0.6,  L+0.6, 0, 3);
-  MUROS_TIERRA(-L-0.6, -L+0.6, -L-0.6, L+0.6, 0, 3);
-  MUROS_TIERRA( L-0.6,  L+0.6, -L-0.6, L+0.6, 0, 3);
+  for(let z = ZF; z <= L + 0.01; z += 5.2){ poste(-L, z); poste(L, z); }
+  for(const y of [0.7, 1.6, 2.5]){
+    osc.push(caja(L*2, 0.06, 0.06, 0, y, L));                                 /* fondo */
+    osc.push(caja(0.06, 0.06, L - ZF, -L, y, (L + ZF)/2));                  /* costados */
+    osc.push(caja(0.06, 0.06, L - ZF, L, y, (L + ZF)/2));
+    osc.push(caja(L - 10, 0.06, 0.06, -(L + 10)/2, y, ZF));                  /* frente, a los lados del portón */
+    osc.push(caja(L - 10, 0.06, 0.06,  (L + 10)/2, y, ZF));
+  }
+  MUROS_TIERRA(-L - 0.3, L + 0.3, L - 0.3, L + 0.3, 0, 3);
+  MUROS_TIERRA(-L - 0.3, -L + 0.3, ZF, L, 0, 3);
+  MUROS_TIERRA( L - 0.3,  L + 0.3, ZF, L, 0, 3);
+  MUROS_TIERRA(-L, -10, ZF - 0.3, ZF + 0.3, 0, 3);
+  MUROS_TIERRA( 10,  L, ZF - 0.3, ZF + 0.3, 0, 3);
+
+  /* las balizas del camino de acceso (los pilares viejos): colisión acá, que MUROS ya existe */
+  for(const [x, z, alto] of (mundo.userData.balizas || []))
+    MUROS_TIERRA(x - 0.35, x + 0.35, z - 0.35, z + 0.35, 0, alto + 0.3);
 
   const grupos = [[horm, MAT_BASE.hormigon, 4.0], [met, MAT_BASE.metal, 3.0],
                   [osc, MAT_BASE.oscuro, 2.0], [verde, MAT_BASE.verde, 2.0],
                   [pint, MAT_BASE.pintura, 2.0], [luces, MAT_BASE.farol, 2.0],
-                  [vid, MAT_BASE.vidrio, 3.0]];
+                  [vid, MAT_BASE.vidrio, 3.0], [pan, MAT_BASE.panel, 3.0]];
   grupos.forEach(([piezas, mat, metros]) => {
     if(!piezas.length) return;
     const m = new THREE.Mesh(fundir(piezas, metros), mat);
@@ -996,8 +1150,7 @@ const MUROS_TIERRA = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1, soloT
 
   /* el radar gira: es lo único que se mueve en la base */
   const radar = new THREE.Group(); radar.position.set(44, 0, 34);
-  const pie = new THREE.Mesh(fundir([cil(0.5, 7, 0, 3.5, 0, 'y'), cajaP(3, 0.5, 3, 0, 0.25, 0)], 3), MAT_BASE.metal);
-  radar.add(pie);
+  radar.add(new THREE.Mesh(fundir([cil(0.5, 7, 0, 3.5, 0, 'y'), cajaP(3, 0.5, 3, 0, 0.25, 0)], 3), MAT_BASE.metal));
   const plato = new THREE.Group(); plato.position.y = 7.2; radar.add(plato);
   const cuenco = new THREE.Mesh(new THREE.SphereGeometry(2.4, 20, 10, 0, Math.PI*2, 0, Math.PI*0.4),
     new THREE.MeshStandardMaterial({color:col(0x7f858c), roughness:0.6, metalness:0.35, side:THREE.DoubleSide}));
@@ -1008,10 +1161,11 @@ const MUROS_TIERRA = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1, soloT
   BASE.radar = plato;
   MUROS_TIERRA(42.5, 45.5, 32.5, 35.5, 0, 7);
 
-  /* dos luces de verdad: sin esto la base de noche es una silueta plana */
-  for(const [x, z] of [[-34, -6], [34, 58]]){
-    const l = new THREE.PointLight(col(0xffe3b8), 1.35, 62, 1.5);
-    l.position.set(x, 12.6, z); mundo.add(l);
+  /* luces de verdad: dos torres y el hangar por dentro, si no adentro es una cueva */
+  for(const [x, y, z, i, d] of [[-34, 12.6, -6, 1.35, 62], [34, 12.6, 58, 1.35, 62],
+                                 [HX, HH - 1.6, HZ, 1.7, 34]]){
+    const l = new THREE.PointLight(col(0xffe3b8), i, d, 1.5);
+    l.position.set(x, y, z); mundo.add(l);
   }
 })();
 
@@ -3162,6 +3316,13 @@ function paso(dt){
   const suelo = alturaEn(jug.pos.x, jug.pos.z, Math.max(yAntes, jug.pos.y));
   if(jug.pos.y <= suelo){ jug.pos.y = suelo; jug.vel.y = 0; jug.enSuelo = true; jug.saltos = 0; }
   else jug.enSuelo = false;
+
+  /* el techo existe: con doble salto la cabeza salía por arriba de la bodega */
+  const cubT = enNave(jug.pos.x, jug.pos.y, jug.pos.z);
+  if(cubT){
+    const tope = cubT.y1 - CFG.ojo - 0.22;
+    if(jug.pos.y > tope){ jug.pos.y = tope; if(jug.vel.y > 0) jug.vel.y = 0; }
+  }
 
   const lim = CFG.corral;
   jug.pos.x = clamp(jug.pos.x, -lim, lim);
