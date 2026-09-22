@@ -118,3 +118,27 @@ Dos cosas que costaron una vuelta:
   la misma partida. El azar visual ahora sale de `Math.random`.
 - **Medir sin calentar miente**: el mismo banco daba 2,7 ms o 5,6 ms para el mismo dibujo. Con 200
   cuadros de calentamiento, la textura de tierra no cuesta nada medible (6,2 vs 6,2 ms).
+
+### 2026-09-22 (noche) — render pixel art y el enredo de los dos Rezona
+**Pedido textual:** «Necesito que sean pixelart y hechos si o si con Rezona si necesitas key manda
+limk» + el sprite del protagonista.
+
+**Los dos Rezona no son el mismo servicio.** El usuario generaba sin problema en `rezona.ai/studio`
+(la web) mientras acá todo rebotaba: el MCP habla con `lab.rezona.ai/game/pgcserver`, que es el
+backend de juegos, y ese tiene el cobro caído. Misma cuenta, mismos 446.069 créditos, distinto
+servicio. **Tres keys distintas dieron el mismo error**, así que pedir otra key no arregla nada.
+Camino que sí destraba: que el usuario genere en Studio y adjunte las imágenes al chat — llegan como
+archivo local y se hornean igual.
+
+El juego pasó a **pixel art de verdad**: el mundo se dibuja en un lienzo chico (`ANCHO/PX`, con PX
+entero, 2 en 412×892) y se agranda con `imageSmoothingEnabled=false`; el HUD se sigue dibujando en el
+lienzo grande, así que el texto queda nítido. Se apaga con `PIXELADO=false`.
+
+- Escala **entera** o no sirve: con 1,94 los píxeles salen de distinto tamaño y tiembla todo.
+- `J.cam.esc` pasó a valer PX, así que todo lo que hacía `ANCHO/cam.esc` siguió andando sin tocarse.
+- Los patrones se crean con el contexto del mundo, no con el de pantalla.
+- Medido con calentamiento, misma escena: **6,4 → 2,6 ms** por cuadro. Son 4 veces menos píxeles.
+
+El protagonista es ahora el del sprite de referencia, armado por partes dentro del rig (pelo naranja
+en púas que se tira con la carrera, vincha con gema y colas que flamean, ojos blancos que se
+entrecierran al pegar, gi gris, faja verde). La paleta salió de contar colores del PNG, no a ojo.
