@@ -243,6 +243,216 @@ const clamp = (v,a,b) => v<a?a:(v>b?b:v);
 const lerp = (a,b,t) => a+(b-a)*t;
 const acercar = (a,b,t) => a + (b-a)*(1-Math.exp(-t));
 
+/* ================================================================== sonido
+   La guía (sección 7): cada efecto se busca POR NOMBRE en window.SONIDOS (un data: de audio que
+   genere Rezona) y, si no está, se sintetiza: lo generado pisa a lo sintetizado sin tocar una
+   línea. No se compone música en código. El audio arranca con el primer toque (antes el
+   navegador no deja), lo lejano va por una reverberación armada al arrancar (ruido que se apaga
+   en 2,6 s) y paneado según dónde está, y lo que se repite varía el tono ±10%. */
+const SON = (function(){
+  let ctx = null, sal = null, rev = null, ruidoB = null, medidor = null;
+  const bufs = {}, capas = {}, ultimo = {};
+  const rnd = (a, b) => a + Math.random()*(b - a);
+  const ahora = () => ctx.currentTime;
+  function gan(v, dest){ const g = ctx.createGain(); g.gain.value = v; if(dest) g.connect(dest); return g; }
+  function fil(tipo, f, q, dest){ const b = ctx.createBiquadFilter(); b.type = tipo; b.frequency.value = f;
+    if(q !== undefined) b.Q.value = q; if(dest) b.connect(dest); return b; }
+  function ruido(dest, t0, dur){ const n = ctx.createBufferSource(); n.buffer = ruidoB; n.loop = true;
+    n.connect(dest); n.start(t0, Math.random()*1.9); if(dur) n.stop(t0 + dur); return n; }
+  function osc(tipo, f, dest, t0, dur){ const o = ctx.createOscillator(); o.type = tipo; o.frequency.value = f;
+    o.connect(dest); o.start(t0); if(dur) o.stop(t0 + dur); return o; }
+  function golpe(g, t0, pico, ataque, caida){ const q = g.gain; q.setValueAtTime(0.0001, t0);
+    q.exponentialRampToValueAtTime(Math.max(pico, 0.0002), t0 + ataque);
+    q.exponentialRampToValueAtTime(0.0001, t0 + ataque + caida); }
+  /* entrada de un efecto: sin posición va directo; con posición se panea y, cuanto más lejos,
+     más va a la reverberación (lo lejano sin reverberación suena a habitación) */
+  function destino(pos, envio){
+    const e = ctx.createGain();
+    if(!pos){ e.connect(sal); if(envio) e.connect(gan(envio, rev)); return e; }
+    const p = ctx.createPanner(); p.panningModel = 'equalpower'; p.distanceModel = 'inverse';
+    p.refDistance = 8; p.rolloffFactor = 0.9; p.maxDistance = 3000;
+    if(p.positionX){ p.positionX.value = pos.x; p.positionY.value = pos.y; p.positionZ.value = pos.z; }
+    else p.setPosition(pos.x, pos.y, pos.z);
+    e.connect(p); p.connect(sal);
+    e.connect(gan(Math.min(0.95, (envio || 0.2) + cam.position.distanceTo(pos)/140), rev));
+    return e;
+  }
+
+  const FX = {
+    paso(o){                                   /* la suela, el golpe y, en la chapa, la chapa */
+      const t = ahora(), v = 0.19*(o.f || 1), metal = o.sup === 'metal';
+      const d = destino(null, metal ? 0.10 : 0.03);
+      const g1 = gan(0, d); ruido(fil('bandpass', metal ? rnd(1900, 2700) : rnd(650, 1050), 0.9, g1), t, 0.12);
+      golpe(g1, t, v, 0.002, metal ? 0.045 : 0.07);
+      const g2 = gan(0, d); osc('sine', rnd(60, 82), g2, t, 0.16); golpe(g2, t, v*1.3, 0.003, 0.09);
+      if(metal){ const g3 = gan(0, d); osc('triangle', rnd(520, 780), g3, t, 0.3); golpe(g3, t + 0.004, v*0.22, 0.002, 0.16); }
+    },
+    salto(){ const t = ahora(), g = gan(0, destino(null, 0.02)), b = fil('bandpass', 420, 0.8, g);
+      b.frequency.setValueAtTime(420, t); b.frequency.exponentialRampToValueAtTime(1500, t + 0.16);
+      ruido(b, t, 0.26); golpe(g, t, 0.07, 0.03, 0.15); },
+    cae(o){ const t = ahora(), f = Math.min(1.6, o.f || 1), metal = o.sup === 'metal', d = destino(null, metal ? 0.2 : 0.05);
+      const g = gan(0, d); osc('sine', 55, g, t, 0.36); golpe(g, t, 0.34*f, 0.004, 0.22);
+      const g2 = gan(0, d); ruido(fil('lowpass', metal ? 2600 : 900, 0.7, g2), t, 0.2); golpe(g2, t, 0.17*f, 0.002, 0.11);
+      if(metal){ const g3 = gan(0, d); osc('triangle', 310, g3, t, 0.9); osc('triangle', 467, g3, t, 0.9); golpe(g3, t + 0.005, 0.07*f, 0.002, 0.55); } },
+    clic(){ const t = ahora(), g = gan(0, destino(null, 0)); osc('square', 2400, fil('bandpass', 2400, 3, g), t, 0.04);
+      golpe(g, t, 0.05, 0.001, 0.03); },
+    negado(){ const t = ahora(), g = gan(0, destino(null, 0.05)), b = fil('lowpass', 900, 1, g);
+      osc('square', 110, b, t, 0.28); osc('square', 116, b, t, 0.28); golpe(g, t, 0.07, 0.005, 0.22); },
+    obturador(){ const t = ahora(), d = destino(null, 0.06);   /* cortina, espejo y el trinquete del arrastre */
+      for(const [dt, f, v] of [[0, 3800, 0.22], [0.055, 2600, 0.15]]){
+        const g = gan(0, d); ruido(fil('highpass', f, 0.7, g), t + dt, 0.05); golpe(g, t + dt, v, 0.001, 0.025); }
+      const g = gan(0, d); ruido(fil('bandpass', 1500, 2, g), t + 0.18, 0.44);
+      const q = g.gain; q.setValueAtTime(0, t);
+      for(let i = 0; i < 12; i++){ const ti = t + 0.18 + i*0.032; q.setValueAtTime(0.09, ti); q.setTargetAtTime(0, ti + 0.004, 0.006); } },
+    tomar(){ const t = ahora(), d = destino(null, 0.05);
+      const g = gan(0, d); ruido(fil('bandpass', 1200, 1.4, g), t, 0.08); golpe(g, t, 0.16, 0.002, 0.05);
+      const g2 = gan(0, d); osc('sine', 180, g2, t, 0.12); golpe(g2, t, 0.12, 0.003, 0.08); },
+    venta(){ const t = ahora(), d = destino(null, 0.2);
+      [[1318.5, 0], [1760, 0.09], [2637, 0.18]].forEach(([f, dt]) => { const g = gan(0, d);
+        osc('sine', f, g, t + dt, 1.2); osc('sine', f*2.01, g, t + dt, 0.6); golpe(g, t + dt, 0.08, 0.004, 0.9); });
+      const g = gan(0, d); ruido(fil('highpass', 5000, 0.7, g), t, 0.3); golpe(g, t, 0.05, 0.002, 0.2); },
+    compra(){ const t = ahora(), d = destino(null, 0.2);
+      [[523.25, 0], [659.25, 0.07], [783.99, 0.14], [1046.5, 0.21]].forEach(([f, dt]) => { const g = gan(0, d);
+        osc('triangle', f, g, t + dt, 0.7); golpe(g, t + dt, 0.08, 0.004, 0.5); }); },
+    esclusa(){ const t = ahora(), d = destino(null, 0.15);   /* el aire que se va o que vuelve */
+      const g = gan(0, d), b = fil('lowpass', 3200, 0.5, g);
+      b.frequency.setValueAtTime(3200, t); b.frequency.exponentialRampToValueAtTime(300, t + 1.4);
+      ruido(b, t, 1.6); golpe(g, t, 0.16, 0.05, 1.3);
+      const g2 = gan(0, d); osc('sine', 48, g2, t, 0.4); golpe(g2, t, 0.25, 0.004, 0.3); },
+    saltoGalaxia(){ const t = ahora(), d = destino(null, 0.6);
+      const g = gan(0, d), b = fil('bandpass', 180, 1.2, g);
+      b.frequency.setValueAtTime(180, t); b.frequency.exponentialRampToValueAtTime(3800, t + 1.3);
+      ruido(b, t, 1.6); const q = g.gain; q.setValueAtTime(0.0001, t);
+      q.exponentialRampToValueAtTime(0.3, t + 1.2); q.exponentialRampToValueAtTime(0.0001, t + 1.55);
+      const g2 = gan(0, d), o = osc('sine', 70, g2, t + 1.25, 2.2);
+      o.frequency.setValueAtTime(70, t + 1.25); o.frequency.exponentialRampToValueAtTime(32, t + 3.2);
+      golpe(g2, t + 1.25, 0.5, 0.01, 1.9); },
+    encendido(){ const t = ahora(), d = destino(null, 0.5);   /* los motores prenden */
+      const g = gan(0, d); ruido(fil('lowpass', 500, 0.8, g), t, 1.6); golpe(g, t, 0.45, 0.02, 1.4);
+      const g2 = gan(0, d); osc('sine', 40, g2, t, 1.5); golpe(g2, t, 0.5, 0.01, 1.3); },
+    golpePuerta(){ const t = ahora(), d = destino(null, 0.3);
+      const g = gan(0, d); osc('sine', 46, g, t, 0.7); golpe(g, t, 0.4, 0.005, 0.5);
+      const g2 = gan(0, d); ruido(fil('lowpass', 700, 0.8, g2), t, 0.25); golpe(g2, t, 0.2, 0.002, 0.16); },
+    soga(){ const t = ahora(), g = gan(0, destino(null, 0.05)); ruido(fil('bandpass', 260, 3, g), t, 0.35);
+      const q = g.gain; q.setValueAtTime(0, t);
+      for(let i = 0; i < 8; i++){ const ti = t + i*0.035 + Math.random()*0.01; q.setValueAtTime(0.12, ti); q.setTargetAtTime(0, ti + 0.005, 0.01); } },
+    latido(o){ const t = ahora(), d = destino(null, 0.05);
+      for(const [dt, v] of [[0, 1], [0.19, 0.7]]){ const g = gan(0, d), w = osc('sine', 64, g, t + dt, 0.25);
+        w.frequency.setValueAtTime(64, t + dt); w.frequency.exponentialRampToValueAtTime(40, t + dt + 0.12);
+        golpe(g, t + dt, 0.3*o.f*v, 0.006, 0.14); } },
+    presencia(o){ const t = ahora(), g = gan(0, destino(o.pos, 0.5)), b = fil('lowpass', 420, 1, g);   /* algo grande, lejos */
+      const f0 = o.grande ? 38 : 72, f1 = o.grande ? 29 : 53;
+      for(const k of [1, 1.013, 0.497]){ const w = osc('sawtooth', f0*k, b, t, 4.3);
+        w.frequency.setValueAtTime(f0*k, t); w.frequency.linearRampToValueAtTime(f1*k, t + 3.9); }
+      const q = g.gain; q.setValueAtTime(0.0001, t);
+      q.exponentialRampToValueAtTime(o.grande ? 0.55 : 0.24, t + 1.2); q.exponentialRampToValueAtTime(0.0001, t + 4.1); }
+  };
+
+  /* capas que no paran: viento, la nave, el motor, la puerta, el traje y lo que se acerca */
+  function armarCapas(){
+    const t = ahora();
+    { const g = gan(0, sal), b = fil('bandpass', 520, 0.55, g); ruido(fil('lowpass', 1400, 0.5, b), t); capas.viento = {g, b}; }
+    { const g = gan(0, sal); osc('sawtooth', 50, fil('lowpass', 240, 0.7, g), t); osc('sine', 100, gan(0.6, g), t);
+      ruido(fil('bandpass', 1900, 8, gan(0.3, g)), t); capas.nave = {g}; }
+    { const g = gan(0, sal), lp = fil('lowpass', 300, 0.8, g); ruido(lp, t);
+      osc('sawtooth', 36, fil('lowpass', 160, 1, gan(0.6, g)), t); capas.motor = {g, lp}; }
+    { const g = gan(0, sal); ruido(fil('lowpass', 170, 0.9, g), t); osc('square', 92, fil('lowpass', 400, 1, gan(0.25, g)), t); capas.puerta = {g}; }
+    { const g = gan(0, sal), b = fil('bandpass', 950, 1.1, g); ruido(b, t); capas.resp = {g, b}; }
+    { const g = gan(0, sal); ruido(fil('highpass', 2200, 0.6, g), t); capas.chorro = {g}; }
+    { const g = gan(0, sal), lp = fil('lowpass', 150, 1.2, g); osc('sawtooth', 41, lp, t); osc('sawtooth', 41.8, lp, t); capas.peligro = {g}; }
+  }
+
+  function arrancar(){
+    if(ctx){ if(ctx.state === 'suspended' && !document.hidden) ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+    try { ctx = new AC(); } catch(e){ ctx = null; return; }
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.25;
+    sal = ctx.createGain(); sal.gain.value = 0.85; sal.connect(comp); comp.connect(ctx.destination);
+    medidor = ctx.createAnalyser(); medidor.fftSize = 2048; comp.connect(medidor);
+    ruidoB = ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate);
+    const d = ruidoB.getChannelData(0); for(let i = 0; i < d.length; i++) d[i] = Math.random()*2 - 1;
+    const L = Math.floor(ctx.sampleRate*2.6), imp = ctx.createBuffer(2, L, ctx.sampleRate);
+    for(let c = 0; c < 2; c++){ const x = imp.getChannelData(c); let lp = 0;        /* -60 dB a los 2,6 s, oscura */
+      for(let i = 0; i < L; i++){ lp += (Math.random()*2 - 1 - lp)*0.35; x[i] = lp*Math.exp(-6.9*i/L); } }
+    rev = ctx.createConvolver(); rev.buffer = imp; rev.connect(gan(0.6, sal));
+    const mudo = ctx.createBufferSource(); mudo.buffer = ctx.createBuffer(1, 1, 22050); mudo.connect(sal); mudo.start(0);   /* iOS */
+    const S = window.SONIDOS || {};
+    Object.keys(S).forEach(k => { try {
+      const bin = atob(String(S[k]).split(',').pop()), u = new Uint8Array(bin.length);
+      for(let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      ctx.decodeAudioData(u.buffer, b => { bufs[k] = b; }, () => {});
+    } catch(e){} });
+    armarCapas();
+  }
+
+  /* un efecto por nombre: lo generado si está (con el tono corrido ±10%), si no el sintetizado */
+  function fx(nombre, o){
+    if(!ctx || ctx.state !== 'running') return false;
+    o = o || {};
+    const t = ahora();
+    if(o.cada && ultimo[nombre] && t - ultimo[nombre] < o.cada) return false;
+    ultimo[nombre] = t;
+    const b = bufs[nombre + (o.sup ? '_' + o.sup : '')] || bufs[nombre];
+    if(b){ const n = ctx.createBufferSource(); n.buffer = b; n.playbackRate.value = rnd(0.9, 1.1);
+      const g = gan(Math.min(1.5, o.f || 1), destino(o.pos || null, o.pos ? 0.3 : 0.08)); n.connect(g); n.start(t); return true; }
+    if(FX[nombre]){ FX[nombre](o); return true; }
+    return false;
+  }
+
+  let rafaga = 0, rafagaObj = 0, tRaf = 0, fResp = 0, latido = 0, xPuerta = null, vPuerta = 0, estadoAntes = 'tierra';
+  const _d = new THREE.Vector3();
+  function cuadro(dt){
+    if(!ctx || ctx.state !== 'running' || !dt) return;
+    const t = ahora(), L = ctx.listener;
+    cam.getWorldDirection(_d);
+    if(L.positionX){ L.positionX.value = cam.position.x; L.positionY.value = cam.position.y; L.positionZ.value = cam.position.z;
+      L.forwardX.value = _d.x; L.forwardY.value = _d.y; L.forwardZ.value = _d.z; L.upX.value = 0; L.upY.value = 1; L.upZ.value = 0; }
+    else { L.setPosition(cam.position.x, cam.position.y, cam.position.z); L.setOrientation(_d.x, _d.y, _d.z, 0, 1, 0); }
+    const eva = EVA.activa, adentro = !eva && !!enNave(jug.pos.x, jug.pos.y, jug.pos.z), esp = VUELO.espacio;
+    tRaf -= dt; if(tRaf <= 0){ rafagaObj = Math.random(); tRaf = rnd(1.5, 4.5); }        /* ráfagas */
+    rafaga += (rafagaObj - rafaga)*Math.min(1, dt*0.8);
+    capas.viento.g.gain.setTargetAtTime((1 - esp)*(adentro ? 0.03 : 0.09 + 0.10*rafaga), t, 0.3);
+    capas.viento.b.frequency.setTargetAtTime(380 + 420*rafaga, t, 0.4);
+    capas.nave.g.gain.setTargetAtTime(adentro ? 0.045 : (eva ? 0.01 : 0), t, 0.5);
+    const e = VUELO; let m = 0;
+    if(e.estado === 'subiendo') m = Math.min(1, e.t/1.0)*(1 - 0.6*clamp((e.t - 5)/2, 0, 1));
+    else if(e.estado === 'bajando') m = 0.5;
+    else if(e.estado === 'espacio') m = 0.12;
+    if(e.estado === 'subiendo' && estadoAntes === 'tierra') fx('encendido');
+    estadoAntes = e.estado;
+    capas.motor.g.gain.setTargetAtTime(m*0.5*(eva ? 0.3 : 1), t, 0.25);
+    capas.motor.lp.frequency.setTargetAtTime(180 + 1300*m, t, 0.3);
+    const xp = compuerta[0].position.x, vp = xPuerta === null ? 0 : Math.abs(xp - xPuerta)/dt; xPuerta = xp;
+    capas.puerta.g.gain.setTargetAtTime(Math.min(1, vp/0.8)*0.10, t, 0.08);
+    if(vPuerta > 0.15 && vp < 0.01) fx('golpePuerta');
+    vPuerta = vp;
+    if(eva){ fResp += dt/4.2; const c = fResp % 1;                  /* adentro del casco se oye respirar */
+      const r = c < 0.35 ? Math.sin(c/0.35*Math.PI) : (c < 0.8 ? 0.7*Math.sin((c - 0.35)/0.45*Math.PI) : 0);
+      capas.resp.g.gain.setTargetAtTime(0.045*r*(1 + BICHOS.peligro*1.3), t, 0.08);
+      capas.resp.b.frequency.setTargetAtTime(c < 0.35 ? 1100 : 780, t, 0.1); }
+    else capas.resp.g.gain.setTargetAtTime(0, t, 0.2);
+    capas.chorro.g.gain.setTargetAtTime(eva ? SON.chorro*0.05 : 0, t, 0.06);
+    const pe = BICHOS.peligro;
+    capas.peligro.g.gain.setTargetAtTime(pe*pe*0.5, t, 0.4);
+    if(pe > 0.15){ latido -= dt; if(latido <= 0){ latido = 60/(55 + 70*pe); fx('latido', {f:pe}); } }
+  }
+
+  /* el primer toque arranca todo; con la pestaña escondida se suspende */
+  const tocar = e => {
+    arrancar();
+    const b = e && e.type === 'pointerdown' && e.target && e.target.closest &&
+              e.target.closest('#especies,#panelb,#compub,#usar,#volar,.cerrar,button,#listagal > *,#copia');
+    if(b) fx('clic', {cada:0.05});
+  };
+  ['pointerdown', 'touchstart', 'keydown'].forEach(ev => window.addEventListener(ev, tocar, {capture:true, passive:true}));
+  document.addEventListener('visibilitychange', () => { if(!ctx) return; if(document.hidden) ctx.suspend(); else ctx.resume(); });
+  function nivel(){ if(!medidor) return 0; const a = new Float32Array(medidor.fftSize); medidor.getFloatTimeDomainData(a);
+    let s = 0; for(let i = 0; i < a.length; i++) s += a[i]*a[i]; return Math.sqrt(s/a.length); }
+  return {arrancar, fx, cuadro, nivel, chorro:0, estado: () => ctx ? ctx.state : 'sin arrancar',
+          nombres: () => Object.keys(FX), generados: () => Object.keys(bufs)};
+})();
+
 /* -------------------------------------------------------------- renderer */
 const lienzo = document.getElementById('lienzo');
 const rend = new THREE.WebGLRenderer({canvas:lienzo, antialias:true, powerPreference:'high-performance'});
@@ -1525,6 +1735,61 @@ const polvo = (function(){
   esc.add(pts); return pts;
 })();
 
+/* POLVO EN EL AIRE (la guía: todo se mueve un poco). Una caja de 10 x 5 x 10 m que viaja con
+   la cabeza: cada mota da la vuelta dentro de la caja en el vértice, así nunca se acaban. Al sol
+   brillan mirando hacia él (el polvo desvía la luz hacia adelante); adentro, apenas y parejas;
+   en el espacio no hay. Una sola llamada. */
+const MOTAS = (function(){
+  const n = 720, caja = new THREE.Vector3(10, 5, 10), base = new Float32Array(n*3), fase = new Float32Array(n);
+  let sem = 4242; const rnd = () => (sem = (sem*1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  for(let i = 0; i < n; i++){ base[i*3] = rnd()*caja.x; base[i*3+1] = rnd()*caja.y; base[i*3+2] = rnd()*caja.z; fase[i] = rnd()*6.283; }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(base, 3));
+  g.setAttribute('aFase', new THREE.BufferAttribute(fase, 1));
+  const U = {uCam:{value:new THREE.Vector3()}, uCaja:{value:caja}, uT:{value:0}, uPx:{value:400},
+             uSol:{value:SOL_DIR}, uAfuera:{value:1}, uVer:{value:1}, uColSol:{value:col(0xffc890)},
+             uColDentro:{value:col(0xcfe0ff)}};
+  const m = new THREE.ShaderMaterial({uniforms:U, transparent:true, depthWrite:false,
+    blending:THREE.AdditiveBlending, fog:false,
+    vertexShader:`
+      attribute float aFase; uniform vec3 uCam, uCaja; uniform float uT, uPx;
+      varying float vA; varying vec3 vDir;
+      void main(){
+        vec3 viento = vec3(0.23, 0.04, 0.11)*uT;
+        vec3 bamb = vec3(sin(uT*0.7 + aFase), sin(uT*0.53 + aFase*1.7), cos(uT*0.61 + aFase))*0.18;
+        vec3 p = mod(position + viento + bamb - uCam + uCaja*0.5, uCaja) - uCaja*0.5 + uCam;
+        vec4 mv = viewMatrix*vec4(p, 1.0);
+        float d = -mv.z;
+        vA = smoothstep(0.25, 0.9, d)*(1.0 - smoothstep(3.2, 4.9, d));
+        vDir = normalize(p - uCam);
+        gl_PointSize = max(1.0, 0.016*uPx/max(d, 0.1));
+        gl_Position = projectionMatrix*mv;
+      }`,
+    fragmentShader:`
+      uniform vec3 uSol, uColSol, uColDentro; uniform float uAfuera, uVer;
+      varying float vA; varying vec3 vDir;
+      void main(){
+        float r = length(gl_PointCoord - 0.5);
+        float a = smoothstep(0.5, 0.1, r)*vA*uVer;
+        float fase = 0.22 + 2.6*pow(max(dot(vDir, uSol), 0.0), 7.0);   /* hacia el sol, brilla */
+        vec3 c = mix(uColDentro*0.20, uColSol*fase*0.55, uAfuera);
+        gl_FragColor = vec4(c*a, 1.0);
+      }`});
+  const pts = new THREE.Points(g, m); pts.frustumCulled = false; pts.renderOrder = 2;
+  esc.add(pts);
+  return {pts, U, afuera:1};
+})();
+function pasoMotas(dt, adentro){
+  const U = MOTAS.U;
+  U.uT.value += dt || 0;
+  U.uCam.value.copy(cam.position);
+  U.uPx.value = rend.getContext().drawingBufferHeight / (2*Math.tan(cam.fov*Math.PI/360));
+  MOTAS.afuera += ((adentro ? 0 : 1) - MOTAS.afuera) * (dt ? Math.min(1, dt*1.5) : 1);
+  U.uAfuera.value = MOTAS.afuera;
+  U.uVer.value = 1 - VUELO.espacio;
+  MOTAS.pts.visible = U.uVer.value > 0.01;
+}
+
 function despegar(){ if(VUELO.estado === 'tierra'){ VUELO.estado = 'subiendo'; VUELO.t = 0; } }
 function aterrizar(){ if(VUELO.estado === 'espacio'){ VUELO.estado = 'bajando'; VUELO.t = 0; } }
 
@@ -1619,6 +1884,7 @@ const camaraObj = (function(){
 const GIRO_MANO = new THREE.Euler(0, Math.PI, 0);   /* medido mirando la captura, no adivinado */
 function tomarCamara(){
   if(FOTO.tiene) return;
+  SON.fx('tomar');
   let mano = null;
   if(mezcla.raiz) mezcla.raiz.traverse(o => { if(!mano && o.isBone && /righthand$/i.test(o.name)) mano = o; });
   if(mano){
@@ -1685,7 +1951,8 @@ function bichoEnCuadro(){
 
 function sacarFoto(){
   if(!FOTO.tiene || FOTO.abierta) return null;
-  if(FOTO.rollo.length >= camAct().carrete) return null;   /* carrete lleno: hay que ir a vender */
+  if(FOTO.rollo.length >= camAct().carrete){ SON.fx('negado'); return null; }   /* carrete lleno: hay que ir a vender */
+  SON.fx('obturador');
   const presa = bichoEnCuadro();
   let anota = {nombre:'PLACA VELADA', detalle:'no entró nada en el cuadro', precio:0};
   if(presa){
@@ -2599,6 +2866,7 @@ function soltarBicho(){
                  ANCLA.y + Math.sin(el)*d*0.8 + 2,
                  ANCLA.z - 4 - Math.abs(Math.cos(a))*d*0.7);
   esc.add(b); BICHOS.vivos.push(b);
+  SON.fx('presencia', {pos:b.position, grande:!!b.userData.colosal, cada:3});
   return b;
 }
 /* _cajaG/_cilG/_esferaG son COMPARTIDAS: los bichos las usan directas para los pedazos
@@ -3004,10 +3272,11 @@ function aplicarGalaxia(i){
 }
 function viajarA(i){
   if(GAL.saltando > 0) return;
-  if(!galaxiaAbierta(i)) return;        /* sin el motor, ese rumbo no se puede poner */
+  if(!galaxiaAbierta(i)){ SON.fx('negado'); return; }   /* sin el motor, ese rumbo no se puede poner */
   cerrarPanel();
   if(VUELO.estado !== 'espacio'){ aplicarGalaxia(i); return; }   /* en tierra queda el rumbo puesto */
   GAL.saltando = 1.6;
+  SON.fx('saltoGalaxia');
   dFogo.style.transition = 'none'; dFogo.style.opacity = '1';
   setTimeout(() => {
     aplicarGalaxia(i);
@@ -3043,6 +3312,7 @@ const gancho = (function(){                       /* el anclaje, para que la sog
 function salirAlEspacio(){
   if(EVA.activa || VUELO.estado !== 'espacio') return;
   EVA.activa = true; EVA.t = 0;
+  SON.fx('esclusa');
   jug.pos.set(ANCLA.x, ANCLA.y + 0.3, ANCLA.z - 2.4);
   jug.vel.set(0, 0.4, -2.2);
   jug.enSuelo = false;
@@ -3051,7 +3321,8 @@ function salirAlEspacio(){
 }
 function entrarDeNuevo(){
   if(!EVA.activa) return;
-  EVA.activa = false;
+  EVA.activa = false; SON.chorro = 0;
+  SON.fx('esclusa');
   soga.visible = false;
   jug.pos.set(0, N.y0, N.z0 + 1.6);
   jug.vel.set(0, 0, 0);
@@ -3073,6 +3344,7 @@ function pasoEva(dt, ix, iy, mag, salto){
     jug.vel.z += (derZ*ix + _dirEva.z*(-iy))*emp*dt;
   }
   if(salto) jug.vel.y += 6.2*dt*60*0.016;
+  SON.chorro = Math.min(1, (mag > 0.05 ? mag : 0) + (salto ? 1 : 0));
   jug.vel.multiplyScalar(1 - Math.min(dt*0.85, 0.5));      /* el traje frena de a poco */
   jug.pos.addScaledVector(jug.vel, dt);
 
@@ -3084,6 +3356,7 @@ function pasoEva(dt, ix, iy, mag, salto){
     jug.pos.copy(ANCLA).addScaledVector(_tmpEva, EVA.largo);
     const hacia = jug.vel.dot(_tmpEva);
     if(hacia > 0) jug.vel.addScaledVector(_tmpEva, -hacia*1.6);   /* rebota tenso */
+    if(hacia > 0.6) SON.fx('soga', {cada:0.7});
   }
   resolverMuros();
 
@@ -3117,7 +3390,70 @@ function pasoEva(dt, ix, iy, mag, salto){
 }
 
 /* las texturas generadas pisan al color plano cuando decodifican, no antes */
-function meterTextura(b64, mats){
+/* RELIEVE DESDE LA LUMINANCIA: en chapa remachada y en tread de diamante lo oscuro ES lo hondo.
+   Diferencias con vuelta (como np.roll) para que las normales también se repitan sin costura, y
+   un suavizado de 3x3 antes, si no el grano de la jpeg sale como arena. Devuelve también el
+   promedio lineal de la textura, para que un material que la toma conserve su color medio. */
+function relieveDe(im, fuerza){
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d'); g.drawImage(im, 0, 0, S, S);
+  const d = g.getImageData(0, 0, S, S), px = d.data, L = new Float32Array(S*S), H = new Float32Array(S*S);
+  let media = 0;
+  for(let i = 0; i < S*S; i++){
+    const l = (0.2126*px[i*4] + 0.7152*px[i*4+1] + 0.0722*px[i*4+2]) / 255;
+    L[i] = l; media += Math.pow(l, 2.2);
+  }
+  media /= S*S;
+  for(let y = 0; y < S; y++) for(let x = 0; x < S; x++){
+    let a = 0;
+    for(let j = -1; j <= 1; j++){ const f = ((y + j + S) % S)*S;
+      for(let i = -1; i <= 1; i++) a += L[f + (x + i + S) % S]; }
+    H[y*S + x] = a/9;
+  }
+  for(let y = 0; y < S; y++) for(let x = 0; x < S; x++){
+    const dx = (H[y*S + (x + 1) % S] - H[y*S + (x + S - 1) % S]) * fuerza;
+    const dy = (H[((y + 1) % S)*S + x] - H[((y + S - 1) % S)*S + x]) * fuerza;
+    /* con flipY la fila crece cuando v baja: -dh/dv es +dh/dfila */
+    const k = 1/Math.sqrt(dx*dx + dy*dy + 1), i = (y*S + x)*4;
+    px[i] = (-dx*k*0.5 + 0.5)*255; px[i+1] = (dy*k*0.5 + 0.5)*255; px[i+2] = (k*0.5 + 0.5)*255; px[i+3] = 255;
+  }
+  g.putImageData(d, 0, 0);
+  const t = new THREE.CanvasTexture(c);                 /* normales: SIN sRGB */
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = rend.capabilities.getMaxAnisotropy();
+  return {normal:t, media};
+}
+/* hormigón de código (plan B de la guía: sin Rezona, se dibuja): ruido de valor en cuatro octavas
+   sobre rejillas que dan la vuelta, así el lienzo se repite; poros y un grano fino encima */
+function hormigonDeCodigo(){
+  const S = 256, c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d'), d = g.createImageData(S, S);
+  let sem = 91731; const rnd = () => (sem = (sem*1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const lisa = t => t*t*(3 - 2*t);
+  const oct = [[8, 0.45], [16, 0.25], [32, 0.18], [64, 0.12]].map(([P, a]) => {
+    const v = new Float32Array(P*P); for(let i = 0; i < P*P; i++) v[i] = rnd(); return [P, a, v]; });
+  for(let y = 0; y < S; y++) for(let x = 0; x < S; x++){
+    let h = 0;
+    for(const [P, a, v] of oct){
+      const fx = x/S*P, fy = y/S*P, ix = Math.floor(fx), iy = Math.floor(fy), tx = lisa(fx - ix), ty = lisa(fy - iy);
+      const i0 = ix % P, i1 = (ix + 1) % P, j0 = iy % P, j1 = (iy + 1) % P;
+      const a0 = v[j0*P + i0]*(1 - tx) + v[j0*P + i1]*tx, a1 = v[j1*P + i0]*(1 - tx) + v[j1*P + i1]*tx;
+      h += (a0*(1 - ty) + a1*ty)*a;
+    }
+    const poro = rnd() < 0.018 ? -0.22 : 0;
+    const l = Math.max(0, Math.min(1, 0.56 + (h - 0.5)*0.6 + poro + (rnd() - 0.5)*0.07));
+    const i = (y*S + x)*4; d.data[i] = Math.min(255, l*262); d.data[i+1] = l*255; d.data[i+2] = l*246; d.data[i+3] = 255;
+  }
+  g.putImageData(d, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = rend.capabilities.getMaxAnisotropy();
+  const rel = relieveDe(c, 1.6), m = MAT_BASE.hormigon;
+  m.map = t; m.color.multiplyScalar(1/Math.max(0.05, rel.media));
+  m.normalMap = rel.normal; m.normalScale.set(0.8, 0.8); m.needsUpdate = true;
+  return 'hormigón de código';
+}
+function meterTextura(b64, mats, opc){
+  opc = opc || {};
   return new Promise((ok, fallo) => {
     const im = new Image();
     im.onload = () => {
@@ -3126,8 +3462,13 @@ function meterTextura(b64, mats){
       t.anisotropy = rend.capabilities.getMaxAnisotropy();
       t.encoding = THREE.sRGBEncoding;
       t.needsUpdate = true;
-      mats.forEach(m => { m.map = t; m.color.copy(col(0xcccccc)); m.needsUpdate = true; });
-      ok(im.width + 'x' + im.height);
+      const rel = relieveDe(im, opc.relieve || 2.5);
+      mats.forEach(m => { m.map = t; m.color.copy(col(0xcccccc));
+        m.normalMap = rel.normal; m.normalScale.set(1, 1); m.needsUpdate = true; });
+      /* los que conservan su color: el promedio de mapa × color queda igual que el color solo */
+      (opc.conservar || []).forEach(([m, esc]) => { m.map = t; m.color.multiplyScalar(1/Math.max(0.05, rel.media));
+        m.normalMap = rel.normal; m.normalScale.set(esc, esc); m.needsUpdate = true; });
+      ok(im.width + 'x' + im.height + ' relieve');
     };
     im.onerror = fallo;
     im.src = 'data:image/jpeg;base64,' + b64;
@@ -3551,6 +3892,7 @@ function paso(dt){
     if(jug.saltos < CFG.saltosMax){
       jug.vel.y = jug.saltos === 0 ? CFG.salto : CFG.saltoDoble;
       jug.saltos++; jug.enSuelo = false;
+      SON.fx('salto');
     }
     ent.saltoLatch = true;
   }
@@ -3579,8 +3921,10 @@ function paso(dt){
   /* el piso se busca desde donde ESTABA, no desde donde quedó: cayendo rápido, un cuadro
      largo lo dejaba debajo de la cubierta y se iba de largo hasta el suelo de afuera */
   const suelo = alturaEn(jug.pos.x, jug.pos.z, Math.max(yAntes, jug.pos.y));
+  const enAire = !jug.enSuelo, vCae = jug.vel.y;
   if(jug.pos.y <= suelo){ jug.pos.y = suelo; jug.vel.y = 0; jug.enSuelo = true; jug.saltos = 0; }
   else jug.enSuelo = false;
+  if(enAire && jug.enSuelo && vCae < -2.5) SON.fx('cae', {sup:superficie(), f:-vCae/7, cada:0.15});
 
   /* el techo existe: con doble salto la cabeza salía por arriba de la bodega */
   const cubT = enNave(jug.pos.x, jug.pos.y, jug.pos.z);
@@ -3752,6 +4096,14 @@ function animar(dt){
 
 /* cámara en tercera persona, desde arriba y con vida propia */
 let ahoraVuelo = 0, pasoFase = 0;
+const pisadas = {n:null};
+/* chapa adentro de la nave y en la rampa; afuera, asfalto y hormigón */
+function superficie(){
+  const p = jug.pos;
+  if(enNave(p.x, p.y, p.z)) return 'metal';
+  if(Math.abs(p.x) < N.rampa.x + 0.2 && p.z > N.rampa.z0 - 0.3 && p.z < N.rampa.z1 + 0.3 && p.y > 0.04) return 'metal';
+  return 'asfalto';
+}
 function camara(dt){
   ahoraVuelo += dt;
   const corr = clamp((jug.rapidez - CFG.vCaminar)/(CFG.vCorrer - CFG.vCaminar), 0, 1);
@@ -3764,6 +4116,13 @@ function camara(dt){
   /* el tranco se siente: sin esto caminar en primera persona es deslizarse */
   pasoFase += jug.rapidez*dt*2.3;
   const anda = EVA.activa ? 0 : clamp(jug.rapidez/CFG.vCaminar, 0, 1.4);
+  /* la pisada cae en el fondo del cabeceo: sin(2·fase) = -1 */
+  const nPaso = Math.floor((pasoFase - 2.356)/Math.PI);
+  if(nPaso !== pisadas.n){
+    if(pisadas.n !== null && jug.enSuelo && !EVA.activa && jug.rapidez > 0.4)
+      SON.fx('paso', {sup:superficie(), f:clamp(jug.rapidez/CFG.vCaminar, 0.55, 1.4)});
+    pisadas.n = nPaso;
+  }
   const bobY = Math.sin(pasoFase*2)*0.026*anda;
   const rol  = Math.sin(pasoFase)*0.016*anda;
 
@@ -3776,7 +4135,11 @@ function camara(dt){
     cam.position.z += Math.sin(ahoraVuelo*41.0)*a*0.6;
   }
   /* camYaw es hacia dónde MIRA: el frente de la cámara es -Z, así que va yaw + PI */
-  cam.rotation.set(camPitch, camYaw + Math.PI, rol + inclinaEva, 'YXZ');
+  /* la mano del que mira: respira y se corre apenas, también quieto; flotando, más */
+  const pulso = EVA.activa ? 2.6 : 1;
+  const swP = (Math.sin(ahoraVuelo*1.13)*0.0032 + Math.sin(ahoraVuelo*2.71 + 1.3)*0.0011)*pulso;
+  const swY = (Math.sin(ahoraVuelo*0.83 + 0.7)*0.0026 + Math.sin(ahoraVuelo*1.97)*0.0009)*pulso;
+  cam.rotation.set(camPitch + swP, camYaw + Math.PI + swY, rol + inclinaEva, 'YXZ');
 
   const fov = CFG.fovBase + (CFG.fovCorrer - CFG.fovBase)*corr;
   if(Math.abs(cam.fov - fov) > 0.05){ cam.fov = lerp(cam.fov, fov, 1 - Math.exp(-7*dt)); cam.updateProjectionMatrix(); }
@@ -3824,6 +4187,7 @@ function dibujar(dt){
   const meta = 2.2 + 1.8 * sol * (1 - 0.7*adentro);
   umbralVista += (meta - umbralVista) * (dt ? Math.min(1, dt*2.5) : 1);
   POST.mUmbral.uniforms.uUmbral.value = umbralVista;
+  pasoMotas(dt, adentro);
   cam.updateMatrixWorld(); nieblaPorCuadro(); rend.info.reset(); POST.revelar(esc, cam, dt);
 }
 let medirPendiente = false;
@@ -3837,6 +4201,7 @@ function marco(ahora){
   const n = dt > 0.034 ? Math.min(4, Math.ceil(dt/0.034)) : 1;
   for(let i = 0; i < n; i++) paso(dt/n);
   dibujar(dt);
+  SON.cuadro(dt);
   suavems = suavems*0.92 + (performance.now() - ahora)*0.08;
   if(suavems > 26 && dpr > 0.75){ dpr = Math.max(0.75, dpr-0.12); medirPendiente = true; suavems = 16; }
   else if(suavems < 11 && dpr < Math.min(devicePixelRatio||1,2)){ dpr = Math.min(Math.min(devicePixelRatio||1,2), dpr+0.1); medirPendiente = true; suavems = 16; }
@@ -4138,6 +4503,7 @@ function venderTodo(){
   const total = FOTO.rollo.reduce((a, f) => a + f.precio, 0);
   if(!total && !FOTO.rollo.length) return 0;
   PLATA.creditos += total; PLATA.ultimaVenta = total; PLATA.aviso = '';
+  SON.fx(total > 0 ? 'venta' : 'negado');
   FOTO.rollo.length = 0;
   pintarCompu(); pintarTerminal();
   return total;
@@ -4146,13 +4512,14 @@ function ponerCamara(i){
   const c = CAMARAS[i];
   const tiene = i === 0 || PLATA.compradas['cam_' + c.id];
   if(!tiene){
-    if(PLATA.creditos < c.precio) return false;
+    if(PLATA.creditos < c.precio){ SON.fx('negado'); return false; }
     PLATA.creditos -= c.precio; PLATA.compradas['cam_' + c.id] = true;
+    SON.fx('compra');
   }
   /* nunca se tiran fotos sin avisar: si no entran en el carrete nuevo, primero se venden */
   if(FOTO.rollo.length > c.carrete){
     PLATA.aviso = 'Vendé el carrete antes de poner la ' + c.nombre;
-    pintarCompu(); return false;
+    SON.fx('negado'); pintarCompu(); return false;
   }
   PLATA.aviso = ''; PLATA.camara = i;
   pintarCompu(); pintarTerminal();
@@ -4161,16 +4528,19 @@ function ponerCamara(i){
 function comprarSalto(id){
   const t = saltoDe(id);
   if(!t || PLATA.compradas[id]) return false;
-  if(t.antes && !PLATA.compradas[t.antes]) return false;   /* de a uno, en orden */
-  if(PLATA.creditos < t.precio) return false;
+  if(t.antes && !PLATA.compradas[t.antes]){ SON.fx('negado'); return false; }   /* de a uno, en orden */
+  if(PLATA.creditos < t.precio){ SON.fx('negado'); return false; }
   PLATA.creditos -= t.precio; PLATA.compradas[id] = true;
+  SON.fx('compra');
   pintarCompu(); pintarTerminal();
   return true;
 }
 function comprarMejora(id){
   const m = MEJORAS.find(x => x.id === id);
-  if(!m || PLATA.compradas[id] || PLATA.creditos < m.precio) return false;
+  if(!m || PLATA.compradas[id]) return false;
+  if(PLATA.creditos < m.precio){ SON.fx('negado'); return false; }
   PLATA.creditos -= m.precio; PLATA.compradas[id] = true;
+  SON.fx('compra');
   aplicarMejora(id);
   pintarCompu(); pintarTerminal();
   return true;
@@ -4201,7 +4571,7 @@ dCompuB.addEventListener('mousedown',  e => { e.preventDefault(); e.stopPropagat
 
 /* ----------------------------------------------------------------- sondas */
 window.__A = {
-  CFG, jug, cam, esc, MAT, hueso, mezcla, rend, POST,
+  CFG, jug, cam, esc, MAT, hueso, mezcla, rend, POST, SON,
   est(){ const i = rend.info; return {llamadas:i.render.calls, triangulos:i.render.triangles,
     ms:+suavems.toFixed(2), dpr:+dpr.toFixed(2), texturas:i.memory.textures, geos:i.memory.geometries}; },
   brillo(){                                  /* dibuja y lee: sin el render del mismo cuadro da cero */
@@ -4298,8 +4668,12 @@ function meterCielo(b64){
 }
 Promise.all([
   B64.cielo ? meterCielo(B64.cielo).catch(e => 'cielo falló: ' + e) : 'cielo de código',
-  B64.casco ? meterTextura(B64.casco, [MAT_NAVE.casco, MAT_NAVE.oscuro]).catch(e => 'casco falló: ' + e) : 'casco liso',
-  B64.chapa ? meterTextura(B64.chapa, [MAT_NAVE.suelo]).catch(e => 'chapa falló: ' + e) : 'chapa lisa',
+  B64.casco ? meterTextura(B64.casco, [MAT_NAVE.casco, MAT_NAVE.oscuro], {relieve:2.5,
+      /* la misma chapa en el hangar, los contenedores y, mientras no haya pared propia, adentro */
+      conservar:[[MAT_BASE.panel, 0.8], [MAT_BASE.metal, 0.9], [MAT_BASE.verde, 0.7], [MAT_BASE.oscuro, 0.8]]
+        .concat(B64.pared ? [] : [[MAT_NAVE.dentro, 0.6]])}).catch(e => 'casco falló: ' + e) : 'casco liso',
+  B64.chapa ? meterTextura(B64.chapa, [MAT_NAVE.suelo], {relieve:2.0}).catch(e => 'chapa falló: ' + e) : 'chapa lisa',
+  hormigonDeCodigo(),
   B64.pared ? meterTextura(B64.pared, [MAT_NAVE.dentro]).catch(e => 'pared falló: ' + e) : 'pared lisa',
   B64.glb   ? meterGLB(B64.glb).catch(e => 'glb falló: ' + e)       : 'alien de código'
 ]).then(r => { window.__A.horneado = r; });
@@ -4309,6 +4683,9 @@ carga.style.opacity = '0';
 setTimeout(() => carga.remove(), 600);
 sombrear(esc);                                 /* todo lo sólido proyecta sombra */
 nieblar(esc);                                  /* todo lo que ya está armado lleva la niebla nueva */
+/* compilar al cargar (la guía): si no, el primer material que entra en cuadro traba el juego.
+   Contra el target HDR, que es donde se dibuja: contra el lienzo compilaría otra variante */
+try { rend.setRenderTarget(POST.esc3d); rend.compile(esc, cam); } catch(e){} finally { rend.setRenderTarget(null); }
 requestAnimationFrame(marco);
 })();
 </script>

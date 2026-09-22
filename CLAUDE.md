@@ -725,3 +725,35 @@ Lo que costó una vuelta cada uno:
 
 Auditoría completa (pasto, escaleras, fotos, terminal, paneles, soga, seis galaxias) sin errores
 ni avisos.
+
+**Segunda parte, lo que faltaba de la guía:**
+- **Relieve**: mapas de normales sacados de la luminancia de las mismas texturas (lo oscuro es lo
+  hondo), con diferencias que dan la vuelta para que también se repitan. La chapa remachada pasó
+  al hangar, los contenedores, los tanques y las paredes de adentro, **conservando el color medio**
+  de cada material (el color se divide por el promedio lineal de la textura). El hormigón es de
+  código: ruido en cuatro octavas sobre rejillas que dan la vuelta, con poros.
+- **Polvo en el aire**: 720 motas en una caja de 10 × 5 × 10 m que viaja con la cabeza y da la
+  vuelta en el vértice. Brillan mirando al sol (el polvo desvía la luz hacia adelante), adentro
+  apenas, en el espacio no hay. Una sola llamada. Medido: 183 píxeles con mota mirando al sol.
+- **Pulso de mano**: la mirada respira y se corre un pelo también quieta; flotando, más.
+- **Sonido, todo sintetizado** (Web Audio), buscando antes cada efecto por nombre en
+  `window.SONIDOS` para que lo que genere Rezona lo pise sin tocar código: pisadas distintas en
+  chapa y en asfalto (en el fondo del cabeceo), salto y caída, clic, obturador con el trinquete
+  del arrastre, tomar la cámara, venta, compra, negado, esclusa, salto de galaxia, encendido,
+  golpe de la compuerta, soga tensa, latido, y un quejido lejano cuando aparece un bicho, paneado
+  donde está. Capas continuas: viento con ráfagas, zumbido de la nave, motor según el vuelo, la
+  compuerta mientras se mueve, la respiración adentro del casco en la caminata, el chorro de los
+  impulsores, y dos sierras graves que baten cuando un coloso se acerca. Reverberación armada al
+  arrancar (−60 dB a los 2,6 s). Arranca con el primer toque y se suspende con la pestaña
+  escondida. Medido: los 16 efectos dan señal, viento 0,023 RMS, zumbido adentro 0,034, una
+  pisada en chapa 0,063 encima; caminando 4 s adentro, 7 pisadas de chapa.
+- **Compilación al cargar**, contra el target HDR (contra el lienzo compilaría otra variante).
+
+Lo que costó una vuelta:
+- **Una sonda que apaga algo con `visible = false` no sirve si el juego lo prende cada cuadro**:
+  las motas «no se dibujaban» porque `pasoMotas` las volvía a prender adentro del mismo
+  `brillo()`. Se apaga el material.
+- Con el grano prendido **dos dibujos seguidos nunca son iguales**: para comparar con y sin algo,
+  el grano va en cero.
+
+Auditoría completa y 80 toques y arrastres al azar sin errores.
