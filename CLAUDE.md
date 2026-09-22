@@ -8,7 +8,7 @@ se prueba **en el celular, en vertical (412×892)**.
 | ruta | qué es |
 |---|---|
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. |
-| `juegos-pc/Alien.html` | **Alien Grid.** Tercera persona móvil: alien riggeado con 4 clips, mundo grid, cielo 360. |
+| `juegos-pc/Alien.html` | **Alien Grid.** Tercera persona móvil: personaje riggeado con 4 clips, mundo grid, cielo 360 y una nave de dos cubiertas que se recorre por dentro. |
 | `herramientas/glb/` | `juntar_anim.py` (varios GLB del mismo rig → uno con todos los clips) y `hornear.py` (achicar texturas y recompactar para meterlo en un HTML). |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -78,3 +78,36 @@ Lo que costó una vuelta cada uno:
   alien patina.
 - En el banco, una captura tomada **con espera después de dibujar sale negra** aunque `brillo()` mida
   153: se captura inmediatamente después del `render()`.
+
+### 2026-09-22 (b) — nave de dos cubiertas, caminar arreglado y cambio de personaje
+**Pedido textual:** «Ahora agrega una nave espacial con 2 pisos en la que el jugador se pueda
+subir y caminar en su interior (El caminar del jugador tiene un error, arreglado)» y después
+«El modelo es muy zarpado hace otro de militar o fotógrafo».
+
+El alien lo reemplazó un **militar** (mismo camino: referencia en T, malla Meshy, cuatro rigs
+con `idle/walk/run/jump`, juntados y horneados a 1,39 MB). Rezona seguía con
+`CREDIT_RESERVE_FAILED` cada vez que se probó.
+
+Lo que costó una vuelta cada uno:
+- **Los ejes de la palanca estaban dados vuelta.** `camYaw` es hacia dónde MIRA la cámara: su
+  derecha es −X con yaw 0, y la palanca hacia arriba da y negativo. Sin dar vuelta las dos cosas
+  se camina para atrás. Y el auto-encuadre sumaba π, o sea dejaba la cámara ADELANTE.
+- **El reloj del clip no puede ir contra una constante inventada.** Los clips de Meshy vienen
+  *en el lugar* (la raíz recorre 10 cm en 4,2 s), así que la velocidad propia se mide del tranco:
+  cuánto retrocede el pie plantado respecto del cuerpo, dividido por la duración. Con un A/B en el
+  mismo binario (`CFG.escalaForzada`) el mínimo de patinaje cae justo en lo que elige la
+  calibración sola. El deslizamiento del pie bajó de 56-64% del avance a 20%.
+- **La escala de una sola pose no alcanza**: al caminar el pie quedaba 15 cm en el aire. Cada clip
+  necesita su propio punto más bajo, muestreado a lo largo del ciclo.
+- **Una sonda que adelanta cuadros mientras el juego sigue corriendo mide dos relojes.** Dos
+  pruebas de la misma escalera daban resultados distintos; la buena es la que maneja con el dedo y
+  deja correr el tiempo real.
+- **Cayendo rápido se atraviesa el piso.** Buscar el piso desde donde quedó el jugador, y no desde
+  donde estaba, lo mandaba de la cubierta al suelo de afuera. Va la prueba barrida más sub-pasos
+  de física (a 6,6 m/s un cuadro de 0,1 s cruza medio muro).
+- **16 cm de luz entre el último escalón y el piso de arriba** hacen caer al jugador a la cubierta
+  de abajo si sube despacio; rápido, los saltea y no se nota.
+- El interior no puede ser una caja cerrada: el techo de la cubierta baja **es** el piso de la
+  alta, que ya viene partido alrededor del hueco de la escalera.
+- Una sola lámpara pegada al techo deja el techo negro: van dos por cubierta y más abajo.
+- La puerta metida adentro del casco no se ve: va **por delante** de la cara de popa.
