@@ -60,11 +60,12 @@
 
 /* ---------------------------------------------------------------- ajustes */
 const CFG = {
-  vCaminar:2.5, vCorrer:6.6, acel:16, frena:18, giroCuerpo:11,
+  vCaminar:1.62, vCorrer:6.6, acel:16, frena:18, giroCuerpo:11,
   grav:-26, salto:9.2, saltoDoble:7.6, saltosMax:2,
   camDist:5.7, camAlto:0.40, camMira:1.24, camSuave:7.5, camGiro:0.0055,
   camDistCorrer:1.2, fovBase:60, fovCorrer:68,
-  sombraLado:14, mundo:3000, corral:120
+  sombraLado:14, mundo:3000, corral:120,
+  escalaForzada:0          /* sólo para el A/B del patinaje: 0 = automática */
 };
 const HORIZONTE = 0xd8a184;   /* mezcla del ámbar del horizonte horneado con el gris */
 
@@ -239,6 +240,277 @@ esc.add(suelo);
   esc.add(cuerpo); esc.add(luz); esc.add(zocalo);
 })();
 
+
+/* ------------------------------------------------------------------- nave */
+/* Geometría y colisión salen de los MISMOS números: si se separan, se despegan. */
+const N = {
+  z0:16.6, z1:34.6, x:5.2,            /* cubierta baja */
+  z2:19.0, z3:33.0, x2:4.4,           /* cubierta alta */
+  y0:1.20, y1:4.45, alto:3.00,        /* pisos y altura libre */
+  puerta:1.6,
+  esc:{x0:2.4, x1:4.4, z:24.0, n:12, hondo:0.42},
+  rampa:{x:1.9, z0:11.6, z1:16.6}
+};
+N.esc.alto = (N.y1 - N.y0)/N.esc.n;               /* el escalón sale de los pisos, no al revés */
+N.escZ1 = N.esc.z + N.esc.n*N.esc.hondo;          /* 29,04 */
+
+const PISOS = [], RAMPAS = [], MUROS = [];
+const piso  = (x0,x1,z0,z1,y) => PISOS.push({x0,x1,z0,z1,y});
+const muro  = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1});
+
+function fundir(piezas){                 /* fundir es la palanca más grande de llamadas */
+  const gs = piezas.map(p => {
+    const g = p.geo.clone().applyMatrix4(p.m);
+    return g.index ? g.toNonIndexed() : g;
+  });
+  let nv = 0; gs.forEach(g => nv += g.attributes.position.count);
+  const pos = new Float32Array(nv*3), nor = new Float32Array(nv*3), uv = new Float32Array(nv*2);
+  let a = 0, b = 0;
+  gs.forEach(g => {
+    pos.set(g.attributes.position.array, a); nor.set(g.attributes.normal.array, a);
+    uv.set(g.attributes.uv.array, b);
+    a += g.attributes.position.array.length; b += g.attributes.uv.array.length;
+    g.dispose();
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  g.setAttribute('normal',   new THREE.BufferAttribute(nor,3));
+  g.setAttribute('uv',       new THREE.BufferAttribute(uv,2));
+  g.computeBoundingSphere();
+  return g;
+}
+const _cajaG = new THREE.BoxGeometry(1,1,1);
+const _cilG = new THREE.CylinderGeometry(1,1,1,14);
+function cil(r, largo, x, y, z){          /* acostado sobre Z */
+  const m = new THREE.Matrix4();
+  m.compose(new THREE.Vector3(x,y,z),
+            new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI/2,0,0)),
+            new THREE.Vector3(r, largo, r));
+  return {geo:_cilG, m};
+}
+function cajaP(w,h,d,x,y,z,rx){
+  const m = new THREE.Matrix4();
+  m.compose(new THREE.Vector3(x,y,z),
+            new THREE.Quaternion().setFromEuler(new THREE.Euler(rx||0,0,0)),
+            new THREE.Vector3(w,h,d));
+  return {geo:_cajaG, m};
+}
+
+const MAT_NAVE = {
+  casco:  new THREE.MeshStandardMaterial({color:col(0x77828f), roughness:0.38, metalness:0.76}),
+  oscuro: new THREE.MeshStandardMaterial({color:col(0x262b34), roughness:0.46, metalness:0.66}),
+  dentro: new THREE.MeshStandardMaterial({color:col(0x6a727d), roughness:0.74, metalness:0.22,
+                                          emissive:col(0x0c1117), emissiveIntensity:1.0}),
+  suelo:  new THREE.MeshStandardMaterial({color:col(0x545b65), roughness:0.60, metalness:0.38,
+                                          emissive:col(0x10151b), emissiveIntensity:1.0}),
+  luz:    new THREE.MeshStandardMaterial({color:col(0x04090e), emissive:col(0x7ceaff),
+                                          emissiveIntensity:1.6, roughness:0.4}),
+  plafon: new THREE.MeshStandardMaterial({color:col(0x0a1014), emissive:col(0xbfeaff),
+                                          emissiveIntensity:0.75, roughness:0.5}),
+  tobera: new THREE.MeshStandardMaterial({color:col(0x1a0d08), emissive:col(0xff7a2e),
+                                          emissiveIntensity:1.5, roughness:0.5}),
+  vidrio: new THREE.MeshStandardMaterial({color:col(0x0b1622), emissive:col(0x12406a),
+                                          emissiveIntensity:0.9, roughness:0.12, metalness:0.9})
+};
+
+(function construirNave(){
+  const casco = [], oscuro = [], luces = [], vidrio = [], dentro = [], suelo = [], tobera = [], plafon = [];
+  const zc = (N.z0 + N.z1)/2;
+
+  /* --- casco: la silueta le gana al detalle, así que proa, popa, alas y toberas --- */
+  casco.push(cajaP(12.6, 3.4, 20.8, 0, 2.60, 26));           /* panza */
+  casco.push(cajaP(10.6, 3.5, 16.4, 0, 6.10, 26.4));         /* lomo */
+  casco.push(cajaP( 8.6, 2.9,  3.6, 0, 3.35, 37.6));         /* proa */
+  casco.push(cajaP( 5.0, 2.1,  2.8, 0, 3.45, 39.9));
+  for(const l of [-1,1]){                                    /* popa afinada, centro libre */
+    casco.push(cajaP(3.4, 3.0, 1.8, l*4.4, 2.70, 15.0));
+    casco.push(cajaP(2.2, 2.4, 1.6, l*4.1, 2.80, 13.8));
+  }
+  oscuro.push(cajaP(6.6, 1.7, 5.0, 0, 8.55, 31.8));          /* puente */
+  vidrio.push(cajaP(6.0, 1.05, 0.3, 0, 8.65, 29.2));
+  vidrio.push(cajaP(7.8, 1.40, 0.3, 0, 6.30, 34.65));        /* ventanal de proa */
+  for(const l of [-1, 1]){
+    casco.push(cajaP(6.2, 0.55, 7.0, l*8.0, 3.90, 24.5));     /* alas */
+    oscuro.push(cajaP(6.4, 0.22, 2.0, l*8.0, 4.20, 21.4));
+    casco.push(cil(1.55, 5.8, l*8.0, 3.35, 19.8));            /* motores */
+    oscuro.push(cil(1.70, 0.7, l*8.0, 3.35, 17.2));
+    tobera.push(cil(1.24, 0.34, l*8.0, 3.35, 16.78));         /* tobera encendida */
+    oscuro.push(cajaP(0.5, 3.2, 3.6, l*5.2, 6.80, 21.0));     /* aletas */
+    luces.push(cajaP(0.16, 2.2, 0.16, l*5.45, 6.80, 19.4));
+    casco.push(cajaP(0.6, 2.2, 0.6, l*4.6, 0.60, 19.0, 0.18));/* patas */
+    casco.push(cajaP(0.6, 2.2, 0.6, l*4.6, 0.60, 33.0, -0.18));
+    oscuro.push(cajaP(1.7, 0.26, 1.7, l*4.6, 0.13, 18.6));
+    oscuro.push(cajaP(1.7, 0.26, 1.7, l*4.6, 0.13, 33.4));
+    luces.push(cajaP(0.22, 0.22, 19.0, l*6.32, 4.32, 26));    /* filo iluminado */
+  }
+  /* puerta: el hueco va DELANTE de la cara de popa, si no el casco lo tapa */
+  oscuro.push(cajaP(N.puerta*2+0.6, N.alto+0.3, 0.5, 0, N.y0 + N.alto/2, 15.42));
+  for(const l of [-1,1]) luces.push(cajaP(0.15, N.alto+0.2, 0.18, l*(N.puerta+0.28),
+                                          N.y0 + N.alto/2, 15.20));
+  luces.push(cajaP(N.puerta*2+0.6, 0.15, 0.18, 0, N.y0 + N.alto + 0.14, 15.20));
+  luces.push(cajaP(N.puerta*2-0.2, 0.06, 0.9, 0, N.y0 + 0.04, 15.9));   /* umbral encendido */
+  /* líneas de panel: un casco liso de 20 m se lee a pared */
+  for(const z of [18.5, 22.5, 26.5, 30.5, 34.0]){
+    oscuro.push(cajaP(12.75, 0.16, 0.5, 0, 3.55, z));
+    oscuro.push(cajaP(10.75, 0.14, 0.4, 0, 5.60, z));
+  }
+  oscuro.push(cajaP(12.75, 0.20, 0.6, 0, 1.30, 26));
+  oscuro.push(cajaP(4.4, 0.18, 0.5, 0, 4.25, 15.55));
+  /* rampa de embarque */
+  const lr = Math.hypot(N.rampa.z1-N.rampa.z0, N.y0);
+  const ang = Math.atan2(N.y0, N.rampa.z1-N.rampa.z0);
+  oscuro.push(cajaP(N.rampa.x*2, 0.22, lr, 0, N.y0/2, (N.rampa.z0+N.rampa.z1)/2, ang));
+  for(const l of [-1,1]) luces.push(cajaP(0.14, 0.30, lr, l*(N.rampa.x-0.1), N.y0/2+0.16,
+                                          (N.rampa.z0+N.rampa.z1)/2, ang));
+
+  /* --- interior: paneles, no una caja cerrada. El techo de la cubierta baja ES el piso de la
+     alta, y ese piso ya viene partido alrededor del hueco de la escalera: así el hueco se ve. --- */
+  function paredes(x, z0, z1, y, puerta){
+    const t = 0.14, h = N.alto, yc = y + h/2;
+    dentro.push(cajaP(t, h, z1-z0, -x + t/2, yc, (z0+z1)/2));
+    dentro.push(cajaP(t, h, z1-z0,  x - t/2, yc, (z0+z1)/2));
+    dentro.push(cajaP(x*2, h, t, 0, yc, z1 - t/2));
+    if(puerta){
+      const ancho = x - N.puerta, dintel = h - 2.45;
+      dentro.push(cajaP(ancho, h, t, -(x + N.puerta)/2, yc, z0 + t/2));
+      dentro.push(cajaP(ancho, h, t,  (x + N.puerta)/2, yc, z0 + t/2));
+      dentro.push(cajaP(N.puerta*2, dintel, t, 0, y + h - dintel/2, z0 + t/2));
+    } else {
+      dentro.push(cajaP(x*2, h, t, 0, yc, z0 + t/2));
+    }
+  }
+  paredes(N.x,  N.z0, N.z1, N.y0, true);
+  paredes(N.x2, N.z2, N.z3, N.y1, false);
+  dentro.push(cajaP(N.x2*2, 0.12, N.z3-N.z2, 0, N.y1 + N.alto - 0.06, (N.z2+N.z3)/2));
+
+  /* pisos: cubierta baja entera, cubierta alta con el hueco de la escalera */
+  suelo.push(cajaP(N.x*2, 0.06, N.z1-N.z0, 0, N.y0-0.03, zc));
+  piso(-N.x, N.x, N.z0, N.z1, N.y0);
+  const hz0 = N.esc.z - 0.2, hz1 = N.escZ1;   /* sin luz entre el último escalón y el piso */
+  const tramos = [[-N.x2, N.esc.x0, N.z2, N.z3], [N.esc.x0, N.x2, N.z2, hz0], [N.esc.x0, N.x2, hz1, N.z3]];
+  tramos.forEach(t => {
+    suelo.push(cajaP(t[1]-t[0], 0.10, t[3]-t[2], (t[0]+t[1])/2, N.y1-0.05, (t[2]+t[3])/2));
+    piso(t[0], t[1], t[2], t[3], N.y1);
+  });
+  /* escalera: cada escalón es un piso, y el subir lo resuelve la tolerancia de escalón */
+  for(let i = 0; i < N.esc.n; i++){
+    const y = N.y0 + N.esc.alto*(i+1), z = N.esc.z + N.esc.hondo*i;
+    suelo.push(cajaP(N.esc.x1-N.esc.x0, N.esc.alto, N.esc.hondo,
+                     (N.esc.x0+N.esc.x1)/2, y - N.esc.alto/2, z + N.esc.hondo/2));
+    piso(N.esc.x0, N.esc.x1, z, z + N.esc.hondo, y);
+  }
+  plafon.push(cajaP(0.22, 0.10, N.escZ1-N.esc.z, N.esc.x0-0.02, N.y0+0.9, (N.esc.z+N.escZ1)/2));
+
+  /* cuadernas y plafones: un interior liso no se lee a nave */
+  for(const d of [{x:N.x, z0:N.z0, z1:N.z1, y:N.y0}, {x:N.x2, z0:N.z2, z1:N.z3, y:N.y1}]){
+    const techo = d.y + N.alto;
+    for(let z = d.z0 + 1.6; z < d.z1 - 0.6; z += 3.0){
+      for(const l of [-1, 1]){
+        oscuro.push(cajaP(0.16, N.alto - 0.1, 0.34, l*(d.x - 0.07), d.y + N.alto/2, z));
+        plafon.push(cajaP(0.10, 0.9, 0.12, l*(d.x - 0.17), d.y + 0.95, z));
+      }
+      oscuro.push(cajaP(d.x*2 - 0.2, 0.16, 0.34, 0, techo - 0.08, z));
+      plafon.push(cajaP(1.5, 0.07, 0.34, 0, techo - 0.17, z));     /* plafón */
+    }
+    if(d.y === N.y1) oscuro.push(cajaP(d.x*2-0.2, 0.08, d.z1-d.z0-0.4, 0, techo-0.14, (d.z0+d.z1)/2));
+  }
+  /* cajones para que adentro no sea una caja vacía */
+  for(const c of [[-4.2,1.0,20.0],[-4.2,1.0,22.2],[4.0,0.8,31.0],[-3.6,1.2,31.6]]){
+    oscuro.push(cajaP(1.5, 1.2, 1.5, c[0], N.y0+0.6, c[2]));
+    plafon.push(cajaP(1.0, 0.05, 1.0, c[0], N.y0+1.21, c[2]));
+  }
+  oscuro.push(cajaP(3.2, 0.9, 1.2, 0, N.y1+0.45, N.z3-1.4));      /* consola de proa */
+  plafon.push(cajaP(2.8, 0.06, 0.8, 0, N.y1+0.91, N.z3-1.45));
+
+  /* --- colisión --- */
+  RAMPAS.push({x0:-N.rampa.x, x1:N.rampa.x, z0:N.rampa.z0, z1:N.rampa.z1, ya:0, yb:N.y0});
+  const t0 = N.y0, t1 = N.y0 + N.alto, u0 = N.y1, u1 = N.y1 + N.alto;
+  muro(-N.x-0.25, -N.x, N.z0, N.z1, t0, t1);
+  muro( N.x, N.x+0.25, N.z0, N.z1, t0, t1);
+  muro(-N.x, N.x, N.z1, N.z1+0.25, t0, t1);
+  muro(-N.x, -N.puerta, N.z0-0.25, N.z0, t0, t1);
+  muro( N.puerta, N.x, N.z0-0.25, N.z0, t0, t1);
+  muro(-N.x2-0.25, -N.x2, N.z2, N.z3, u0, u1);
+  muro( N.x2, N.x2+0.25, N.z2, N.z3, u0, u1);
+  muro(-N.x2, N.x2, N.z3, N.z3+0.25, u0, u1);
+  muro(-N.x2, N.x2, N.z2-0.25, N.z2, u0, u1);
+  /* anillo exterior: el casco no se atraviesa, pero la puerta queda abierta */
+  muro(-6.6, -5.45, 15.4, 36.6, 0, 7.4);
+  muro( 5.45, 6.6, 15.4, 36.6, 0, 7.4);
+  muro(-6.6, 6.6, 36.4, 36.7, 0, 7.4);
+  muro(-6.6, -N.rampa.x, 15.4, 15.7, 0, 7.4);
+  muro( N.rampa.x, 6.6, 15.4, 15.7, 0, 7.4);
+
+  const mallas = [[casco,MAT_NAVE.casco],[oscuro,MAT_NAVE.oscuro],[luces,MAT_NAVE.luz],
+                  [tobera,MAT_NAVE.tobera],[plafon,MAT_NAVE.plafon],[vidrio,MAT_NAVE.vidrio],
+                  [dentro,MAT_NAVE.dentro],[suelo,MAT_NAVE.suelo]];
+  mallas.forEach(([p, mat]) => {
+    if(!p.length) return;
+    const m = new THREE.Mesh(fundir(p), mat);
+    m.castShadow = false;
+    m.receiveShadow = true;
+    esc.add(m);
+  });
+
+  /* una sola lámpara pegada al techo deja el techo negro: van dos por cubierta, más abajo */
+  const faroles = [
+    [0xffe8cc, N.y0 + 1.9, N.z0 + (N.z1-N.z0)*0.30],
+    [0xffe8cc, N.y0 + 1.9, N.z0 + (N.z1-N.z0)*0.72],
+    [0xcfe9ff, N.y1 + 1.9, N.z2 + (N.z3-N.z2)*0.30],
+    [0xcfe9ff, N.y1 + 1.9, N.z2 + (N.z3-N.z2)*0.72]
+  ];
+  faroles.forEach(([c, y, z]) => {
+    const l = new THREE.PointLight(col(c), 1.75, 19, 1.2);
+    l.position.set(0, y, z); esc.add(l);
+  });
+})();
+
+/* dónde está parado el jugador: devuelve la caja de la cubierta o null */
+function enNave(x, y, z){
+  if(y >= N.y0 - 0.4 && x > N.esc.x0 - 0.9 && x < N.esc.x1 + 0.9 &&
+     z > N.esc.z - 1.4 && z < N.escZ1 + 1.4)          /* subiendo: el techo está abierto */
+    return {x0:-N.x, x1:N.x, z0:N.z0, z1:N.z1, y0:N.y0, y1:N.y1 + N.alto};
+  if(y >= N.y1 - 0.4 && x > -N.x2 && x < N.x2 && z > N.z2 && z < N.z3)
+    return {x0:-N.x2, x1:N.x2, z0:N.z2, z1:N.z3, y0:N.y1, y1:N.y1+N.alto};
+  if(y >= N.y0 - 0.4 && x > -N.x && x < N.x && z > N.z0 && z < N.z1)
+    return {x0:-N.x, x1:N.x, z0:N.z0, z1:N.z1, y0:N.y0, y1:N.y0+N.alto};
+  return null;
+}
+
+const TOLERANCIA = 0.42;            /* lo que se sube de un paso sin saltar */
+function alturaEn(x, z, yRef){
+  let mejor = 0;
+  for(let i = 0; i < PISOS.length; i++){
+    const p = PISOS[i];
+    if(x < p.x0 || x > p.x1 || z < p.z0 || z > p.z1) continue;
+    if(p.y <= yRef + TOLERANCIA && p.y > mejor) mejor = p.y;
+  }
+  for(let i = 0; i < RAMPAS.length; i++){
+    const r = RAMPAS[i];
+    if(x < r.x0 || x > r.x1 || z < r.z0 || z > r.z1) continue;
+    const y = r.ya + (r.yb - r.ya)*(z - r.z0)/(r.z1 - r.z0);
+    if(y <= yRef + TOLERANCIA && y > mejor) mejor = y;
+  }
+  return mejor;
+}
+
+const RADIO_CUERPO = 0.42, ALTO_CUERPO = 1.7;
+function resolverMuros(){
+  for(let i = 0; i < MUROS.length; i++){
+    const m = MUROS[i];
+    if(jug.pos.y + ALTO_CUERPO < m.y0 || jug.pos.y > m.y1) continue;
+    if(jug.pos.x <= m.x0 - RADIO_CUERPO || jug.pos.x >= m.x1 + RADIO_CUERPO) continue;
+    if(jug.pos.z <= m.z0 - RADIO_CUERPO || jug.pos.z >= m.z1 + RADIO_CUERPO) continue;
+    const a = jug.pos.x - (m.x0 - RADIO_CUERPO), b = (m.x1 + RADIO_CUERPO) - jug.pos.x;
+    const c = jug.pos.z - (m.z0 - RADIO_CUERPO), d = (m.z1 + RADIO_CUERPO) - jug.pos.z;
+    const min = Math.min(a, b, c, d);                /* se sale por donde menos se metió */
+    if(min === a){ jug.pos.x = m.x0 - RADIO_CUERPO; if(jug.vel.x > 0) jug.vel.x = 0; }
+    else if(min === b){ jug.pos.x = m.x1 + RADIO_CUERPO; if(jug.vel.x < 0) jug.vel.x = 0; }
+    else if(min === c){ jug.pos.z = m.z0 - RADIO_CUERPO; if(jug.vel.z > 0) jug.vel.z = 0; }
+    else { jug.pos.z = m.z1 + RADIO_CUERPO; if(jug.vel.z < 0) jug.vel.z = 0; }
+  }
+}
+
 /* --------------------------------------------------------- alien de código */
 const MAT = {
   piel:  new THREE.MeshStandardMaterial({color:col(0x3fa389), roughness:0.55, metalness:0.05}),
@@ -316,7 +588,7 @@ mancha.rotation.x = -Math.PI/2; mancha.position.y = 0.012; mancha.renderOrder = 
 esc.add(mancha);
 
 /* ----------------------------------------------------------- estado jugador */
-const jug = {
+var jug = {
   pos:new THREE.Vector3(0,0,6), vel:new THREE.Vector3(), yaw:0,
   enSuelo:true, saltos:0, fase:0, estado:'quieto', rapidez:0, aire:0
 };
@@ -330,7 +602,7 @@ const ALTO_ALIEN = 1.85;
 
 /* La caja de bind MIENTE cuando el esqueleto vive en otra escala que la malla: el modelo se
    dibujaba 66 veces más grande y fuera de cuadro. Se mide sobre el vértice ya deformado. */
-function medirPiel(raiz){
+function medirPiel(raiz, muestras){
   const caja = new THREE.Box3(); caja.makeEmpty();
   const v = new THREE.Vector3();
   raiz.updateMatrixWorld(true);
@@ -338,7 +610,7 @@ function medirPiel(raiz){
     if(!o.isSkinnedMesh) return;
     o.skeleton.update();
     const pos = o.geometry.attributes.position, n = pos.count;
-    const salto = Math.max(1, Math.floor(n/3000));
+    const salto = Math.max(1, Math.floor(n/(muestras || 3000)));
     for(let i = 0; i < n; i += salto){
       if(o.boneTransform) o.boneTransform(i, v); else v.fromBufferAttribute(pos, i);
       caja.expandByPoint(v.applyMatrix4(o.matrixWorld));
@@ -348,13 +620,88 @@ function medirPiel(raiz){
   return caja;
 }
 
-/* un clip de biblioteca trae el desplazamiento adentro: si no se aplana, el alien patina */
+/* Un clip de biblioteca trae el desplazamiento adentro. Se aplana —el avance lo pone el
+   código— pero ANTES se anota cuánto recorría: ese recorrido es la velocidad propia del clip,
+   y es lo único que hace que el pie plantado no patine. */
 function quitarDesplazamiento(clip, tambienY){
+  clip.userData = clip.userData || {};
+  let recorrido = 0;
   clip.tracks.forEach(t => {
     if(!/\.position$/.test(t.name)) return;
-    const v = t.values, x0 = v[0], y0 = v[1], z0 = v[2];
+    const v = t.values;
+    let xa = Infinity, xb = -Infinity, za = Infinity, zb = -Infinity;
+    for(let i = 0; i < v.length; i += 3){
+      if(v[i] < xa) xa = v[i];      if(v[i] > xb) xb = v[i];
+      if(v[i+2] < za) za = v[i+2];  if(v[i+2] > zb) zb = v[i+2];
+    }
+    recorrido = Math.max(recorrido, Math.hypot(xb-xa, zb-za));
+    const x0 = v[0], y0 = v[1], z0 = v[2];
     for(let i = 0; i < v.length; i += 3){ v[i] = x0; if(tambienY) v[i+1] = y0; v[i+2] = z0; }
   });
+  clip.userData.recorrido = recorrido;   /* en unidades de la pista, todavía no en metros */
+}
+
+/* Los clips de Meshy vienen EN EL LUGAR: el recorrido de la raíz es 10 cm en 4,2 s, no sirve.
+   La velocidad propia sale del tranco: mientras el pie está plantado se va para atrás respecto
+   del cuerpo justo a la velocidad a la que el cuerpo avanza. Se suma ese retroceso y se divide
+   por la duración — así funciona con clips de uno o de cuatro pasos. */
+function calibrarClips(raiz, mixer, clips, acciones){
+  raiz.updateMatrixWorld(true);
+  const hueso = {};
+  raiz.traverse(o => { if(o.isBone) hueso[o.name] = o; });
+  const cadera = hueso['Hips'] || hueso['hips'] || hueso['Pelvis'];
+  const pies = [hueso['LeftToeBase'] || hueso['LeftFoot'], hueso['RightToeBase'] || hueso['RightFoot']];
+  const adelante = new THREE.Vector3(), c = new THREE.Vector3(), p = new THREE.Vector3();
+  clips.forEach(cl => {
+    cl.userData = cl.userData || {};
+    cl.userData.vel = 0;
+    if(!cadera || !pies[0] || !pies[1] || cl.duration <= 0) return;
+    const a = acciones[cl.name];
+    for(const k in acciones) acciones[k].stop();
+    a.play(); a.setEffectiveWeight(1);
+    const M = 64;
+    let previo = null, retroceso = 0;
+    for(let i = 0; i <= M; i++){
+      mixer.setTime(0); a.time = cl.duration * i / M; mixer.update(0);
+      raiz.updateMatrixWorld(true);
+      raiz.getWorldDirection(adelante); adelante.y = 0; adelante.normalize();
+      c.setFromMatrixPosition(cadera.matrixWorld);
+      const d = pies.map(b => {
+        p.setFromMatrixPosition(b.matrixWorld);
+        return {y: p.y, d: (p.x - c.x)*adelante.x + (p.z - c.z)*adelante.z};
+      });
+      if(previo){
+        const k = d[0].y < d[1].y ? 0 : 1;          /* el plantado es el más bajo */
+        const paso = d[k].d - previo[k].d;
+        if(paso < 0) retroceso -= paso;
+      }
+      previo = d;
+    }
+    a.stop();
+    cl.userData.vel = retroceso / cl.duration;
+  });
+  mixer.setTime(0);
+}
+
+/* El pie flotaba 15 cm al caminar: cada clip para en una altura distinta y la escala se había
+   sacado de UNA sola pose. Se busca el punto más bajo de cada ciclo y se baja el modelo. */
+function calibrarPiso(raiz, mixer, clips, acciones){
+  const guardado = mixer.time;
+  clips.forEach(c => {
+    const a = acciones[c.name];
+    for(const k in acciones) acciones[k].stop();
+    a.play(); a.setEffectiveWeight(1);
+    let bajo = Infinity;
+    for(let i = 0; i < 12; i++){
+      mixer.setTime(0); a.time = c.duration * i / 12; mixer.update(0);
+      const caja = medirPiel(raiz, 500);
+      if(caja.min.y < bajo) bajo = caja.min.y;
+    }
+    c.userData = c.userData || {};
+    c.userData.offsetY = isFinite(bajo) ? -bajo : 0;
+    a.stop();
+  });
+  mixer.setTime(guardado);
 }
 function estadoAClip(e){
   const n = {quieto:['idle','breath','stand'], caminar:['walk'], correr:['run','sprint','jog'],
@@ -402,6 +749,9 @@ function meterGLB(b64){
             a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true;
           }
         });
+        calibrarClips(raiz, mezcla.mixer, g.animations, mezcla.acc);
+        calibrarPiso(raiz, mezcla.mixer, g.animations, mezcla.acc);
+        mezcla.baseY = raiz.position.y;
         mezcla.actual = null; ponerClip(jug.estado);
       }
       ok(Object.keys(mezcla.acc));
@@ -474,9 +824,11 @@ function paso(dt){
   const ty = (teclas.KeyS||teclas.ArrowDown?1:0) - (teclas.KeyW||teclas.ArrowUp?1:0);
   if(tx || ty){ const d = Math.hypot(tx,ty); ix = tx/d; iy = ty/d; mag = teclas.ShiftLeft?1:0.6; }
 
+  /* camYaw es hacia dónde MIRA la cámara. Su derecha es -X con yaw 0, y la palanca hacia
+     arriba da y negativo: las dos cosas hay que darlas vuelta o se camina al revés. */
   ejeZ.set(Math.sin(camYaw), 0, Math.cos(camYaw));
-  ejeX.set(ejeZ.z, 0, -ejeZ.x);
-  deseo.set(0,0,0).addScaledVector(ejeX, ix).addScaledVector(ejeZ, iy);
+  ejeX.set(-ejeZ.z, 0, ejeZ.x);
+  deseo.set(0,0,0).addScaledVector(ejeX, ix).addScaledVector(ejeZ, -iy);
   const largo = deseo.length();
   if(largo > 0.0001) deseo.multiplyScalar(1/largo);
 
@@ -500,8 +852,13 @@ function paso(dt){
   ent.salto = false;
 
   jug.vel.y += CFG.grav*dt;
-  jug.pos.addScaledVector(jug.vel, dt);
-  if(jug.pos.y <= 0){ jug.pos.y = 0; jug.vel.y = 0; jug.enSuelo = true; jug.saltos = 0; }
+  jug.pos.x += jug.vel.x*dt;
+  jug.pos.z += jug.vel.z*dt;
+  resolverMuros();
+  jug.pos.y += jug.vel.y*dt;
+
+  const suelo = alturaEn(jug.pos.x, jug.pos.z, jug.pos.y);
+  if(jug.pos.y <= suelo){ jug.pos.y = suelo; jug.vel.y = 0; jug.enSuelo = true; jug.saltos = 0; }
   else jug.enSuelo = false;
 
   const lim = CFG.corral;
@@ -529,8 +886,9 @@ function paso(dt){
   animar(dt);
 
   /* mancha de contacto: se achica y aclara con la altura */
-  const f = clamp(1 - jug.pos.y/3.2, 0.18, 1);
-  mancha.position.set(jug.pos.x, 0.012, jug.pos.z);
+  const bajoPie = alturaEn(jug.pos.x, jug.pos.z, jug.pos.y);
+  const f = clamp(1 - (jug.pos.y - bajoPie)/3.2, 0.18, 1);
+  mancha.position.set(jug.pos.x, bajoPie + 0.014, jug.pos.z);
   mancha.scale.setScalar(0.66 + 0.34*f);
   mancha.material.opacity = 0.20*f;
 
@@ -546,10 +904,17 @@ function paso(dt){
 function animar(dt){
   if(mezcla.mixer){
     ponerClip(jug.estado);
-    const esc = jug.estado === 'correr' ? clamp(jug.rapidez/CFG.vCorrer, 0.6, 1.5)
-              : jug.estado === 'caminar' ? clamp(jug.rapidez/CFG.vCaminar, 0.5, 1.4) : 1;
-    mezcla.mixer.timeScale = esc;
+    const cl = mezcla.actual ? mezcla.actual.getClip() : null;
+    const propia = cl && cl.userData ? cl.userData.vel : 0;
+    /* el reloj del clip sigue a la velocidad real, no a una constante inventada */
+    mezcla.mixer.timeScale = CFG.escalaForzada ? CFG.escalaForzada
+      : (propia > 0.05 && (jug.estado === 'caminar' || jug.estado === 'correr'))
+        ? clamp(jug.rapidez / propia, 0.4, 2.6) : 1;
     mezcla.mixer.update(dt);
+    if(cl && mezcla.raiz && cl.userData.offsetY !== undefined){
+      const o = mezcla.raiz.position.y;
+      mezcla.raiz.position.y = o + (cl.userData.offsetY - o)*(1 - Math.exp(-14*dt));
+    }
     return;
   }
   const h = hueso;
@@ -603,17 +968,21 @@ function animar(dt){
 /* cámara en tercera persona, desde arriba y con vida propia */
 function camara(dt){
   if(idMira === null && jug.rapidez > 1.2){               /* se acomoda sola detrás del movimiento */
-    const obj = Math.atan2(jug.vel.x, jug.vel.z) + Math.PI;
+    const obj = Math.atan2(jug.vel.x, jug.vel.z);          /* mirar HACIA donde va, no al revés */
     let d = obj - camYaw;
     while(d > Math.PI) d -= Math.PI*2;
     while(d < -Math.PI) d += Math.PI*2;
     camYaw += d*(1-Math.exp(-1.6*dt))*clamp(jug.rapidez/CFG.vCorrer,0,1);
   }
   const corr = clamp((jug.rapidez - CFG.vCaminar)/(CFG.vCorrer - CFG.vCaminar), 0, 1);
-  const distObj = CFG.camDist + CFG.camDistCorrer*corr + jug.pos.y*0.22;
-  camDist = acercar(camDist, distObj, 4*dt);
+  const cubierta = enNave(jug.pos.x, jug.pos.y, jug.pos.z);
+  /* adentro la cámara se acerca y se endereza: si no, mira el techo desde afuera del casco */
+  let distObj = CFG.camDist + CFG.camDistCorrer*corr + (cubierta ? 0 : jug.pos.y*0.22);
+  if(cubierta) distObj = Math.min(distObj, 4.6);
+  camDist = acercar(camDist, distObj, 6*dt);
 
-  const cp = Math.cos(camPitch), sp = Math.sin(camPitch);
+  const pitchUsado = cubierta ? Math.min(camPitch, 0.21) : camPitch;
+  const cp = Math.cos(pitchUsado), sp = Math.sin(pitchUsado);
   const bx = jug.pos.x + Math.sin(camYaw + Math.PI)*camDist*cp;
   const bz = jug.pos.z + Math.cos(camYaw + Math.PI)*camDist*cp;
   const by = jug.pos.y + CFG.camMira + camDist*sp;
@@ -622,6 +991,11 @@ function camara(dt){
   camPos.x = lerp(camPos.x, bx, t);
   camPos.y = lerp(camPos.y, Math.max(by, 0.8), t);
   camPos.z = lerp(camPos.z, bz, t);
+  if(cubierta){                        /* queda encerrada en la cubierta, no cruza el casco */
+    camPos.x = clamp(camPos.x, cubierta.x0 + 0.40, cubierta.x1 - 0.40);
+    camPos.z = clamp(camPos.z, cubierta.z0 + 0.40, cubierta.z1 - 0.40);
+    camPos.y = clamp(camPos.y, cubierta.y0 + 0.45, cubierta.y1 - 0.30);
+  }
   cam.position.copy(camPos);
 
   camMira.set(                                            /* mira un poco adelante */
@@ -682,6 +1056,15 @@ window.__A = {
   mirar(dy){ camYaw += dy; },
   picar(v){ camPitch = v; },
   clip(){ return mezcla.actual ? mezcla.actual.getClip().name : null; },
+  reloj(){ return mezcla.mixer ? +mezcla.mixer.timeScale.toFixed(3) : null; },
+  clips(){ const r = {}; for(const k in mezcla.acc){ const c = mezcla.acc[k].getClip();
+    r[k] = {dur:+c.duration.toFixed(2), vel:+(c.userData.vel||0).toFixed(3),
+            offsetY:+(c.userData.offsetY||0).toFixed(4)}; } return r; },
+  nave(){ const c = enNave(jug.pos.x, jug.pos.y, jug.pos.z);
+    return {dentro:!!c, cubierta: c ? (jug.pos.y >= N.y1-0.4 ? 1 : 0) : null,
+            piso:+alturaEn(jug.pos.x, jug.pos.z, jug.pos.y).toFixed(3),
+            pisos:PISOS.length, muros:MUROS.length}; },
+  poner(x, y, z){ jug.pos.set(x, y, z); jug.vel.set(0,0,0); return jug.pos.toArray(); },
   piel(){ return mezcla.raiz ? medirPiel(mezcla.raiz).min.toArray().concat(medirPiel(mezcla.raiz).max.toArray()).map(v=>+v.toFixed(3)) : null; },
   assets(){ return {glb:!!mezcla.raiz, clips:Object.keys(mezcla.acc),
     cielo:uCielo.uTieneMapa.value > 0.5, gridSuelo:!!suelo.material.map}; }
