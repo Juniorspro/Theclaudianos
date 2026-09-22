@@ -513,3 +513,37 @@ Lo que faltaba era que se leyera como álbum de figuritas y no como una lista co
 
 Medido en el banco: 21 fichas dibujadas, numeración `#01 … #21` sin saltos, y con tres fotos en
 Vega Rota el grupo marca 3/3 y el encabezado «faltan 18».
+
+### 2026-09-22 (r) — siluetas en los huecos y pasada de errores
+**Pedido textual:** «Haz que los huecos vacíos muestren la silueta del alien (De paso arregla TODOS
+LOS POSIBLES ERRORES DENTRO DEL JUEGO, TODOS)».
+
+**Las siluetas salen del mismo generador que el bicho**, no están dibujadas a mano: se arma la
+especie en una escena aparte, se le pisan todos los materiales por uno plano, se dibuja a un
+`WebGLRenderTarget` de 108×135 con fondo transparente y se leen los píxeles — alpha > 8 pinta,
+el resto queda calado. Sale un PNG que se guarda en caché. Las 21 tardan 680 ms la primera vez que
+se abre el álbum y después ya están.
+
+**Lo que se arregló midiendo, no mirando:**
+- **Fuga de memoria.** Los bichos se sacaban de la escena con `esc.remove` pero nunca se tiraban las
+  geometrías ni los materiales: una partida completa dejaba **329 geometrías vivas** (arranca con
+  75). Va `tirarBicho()` en los tres lugares que los borran. Mismo recorrido: **109**, y 20 camadas
+  seguidas de bichos suben de 75 a 88 y se quedan ahí.
+- **Trampa al tirar geometrías.** `_cajaG`, `_cilG` y `_esferaG` son COMPARTIDAS y los bichos las
+  usan directas para los pedazos sueltos: tirarlas al borrar uno rompía todos los que vinieran
+  después. `tirarBicho` las saltea por identidad.
+- **La rareza no pagaba.** `userData.rareza` va de 0 a 1, pero el precio y la ficha la trataban como
+  si fuera de 0 a 9: entre un bicho común y el más raro había 48 créditos de diferencia. Ahora va
+  `rareza9()` en los dos lados. Medido: rareza 0 → 54 cr, rareza 4 → 218 cr, rareza 9 → 547 cr.
+- **Cambiar a una cámara con menos carrete tiraba las fotos sin avisar.** Ahora se niega y la
+  terminal dice «Vendé el carrete antes de poner la CÁMARA DE MANO».
+- **Los paneles se abrían detrás de la copia abierta** (álbum, terminal y carta). Los tres chequean
+  `FOTO.abierta`.
+- **El chip del álbum armaba la palanca por atrás**: está en la lista de cosas que no arman joystick.
+- **Bomba de tiempo**: `MAT_SILUETA` se usaba en `tirarBicho`, declarada 1.200 líneas más abajo. Con
+  que un bicho se borrara antes de que el álbum existiera, la partida moría con un TDZ. Subió.
+
+Banco: recorrido completo (pasto, escaleras ×3, fotos en tierra, vender vacío, comprar sin plata,
+paneles encimados, deriva con soga, seis galaxias con fotos y ventas, aterrizaje y segundo
+despegue) más 70 toques y arrastres al azar — **cero errores de consola**, ningún NaN, ningún
+crédito negativo, el carrete nunca se pasa y el jugador nunca se cae del mundo.

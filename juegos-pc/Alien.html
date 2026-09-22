@@ -164,6 +164,7 @@
     place-items:center;color:#46566a;font-size:22px;font-weight:800}
   #album .ficha .tapa.vacia{border-style:dashed;
     background:repeating-linear-gradient(135deg,#0a0d13 0 6px,#0d1119 6px 12px)}
+  #album .ficha .tapa .sil{width:100%;height:100%;object-fit:contain;display:block;opacity:.72}
   #album .ficha .tapa .num{position:absolute;left:0;right:0;bottom:0;padding:1px 0;
     font-size:8px;letter-spacing:.1em;text-align:center;color:#9fb4c8;background:rgba(3,7,12,.78)}
   #album .grupo span{float:right;color:#ffc98a;letter-spacing:.1em}
@@ -181,7 +182,7 @@
 <canvas id="lienzo"></canvas>
 <div id="ui">
   <div class="chip">ALIEN GRID</div>
-  <div id="especies">ESPECIES 0</div>
+  <div id="especies">ESPECIES 0/21</div>
   <div id="pista">izquierda: mover<br>derecha: mirar<br>botón: saltar</div>
   <div id="base"></div><div id="puno"></div>
   <div id="panelb">PANEL</div>
@@ -1018,7 +1019,7 @@ function sacarFoto(){
   if(presa){
     const cob = cobertura(presa);
     anota = {nombre:presa.userData.nombre,
-             detalle:'rareza ' + presa.userData.rareza.toFixed(1) + ' · ' +
+             detalle:'rareza ' + rareza9(presa.userData).toFixed(1) + ' · ' +
                      GALAXIAS[GAL.actual].nombre + (presa.userData.colosal ? ' · COLOSAL' : ''),
              precio:precioFoto(presa.userData, cob)};
     presa.userData.capturado = 0.0001;
@@ -1797,7 +1798,7 @@ function nombreBicho(rnd, nivel, arq){
   return n;
 }
 
-function crearBicho(nivel, semilla){
+function crearBicho(nivel, semilla, forzar){
   const rnd = sembrar(semilla);
   const r = Math.min(nivel/9, 1);
   const g = new THREE.Group();
@@ -1818,8 +1819,9 @@ function crearBicho(nivel, semilla){
   let sinRepetir = posibles.filter(a => a.id !== BICHOS.ultimoArq && dandoVueltas.indexOf(a.id) < 0);
   if(!sinRepetir.length) sinRepetir = posibles.filter(a => a.id !== BICHOS.ultimoArq);
   if(sinRepetir.length) posibles = sinRepetir;
-  const arq = posibles[(rnd()*posibles.length)|0] || ARQ[0];
-  BICHOS.ultimoArq = arq.id;
+  const arq = forzar ? (ARQ.find(a => a.id === forzar) || ARQ[0])
+                     : (posibles[(rnd()*posibles.length)|0] || ARQ[0]);
+  if(!forzar) BICHOS.ultimoArq = arq.id;
   arq.hacer(rnd, r, P);
 
   /* piel apagada y ojos que brillan: lo que asusta es que te miren desde lo oscuro */
@@ -1926,8 +1928,24 @@ function soltarBicho(){
   esc.add(b); BICHOS.vivos.push(b);
   return b;
 }
+/* _cajaG/_cilG/_esferaG son COMPARTIDAS: los bichos las usan directas para los pedazos
+   sueltos. Tirarlas al borrar un bicho rompe todos los que vengan después. */
+const GEO_COMPARTIDAS = [_cajaG, _cilG, _esferaG];
+/* va acá arriba a propósito: `tirarBicho` la mira y se usa mucho antes del álbum */
+const MAT_SILUETA = new THREE.MeshBasicMaterial({color:0xffffff, side:THREE.DoubleSide});
+function tirarBicho(b){
+  b.traverse(o => {
+    if(o.isMesh){
+      if(o.geometry && GEO_COMPARTIDAS.indexOf(o.geometry) < 0) o.geometry.dispose();
+      const ms = Array.isArray(o.material) ? o.material : [o.material];
+      ms.forEach(m => { if(m && m.dispose && m !== MAT_SILUETA) m.dispose(); });
+    }
+    if(o.isLight && o.dispose) o.dispose();
+  });
+  esc.remove(b);
+}
 function limpiarBichos(){
-  BICHOS.vivos.forEach(b => esc.remove(b));
+  BICHOS.vivos.forEach(tirarBicho);
   BICHOS.vivos.length = 0;
 }
 /* Cada especie se mueve como corresponde a su cuerpo: el que acecha se queda quieto y de golpe
@@ -2258,9 +2276,9 @@ function pasoBichos(dt, t){
       b.position.addScaledVector(u.deriva, dt*6);
       u.escBase *= 1 - dt*0.55;
       b.scale.setScalar(u.escBase);
-      if(u.capturado > 2.2){ esc.remove(b); BICHOS.vivos.splice(i, 1); }
+      if(u.capturado > 2.2){ tirarBicho(b); BICHOS.vivos.splice(i, 1); }
     } else if(b.position.distanceTo(ANCLA) > (galAct.lejos || 70)){
-      esc.remove(b); BICHOS.vivos.splice(i, 1);
+      tirarBicho(b); BICHOS.vivos.splice(i, 1);
     }
   }
 }
@@ -2731,7 +2749,7 @@ function pintarPanel(){
     dListaGal.appendChild(b);
   });
 }
-function abrirPanel(){ if(PANEL.abierto) return; PANEL.abierto = true; pintarPanel(); dGal.classList.add('ver'); }
+function abrirPanel(){ if(PANEL.abierto) return; if(FOTO.abierta) return; PANEL.abierto = true; pintarPanel(); dGal.classList.add('ver'); }
 function cerrarPanel(){ PANEL.abierto = false; dGal.classList.remove('ver'); }
 let idPalanca = null, idMira = null, oX = 0, oY = 0, mX = 0, mY = 0;
 const RADIO = 58;
@@ -2745,7 +2763,7 @@ addEventListener('pointerdown', e => {
   if(FOTO.abierta) return;                    /* con la copia abierta no se arma la palanca */
   if(PANEL.abierto || COMPU.abierto || ALBUM_ABIERTO.v) return;
   if(e.target === dSalto || e.target === dVolar || e.target === dUsar || e.target === dPanelB ||
-     e.target === dCompuB) return;
+     e.target === dCompuB || e.target === dEspecies) return;
   if(e.clientX < innerWidth*0.52 && idPalanca === null){
     idPalanca = e.pointerId; oX = e.clientX; oY = e.clientY;
     pintarPalanca(oX, oY, true);
@@ -3125,18 +3143,67 @@ const FICHAS = {
   marea:    ['LA MAREA', 'Cinco cortinas de tentáculos desfasadas, con ojos a lo largo de la cresta. Llega como una ola y no rompe nunca.']
 };
 const ALBUM = {};          /* arq -> {veces, nombre, rareza, precio, tapa} */
+const SILUETAS = {};       /* arq -> dataURL con la silueta recortada */
+
+/* La silueta del hueco vacío sale del MISMO generador que el bicho: se arma la especie
+   en una escena aparte, se pinta plana y se dibuja a un render target con fondo vacío. */
+function siluetaDe(id){
+  if(SILUETAS[id] !== undefined) return SILUETAS[id];
+  SILUETAS[id] = null;
+  let url = null;
+  try {
+    const b = crearBicho(6, (id.length*2654435761 + id.charCodeAt(0)*97) >>> 0, id);
+    b.position.set(0,0,0); b.rotation.set(0,0,0);
+    const guardadas = [];
+    b.traverse(o => { if(o.isMesh){ guardadas.push([o, o.material]); o.material = MAT_SILUETA; } });
+    const escS = new THREE.Scene(); escS.add(b);
+    escS.updateMatrixWorld(true);
+    const caja = new THREE.Box3().setFromObject(b);
+    const c = caja.getCenter(new THREE.Vector3()), t = caja.getSize(new THREE.Vector3());
+    const W = 108, H = 135, fov = 32;
+    const radio = Math.max(t.y/2, (t.x/2)*(H/W), 0.001);
+    const dist = radio/Math.tan(fov*Math.PI/360)*1.22 + t.z*0.6;
+    const camS = new THREE.PerspectiveCamera(fov, W/H, Math.max(dist*0.01, 0.01), dist*4);
+    camS.position.set(c.x + dist*0.30, c.y + dist*0.10, c.z + dist*0.95);
+    camS.lookAt(c);
+    const rt = new THREE.WebGLRenderTarget(W, H, {minFilter:THREE.LinearFilter, magFilter:THREE.LinearFilter});
+    const antes = rend.getRenderTarget(), color = new THREE.Color(), alfa = rend.getClearAlpha();
+    rend.getClearColor(color);
+    rend.setClearColor(0x000000, 0);
+    rend.setRenderTarget(rt); rend.clear(); rend.render(escS, camS);
+    const pix = new Uint8Array(W*H*4);
+    rend.readRenderTargetPixels(rt, 0, 0, W, H, pix);
+    rend.setRenderTarget(antes); rend.setClearColor(color, alfa);
+    const cnv = document.createElement('canvas'); cnv.width = W; cnv.height = H;
+    const g2 = cnv.getContext('2d'), im = g2.createImageData(W, H);
+    for(let y = 0; y < H; y++){                 /* readRenderTargetPixels viene dado vuelta */
+      for(let x = 0; x < W; x++){
+        const a = ((H-1-y)*W + x)*4, b2 = (y*W + x)*4;
+        const on = pix[a+3] > 8 ? 255 : 0;
+        im.data[b2] = 168; im.data[b2+1] = 192; im.data[b2+2] = 216; im.data[b2+3] = on;
+      }
+    }
+    g2.putImageData(im, 0, 0);
+    url = cnv.toDataURL('image/png');
+    guardadas.forEach(([o, m]) => { o.material = m; });
+    tirarBicho(b);
+    rt.dispose();
+  } catch(e){ url = null; }
+  SILUETAS[id] = url;
+  return url;
+}
 const ALBUM_TOTAL = Object.keys(FICHAS).length;
 
 function anotarEnAlbum(u, precio, tapa){
   const a = ALBUM[u.arq] || (ALBUM[u.arq] = {veces:0, nombre:'', rareza:0, precio:0, tapa:null});
   a.veces++;
   if(precio >= a.precio || !a.tapa){    /* se guarda la mejor copia, no la última */
-    a.precio = precio; a.nombre = u.nombre; a.rareza = u.rareza; a.tapa = tapa || a.tapa;
+    a.precio = precio; a.nombre = u.nombre; a.rareza = rareza9(u); a.tapa = tapa || a.tapa;
   }
   dEspecies.textContent = 'ESPECIES ' + Object.keys(ALBUM).length + '/' + ALBUM_TOTAL;
   dEspecies.classList.add('ver');
 }
-function abrirAlbum(){ if(ALBUM_ABIERTO.v) return; ALBUM_ABIERTO.v = true; pintarAlbum(); dAlbum.classList.add('ver'); }
+function abrirAlbum(){ if(ALBUM_ABIERTO.v || FOTO.abierta) return; ALBUM_ABIERTO.v = true; pintarAlbum(); dAlbum.classList.add('ver'); }
 function cerrarAlbum(){ ALBUM_ABIERTO.v = false; dAlbum.classList.remove('ver'); }
 const ALBUM_ABIERTO = {v:false};
 function pintarAlbum(){
@@ -3160,7 +3227,10 @@ function pintarAlbum(){
              ' · ' + a.veces + (a.veces === 1 ? ' foto' : ' fotos') +
              ' · mejor pago ' + a.precio + ' cr</u></div></div>';
       } else {
-        h += '<div class="ficha no"><div class="tapa vacia">?<span class="num">' + num + '</span></div>' +
+        const sil = siluetaDe(id);
+        h += '<div class="ficha no"><div class="tapa vacia">' +
+             (sil ? '<img class="sil" src="' + sil + '" alt="">' : '?') +
+             '<span class="num">' + num + '</span></div>' +
              '<div class="txt"><b>?</b><i>Hueco vacío. Todavía nadie le sacó una foto.</i>' +
              '<u>' + num + ' · ' + g.nombre + '</u></div></div>';
       }
@@ -3202,7 +3272,7 @@ const SALTOS = [
   {id:'salto4', nombre:'SALTO CLASE IV',    precio:6500,  antes:'salto3', abre:4},
   {id:'salto5', nombre:'BLINDAJE DE VACÍO', precio:12000, antes:'salto4', abre:5}
 ];
-const PLATA = {creditos:0, camara:0, compradas:{}, ultimaVenta:0};
+const PLATA = {creditos:0, camara:0, compradas:{}, ultimaVenta:0, aviso:''};
 const galaxiaAbierta = i => !GALAXIAS[i].llave || !!PLATA.compradas[GALAXIAS[i].llave];
 const saltoDe = id => SALTOS.find(x => x.id === id);
 const camAct = () => CAMARAS[PLATA.camara];
@@ -3261,6 +3331,7 @@ function pintarTerminal(){
 pintarTerminal();
 
 /* --------------------------------------------- cuánto paga una foto */
+const rareza9 = u => Math.min(u.rareza, 1)*9;
 const _cajaFoto = new THREE.Box3(), _vFoto = new THREE.Vector3();
 function cobertura(b){            /* qué tajada del cuadro ocupa el bicho: encuadrar paga */
   _cajaFoto.setFromObject(b);
@@ -3276,14 +3347,15 @@ function cobertura(b){            /* qué tajada del cuadro ocupa el bicho: encu
   return clamp(a/4, 0, 1);
 }
 function precioFoto(u, cob){
-  const base = 55 + u.rareza*48;
+  /* userData.rareza va de 0 a 1; la que se muestra y la que paga va de 0 a 9 */
+  const base = 55 + rareza9(u)*48;
   const col = u.colosal ? 4.2 : 1;
   const enc = 0.5 + 1.1*Math.sqrt(clamp(cob, 0, 1));
   return Math.round(base*col*enc*camAct().calidad);
 }
 
 /* ------------------------------------------------------- panel de la terminal */
-function abrirCompu(){ if(COMPU.abierto) return; COMPU.abierto = true; pintarCompu(); dCompu.classList.add('ver'); }
+function abrirCompu(){ if(COMPU.abierto) return; if(FOTO.abierta) return; COMPU.abierto = true; pintarCompu(); dCompu.classList.add('ver'); }
 function cerrarCompu(){ COMPU.abierto = false; dCompu.classList.remove('ver'); }
 function pintarCompu(){
   const total = FOTO.rollo.reduce((a, f) => a + f.precio, 0);
@@ -3328,14 +3400,15 @@ function pintarCompu(){
          '<b>' + m.nombre + '</b><i>' + m.linea + '</i>' +
          '<u>' + (tiene ? 'PUESTA' : m.precio + ' cr') + '</u></div>';
   }
-  dCompuSub.textContent = PLATA.creditos + ' créditos' +
-    (PLATA.ultimaVenta ? ' · última venta ' + PLATA.ultimaVenta + ' cr' : '');
+  dCompuSub.textContent = PLATA.aviso ? PLATA.aviso
+    : (PLATA.creditos + ' créditos' +
+       (PLATA.ultimaVenta ? ' · última venta ' + PLATA.ultimaVenta + ' cr' : ''));
   dListaCompu.innerHTML = h;
 }
 function venderTodo(){
   const total = FOTO.rollo.reduce((a, f) => a + f.precio, 0);
   if(!total && !FOTO.rollo.length) return 0;
-  PLATA.creditos += total; PLATA.ultimaVenta = total;
+  PLATA.creditos += total; PLATA.ultimaVenta = total; PLATA.aviso = '';
   FOTO.rollo.length = 0;
   pintarCompu(); pintarTerminal();
   return total;
@@ -3347,9 +3420,12 @@ function ponerCamara(i){
     if(PLATA.creditos < c.precio) return false;
     PLATA.creditos -= c.precio; PLATA.compradas['cam_' + c.id] = true;
   }
-  /* el carrete no se achica con la cámara: lo que sobra se pierde */
-  PLATA.camara = i;
-  if(FOTO.rollo.length > c.carrete) FOTO.rollo.length = c.carrete;
+  /* nunca se tiran fotos sin avisar: si no entran en el carrete nuevo, primero se venden */
+  if(FOTO.rollo.length > c.carrete){
+    PLATA.aviso = 'Vendé el carrete antes de poner la ' + c.nombre;
+    pintarCompu(); return false;
+  }
+  PLATA.aviso = ''; PLATA.camara = i;
   pintarCompu(); pintarTerminal();
   return true;
 }
@@ -3452,6 +3528,7 @@ window.__A = {
     chip:dEspecies.textContent, tapas:Object.keys(ALBUM).filter(k => !!ALBUM[k].tapa).length,
     detalle:ALBUM}; },
   abrirAlbum, cerrarAlbum,
+  siluetas(){ const r = {}; for(const k in SILUETAS) r[k] = SILUETAS[k] ? SILUETAS[k].length : 0; return r; },
   regalar(n){ PLATA.creditos += n; pintarTerminal(); return PLATA.creditos; },
   tomar:tomarCamara, disparar:sacarFoto, cerrarFoto, papel:dPapel,
   vuelo(){ return {estado:VUELO.estado, t:+VUELO.t.toFixed(2), caida:+VUELO.caida.toFixed(1),
