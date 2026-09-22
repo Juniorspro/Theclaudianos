@@ -162,3 +162,26 @@ pintadas de a un píxel, sin antialias.
   muestra el puño volviendo y parece que la animación no anda. `__T.pose()` y `__T.lienzoHeroe()`
   sirven para mirar la pose y el personaje aislado.
 - Costo: 2,44 ms contra 2,47 ms con el héroe vectorial. Nada.
+
+### 2026-09-22 (noche, 3) — enemigos y fondos en pixel art
+**Pedido textual:** «Hazlo aún mejor también a los enemigos y fondos».
+
+**Enemigos**: el mismo sistema de piezas que el protagonista, generalizado en `dibujarPx(e, fuente)`.
+Un kit con letras de **rol** (piel, uniforme, pantalón, casco, detalle, barba, guante, bota) y una
+paleta por tipo: 7 cabezas (casco, casco con nasal, gorra, pelado con barba, capucha, boina con
+bigote, corona con barba) × 4 torsos (base, mandil, coraza, manto). Once personajes —los siete
+matones y cuatro jefes— salen de ahí; La Máquina sigue vectorial. Fuente del kit:
+`herramientas/kit_enemigos.py` y `kit_enemigos_tipos.py`. Las piezas se hornean la primera vez
+que se piden y quedan en caché.
+
+- La barba compartía rol con el dorado y el rey salió con barba de oro: barba y bigote tienen su
+  propio rol (`h`/`H`).
+- Pesado y jefes se escalan (1,2 y `e.escala`) con vecino más cercano: algún píxel queda doble,
+  pero no se inventan medios tonos.
+
+**Fondos**: un pintor por tema en `PINTORES` (pixel art a escala 1, cacheado) y `animFondo()` para lo
+que se mueve: neones que parpadean como tubo quemado, faroles, humo de chimeneas, tubos
+fluorescentes, balizas de antena, nubes, banderas.
+
+Medido con calentamiento contra el commit anterior: **2,46 → 1,51 ms** por cuadro. Las piezas
+horneadas cuestan menos que los trazos vectoriales que reemplazan.
