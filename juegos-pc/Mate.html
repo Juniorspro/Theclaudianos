@@ -4109,8 +4109,8 @@ function empezarNivel(i, conCine){
   J.pausa = false; cargarNivel(i); J.fundirA = 0; P_FIN.u.fundido.value = 1;
   SON.ambiente(NIVELES[i].cap);
   const cine = CINE_ANTES[i];
-  J.banner = 0;
-  if(cine && (conCine || cine === 'jefe')){ PROG.vistos[cine] = 1; guardarProg(); arrancarCine(cine, () => { SON.musica(NIVELES[i].jefe ? 'jefe' : NIVELES[i].cap); J.banner = 0; }); }
+  J.banner = NIVELES[i].jefe ? 99 : 0;
+  if(cine && (conCine || cine === 'jefe')){ PROG.vistos[cine] = 1; guardarProg(); arrancarCine(cine, () => { SON.musica(NIVELES[i].jefe ? 'jefe' : NIVELES[i].cap); J.banner = NIVELES[i].jefe ? 99 : 0; }); }
 }
 function pantallaResultado(){
   const d = J.nivel, prev = PROG.niveles[d.id] || {};
