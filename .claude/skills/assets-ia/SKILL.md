@@ -67,6 +67,18 @@ Conviene generar con los dos y **comparar dentro del juego**, no en la hoja de c
   `duration` es un techo, y un prompt que pide un sonido chiquito devuelve silencio — el nivel lo
   pone el código, nunca el prompt.
 
+## Rezona: lo que se aprendió en BRECHA 7
+- **El audio puede estar caído entero** (`PROVIDER_UNAVAILABLE`, `NOIZ_FAILED`): el pedido se acepta, da
+  `task_id` y a los 25 s termina `failed`. Probar con **un** pedido antes de mandar la cola (el cupo es de la cuenta).
+- Música: `duration` tope **30 s**; efectos: mínimo **1 s** (si no, `VALIDATION_ERROR` sin detalle).
+  Un `voice_id` inventado se acepta sin validar; mandar `model` da «Unsupported speech model».
+- Tripo con `extra:{smart_low_poly:true}` da mallas mucho más limpias para utilería.
+- `KHR_mesh_quantization` **sí anda con `GLTFLoader` r128**, pero lo cuantizado se pasa a coma flotante
+  antes de hornear la matriz del nodo (si no, todo lo que pasa de 1 se recorta sin aviso).
+- Sacar las animaciones no achica el GLB hasta soltar canales, muestreadores y accesores antes de podar.
+- Todo lo generado entra al HTML como data URI; se decodifica **cuando algo lo usa** (todas las imágenes
+  juntas son cientos de MB en un teléfono) y se suelta al cambiar de escena.
+
 ## La regla que manda
 **Lo generado no reemplaza nada hasta que llega.** Se arranca con lo dibujado por código y el
 asset lo pisa cuando decodifica: un base64 roto cuesta **una pieza**, no la pantalla. Y hace falta

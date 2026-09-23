@@ -41,6 +41,11 @@ en un marco girado infla la caja), `anda(n)`, `assets()`.
 6. **Medir sin un control no prueba nada**: el A/B va en el mismo binario con una constante dada
    vuelta, y contra el commit anterior en el mismo banco (`git show HEAD:archivo`).
 7. Una prueba que nunca puede dar limpio deja de detectar el defecto de verdad.
+8. **Esperar por el estado del juego, no por tiempo.** Con un render más pesado el banco (por software)
+   hace menos pasos por segundo y las esperas fijas mienten: «cubrirse no anda», «el informe no sale».
+   `waitForFunction(() => jug.cubT > 0.8)` o adelantar con `anda(n)`.
+9. El render por software paga en la CPU **los triángulos y el PBR por píxel**: sirve para comparar
+   versiones, no para prometer cuadros por segundo en un teléfono con GPU.
 
 ## Entrada en el banco
 Los botones responden a **`touchstart`**, no a `click` (`'ontouchstart' in window` es true y el

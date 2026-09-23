@@ -56,8 +56,22 @@ description: Reglas de render de three.js que ya costaron una vuelta cada una �
 - Se funde **por cuadra, no por mundo**: con todo en una malla no hay recorte por frustum.
 - La caja de sombra sigue al jugador; el mapa viejo se suelta a mano (`mapSize` no lo recrea).
 - **Un cambio que no mide mejor no se deja puesto por parecer razonable.**
+- **Contar triángulos por categoría antes de optimizar**: 470.000 eran vallas instanciadas (800 × 585) y
+  30.000 las armas de 6.000 que llevaba cada enemigo. Lo repetido se simplifica al armar; lo que lleva un
+  enemigo va en una versión `_lod` que comparte el material. Un modelo hecho de **piezas sueltas** no baja
+  de su piso por más error que se le permita (el contenedor quedó en 1.172): ahí va distancia, no simplificar.
+- **La calidad automática tiene que contar los cuadros lentos**: si descarta los de más de 100 ms, en el
+  aparato que más lo necesita no mide nada y no baja nunca. Saltear el arranque **por reloj**, no por
+  cuadros (20 cuadros a 1,6 por segundo son 12 s).
+- El escalón de abajo de todo: los `MeshStandardMaterial` pasan a Lambert (en r128 la luz va por vértice) y
+  el original queda en `userData` para volver. El arma en primera persona queda PBR: sin entorno sale negra.
+- Afuera, con sol fuerte, **el umbral del resplandor sube** (2,3 en vez de 1,25): si no, todo lo soleado
+  brilla como neón.
 
 ## Método
 - **Un parámetro que no cambia lo que tiene que cambiar no está en el camino.** Antes de barrer
   valores, un **material de diagnóstico** (pintar normales) contesta en un cuadro.
 - Medir el brillo con `readPixels`, nunca con `drawImage` (sin `preserveDrawingBuffer` da cero).
+- El fondo equirectangular **se convierte a cubo una sola vez**: si arrancó con un marcador, al llegar la
+  imagen de verdad hay que `dispose()` y reasignar, o el cielo queda del color del marcador.
+- Un ícono renderizado a un render target sale **lineal**: pasarlo a sRGB y despremultiplicar el borde.

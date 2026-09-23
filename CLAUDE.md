@@ -11,7 +11,8 @@ se prueba **en el celular, en vertical (412×892)**. EL TIPO se juega **acostado
 | `juegos-pc/AOscuras.html` | **A OSCURAS.** Táctico de arriba estilo Bullet Echo: linterna en cono, ecos de pasos y tiros, 5 misiones procedurales (equipo, robo en sigilo, dominio, batalla real, jefe). Canvas 2D en píxeles, un archivo, sin red. |
 | `juegos-pc/Andes.html` | **ANDES.** Descenso en tabla al estilo Alto's Adventure: un dedo (tocar salta, mantener gira), mortales, grinds, toldos, llamas, ancianos, avalancha, alas; 5 montañas procedurales con hora del día y clima. Canvas 2D vectorial, acostado, sin red. |
 | `juegos-pc/Bronca.html` | **BRONCA · ZOMBIS.** Palitos contra zombis al estilo Anger of Stick 5: combos, armas que apuntan solas, aliados, robot y helicóptero, experiencia y base con tienda; 5 misiones procedurales (una es defensa) con jefe cada una. Canvas 2D vectorial, acostado, sin red. |
-| `juegos-pc/Brecha.html` | **BRECHA 7.** Tirador táctico en primera persona sobre rieles al estilo SIERRA 7: cubrirse para recargar, brechas en cámara lenta con rehenes, francotirador con caída y viento, convoy con helicóptero; 5 misiones procedurales. three.js r128 **adentro del archivo** (sin red), geometría por código, acostado. |
+| `juegos-pc/Brecha.html` | **BRECHA 7.** Tirador táctico en primera persona sobre rieles al estilo SIERRA 7: cubrirse para recargar, brechas en cámara lenta con rehenes, francotirador con caída y viento, convoy con helicóptero; 5 misiones procedurales. three.js r128 y **todo lo generado con Rezona adentro del archivo** (texturas PBR, cielos, arte, armas, utilería, vehículos, personajes con esqueleto), sin red, acostado. Se arma con `herramientas/brecha/armar.py`. |
+| `herramientas/brecha` | Partes del código de BRECHA 7, su armador y el banco (`banco/*.js`). |
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. De otra línea de trabajo. |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -575,3 +576,68 @@ ESPAÑOL · ENGLISH · PORTUGUÊS en la portada. Nombres propios (héroes, apodo
   invencible), gestos iguales y el traductor a 0,2 µs por llamada (nada medible en el cuadro). Control final: toque real en cada botón
   de idioma de los cinco juegos, sin red.
 
+### 2026-09-23 (18) — BRECHA 7 con assets de Rezona, a fondo
+**Pedido textual:** «Usa Rezona para generar mejores texturas a brecha con imágenes modelos 3D etc y música y sonidos también
+mejores gráficos y menús en un 500% mejoralo no tenes límites de generación en Rezona así que hacelo todo pbr texturas también y
+modelos 3D incluso de armas» y después «Ahora en vez de mejorar 1000% debes mejorar todo y hacerlo a tu máximo» (con una guía
+adjunta: luz primero, HDR + ACES, niebla del color del cielo, PBR sin costuras, trampas de GLB, audio, todo adentro del HTML).
+
+**Lo generado con Rezona** (proyecto descartable `tOMtshuHPE`, cuatro agentes en paralelo): 19 juegos de texturas PBR (albedo,
+normal y ORM, procesados sin costura), 2 cielos equirectangulares con el sol medido, 7 ilustraciones de menú, 8 armas, escudo,
+10 piezas de utilería, 5 vehículos, las dos manos con guante, 4 personajes con esqueleto de 24 huesos (soldado, pesado, El Coloso,
+rehén) y, para el puerto, contenedor de 40 pies, grúa de pórtico y buque portacontenedores. **Audio: nada.** El proveedor de audio de Rezona devolvió `NOIZ_FAILED` en los ~50 pedidos (efectos, voces,
+música, con parámetros mínimos): se aceptan, dan `task_id` y a los 25 s terminan `failed`.
+
+**Cómo entra al HTML** (12,7 MB, sin red): `window.ARCH` con data URIs y `window.MAN` con lo medido. Sin `fetch` ni `blob:` (el
+visor los bloquea): imágenes con `createImageBitmap(Blob)`, modelos con `GLTFLoader.parse`, sonido con `decodeAudioData`. Todo
+arranca con lo dibujado por código y lo generado lo pisa cuando decodifica. Las imágenes se decodifican **cuando algo las usa** y
+se sueltan al cambiar de tema: todas juntas son cientos de MB en un teléfono.
+- **Armado**: `herramientas/brecha/armar.py` junta `herramientas/brecha/partes/*` y mete los assets achicados a lo que se ve en
+  un teléfono (texturas 512, ORM 256, armas del jugador 1024, GLB cuantizados, clips de animación afuera). **En una sesión nueva,
+  sin la carpeta de generados, reusa los assets del HTML ya armado**: se puede tocar el código sin regenerar nada.
+- **Render**: HDR en medio flotante, multimuestreo ×4 sólo con calidad ≥ 0,85, resplandor por cadena de mips, ACES, gradación por
+  tema, viñeta, grano; niebla teñida hacia el sol; entorno PMREM del cielo (o dibujado adentro); sombra que sigue al jugador.
+- **Mundo PBR**: UV en metros, tinte por vértice relativo al color medio de la foto, oclusión horneada por vértice.
+- **Personajes**: el GLB se mueve con el mismo esqueleto de 16 puntos (IK y muñeco de trapo) de antes; cada hueso se orienta
+  desde esos puntos. El choque sigue siendo el de las cápsulas.
+- **Menús**: el arte generado en un lienzo único detrás de las capas (portada con título a la izquierda y paneo lento, armería,
+  una imagen por operación), carga con la portada y barra, miniaturas de las operaciones, íconos de las armas renderizados desde
+  los modelos 3D. Mientras el arte tapa la pantalla, la escena 3D no se dibuja.
+- **Agua del puerto**: casi espejo que refleja el cielo, olas con un mapa de normales sin costura (senos de frecuencia entera) que
+  se corre con el tiempo.
+- **Sonido nuevo** (`p2s.js`): 72 muestras sintetizadas por capas al abrir el audio (estampido, cuerpo con corte que cae, golpe
+  grave y mecánica metálica; impactos, recargas, cerrojo, casquillos, patada de puerta, explosión, batería), de a 8 ms por tarea:
+  350 ms en total sin trabar el toque. Reverb por convolución con la respuesta de cada lugar (galpón, salones, búnker, puerto con
+  ecos de contenedores, ruta abierta). Música por capas que entran con la tensión (menú, sigilo, combate). Motor y rotor en bucle
+  cosido. Impactos según el material de la caja. Pasos, casquillos, latido con poca vida. Voces de radio en el idioma elegido con
+  la voz del sistema si es local. **Lugar listo para los MP3 de Rezona** (disparos, voces `v_<frase>_<idioma>`, `mus_<modo>`):
+  si llegan, pisan lo sintetizado sin tocar código.
+- **Gráficos: AUTO / ALTOS / MEDIOS / BAJOS** en la portada; la calidad aprendida se guarda.
+
+Trampas que costaron una vuelta:
+- En r128 `Texture` no tiene `userData`: la marca va en `t.__asset`.
+- **El fondo equirectangular se convierte a cubo una sola vez**: con el marcador de 4×4 quedaba un cielo violeta liso. Al llegar la
+  imagen: `dispose()` y reasignar.
+- **Lo cuantizado (`KHR_mesh_quantization`) se pasa a coma flotante antes de hornear la matriz**: si no, todo lo que pasa de 1 se
+  recorta sin aviso. Con `GLTFLoader` r128 anda (la regla de `-noq` era por otro cargador).
+- Sacar los clips no achicaba el GLB: hay que soltar canales, muestreadores y accesores antes de podar.
+- El esqueleto generado tenía la derecha en +x: la pose se espeja; los cuerpos muertos se hundían (radio de piso por punto).
+- **El umbral del resplandor afuera**: con sol 3,2 medio mundo pasa de 1,25 y todo lo soleado brillaba como neón. Afuera va 2,3.
+- **470.000 triángulos de vallas** en la autopista (800 × 585 instancias) y **6.000 por arma de cada enemigo**: se simplifican al
+  armar (valla 160, utilería pesada a la mitad) y los enemigos llevan una versión `_lod` de 900 que comparte texturas.
+- **La calidad automática no bajaba nunca en un aparato lento**: tiraba los cuadros de más de 100 ms, y después se salteaba 20
+  cuadros al empezar cada misión (12 s a 1,6 cuadros por segundo). Ahora cuenta hasta 1,5 s por cuadro, se saltea 1,2 s por reloj,
+  reacciona a los 8 cuadros si va muy lento y arranca sin multimuestreo en pantallas táctiles.
+- Banco: con el render nuevo las esperas fijas mienten (cubrirse «no andaba», el informe «no salía»): se espera por el estado del
+  juego, no por tiempo.
+- Rezona audio: música tope 30 s, efectos mínimo 1 s (si no, `VALIDATION_ERROR` sin detalle), `voice_id` inventado se acepta
+  sin validar y `model` desconocido da «Unsupported speech model».
+
+Medido (3 semillas × 5, dos corridas): bot con invencibilidad 14/15 y 13/15 (un rehén ejecutado en la embajada y una vez
+trabado en el convoy; repetidas, 3/3 cada una: es el azar de la IA), sin invencibilidad 13/15 y 14/15, como antes. Toques reales por CDP 11/11, recorrido de menús sin botones tapados ni desbordes en cinco
+tamaños de visor, sin red, inglés y portugués sin restos. Sonido: 72 muestras sin NaN ni silencio, suenan en partida, el bucle
+del motor sigue al convoy y los lugares de Rezona se probaron con buffers falsos. **Rendimiento en el banco (render por software,
+sin GPU), con calidad automática: 11–14 cuadros por segundo a CPU normal y 7–9 a CPU ×6; el puerto, 3,6 y 1,3** (antes
+53–56 y 32–46; el puerto es el más pesado: se ve todo el muelle, 88.000 triángulos de utilería y los modelos de contenedor
+sólo a menos de 50 m de los puestos): ahí se pagan en la CPU los triángulos y el PBR por píxel. En un teléfono con GPU no lo pude medir; si va lento,
+GRÁFICOS: BAJOS.
