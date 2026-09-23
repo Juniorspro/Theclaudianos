@@ -1134,3 +1134,25 @@ Lo que costó una vuelta:
 
 Medido: 49 de 49 peleas de IA contra IA terminan (4 a 29 s) sin errores ni NaN; toques reales,
 carrera y menús sin errores; 3,6 ms por cuadro en vertical.
+
+### 2026-09-23 (af) — A LOS SALTOS: gladiadores un poco más humanos
+**Pedido textual:** «Haz más humano los modelos de los gladiadores, solo un poco».
+
+- **Proporciones**: piernas de 13 a 14,5 unidades y la cabeza 0,7 más arriba (se ve el cuello), así la
+  cabeza pesa menos en el total sin redibujar los siete cascos.
+- **Torso de persona**: trapecios, hombros más anchos que la cintura, pecho, abdomen y una faldita
+  que se abre sobre los muslos. El músculo se marca con un rol nuevo `Q` (piel al 87%) y no con la
+  sombra `P`, que agrandada salía como manchas; también se sacaron los poros. Las corazas salen
+  ahora de la forma del torso (patrón por rol sobre la piel), así siguen la silueta nueva.
+- **Brazos y piernas que se afinan** (`musculo`/`trazoVar`): bíceps que se afina al codo, antebrazo
+  ancho abajo del codo y fino en la muñeca, muslo ancho arriba, pantorrilla que se abulta y se
+  afina al tobillo; hombro redondo, rodilla, puño con pulgar.
+- **Caras**: ceja, oreja, nariz y boca en el retiario, el fanático y la gálea.
+- **Respira**: quieto, torso, cabeza y brazos suben y bajan medio píxel fino con su propia fase.
+
+Lo que costó una vuelta:
+- **La faldita salía como dos pompones a cuadros**: la pierna de adelante se dibujaba después del
+  torso y le tapaba el medio. Las dos piernas van antes del torso.
+
+Medido: 49 de 49 peleas terminan (4 a 37 s) sin errores ni NaN, toques y carrera bien; A/B contra el
+commit anterior en el mismo banco: ~1 ms más por cuadro (6-7 contra 4-6 ms), lejos de los 16,7.

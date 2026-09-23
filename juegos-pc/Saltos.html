@@ -178,10 +178,10 @@ function pixelTxt(str, grad, S){
    k contorno · p/P piel · h/H pelo · m/M metal · o/O bronce · r/R tela roja · c/C cuero
    w blanco · e ojo · q cuadros (se alternan los dos colores de la clase) */
 const CABEZAS = {
-  ret:["...kkkkk...","..khhhhhkk.",".khhhhhhhhk",".krrrrrrrrk",".khhpppppk.",".khpppwepk.",
-       ".kpppppppPk",".khpppppPk.",".khhPPPPk..","..khhhhk...","...kppk....","...kppk...."],
-  fan:["...........","...kkkkk...","..kpppppkk.",".kpppppppk.",".kprrrrppk.",".kppppwepk.",
-       ".kpppppppPk",".khhppphhk.",".khhhhhhhk.","..khhhhhk..","...khhhk...","...kppk...."],
+  ret:["...kkkkk...","..khhhhhkk.",".khhhhhhhhk",".krrrrrrrrk",".khhppHHpk.",".khPppwepk.",
+       ".khPpppppPk",".khppppRpk.",".khhppppk..","..khhhhk...","...kppk....","...kppk...."],
+  fan:["...........","...kkkkk...","..kpppppkk.",".kprrrrppk.",".kpppHHppk.",".kPppwepppk",
+       ".kPppppppPk",".khhppRphk.",".khhhhhhhk.","..khhhhhk..","...khhhk...","...kppk...."],
   mirmillon:["....kkk....","...kmMmk...","..kkmMmkk..",".kmmmmmmmk.","kmmmmmmmmmk",".kmmMkmkmkk",
        ".kmmMkmkmkk",".kmmMkmkmkk",".kmmmmmmmk.","..kmmmmmk..","...kppk....","...kppk...."],
   tracio:[".....kkkkk.","....koooook","...kooookk.","..kooook...",".koooooook.","koooooooook",
@@ -191,10 +191,11 @@ const CABEZAS = {
   hoplomaco:["..krrrrk...",".krrrrrrk..","..kkrrkk...","..kmmmmmk..",".kmmmmmmmk.","kmmmmmmmmmk",
        ".kmmMkmkmkk",".kmmMkmkmkk",".kmmmmmmmk.","..kmmmmmk..","...kppk....","...kppk...."],
   galea:["...........","....krk....","...kmmmk...","..kmmmmmk..",".kmmmmmmmk.",".kMmmmmmmMk",
-       ".kkmpwepkk.",".kmmpppppPk",".kmmhppphk.","..kkhhhhk..","...kppk....","...kppk...."]
+       ".kmmpwepkk.",".kmmpppppPk",".kmmhpRphk.","..kkhhhhk..","...kppk....","...kppk...."]
 };
-const TORSO = ["..kkkkkkkk..",".kppppppppk.","kppppppppppk","kpPppppppPpk","kppPppppPppk",".kpppppppppk",
-  ".kppPpPpPpk.",".kpppppppk..",".kppppppppk.",".kccoocccck.",".kqqqqqqqqk.",".kqqqqqqqqk.","..kqqqqqqk..","..kqq..qqk.."];
+/* Q: tono intermedio de la piel para marcar el músculo sin que parezcan manchas */
+const TORSO = ["...kkkkkk...","..kQppppQk..",".kppppppppk.","kQpppppppppk","kppQQpppQQpk","kpppppppppQk",
+  ".kppQpQpppk.",".kpppppQppk.",".kpQpppppQk.",".kccoocccck.","kqqqqqqqqqqk","kqqqqqqqqqqk",".kqqqkqqqqk.",".kqqk..kqqk."];
 const _v = "............";
 const ARMADURAS = {
   cuero:[_v,".kcCccccCck.","kcCccccccCck","kccCccccCcck","kcccccccccck",".kcCcCcCcCck",".kcccccccck.",".kcCcCcCck..",".kcccccccck.",_v,_v,_v,_v,_v],
@@ -269,7 +270,6 @@ function hornearHD(grid, pal){
       /* textura: la tela y el cuero tienen trama; el metal, un destello vertical */
       if(tela && !luz && ((x*7 + y*13) % 9 === 0)) col = tono(col, 0.86);
       if(met && !luz && !osc && (x + y*3) % 11 === 0) col = tono(base, 1.35);
-      if(r === 'p' && !luz && !osc && ((x*5 + y*3) % 13 === 0)) col = tono(base, 0.93);
     }
     g.fillStyle = col; g.fillRect(x, y, 1, 1);
   }
@@ -281,11 +281,13 @@ function piezas(def, estatua){
   const pal = Object.assign({}, estatua ? PAL_ESTATUA : PAL_BASE);
   if(!estatua){ pal.p = def.piel; pal.P = sombra(def.piel, 0.72); pal.h = def.pelo; pal.H = sombra(def.pelo, 0.6);
     pal.a = def.q[0]; pal.A = def.q[1]; if(def.tinte) Object.assign(pal, def.tinte); }
+  pal.Q = tono(pal.p, 0.87);
   const casco = def.eq.casco !== 'ninguno' ? def.eq.casco : (def.cabeza || 'ret');
   /* la coraza se funde con el torso ANTES de agrandar, así el sombreado ve la silueta entera */
   let grid = TORSO;
-  if(def.eq.torso !== 'nada' && ARMADURAS[def.eq.torso]){ const A = ARMADURAS[def.eq.torso];
-    grid = TORSO.map((fila, y) => [...fila].map((ch, x) => (A[y][x] && A[y][x] !== '.') ? A[y][x] : ch).join('')); }
+  const PATRON = {cuero:(x, y) => (x + y) % 4 === 0 ? 'C' : 'c', escamas:(x, y) => (x + y) % 2 ? 'm' : 'M', lorica:(x, y) => y % 2 ? 'm' : 'M'};
+  if(PATRON[def.eq.torso]){ const f = PATRON[def.eq.torso];
+    grid = TORSO.map((fila, y) => y >= 1 && y <= 8 ? [...fila].map((ch, x) => (ch === 'p' || ch === 'P') ? f(x, y) : ch).join('') : fila); }
   const p = {pal, cabeza:hornearHD(CABEZAS[casco] || CABEZAS.ret, pal), torso:hornearHD(grid, pal),
              escudo:def.eq.escudo !== 'ninguno' ? hornearHD(ESCUDO_SPR[def.eq.escudo], pal) : null};
   PIEZAS.set(clave, p);
@@ -505,7 +507,7 @@ function nuevoLuchador(def, x, dir, jugador, dif){
     jab:def.jab || 0, red:def.red || 0, carga:0, sosten:0, dirCarga:0, pidioSalto:0,
     ctrl:{izq:false, der:false, atk:null, guardia:false, postura:false, lanzar:false},
     ia:{t:30 + RI(0, 30), hop:null, guardT:0, reac:false, quieto:0}, tip:null, tip2:null, v1:0, v2:0,
-    golpes:0, dano:0, cortes:0, ultTocado:0, pisada:0, causa:''};
+    golpes:0, dano:0, cortes:0, ultTocado:0, pisada:0, causa:'', fase:rv(0, 6.3)};
   return g;
 }
 const armaDe = g => (!g.cortado.bA && g.def.eq.arma) ? ARMAS[g.def.eq.arma] : null;
@@ -523,7 +525,7 @@ function alcance(g){ const a = armaDe(g) || arma2De(g); return 14 + (a ? a.largo
 function esqueleto(g){
   const d = g.dir, echado = g.caido > 0 || g.muerto > 0;
   const piernas = (g.cortado.pI ? 0 : 1) + (g.cortado.pD ? 0 : 1);
-  const LP = (piernas === 2 ? 13 : piernas === 1 ? 11 : 5)*(1 - 0.32*g.comp);
+  const LP = (piernas === 2 ? 14.5 : piernas === 1 ? 12 : 5)*(1 - 0.32*g.comp);   /* piernas de persona: la cabeza pesa menos en el total */
   const angP = g.ang*(echado ? 1 : 0.12);
   const rot = (ox, oy, lx, ly, a) => { const c = Math.cos(a), s = Math.sin(a); return {x:ox + d*(lx*c - ly*s), y:oy + (lx*s + ly*c)}; };
   const H = rot(g.x, g.y, 0, -LP, angP);
@@ -952,6 +954,20 @@ function miembro(ctx, a, b, s, col, k){
   trazo(ctx, {x:a.x + nx*o, y:a.y + ny*o}, {x:b.x + nx*o, y:b.y + ny*o}, 1, tono(col, 1.22));
   trazo(ctx, {x:a.x - nx*o, y:a.y - ny*o}, {x:b.x - nx*o, y:b.y - ny*o}, 1, tono(col, 0.68));
 }
+/* un miembro que se afina: ancho en el músculo (s0) y fino en la punta (s1), con su volumen */
+function trazoVar(ctx, a, b, s0, s1, col){
+  const L = Math.hypot(b.x - a.x, b.y - a.y)*DET, n = Math.max(1, Math.ceil(L)); ctx.fillStyle = col;
+  for(let i = 0; i <= n; i++){ const t = i/n, s = Math.round(s0 + (s1 - s0)*t), w = s/DET, h = s/2/DET;
+    ctx.fillRect(rf(a.x + (b.x - a.x)*t - h), rf(a.y + (b.y - a.y)*t - h), w, w); }
+}
+function musculo(ctx, a, b, s0, s1, col){
+  trazoVar(ctx, a, b, s0 + 2, s1 + 2, K); trazoVar(ctx, a, b, s0, s1, col);
+  const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1;
+  let nx = -dy/L, ny = dx/L; if(ny > 0 || (ny === 0 && nx > 0)){ nx = -nx; ny = -ny; }
+  const o0 = (s0/2 - 0.5)/DET, o1 = (s1/2 - 0.5)/DET;
+  trazo(ctx, {x:a.x + nx*o0, y:a.y + ny*o0}, {x:b.x + nx*o1, y:b.y + ny*o1}, 1, tono(col, 1.2));
+  trazo(ctx, {x:a.x - nx*o0, y:a.y - ny*o0}, {x:b.x - nx*o1, y:b.y - ny*o1}, 1, tono(col, 0.68));
+}
 /* disco en la grilla de unidades (HUD) */
 function disco(ctx, x, y, r, col){ ctx.fillStyle = col; const R2 = r*r;
   for(let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) for(let dx = -Math.ceil(r); dx <= Math.ceil(r); dx++)
@@ -1028,16 +1044,21 @@ function dibujarArma(ctx, m, ang, d, arma, pal){
 function rodilla(a, b, d, k){ return {x:(a.x + b.x)/2 + d*k, y:(a.y + b.y)/2}; }
 function dibujarGlad(ctx, g, ox, oy, estatua){
   const sk = esqueleto(g), d = sk.d, pz = piezas(g.def, estatua), pal = pz.pal;
-  const T = p => ({x:p.x + ox, y:p.y + oy});
-  const H = T(sk.H), S = T(sk.S), S2 = T(sk.S2), N = T(sk.N), sangre = '#8a0c08';
+  /* quieto, respira: el torso, la cabeza y los brazos suben y bajan apenas (sólo al dibujar) */
+  const resp = g.suelo && !g.ataque && !g.caido && !g.muerto && !g.carga ? Math.sin(J.t*0.07 + (g.fase || 0))*0.45 : 0;
+  const T = p => ({x:p.x + ox, y:p.y + oy}), Tr = p => ({x:p.x + ox, y:p.y + oy + resp});
+  const H = T(sk.H), S = Tr(sk.S), S2 = Tr(sk.S2), N = Tr(sk.N), sangre = '#8a0c08';
   const kb = 1.4 + g.comp*2.4;
   const pierna = (id, pie, atras) => {
     if(g.cortado[id]){ discoF(ctx, H.x, H.y + 1, 1.3, sangre, true); return; }
     const F = T(pie), R = rodilla(H, F, d, g.suelo && !g.caido && !g.muerto ? kb : 1.5);
     const piel = atras ? tono(pal.p, 0.84) : pal.p;
-    miembro(ctx, H, R, 6, piel);
-    if(g.def.eq.grebas){ miembro(ctx, R, F, 6, atras ? tono(pal.m, 0.85) : pal.m); discoF(ctx, R.x, R.y, 1.1, pal.o, true); }
-    else { miembro(ctx, R, F, 5, piel); trazo(ctx, {x:F.x - 0.9, y:F.y - 2.2}, {x:F.x + 0.9, y:F.y - 2.2}, 1, pal.C); trazo(ctx, {x:F.x - 0.9, y:F.y - 1.3}, {x:F.x + 0.9, y:F.y - 1.3}, 1, pal.C); }
+    musculo(ctx, H, R, 7, 5, piel);                                   /* muslo: ancho arriba */
+    /* pantorrilla: se abulta abajo de la rodilla y se afina al tobillo */
+    const P1 = {x:R.x + (F.x - R.x)*0.35, y:R.y + (F.y - R.y)*0.35};
+    if(g.def.eq.grebas){ const m = atras ? tono(pal.m, 0.85) : pal.m; musculo(ctx, R, P1, 5, 6, m); musculo(ctx, P1, F, 6, 4, m); discoF(ctx, R.x, R.y, 1.2, pal.o, true); }
+    else { musculo(ctx, R, P1, 5, 6, piel); musculo(ctx, P1, F, 6, 4, piel); discoF(ctx, R.x, R.y, 0.9, piel, true);
+      trazo(ctx, {x:F.x - 0.9, y:F.y - 2.2}, {x:F.x + 0.9, y:F.y - 2.2}, 1, pal.C); trazo(ctx, {x:F.x - 0.9, y:F.y - 1.3}, {x:F.x + 0.9, y:F.y - 1.3}, 1, pal.C); }
     /* sandalia: suela, pie y tiras */
     const x0 = F.x - d*1.6, x1 = F.x + d*2.8;
     trazo(ctx, {x:x0, y:F.y - 0.25}, {x:x1, y:F.y - 0.25}, 3, K);
@@ -1047,19 +1068,22 @@ function dibujarGlad(ctx, g, ox, oy, estatua){
   };
   const brazo = (b, id, desde, manica, atras) => {
     if(g.cortado[id]){ discoF(ctx, desde.x, desde.y, 1.2, sangre, true); return; }
-    const C = T(b.codo), M = T(b.mano), piel = atras ? tono(pal.p, 0.84) : pal.p;
-    miembro(ctx, desde, C, 4, piel);
-    if(manica){ trazo(ctx, C, M, 7, K); trazoCuadros(ctx, C, M, 5, pal.a, pal.A); trazo(ctx, {x:C.x, y:C.y - 1/DET}, {x:M.x, y:M.y - 1/DET}, 1, tono(pal.a, 1.25)); }
-    else miembro(ctx, C, M, 4, piel);
-    discoF(ctx, M.x, M.y, 1.3, K); discoF(ctx, M.x, M.y, 0.9, piel, true);
+    const C = Tr(b.codo), M = Tr(b.mano), piel = atras ? tono(pal.p, 0.84) : pal.p;
+    discoF(ctx, desde.x, desde.y, 1.9, K); discoF(ctx, desde.x, desde.y, 1.5, piel, true);   /* hombro */
+    musculo(ctx, desde, C, 6, 4, piel);                                /* brazo: bíceps que se afina al codo */
+    if(manica){ trazoVar(ctx, C, M, 7, 6, K); trazoCuadros(ctx, C, M, 5, pal.a, pal.A); trazo(ctx, {x:C.x, y:C.y - 1/DET}, {x:M.x, y:M.y - 1/DET}, 1, tono(pal.a, 1.25)); }
+    else musculo(ctx, C, M, 5, 3, piel);                               /* antebrazo: ancho abajo del codo, fino en la muñeca */
+    discoF(ctx, M.x, M.y, 1.4, K); discoF(ctx, M.x, M.y, 1.0, piel, true);   /* puño */
+    ctx.fillStyle = tono(piel, 0.7); ctx.fillRect(rf(M.x + d*0.5), rf(M.y - 0.5), 1/DET, 1/DET);   /* pulgar */
   };
   /* de atrás para adelante: pierna de atrás, brazo del arma, torso, pierna de adelante, cabeza,
      brazo del escudo con el escudo, y el arma arriba de todo */
+  /* las dos piernas van antes del torso: la faldita las tapa arriba, como en una persona */
   pierna('pI', sk.pT, true);
-  brazo(sk.bA, 'bA', S, g.def.eq.manica, true);
-  sprite(ctx, pz.torso, H.x, H.y, 6, 11, g.ang, d);
   pierna('pD', sk.pD, false);
-  if(!g.cortado.cab) sprite(ctx, pz.cabeza, N.x, N.y + 1, 5, 12, g.ang, d);
+  brazo(sk.bA, 'bA', S, g.def.eq.manica, true);
+  sprite(ctx, pz.torso, H.x, H.y + resp, 6, 11, g.ang, d);
+  if(!g.cortado.cab) sprite(ctx, pz.cabeza, N.x, N.y + 0.3, 5, 12, g.ang, d);      /* un poco más arriba: se ve el cuello */
   else { discoF(ctx, N.x, N.y, 1.6, sangre, true); discoF(ctx, N.x, N.y - 0.3, 0.7, '#e8d8c0'); }
   brazo(sk.bE, 'bE', S2, false, false);
   if(pz.escudo && !g.cortado.bE){ const M = T(sk.bE.mano), e = pz.escudo;
