@@ -54,6 +54,9 @@ h2{display:flex;justify-content:center;margin:2px 0 4px}
 table.res{border-collapse:collapse;width:100%}
 table.res td{padding:3px 4px}
 .espacio{flex:1 1 auto;min-height:8px}
+#idiomas{gap:8px}
+#idiomas .boton{min-width:0;min-height:36px;padding:6px 8px;background:#3a4058;box-shadow:inset -3px -3px 0 #232838,inset 3px 3px 0 #6a7294,0 0 0 3px #03040a,0 5px 0 3px #03040a}
+#idiomas .boton.ya{background:#e8a21a;box-shadow:inset -3px -3px 0 #9a6208,inset 3px 3px 0 #ffe08a,0 0 0 3px #03040a,0 5px 0 3px #03040a}
 </style></head><body>
 <div id="pantalla">
   <canvas id="lienzo"></canvas>
@@ -65,6 +68,7 @@ table.res td{padding:3px 4px}
     <button class="boton" id="btHeroes">HÉROES</button>
     <button class="boton gris" id="btComo">CÓMO SE JUEGA</button>
     <button class="boton gris chico" id="btSonido">SONIDO: SÍ</button>
+    <div class="fila" id="idiomas"><button class="boton chico" id="btIdEs" data-l="es">ESPAÑOL</button><button class="boton chico" id="btIdEn" data-l="en">ENGLISH</button><button class="boton chico" id="btIdPt" data-l="pt">PORTUGUÊS</button></div>
   </div>
 
   <div class="capa fondo" id="capaMisiones">
@@ -155,6 +159,116 @@ function cargar(){
 }
 function guardar(){ try{ localStorage.setItem(CLAVE, JSON.stringify(G)); }catch(e){} }
 const G = cargar();
+
+/* ---------- idiomas: castellano (base), inglés y portugués ----------
+   Todo se escribe en castellano y T() traduce al mostrar: entero si está en el diccionario, y si no
+   por frases sueltas (palabras enteras), así sirven los armados como 'DISCO '+n+'/3'.
+   Los apodos (CHUECO, LA RUBIA…), los héroes y EL MOLE son nombres propios: no se traducen. */
+const TR = {
+  en:{
+    /* menús */
+    'JUGAR':'PLAY', 'HÉROES':'HEROES', 'CÓMO SE JUEGA':'HOW TO PLAY', 'SONIDO':'SOUND', 'SÍ':'ON', 'NO':'OFF', 'MISIONES':'MISSIONS', 'VOLVER':'BACK',
+    'MISIÓN':'MISSION', 'A LA OSCURIDAD':'INTO THE DARK', 'CAMBIAR HÉROE':'CHANGE HERO', 'ELEGIR':'SELECT', 'COMPRAR':'BUY', 'MEJORAR':'UPGRADE',
+    'NIVEL MÁXIMO':'MAX LEVEL', 'NIVEL':'LEVEL', 'NV':'LV', 'PAUSA':'PAUSED', 'SEGUIR':'RESUME', 'REINICIAR':'RESTART', 'SALIR':'QUIT',
+    'VICTORIA':'VICTORY', 'DERROTA':'DEFEAT', 'PUESTO':'PLACE', 'SIGUIENTE':'NEXT', 'OTRA VEZ':'AGAIN', 'TE FALTAN MONEDAS':'NOT ENOUGH COINS',
+    'TÁCTICO A LINTERNA':'FLASHLIGHT TACTICS', 'ESCUCHÁ LOS PASOS':'LISTEN FOR FOOTSTEPS',
+    'BAJAS':'KILLS', 'PUNTERÍA':'ACCURACY', 'DAÑO':'DAMAGE', 'TIEMPO':'TIME', 'MONEDAS':'COINS',
+    'VIDA':'HEALTH', 'BLINDAJE':'ARMOR', 'ALCANCE':'RANGE', 'VELOCIDAD':'SPEED', 'LINTERNA':'FLASHLIGHT',
+    /* misiones y estrellas */
+    'ALMACÉN':'WAREHOUSE', 'OFICINAS':'OFFICES', 'LABORATORIO':'LABORATORY', 'PUERTO':'PORT', 'BÚNKER':'BUNKER',
+    'EQUIPO 3 VS 3':'TEAM 3 VS 3', 'ROBO EN SIGILO':'STEALTH HEIST', 'DOMINIO DE ZONAS':'ZONE CONTROL', 'BATALLA REAL':'BATTLE ROYALE', 'JEFE FINAL':'FINAL BOSS',
+    'GANAR POR':'WIN BY', 'GANAR':'WIN', 'SIN MORIR':'NO DEATHS', 'BAJAS TUYAS':'KILLS BY YOU', 'ESCAPAR':'ESCAPE', 'SIN ALARMA':'NO ALARM',
+    'EN MENOS DE':'UNDER', 'QUEDAR ENTRE':'TOP',
+    'Tu equipo contra el de ellos, tres contra tres. Gana el que deje al otro sin nadie.':'Your team against theirs, three on three. The last team standing wins.',
+    'Solo. Robá los 3 discos y volvé al ascensor. Los guardias patrullan con linterna: si te ven, suena la alarma y vienen todos.':'Alone. Steal the 3 disks and get back to the elevator. Guards patrol with flashlights: if they see you, the alarm goes off and they all come.',
+    'Tomá las zonas A, B y C y aguantalas. Cada zona suma un punto por segundo. Primero a 100. Acá se reaparece.':'Take zones A, B and C and hold them. Each zone scores one point per second. First to 100. Here you respawn.',
+    'Diez contra todos bajo la lluvia. El gas va cerrando el puerto. Rompé los cofres, armate y quedate último.':'Ten, every one for themselves, in the rain. The gas keeps closing in on the port. Break the chests, gear up and be the last one standing.',
+    'Bajá al búnker con dos compañeros y tirá abajo a EL MOLE. Su escudo para todo lo que le tirás de frente: rodealo.':'Go down into the bunker with two teammates and take down EL MOLE. His shield stops everything you fire at him head-on: flank him.',
+    /* héroes: clase, arma y habilidad */
+    'SOLDADO':'SOLDIER', 'TANQUE':'TANK', 'EXPLORADOR':'SCOUT', 'FRANCOTIRADORA':'SNIPER', 'EMBOSCADOR':'AMBUSHER', 'JEFE':'BOSS', 'GUARDIA':'GUARD',
+    'FUSIL':'RIFLE', 'ESCOPETA':'SHOTGUN', 'SUBFUSIL':'SMG', 'RIFLE':'SNIPER RIFLE', 'PISTOLA MUDA':'SILENCED PISTOL', 'PISTOLA':'PISTOL', 'AMETRALLADORA':'MACHINE GUN',
+    'GRANADA':'GRENADE', 'GRANADAS':'GRENADES', 'ESCUDO':'SHIELD', 'ARRANQUE':'DASH', 'PULSO':'PULSE', 'SOMBRA:':'SHADOW:',
+    'Tira una granada que rebota en las paredes y explota. Rompe vidrios y cajas.':'Throws a grenade that bounces off walls and explodes. Breaks glass and crates.',
+    'Levanta un escudo de frente que para todas las balas durante 4 segundos.':'Raises a front shield that stops every bullet for 4 seconds.',
+    'Un pique rapidísimo hacia donde caminás. Durante el pique las balas no te tocan.':'A lightning-fast dash wherever you are walking. Bullets can\'t touch you during the dash.',
+    'Un pulso de radar: muestra a todos los enemigos cerca tuyo por 3 segundos.':'A radar pulse: reveals every enemy near you for 3 seconds.',
+    'Te volvés invisible por 4,5 segundos o hasta que disparás. Pegás más fuerte al salir.':'You turn invisible for 4.5 seconds or until you shoot. You hit harder coming out.',
+    /* en juego */
+    'RECARGA':'RELOAD', 'INVISIBLE':'INVISIBLE', 'SIGILO':'STEALTH', 'RUIDO':'NOISE', 'BURBUJA':'BUBBLE', 'FASE':'PHASE', 'DISCOS':'DISKS', 'DISCO':'DISK',
+    '¡ALARMA!':'ALARM!', 'VIVOS':'ALIVE', 'GAS EN':'GAS IN', 'EL GAS AVANZA':'GAS ADVANCING', 'EL GAS':'THE GAS', 'ESPECTANDO A':'SPECTATING', 'ESPECTANDO':'SPECTATING',
+    'VOS':'YOU', 'SALIDA':'EXIT', 'ZONA':'ZONE', 'TOMADA':'CAPTURED', 'PERDIDA':'LOST',
+    '¡EL MOLE SE ENOJA!':'EL MOLE GETS ANGRY!', '¡EL MOLE ESTÁ FURIOSO!':'EL MOLE IS FURIOUS!', '¡AL ASCENSOR!':'TO THE ELEVATOR!', '¡ALERTA!':'ALERT!',
+    '¡EL GAS SE CIERRA!':'GAS CLOSING IN!', '¡VICTORIA!':'VICTORY!', '¡HABILIDAD LISTA!':'SKILL READY!', '¡BURBUJA!':'BUBBLE!', '¡TURBO!':'TURBO!', '¡RADAR!':'RADAR!',
+  },
+  pt:{
+    'JUGAR':'JOGAR', 'HÉROES':'HERÓIS', 'CÓMO SE JUEGA':'COMO JOGAR', 'SONIDO':'SOM', 'SÍ':'SIM', 'NO':'NÃO', 'MISIONES':'MISSÕES', 'VOLVER':'VOLTAR',
+    'MISIÓN':'MISSÃO', 'A LA OSCURIDAD':'PARA O ESCURO', 'CAMBIAR HÉROE':'TROCAR HERÓI', 'ELEGIR':'ESCOLHER', 'COMPRAR':'COMPRAR', 'MEJORAR':'MELHORAR',
+    'NIVEL MÁXIMO':'NÍVEL MÁXIMO', 'NIVEL':'NÍVEL', 'NV':'NV', 'PAUSA':'PAUSA', 'SEGUIR':'CONTINUAR', 'REINICIAR':'REINICIAR', 'SALIR':'SAIR',
+    'VICTORIA':'VITÓRIA', 'DERROTA':'DERROTA', 'PUESTO':'POSIÇÃO', 'SIGUIENTE':'PRÓXIMA', 'OTRA VEZ':'DE NOVO', 'TE FALTAN MONEDAS':'MOEDAS INSUFICIENTES',
+    'TÁCTICO A LINTERNA':'TÁTICO DE LANTERNA', 'ESCUCHÁ LOS PASOS':'OUÇA OS PASSOS',
+    'BAJAS':'ABATES', 'PUNTERÍA':'PONTARIA', 'DAÑO':'DANO', 'TIEMPO':'TEMPO', 'MONEDAS':'MOEDAS',
+    'VIDA':'VIDA', 'BLINDAJE':'BLINDAGEM', 'ALCANCE':'ALCANCE', 'VELOCIDAD':'VELOCIDADE', 'LINTERNA':'LANTERNA',
+    'ALMACÉN':'ARMAZÉM', 'OFICINAS':'ESCRITÓRIOS', 'LABORATORIO':'LABORATÓRIO', 'PUERTO':'PORTO', 'BÚNKER':'BUNKER',
+    'EQUIPO 3 VS 3':'EQUIPE 3 VS 3', 'ROBO EN SIGILO':'ROUBO FURTIVO', 'DOMINIO DE ZONAS':'DOMÍNIO DE ZONAS', 'BATALLA REAL':'BATTLE ROYALE', 'JEFE FINAL':'CHEFE FINAL',
+    'GANAR POR':'VENCER POR', 'GANAR':'VENCER', 'SIN MORIR':'SEM MORRER', 'BAJAS TUYAS':'ABATES SEUS', 'ESCAPAR':'ESCAPAR', 'SIN ALARMA':'SEM ALARME',
+    'EN MENOS DE':'EM MENOS DE', 'QUEDAR ENTRE':'FICAR NO TOP',
+    'Tu equipo contra el de ellos, tres contra tres. Gana el que deje al otro sin nadie.':'Sua equipe contra a deles, três contra três. Vence quem deixar o outro sem ninguém.',
+    'Solo. Robá los 3 discos y volvé al ascensor. Los guardias patrullan con linterna: si te ven, suena la alarma y vienen todos.':'Sozinho. Roube os 3 discos e volte ao elevador. Os guardas patrulham com lanterna: se te virem, o alarme toca e vêm todos.',
+    'Tomá las zonas A, B y C y aguantalas. Cada zona suma un punto por segundo. Primero a 100. Acá se reaparece.':'Tome as zonas A, B e C e segure-as. Cada zona soma um ponto por segundo. Primeiro a 100. Aqui você renasce.',
+    'Diez contra todos bajo la lluvia. El gas va cerrando el puerto. Rompé los cofres, armate y quedate último.':'Dez contra todos debaixo de chuva. O gás vai fechando o porto. Quebre os baús, se arme e seja o último.',
+    'Bajá al búnker con dos compañeros y tirá abajo a EL MOLE. Su escudo para todo lo que le tirás de frente: rodealo.':'Desça ao bunker com dois companheiros e derrube EL MOLE. O escudo dele para tudo que você atira de frente: dê a volta nele.',
+    'SOLDADO':'SOLDADO', 'TANQUE':'TANQUE', 'EXPLORADOR':'BATEDOR', 'FRANCOTIRADORA':'ATIRADORA', 'EMBOSCADOR':'EMBOSCADOR', 'JEFE':'CHEFE', 'GUARDIA':'GUARDA',
+    'FUSIL':'FUZIL', 'ESCOPETA':'ESCOPETA', 'SUBFUSIL':'SUBMETRALHADORA', 'RIFLE':'RIFLE', 'PISTOLA MUDA':'PISTOLA SILENCIADA', 'PISTOLA':'PISTOLA', 'AMETRALLADORA':'METRALHADORA',
+    'GRANADA':'GRANADA', 'GRANADAS':'GRANADAS', 'ESCUDO':'ESCUDO', 'ARRANQUE':'ARRANCADA', 'PULSO':'PULSO', 'SOMBRA:':'SOMBRA:',
+    'Tira una granada que rebota en las paredes y explota. Rompe vidrios y cajas.':'Lança uma granada que quica nas paredes e explode. Quebra vidros e caixas.',
+    'Levanta un escudo de frente que para todas las balas durante 4 segundos.':'Ergue um escudo frontal que para todas as balas por 4 segundos.',
+    'Un pique rapidísimo hacia donde caminás. Durante el pique las balas no te tocan.':'Uma arrancada rapidíssima na direção em que você anda. Durante a arrancada as balas não te acertam.',
+    'Un pulso de radar: muestra a todos los enemigos cerca tuyo por 3 segundos.':'Um pulso de radar: mostra todos os inimigos perto de você por 3 segundos.',
+    'Te volvés invisible por 4,5 segundos o hasta que disparás. Pegás más fuerte al salir.':'Você fica invisível por 4,5 segundos ou até atirar. Bate mais forte ao sair.',
+    'RECARGA':'RECARGA', 'INVISIBLE':'INVISÍVEL', 'SIGILO':'FURTIVO', 'RUIDO':'RUÍDO', 'BURBUJA':'BOLHA', 'FASE':'FASE', 'DISCOS':'DISCOS', 'DISCO':'DISCO',
+    '¡ALARMA!':'ALARME!', 'VIVOS':'VIVOS', 'GAS EN':'GÁS EM', 'EL GAS AVANZA':'O GÁS AVANÇA', 'EL GAS':'O GÁS', 'ESPECTANDO A':'ASSISTINDO', 'ESPECTANDO':'ASSISTINDO',
+    'VOS':'VOCÊ', 'SALIDA':'SAÍDA', 'ZONA':'ZONA', 'TOMADA':'TOMADA', 'PERDIDA':'PERDIDA',
+    '¡EL MOLE SE ENOJA!':'EL MOLE SE IRRITA!', '¡EL MOLE ESTÁ FURIOSO!':'EL MOLE ESTÁ FURIOSO!', '¡AL ASCENSOR!':'PARA O ELEVADOR!', '¡ALERTA!':'ALERTA!',
+    '¡EL GAS SE CIERRA!':'O GÁS SE FECHA!', '¡VICTORIA!':'VITÓRIA!', '¡HABILIDAD LISTA!':'HABILIDADE PRONTA!', '¡BURBUJA!':'BOLHA!', '¡TURBO!':'TURBO!', '¡RADAR!':'RADAR!',
+  }
+};
+/* cómo se juega tiene negritas adentro: va entero por idioma */
+const COMO_TXT = {
+  en:`<p><b>In the dark.</b> You only see what your flashlight and your teammates' light up. The rest you have to <b>hear</b>: enemy footsteps and shots show up as <b>echoes</b> on the floor.</p>
+      <p><b>Left finger:</b> move. Push just a little and you walk in <b>stealth</b> (silent); push all the way and you run, but they hear you.</p>
+      <p><b>Right finger:</b> aim the flashlight. <b>It fires on its own</b> when an enemy lands in your sights. Standing still, the flashlight reaches farther.</p>
+      <p><b>Round button:</b> the hero's skill (grenade, shield, dash, radar pulse or invisibility).</p>
+      <p><b>Crates</b> cover you from bullets but not from sight. <b>Glass</b> can be seen through and shot to pieces. <b>Red barrels</b> explode.</p>
+      <p>Armor (blue) runs out before health (green). The fallen drop medkits and vests.</p>
+      <p style="color:#8d96b5">PC: WASD moves, Shift walks, the mouse aims, click fires, Space skill, R reloads, P pause.</p>`,
+  pt:`<p><b>No escuro.</b> Você só vê o que a sua lanterna e a dos seus companheiros iluminam. O resto você tem que <b>ouvir</b>: os passos e os tiros dos inimigos aparecem como <b>ecos</b> no chão.</p>
+      <p><b>Dedo esquerdo:</b> mover. Empurre só um pouco e você anda <b>furtivo</b> (sem ruído); empurre até o fim e você corre, mas eles te ouvem.</p>
+      <p><b>Dedo direito:</b> apontar a lanterna. <b>Atira sozinho</b> quando um inimigo entra na sua mira. Parado, a lanterna ilumina mais longe.</p>
+      <p><b>Botão redondo:</b> a habilidade do herói (granada, escudo, arrancada, pulso de radar ou invisibilidade).</p>
+      <p><b>Caixas</b> te protegem das balas, mas não da vista. <b>Vidros</b>: dá para ver através e quebram a tiros. <b>Barris vermelhos</b>: explodem.</p>
+      <p>A blindagem (azul) se gasta antes da vida (verde). Os caídos soltam kits médicos e coletes.</p>
+      <p style="color:#8d96b5">PC: WASD move, Shift anda, o mouse mira, clique atira, Espaço habilidade, R recarrega, P pausa.</p>`
+};
+function idiomaInicial(){ let n = 'es'; try{ n = (navigator.language||'es').slice(0,2).toLowerCase(); }catch(e){} return n==='en' || n==='pt' ? n : 'es'; }
+if(!TR[G.idioma] && G.idioma!=='es') G.idioma = idiomaInicial();
+const TRC = {};   /* por idioma: {re, cache} */
+function T(s){
+  const l = G.idioma; if(l==='es' || s==null) return s; s = String(s); const D = TR[l]; if(!D) return s;
+  if(D[s] !== undefined) return D[s];
+  let C = TRC[l]; if(!C){ const ks = Object.keys(D).sort((a, b)=> b.length - a.length).map(k=> k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    C = TRC[l] = {re:new RegExp('(?<![\\p{L}])(' + ks.join('|') + ')(?![\\p{L}])', 'gu'), cache:new Map()}; }
+  let r = C.cache.get(s); if(r !== undefined) return r;
+  r = s.replace(C.re, m=> D[m]); if(C.cache.size > 600) C.cache.clear(); C.cache.set(s, r); return r;
+}
+let COMO_ES = null;
+/* re-aplica el idioma: cómo se juega, todo lo pixelado (desde el castellano de data-px) y el selector */
+function aplicarIdioma(){
+  document.documentElement.lang = G.idioma==='pt' ? 'pt-BR' : G.idioma;
+  const como = document.querySelector('#capaComo .texto');
+  if(como){ if(COMO_ES===null) COMO_ES = como.innerHTML; como.innerHTML = G.idioma==='es' ? COMO_ES : COMO_TXT[G.idioma]; }
+  document.querySelectorAll('[data-px]').forEach(el=>{ if(el._pxS) pixelar(el, el._pxS, el._pxO); });
+  document.querySelectorAll('#idiomas .boton').forEach(b=> b.classList.toggle('ya', b.dataset.l===G.idioma));
+}
 
 /* ---------- héroes ---------- */
 const HEROES = [
@@ -1890,7 +2004,7 @@ function hud(){
     const x2 = VW-3-cB.width, x1 = x2 - cM.width - 1; g.fillStyle = 'rgba(8,8,14,0.6)'; g.fillRect(x1 - cA.width - 2, y-4, cA.width+cM.width+cB.width+5, 10);
     g.drawImage(cA, x1 - cA.width - 1, y-3); g.drawImage(cM, x1, y-3); g.drawImage(cB, x2, y-3); });
   /* avisos al centro */
-  J.avisos.forEach((k,i)=>{ const c = lienzoTexto(k.txt, {col:k.col}); const S = 2, y = Math.round(VH*0.3) + i*20;
+  J.avisos.forEach((k,i)=>{ const c = lienzoTexto(k.txt, {col:k.col}); const S = c.width*2 <= VW-16 ? 2 : 1, y = Math.round(VH*0.3) + i*20;
     g.globalAlpha = lim(k.t*2, 0, 1); g.drawImage(c, Math.round(VW/2 - c.width*S/2), y, c.width*S, c.height*S); g.globalAlpha = 1; });
   if(!e.vivo && J.espectando && J.espectando!==e) txt(g, 'ESPECTANDO · '+J.espectando.nombre, VW>>1, VH-18, GRAD.azul, 'cen');
   /* de dónde vienen los tiros: un arco rojo alrededor tuyo */
@@ -2097,7 +2211,7 @@ function abrirBrief(i){
   $('briefNom').textContent = nv.nom; $('briefNom').dataset.px = '';
   const mini = MINIS[i] || (MINIS[i] = miniatura(i,1)), c = $('briefMapa'); c.width = mini.width; c.height = mini.height; c.getContext('2d').drawImage(mini,0,0);
   const k = Math.min(192/mini.width, 240/mini.height); c.style.width = Math.round(mini.width*k)+'px'; c.style.height = Math.round(mini.height*k)+'px';
-  $('briefTxt').innerHTML = '<p>'+nv.txt+'</p><p><b>★</b> '+nv.est.join(' · ')+'</p>';
+  $('briefTxt').innerHTML = '<p>'+T(nv.txt)+'</p><p><b>★</b> '+nv.est.map(T).join(' · ')+'</p>';
   const d = HEROE(G.heroe), r = retrato(d, '#3aa8ff'), rc = $('briefRetrato'); rc.width = r.width; rc.height = r.height; rc.getContext('2d').drawImage(r,0,0);
   const bh = $('briefHeroe'); bh.innerHTML = ''; const n = document.createElement('div'); n.textContent = d.nom+' · '+d.clase; bh.appendChild(n); pixelar(n, 2, {grad:GRAD.blanco});
   const n2 = document.createElement('div'); n2.textContent = 'NIVEL '+(G.heroes[d.id]||1)+' · '+d.arma.nom; bh.appendChild(n2); pixelar(n2, 1, {grad:GRAD.gris});
@@ -2115,7 +2229,7 @@ function armarHeroe(){
   const st = $('heroeStats'); st.innerHTML = '';
   for(const [k,v] of stats){ const f = document.createElement('div'); f.className = 'stat'; const l = document.createElement('span'); l.textContent = k; f.appendChild(l); pixelar(l, 1, {grad:GRAD.gris});
     const i = document.createElement('i'); const b = document.createElement('b'); b.style.width = Math.round(lim(v,0.05,1)*100)+'%'; i.appendChild(b); f.appendChild(i); st.appendChild(f); }
-  $('heroeHab').innerHTML = '<p><b>'+d.hab.nom+':</b> '+d.hab.txt+'</p>';
+  $('heroeHab').innerHTML = '<p><b>'+T(d.hab.nom+':')+'</b> '+T(d.hab.txt)+'</p>';
   const bt = $('btHAccion');
   if(!nivel){ bt.textContent = 'COMPRAR '+d.precio; bt.className = 'boton oro'; }
   else if(G.heroe===d.id){ bt.textContent = nivel<5 ? 'MEJORAR '+(nivel*350) : 'NIVEL MÁXIMO'; bt.className = 'boton'; }
@@ -2166,6 +2280,7 @@ boton('btHeroes', abrirHeroes);
 boton('btComo', ()=> mostrar('capaComo'));
 boton('btComoVolver', ()=> mostrar('capaTitulo'));
 boton('btSonido', ()=>{ G.sonido = !G.sonido; guardar(); if(amo) amo.gain.value = G.sonido? 0.85 : 0; const b = $('btSonido'); b.textContent = 'SONIDO: '+(G.sonido?'SÍ':'NO'); b.dataset.px=''; pixelar(b, 2, {grad:GRAD.gris}); });
+for(const b of document.querySelectorAll('#idiomas .boton')) boton(b.id, ()=>{ G.idioma = b.dataset.l; guardar(); aplicarIdioma(); });
 boton('btMisVolver', ()=>{ monedero(); mostrar('capaTitulo'); });
 boton('btBriefIr', ()=> iniciarNivel(briefNi));
 boton('btBriefHeroe', ()=>{ ESC.volverBrief = true; abrirHeroes(); });
@@ -2243,8 +2358,10 @@ const FUENTE_PX = {
  '<':["....#","...#.","..#..",".#...","..#..","...#.","....#"],
  '%':["##..#","##.#.","...#.","..#..",".#...",".#.##","#..##"], '>':["#....",".#...","..#..","...#.","..#..",".#...","#...."],
 };
-const ACENTOS_PX = {'Á':['A','a'],'É':['E','a'],'Í':['I','a'],'Ó':['O','a'],'Ú':['U','a'],'Ñ':['N','t'],'Ü':['U','d']};
-const MARCAS_PX = {a:[[3,-3],[2,-2]], t:[[0,-2],[1,-3],[2,-3],[3,-2],[4,-3]], d:[[1,-2],[3,-2]]};
+const ACENTOS_PX = {'Á':['A','a'],'É':['E','a'],'Í':['I','a'],'Ó':['O','a'],'Ú':['U','a'],'Ñ':['N','t'],'Ü':['U','d'],
+  'Ã':['A','t'],'Õ':['O','t'],'Â':['A','c'],'Ê':['E','c'],'Ô':['O','c'],'À':['A','g'],'Ç':['C','z']};
+/* marcas: a aguda, t tilde, d diéresis, c circunfleja, g grave, z cedilla (va debajo) */
+const MARCAS_PX = {a:[[3,-3],[2,-2]], t:[[0,-2],[1,-3],[2,-3],[3,-2],[4,-3]], d:[[1,-2],[3,-2]], c:[[1,-2],[2,-3],[3,-2]], g:[[1,-3],[2,-2]], z:[[2,7],[2,8],[1,8]]};
 function glifoPx(ch){
   const c = ch.toUpperCase();
   if(FUENTE_PX[c]) return {f:FUENTE_PX[c], m:null};
@@ -2257,7 +2374,7 @@ function puntosTexto(str){
   for(const ch of str){
     const g = glifoPx(ch), w = g.f[0].length;
     for(let r=0;r<7;r++) for(let k=0;k<w;k++) if(g.f[r][k]==='#') pts.push([x+k, r, r]);
-    if(g.m) for(const [mx,my] of g.m) pts.push([x+mx, my, 0]);
+    if(g.m) for(const [mx,my] of g.m) pts.push([x+mx, my, my>6 ? 6 : 0]);
     x += w + 1;
   }
   return {pts, w:Math.max(1,x-1)};
@@ -2275,12 +2392,12 @@ const GRAD_RANGO = {S:GRAD.oro, A:GRAD.verde, B:GRAD.azul, C:GRAD.gris, D:GRAD.r
 /* texto a un lienzo de 1 px por píxel de fuente: contorno, sombra y degradé por fila */
 const cacheTxt = new Map();
 function lienzoTexto(str, o){
-  o = o || {};
+  o = o || {}; str = T(str);
   const clave = str+'|'+(o.grad? o.grad[0]+o.grad[6] : o.col)+'|'+(o.borde||'');
   if(cacheTxt.has(clave)) return cacheTxt.get(clave);
   const {pts, w} = puntosTexto(str);
-  const arriba = 3, c = document.createElement('canvas');
-  c.width = w + 3; c.height = arriba + 7 + 3;
+  const arriba = 3, abajo = pts.some(p=> p[1] > 6) ? 2 : 0, c = document.createElement('canvas');
+  c.width = w + 3; c.height = arriba + 7 + 3 + abajo;
   const g = c.getContext('2d'), ox = 1, oy = arriba + 1, borde = o.borde || '#141018';
   g.fillStyle = 'rgba(10,6,16,0.75)';
   for(const [x,y] of pts) g.fillRect(ox+x-1, oy+y, 3, 3);                 /* sombra abajo-derecha */
@@ -2296,12 +2413,12 @@ function pixelar(el, S, o){
   if(!el) return;
   const txt = el.textContent.trim() !== '' ? el.textContent.trim() : (el.dataset.px||'');
   if(!txt) return;
-  if(el.dataset.px === txt && el.querySelector('canvas.px')) return;
-  el.dataset.px = txt; el.textContent = '';
+  if(el.dataset.px === txt && el.dataset.pxl === G.idioma && el.querySelector('canvas.px')) return;
+  el.dataset.px = txt; el.dataset.pxl = G.idioma; el._pxS = S; el._pxO = o; el.textContent = '';
   const src = lienzoTexto(txt, o), c = document.createElement('canvas');
   c.width = src.width; c.height = src.height; c.getContext('2d').drawImage(src,0,0);
   c.className = 'px'; c.style.width = (c.width*S)+'px'; c.style.height = (c.height*S)+'px';
-  c.setAttribute('aria-label', txt);
+  c.setAttribute('aria-label', T(txt));
   el.appendChild(c);
 }
 function lienzoForma(w, h, dentro, color, sombra){
@@ -2319,6 +2436,7 @@ function lienzoForma(w, h, dentro, color, sombra){
 
 /* ====================== arranque ====================== */
 medir();
+aplicarIdioma();
 iniciarDemo(); monedero(); mostrar('capaTitulo'); musicaPoner(5);
 requestAnimationFrame(bucle);
 </script>
