@@ -9,6 +9,8 @@ se prueba **en el celular, en vertical (412×892)**.
 |---|---|
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. |
 | `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil, **escenario girado 90°** (se juega apaisado): base militar de arranque, nave de dos cubiertas que se recorre por dentro, seis galaxias que se ganan, caminata espacial con soga, fotos que se venden y álbum de 21 especies. |
+| `juegos-pc/Saltos.html` | **A LOS SALTOS.** Gladiadores 2D pixel art con física de saltos (a la Gladihoppers): 7 clases, cortes y sangre, carrera con edad, fama, mercado y estatuas. Canvas 2D, sin red, vertical. |
+| `docs/GUIA_JUEGOS_2D_PIXEL.md` | Receta para juegos 2D pixel art (escala entera, piezas, banco). La usa `Saltos.html`. |
 | `herramientas/glb/` | `juntar_anim.py` (varios GLB del mismo rig → uno con todos los clips) y `hornear.py` (achicar texturas y recompactar para meterlo en un HTML). |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -1039,3 +1041,57 @@ Medido con el audio andando: en la base 38% de la energía en graves y 61% en me
 nave 73% graves; en EL VACÍO **93% graves y 0,2% agudos**, con la mezcla apretada a 3,7 kHz, y el
 lecho más fuerte (0,077 RMS contra 0,03-0,05 de las otras). Las seis galaxias arman su lecho y
 disparan sus sucesos. Auditoría 14/14, fuzz en portugués y fotos en las tres calidades sin errores.
+
+### 2026-09-23 (ad) — A LOS SALTOS, gladiadores 2D pixel art
+**Pedido textual:** «genera un nuevo juego está vez 2D pixel art con este estilo usa este md para aprender a
+hacer juegos 2D únicos que no se repitan entre sí, y busca información sobre este juego para recrearlo»
+(con una captura de **Gladihoppers**, de Dreamon Studios, y `GUIA_JUEGOS_2D_PIXEL.md`, que quedó en `docs/`).
+
+Lo que se sacó del original (sitio de Dreamon, reseñas y tiendas; la wiki de Fandom no dejó entrar):
+pelea 1 contra 1 con física, los gladiadores **no caminan: saltan**, dos posturas con ataques
+direccionales, escudo, jabalina, controles por gestos o botones, carrera con edad, fama y monedas,
+tres reclutas (gratis, 50 y 100), una mejora de atributo por victoria, siete clases con FUE/RES
+distintas, muerte permanente con **estatua**, sangre en píxeles y miembros que se cortan.
+
+`juegos-pc/Saltos.html` (111 KB, un solo archivo, cero red), siguiendo la guía:
+- **Escala entera de verdad**: el mundo se dibuja chico y se agranda por un número entero de
+  píxeles REALES del dispositivo (8 en un 412×892 a 2,625) — en píxeles CSS la escala daba 2,6.
+- **Personajes por piezas**: cabeza/casco (siete: pez, grifo, liso, penacho, gálea, pelado con
+  barba, pelo con vincha), torso con coraza encima (cuero, escamas, lorica) y escudo horneados de
+  grillas con roles de color; brazos, piernas y **armas dibujados píxel por píxel a cualquier ángulo**
+  (gladio, sica curva, spatha, hacha, bipenne, maza, rompecráneos, lanza, tridente).
+- **Física**: pies en el piso, cadera sobre piernas que se comprimen, torso con resorte que lo
+  endereza, brazos con motor hacia su ángulo. Mantener ◀/▶ carga el salto (un toque ≈ 18 px, medio
+  segundo ≈ 54). El golpe vale por la **velocidad de la punta** del arma.
+- **Seis partes con vida** (cabeza, torso, dos brazos, dos piernas) con armadura propia. Brazo
+  cortado suelta el arma o el escudo, pierna cortada casi no deja saltar, cabeza o torso deshechos
+  matan, y la sangre se va. La sangre queda pintada en la arena. Bloqueo con el escudo por
+  geometría, paradas arma contra arma con chispas, golpe que frena y sacudida.
+- **Clases**: mirmillón, tracio, retiario (tridente y **red** que enreda), secutor (casco liso donde
+  la red casi no agarra), hoplómaco (lanza y dos jabalinas), dimaquero (dos espadas) y fanático.
+- **Carrera**: reclutas, ludus, tres rivales por fama (fácil/parejo/difícil) y el campeón del
+  coliseo, mercado de cinco rubros, médico, salud que se arrastra, edad (desde los 31 se pierde
+  algo cada cumpleaños, a los 38 retiro), y **salón de estatuas** en piedra con el mismo sprite.
+- Portada viva (dos IA peleando atrás del título que cae y ondula), pelea rápida, ajustes (sangre
+  mucha/poca/nada, sonido, botones o gestos, vibrar), ayuda, y sonido todo sintetizado: metal,
+  madera, carne, cortes, la multitud que ruge con la emoción, tambores de pelea y una melodía en
+  frigio dominante en el menú.
+
+Lo que costó una vuelta:
+- **Peleas de 6 segundos y 41 de 49 decapitaciones**: un tajo rápido a la cabeza hacía 49 contra 27
+  de vida. Más vida por parte, velocidad que paga hasta ×1,45 y decapitar sólo con cortes de más
+  de 17: mediana de 11 s y 10 golpes, mitad de las muertes por decapitación.
+- **Un contador con decimales pasaba de largo el cero**: `caido = 86 − 1,6·AGI` y se descontaba de a
+  uno; quedaba en −0,8, que es verdadero, y el gladiador se quedaba «caído» para siempre (dos peleas
+  de 150 s sin final). Entero y topado en cero.
+- **El salto cargado cruzaba media arena** (110 px de 184): bajó a 54.
+- Los carteles se encimaban («¡DECAPITADO!» sobre «¡MUERTO!» sobre «¡BRUTAL!»); el nuevo sube.
+- Las armas cortadas seguían girando en el piso y quedaban clavadas de punta.
+- La fuente de píxeles no tiene ◀ ▶: los consejos van en palabras de hasta 22 letras (136 de ancho).
+
+Medido: IA contra IA en las 49 combinaciones de clases, **49 de 49 terminan** (4 a 29 s), cero NaN,
+cero errores; todas las clases ganan alguna. Toques reales por CDP: saltos a los dos lados, los
+cuatro ataques, guardia, **dos dedos a la vez**, postura, jabalina y pausa; en gestos, tocar,
+deslizar arriba/abajo/hacia el rival y para atrás. Carrera completa: recluta, cuatro victorias con
+mejora, salud que baja 100 → 63 → 47%, mercado, muerte y estatua. 3,4 ms por cuadro en vertical
+(200 de calentamiento, 300 medidos).
