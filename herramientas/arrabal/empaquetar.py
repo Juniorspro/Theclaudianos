@@ -9,7 +9,7 @@ import base64, json, os, re
 RAIZ = os.path.join(os.path.dirname(__file__), '..', '..')
 HTML = os.path.join(RAIZ, 'juegos-pc', 'Arrabal.html')
 ASSETS = os.path.join(RAIZ, 'assets', 'arrabal')
-TIPOS = {'.webp': 'image/webp', '.png': 'image/png', '.mp3': 'audio/mpeg', '.json': ''}
+TIPOS = {'.avif': 'image/avif', '.webp': 'image/webp', '.png': 'image/png', '.mp3': 'audio/mpeg', '.json': ''}
 
 archivos = {}
 for n in sorted(os.listdir(ASSETS)):

@@ -55,6 +55,34 @@ ESPECIAL = {
     'toro': 'lowers his horns and charges forward with a heavy shoulder tackle to the right',
     'vale': 'swings her hockey stick hard and hits a glowing ball flying to the right',
 }
+ESPECIAL2 = {
+    'morocha': 'whips her leg in a sharp tango boleo, a fast hooking kick low to the right',
+    'bandoneon': 'raises both brass gauntlets overhead and slams them down in a heavy smash to the right',
+    'chispa': 'plants her lantern pole on the ground and a pillar of fire erupts in front of her to the right',
+    'mate': 'crouches and slams his hand on the ground, blue electric sparks burst out around him',
+    'parca': 'throws her anchor on its chain forward to the right like a fishing hook and pulls it back',
+    'colectivo': 'whistles and a small flying toy bus zooms forward to the right from behind him',
+    'kanji': 'leaps forward to the right with a flying knee strike',
+    'xiao': 'lunges forward to the right with a long straight thrust of her staff',
+    'buzo': 'crouches and places a small round naval mine on the floor in front of her',
+    'lobizon': 'throws his head back and howls, with rings of sound blasting forward to the right',
+    'toro': 'grabs forward, lifts an invisible opponent and slams down backward in a powerful suplex motion',
+    'vale': 'drops low and sweeps her hockey stick along the floor to the right',
+}
+SUPER = {
+    'morocha': 'unleashes a furious flurry of spinning tango kicks with a storm of red petals, ending in a dramatic pose',
+    'bandoneon': 'slams his bellows gauntlets together releasing a huge blast of hot steam forward to the right',
+    'chispa': 'raises her lantern pole high and a rain of fire falls around her',
+    'mate': 'spins the boleadoras over his head and summons crackling lightning bolts',
+    'parca': 'raises her arms and summons a huge wave of ghostly water rushing forward to the right',
+    'colectivo': 'points forward as a line of flying toy buses rushes ahead to the right',
+    'kanji': 'unleashes a rapid barrage of glowing golden palm strikes forward to the right',
+    'xiao': 'unleashes a furious rapid barrage of staff strikes forward to the right',
+    'buzo': 'shoulders the speargun and fires a big glowing torpedo forward to the right',
+    'lobizon': 'glows under a full moon aura and unleashes a frenzy of claw slashes forward to the right',
+    'toro': 'raises his arms and delivers a devastating leaping body slam forward to the right',
+    'vale': 'winds up a huge swing of her hockey stick and strikes a glowing ball with trails of light to the right',
+}
 ANIMS = {
     'idle': '{q} breathes in a relaxed fighting stance, bouncing gently on the knees, a calm looping idle animation',
     'caminar': '{q} walks forward to the right in place, like on a treadmill, one full walk cycle, staying in the center',
@@ -64,6 +92,18 @@ ANIMS = {
     'golpeado': '{q} gets hit hard in the face, recoils backward in pain and then recovers to the fighting stance',
     'caida': '{q} is knocked out: gets thrown backward, falls onto the floor and lies there',
     'victoria': '{q} celebrates the victory with a proud triumphant pose',
+    'fuerte': '{q} winds up and delivers one heavy, powerful strike to the right with full body weight and then returns to the fighting stance',
+    'especial2': '{q} {esp2} and then returns to the fighting stance',
+    'super': '{q} {sup}',
+    'salto': '{q} crouches, jumps straight up high into the air with knees tucked, and lands back in the same spot in the fighting stance',
+    'aereo': '{q} jumps up and delivers a flying kick to the right in mid-air, then lands back in the fighting stance',
+    'barrida': '{q} drops into a low crouch and sweeps one leg along the floor to the right, then rises back to the fighting stance',
+    'alzada': '{q} crouches and explodes upward with a rising uppercut to the right, then lands back in the fighting stance',
+    'bloqueo': '{q} raises both arms in a tight defensive guard in front of the face and holds the block, bracing against a hit',
+    'dash': '{q} runs forward fast to the right in place, like on a treadmill, a fast running cycle, staying in the center',
+    'atras': '{q} hops quickly backward to the left with a short backstep and returns to the fighting stance',
+    'levanta': '{q} is lying on the floor, then gets up quickly and returns to the fighting stance facing right',
+    'volando': '{q} is hit by a huge uppercut, gets launched up and backward into the air spinning, then falls onto the floor',
 }
 COLA = (' 2D hand-painted fighting game character animation, side view facing right, the camera is completely static '
         'and locked, flat solid {fondo} background that stays exactly the same, the character stays in place at the '
@@ -78,10 +118,11 @@ ALTERNATIVO = {
 
 
 def pedido(n, a):
-    txt = ALTERNATIVO.get((n, a)) or ANIMS[a].format(q=QUIEN[n].capitalize(), golpe=GOLPE[n], esp=ESPECIAL[n])
+    txt = ALTERNATIVO.get((n, a)) or ANIMS[a].format(q=QUIEN[n].capitalize(), golpe=GOLPE[n], esp=ESPECIAL[n],
+                                                     esp2=ESPECIAL2[n], sup=SUPER[n])
     txt += COLA.format(fondo='magenta' if n in MAGENTA else 'green')
     return {'project_id': PROYECTO, 'output_path': 'assets/anim-%s-%s.mp4' % (n, a), 'prompt': txt,
-            'source_url': FUENTE % (COMMIT, n), 'seconds': 4, 'resolution': '480p', 'ratio': '1:1'}
+            'source_url': FUENTE % (COMMIT, n + ('-caido' if a == 'levanta' else '')), 'seconds': 4, 'resolution': '480p', 'ratio': '1:1'}
 
 
 def main():

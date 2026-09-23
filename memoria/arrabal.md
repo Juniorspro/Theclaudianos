@@ -27,6 +27,19 @@ Pedido: «Haz el estilo más Arcade el segundo juego». Se sumó, sin tocar la h
   tubo + viñeta + un barrido claro que baja (se apaga en ajustes: «EFECTO DE TUBO»).
 - La historia usa el mismo motor con `modo='historia'` (equipos y relevos, sin rondas).
 
+## Todas las animaciones con 24 cuadros reales (23/09/2026)
+Pedido: «Genera en cada personaje en todas sus animaciones 24 fotogramas reales».
+- 20 animaciones por luchador (240 videos): a las 8 se suman fuerte, especial2, super, salto,
+  aereo, barrida, alzada, bloqueo, dash, atras, levanta, volando. `levanta` arranca de la pose de
+  caído (`fuentes/<id>-caido.jpg`) y se ancla en el ÚLTIMO cuadro (ya parado).
+- **24 cuadros distintos**: sin reuso de cuadros repetidos; los ciclos (idle, caminar, dash) miden
+  24–48 cuadros de video y los tramos de golpe se estiran hasta 24 como mínimo.
+- Las que la física ya mueve (salto, aereo, volando) se anclan **por los pies de cada cuadro** (y
+  volando/atras también por su centro): si no, el video suma su propia altura y salta el doble.
+- En La Parca y Colectivo el «especial» filmado es su SEGUNDO especial (`ANIM_ESP`).
+- Atlas en **AVIF** (calidad 55): un tercio menos que WebP igual a la vista. Safari lo muestra desde
+  iOS 16; si no decodifica, quedan los cuadros sueltos (WebP).
+
 ## Apaisado, mando de botones y animaciones de 24 cuadros (23/09/2026)
 Pedido: «más con botones que una zona… mejora en un 100% la interfaz… cada animación golpe 1 etc
 tenga 24 fotogramas… varias animaciones Idle… más goty y también gira 90° el juego».

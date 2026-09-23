@@ -1,4 +1,4 @@
-"""Hornea los videos de Rezona en animaciones de 24 cuadros -> assets/arrabal/anim-<id>.webp + anim.json
+"""Hornea los videos de Rezona en animaciones de 24 cuadros -> assets/arrabal/anim-<id>.avif + anim.json
 
 Por cada video (videos/<id>-<anim>.mp4, fondo verde o magenta plano):
   1. se sacan todos los cuadros (24 por segundo) y se les quita el fondo con un recorte suave por
@@ -6,8 +6,9 @@ Por cada video (videos/<id>-<anim>.mp4, fondo verde o magenta plano):
   2. se elige el tramo: en los golpes, desde que el cuerpo arranca hasta que vuelve (la energía de
      movimiento contra el primer cuadro); en respirar y caminar, un ciclo que cierra (el par de
      cuadros más parecidos a la distancia de un período);
-  3. se toman 24 cuadros parejos de ese tramo, todos con la MISMA ancla (los pies y el torso del
-     primer cuadro): el cuerpo se mueve dentro de la animación y no tiembla entre cuadros;
+  3. se toman 24 cuadros parejos de ese tramo (24 cuadros DISTINTOS del video: el tramo o el ciclo
+     mide al menos 24), todos con la MISMA ancla (los pies y el torso del primer cuadro; en
+     levantarse, del último, ya parado): el cuerpo se mueve dentro de la animación y no tiembla;
   4. cada cuadro se recorta a lo suyo y se empaqueta en un atlas por luchador.
 anim.json: {id: {alto: px de la guardia, a: {anim: [[x, y, w, h, dx, dy], ...24]}}}
 (dx, dy: dónde va la esquina del cuadro respecto del ancla, en px del atlas)
@@ -23,8 +24,15 @@ VIDEOS = sys.argv[1]
 SALIDA = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'arrabal')
 IDS = sys.argv[2:] or ['morocha', 'bandoneon', 'chispa', 'mate', 'parca', 'colectivo',
                        'kanji', 'xiao', 'buzo', 'lobizon', 'toro', 'vale']
-ANIMS = ['idle', 'caminar', 'golpe', 'patada', 'especial', 'golpeado', 'caida', 'victoria']
-CICLO = {'idle', 'caminar'}
+ANIMS = ['idle', 'caminar', 'golpe', 'patada', 'especial', 'golpeado', 'caida', 'victoria',
+         'fuerte', 'especial2', 'super', 'salto', 'aereo', 'barrida', 'alzada', 'bloqueo', 'dash', 'atras',
+         'levanta', 'volando']
+CICLO = {'idle', 'caminar', 'dash'}
+# las que el juego ya mueve con su física: el video no puede sumarle altura (ni corrimiento), así
+# que cada cuadro se ancla por sus propios pies (y, en las de costado, por su propio centro)
+PIES_POR_CUADRO = {'salto', 'aereo', 'volando'}
+CENTRO_POR_CUADRO = {'volando', 'atras'}
+QUIETA_AL_FINAL = {'caida', 'victoria', 'bloqueo', 'volando', 'levanta'}
 ALTO = 160            # px de la guardia en el atlas
 N = 24
 FF = imageio_ffmpeg.get_ffmpeg_exe()
@@ -72,7 +80,7 @@ def tramo(fr, alfas, anim):
         chico = [np.asarray(Image.fromarray(a).resize((64, 64))).astype(np.float32) for a in alfas]
         mejor = (1e18, 0, 24)
         for s in range(6, n - 30):
-            for P in range(20, min(48, n - s - 1)):
+            for P in range(N, min(49, n - s - 1)):      # al menos 24: cada cuadro, uno distinto
                 d = np.mean(np.abs(chico[s] - chico[s + P]))
                 if d < mejor[0]:
                     mejor = (d, s, P)
@@ -86,14 +94,21 @@ def tramo(fr, alfas, anim):
     if len(mov) == 0:
         return [int(i * (n - 1) / (N - 1)) for i in range(N)]
     a0 = max(0, mov[0] - 3)
-    if anim in ('caida', 'victoria'):
+    if anim in QUIETA_AL_FINAL:
         # termina cuando se queda quieto (tirado o en la pose)
         paso = np.array([np.mean(np.abs(alfas[i].astype(np.float32) - alfas[i - 1].astype(np.float32))) for i in range(1, n)])
         quieto = [i for i in range(mov[0] + 6, n - 1) if paso[i - 1:i + 4].max() < paso.max() * 0.08]
         a1 = quieto[0] + 2 if quieto else n - 1
     else:
         a1 = min(n - 1, mov[-1] + 3)
-    a1 = max(a1, a0 + N - 1) if a0 + N - 1 < n else n - 1
+    # el tramo tiene que tener al menos 24 cuadros del video: si es corto, se estira hacia los dos lados
+    while a1 - a0 < N - 1:
+        if a1 < n - 1:
+            a1 += 1
+        if a1 - a0 < N - 1 and a0 > 0:
+            a0 -= 1
+        if a0 == 0 and a1 == n - 1:
+            break
     return [a0 + int(round(i * (a1 - a0) / (N - 1))) for i in range(N)]
 
 
@@ -121,26 +136,25 @@ def luchador(id_):
         rgba = [sin_fondo(f, fondo) for f in fr]
         alfas = [r[..., 3] for r in rgba]
         idx = tramo(fr, alfas, anim)
-        ax, ay, h = ancla(alfas[0])
+        ax, ay, h = ancla(alfas[idx[-1]] if anim == 'levanta' else alfas[0])
         if alto_ref is None:
             alto_ref = h
         k = ALTO / h                   # cada video se lleva a la misma altura de guardia
         lista = []
-        previo = None
-        for i in idx:
-            # un cuadro casi igual al anterior (la pose que se sostiene) reusa el mismo lugar del atlas
-            if previo is not None and np.mean(np.abs(rgba[i].astype(np.int16) - rgba[previo].astype(np.int16))) < 1.2:
-                lista.append(lista[-1])
-                continue
-            previo = i
+        for i in idx:                   # 24 cuadros reales: ninguno se repite
             r = rgba[i]
             m = r[..., 3] > 8
             ys, xs = np.nonzero(m)
             if len(ys) == 0:
                 ys, xs = np.array([0, 1]), np.array([0, 1])
             y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+            ayc, axc = ay, ax
+            if anim in PIES_POR_CUADRO:
+                ayc = float(np.nonzero(r[..., 3] > 128)[0].max()) if (r[..., 3] > 128).any() else ay
+            if anim in CENTRO_POR_CUADRO:
+                axc = float(np.nonzero(r[..., 3] > 128)[1].mean()) if (r[..., 3] > 128).any() else ax
             im = Image.fromarray(r[y0:y1, x0:x1]).resize((max(1, round((x1 - x0) * k)), max(1, round((y1 - y0) * k))), Image.LANCZOS)
-            lista.append((im, round((x0 - ax) * k, 1), round((y0 - ay) * k, 1)))
+            lista.append((im, round((x0 - axc) * k, 1), round((y0 - ayc) * k, 1)))
         imgs.append((anim, lista))
     # atlas por estantes
     todos, visto = [], {}
@@ -165,8 +179,11 @@ def luchador(id_):
             x, y = pos[visto[id(q)]]
             meta['a'].setdefault(anim, [None] * N)[j] = [x, y, q[0].width, q[0].height, q[1], q[2]]
     meta['alto'] = ALTO
-    p = os.path.join(SALIDA, 'anim-%s.webp' % id_)
-    at.save(p, 'WEBP', quality=62, method=6)
+    p = os.path.join(SALIDA, 'anim-%s.avif' % id_)
+    at.save(p, 'AVIF', quality=55, speed=6)              # AVIF: un tercio menos que WebP a la vista igual
+    viejo = os.path.join(SALIDA, 'anim-%s.webp' % id_)
+    if os.path.exists(viejo):
+        os.remove(viejo)
     print('%-10s %d anims, atlas %dx%d, %.0f kB' % (id_, len(imgs), at.width, at.height, os.path.getsize(p) / 1024), flush=True)
     return meta
 
