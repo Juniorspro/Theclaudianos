@@ -457,3 +457,33 @@ Medido: bot sin invencibilidad 11/15 dos veces (3 semillas × 5; casi siempre pi
 con invencibilidad 5/5 en dos semillas; misiones de 2,5 a 6 minutos. Toques reales por CDP: caminar, pegar con un segundo dedo, saltar,
 rodar, habilidades, cambiar arma, pausa y seguir. Sin errores. Sondas: `window.__B` — `iniciar(n,sem)`, `anda(n)`, `bot(v)`, `dios(v)`,
 `est()`, `dibujarYa()`.
+
+### 2026-09-23 (13) — BRONCA con golpes calcados de videos de AoS5
+**Pedido textual:** «Puedes buscar videos de todas las animaciones de anger of stick 5 y hacerle bodytracking para copiar las
+animaciones y golpes a la perfección si o si» y después «Puedes usar tiktok y YouTube mediante Neko PC y buscar ssstiktok etc».
+
+- **YouTube no se deja** desde el contenedor: `yt-dlp` pide iniciar sesión o da 429/403 en todos los clientes, y los espejos
+  (Invidious, Piped) también están bloqueados. **TikTok sí**: la API de tikwm (la que usan ssstik y compañía) baja por URL con curl;
+  su búsqueda tiene desafío de Cloudflare. Las URLs salen de las páginas `tiktok.com/discover/...` abiertas con Chromium.
+  Neko no hizo falta: el Chromium del banco es un navegador de verdad.
+- **Trampa:** Chromium daba `ERR_CERT_AUTHORITY_INVALID` porque el almacén NSS (`~/.pki/nssdb`) estaba vacío. Se le agregó la CA del
+  proxy de la sesión con `certutil -A -t "C,," -i /root/.ccr/agent-proxy-ca.crt` (confiar en la CA oficial, no apagar la verificación).
+- Se bajaron ~60 clips (226 URLs, portadas revisadas a ojo). **Los rastreadores de cuerpo entrenados con personas no sirven para un
+  palito**: `herramientas/calco_palitos.py` usa geometría — silueta negra → relleno de agujeros → se saca la cabeza (máximo de la
+  transformada de distancia) → esqueleto desde el borde de la cabeza → piernas = el par de puntas que se separa más lejos del cuello,
+  brazos = las que salen cerca. Probado contra poses conocidas de BRONCA: cabeza a 0,7 cm, pies 1,6 cm, mano 1,1 cm; la cadera, 7 cm.
+- **Trampas del calco:** el ojo blanco hacía un rulo en la cabeza (se rellena); al recortar la cabeza los hombros quedaban sueltos
+  (varias raíces); las piernas gruesas se funden antes del hueso (cadera = rodilla + largo de canilla sobre el muslo); la escala por
+  cadera-cuello se disparaba (se usa el radio de la cabeza: **en AoS5 el palito en guardia mide 6,7 radios de cabeza**); los clips
+  repiten cuadros (el juego se grabó a ~15 cuadros por segundo). Clasificar golpes solo daba casi todo carrera y armas: **el golpe se
+  tira casi parado** (filtro por velocidad de la cadera) y los buenos se eligieron a ojo en hojas cuadro por cuadro.
+- Fuentes buenas: un combo completo del juego (TikTok 7644216474915163412, cuadros 606–645: directo, estocada, gancho arriba),
+  patadas laterales (7091473179801029914, 100–113), patada alta (7625425895171345685, 4982–4985) y carrera (clip 029, 955–964).
+- `herramientas/golpes_aos.py` arma `ANIM_AOS` (guardia, jab, cross, gancho, patada, lateral, voladora, correr): deja cabeza, pies y
+  manos como en el video y busca la cadera y el ángulo del torso que los hacen alcanzables. `pose()` las muestrea por fotogramas.
+- **Proporciones de AoS5 en los humanos** (`HUMANO`): torso corto 0,32, piernas 1,16, brazos 0,8, cabeza 0,27, trazo ×1,5, escala 0,9.
+  Las poses hechas a mano se agrandan ×1,32 y se les acorta el torso. Los zombis siguen como estaban.
+- Comparación cuadro original / pose del juego: `juegos-pc/referencias/aos_calco_comparar.jpg`.
+
+Medido: bot con invencibilidad 5/5, sin invencibilidad 12/15 (antes 11/15); toques por CDP como antes; sin errores.
+

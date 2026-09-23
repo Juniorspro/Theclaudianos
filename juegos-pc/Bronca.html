@@ -347,6 +347,18 @@ function ik(ax, ay, tx, ty, l1, l2, flip){
   return [ax + Math.cos(ang)*l1, ay + Math.sin(ang)*l1, tx, ty];
 }
 const L_BRAZO = 0.3, L_ANTE = 0.3, L_MUSLO = 0.44, L_CANILLA = 0.44;
+/* los humanos tienen las proporciones de Anger of Stick 5, medidas en video: piernas y brazos largos, cabeza grande.
+   k agranda las poses hechas a mano (pensadas para los huesos cortos); esc los deja del alto de un zombi */
+const HUMANO = {brazo:0.4, ante:0.4, muslo:0.58, canilla:0.58, cab:0.27, torso:0.32, k:1.32, esc:0.9, grosor:1.5};
+/* poses calcadas de videos de Anger of Stick 5 con herramientas/calco_palitos.py y golpes_aos.py */
+const ANIM_AOS = {"guardia":{"cad":[0.0,0.945],"cue":[-0.11,1.246],"pieA":[-0.628,0.02],"pieB":[0.626,0.0],"manoA":[0.606,1.612],"manoB":[0.481,1.474]},"jab":[[0,{"cad":[0.0,0.945],"cue":[-0.11,1.246],"pieA":[0.626,0.0],"pieB":[-0.628,0.02],"manoA":[0.606,1.612],"manoB":[0.481,1.474]}],[0.3,{"cad":[0.0,1.319],"cue":[-0.032,1.637],"pieA":[0.999,0.253],"pieB":[-0.929,0.046],"manoA":[1.16,2.181],"manoB":[0.726,1.474]}],[0.62,{"cad":[0.0,1.319],"cue":[-0.032,1.637],"pieA":[0.999,0.253],"pieB":[-0.929,0.046],"manoA":[1.16,2.181],"manoB":[0.726,1.474]}],[1,{"cad":[0.0,0.945],"cue":[-0.11,1.246],"pieA":[0.626,0.0],"pieB":[-0.628,0.02],"manoA":[0.606,1.612],"manoB":[0.481,1.474]}]],"cross":[[0,{"cad":[0.0,0.945],"cue":[-0.11,1.246],"pieA":[0.626,0.0],"pieB":[-0.628,0.02],"manoA":[0.481,1.474],"manoB":[0.606,1.612]}],[0.38,{"cad":[0.0,1.073],"cue":[0.11,1.374],"pieA":[0.962,0.074],"pieB":[-1.456,0.098],"manoA":[1.414,2.003],"manoB":[0.999,2.223]}],[0.66,{"cad":[0.0,1.073],"cue":[0.11,1.374],"pieA":[0.962,0.074],"pieB":[-1.456,0.098],"manoA":[1.414,2.003],"manoB":[0.999,2.223]}],[1,{"cad":[0.0,0.945],"cue":[-0.11,1.246],"pieA":[0.626,0.0],"pieB":[-0.628,0.02],"manoA":[0.481,1.474],"manoB":[0.606,1.612]}]],"gancho":[[0,{"cad":[0.0,0.945],"cue":[-0.11,1.246],"pieA":[-0.628,0.02],"pieB":[0.626,0.0],"manoA":[0.606,1.612],"manoB":[0.481,1.474]}],[0.25,{"cad":[0.0,1.103],"cue":[0.194,1.358],"pieA":[-0.85,0.043],"pieB":[0.645,0.087],"manoA":[0.688,2.318],"manoB":[-0.568,2.123]}],[0.5,{"cad":[0.0,1.267],"cue":[0.032,1.585],"pieA":[0.642,0.043],"pieB":[-0.745,0.0],"manoA":[0.078,2.947],"manoB":[0.726,1.474]}],[0.8,{"cad":[0.0,1.267],"cue":[0.032,1.585],"pieA":[0.642,0.043],"pieB":[-0.745,0.0],"manoA":[0.078,2.947],"manoB":[0.726,1.474]}],[1,{"cad":[0.0,0.945],"cue":[-0.11,1.246],"pieA":[0.626,0.0],"pieB":[-0.628,0.02],"manoA":[0.606,1.612],"manoB":[0.481,1.474]}]],"patada":[[0,{"cad":[0.0,0.945],"cue":[-0.11,1.246],"pieA":[0.626,0.0],"pieB":[-0.628,0.02],"manoA":[0.606,1.612],"manoB":[0.481,1.474]}],[0.32,{"cad":[0.0,1.403],"cue":[-0.312,1.473],"pieA":[1.695,1.63],"pieB":[-0.118,0.035],"manoA":[-0.533,2.372],"manoB":[-1.473,2.088]}],[0.64,{"cad":[0.0,1.403],"cue":[-0.312,1.473],"pieA":[1.695,1.63],"pieB":[-0.118,0.035],"manoA":[-0.533,2.372],"manoB":[-1.473,2.088]}],[1,{"cad":[0.0,0.945],"cue":[-0.11,1.246],"pieA":[0.626,0.0],"pieB":[-0.628,0.02],"manoA":[0.606,1.612],"manoB":[0.481,1.474]}]],"lateral":[[0,{"cad":[0.0,0.945],"cue":[-0.11,1.246],"pieA":[0.626,0.0],"pieB":[-0.628,0.02],"manoA":[0.606,1.612],"manoB":[0.481,1.474]}],[0.2,{"cad":[0.0,1.521],"cue":[-0.285,1.666],"pieA":[1.173,1.52],"pieB":[-0.541,0.471],"manoA":[0.991,1.612],"manoB":[0.866,1.474]}],[0.45,{"cad":[0.0,1.451],"cue":[-0.308,1.537],"pieA":[1.539,1.507],"pieB":[0.669,0.488],"manoA":[-0.351,0.04],"manoB":[-0.625,0.463]}],[0.75,{"cad":[0.0,1.624],"cue":[-0.304,1.725],"pieA":[1.338,1.177],"pieB":[-0.401,0.512],"manoA":[-1.553,2.021],"manoB":[1.006,1.474]}],[1,{"cad":[0.0,0.945],"cue":[-0.11,1.246],"pieA":[0.626,0.0],"pieB":[-0.628,0.02],"manoA":[0.481,1.474],"manoB":[0.606,1.612]}]],"voladora":[[0,{"cad":[0.0,1.521],"cue":[-0.285,1.666],"pieA":[1.173,1.52],"pieB":[-0.541,0.471],"manoA":[0.866,1.474],"manoB":[0.991,1.612]}],[0.25,{"cad":[0.0,1.451],"cue":[-0.308,1.537],"pieA":[1.539,1.507],"pieB":[0.669,0.488],"manoA":[-0.351,0.04],"manoB":[-0.625,0.463]}],[0.8,{"cad":[0.0,1.624],"cue":[-0.304,1.725],"pieA":[1.338,1.177],"pieB":[-0.401,0.512],"manoA":[-1.553,2.021],"manoB":[1.006,1.474]}],[1,{"cad":[0.0,1.624],"cue":[-0.304,1.725],"pieA":[1.338,1.177],"pieB":[-0.401,0.512],"manoA":[-1.553,2.021],"manoB":[1.006,1.474]}]],"correr":[[0,{"cad":[0.0,1.339],"cue":[-0.139,1.627],"pieA":[1.367,0.532],"pieB":[-0.869,0.29],"manoA":[-1.39,1.825],"manoB":[0.682,1.638]}],[0.25,{"cad":[0.0,1.219],"cue":[-0.153,1.5],"pieA":[-0.314,0.337],"pieB":[-0.314,0.349],"manoA":[0.843,1.554],"manoB":[0.138,1.638]}],[0.5,{"cad":[0.0,1.339],"cue":[-0.139,1.627],"pieA":[-0.869,0.29],"pieB":[1.367,0.532],"manoA":[0.682,1.638],"manoB":[-1.39,1.825]}],[0.75,{"cad":[0.0,1.219],"cue":[-0.153,1.5],"pieA":[-0.314,0.349],"pieB":[-0.314,0.337],"manoA":[0.138,1.638],"manoB":[0.843,1.554]}],[1,{"cad":[0.0,1.339],"cue":[-0.139,1.627],"pieA":[1.367,0.532],"pieB":[-0.869,0.29],"manoA":[-1.39,1.825],"manoB":[0.682,1.638]}]]};
+/* muestra una animación calcada: fotogramas [t, pose] con t de 0 a 1, pasaje suave entre uno y otro */
+function muestraAnim(K, k){
+  let i = 0; while(i < K.length - 2 && k > K[i+1][0]) i++;
+  const [t0, a] = K[i], [t1, b] = K[i+1]; let u = lim((k - t0)/((t1 - t0) || 1), 0, 1); u = u*u*(3 - 2*u);
+  const o = {}; for(const c in a) o[c] = [lerp(a[c][0], b[c][0], u), lerp(a[c][1], b[c][1], u)];
+  return o;
+}
 /* pose local: x hacia adelante, y arriba, origen en los pies. Devuelve articulaciones */
 function pose(e){
   const t = J.t*DT, f = e.fase, zom = e.lado===1, a = e.atq, est = e.estado;
@@ -394,19 +406,38 @@ function pose(e){
       case 'lanza': mA = [lerp(-0.3, 0.6, pico), lerp(1.8, 1.6, pico)]; break;
     }
   }
+  /* humanos: guardia, carrera y golpes calcados de AoS5; lo demás, a mano y agrandado a sus huesos */
+  const hum = e.lado===0 && e.tipo!=='torre';
+  if(hum){
+    let q = null;
+    if(est!=='caido' && est!=='muerto' && !(e.rodando > 0)){
+      if(a && ANIM_AOS[a.pose]) q = muestraAnim(ANIM_AOS[a.pose], lim(a.t/a.dur, 0, 1));
+      else if(!a && !e.enAire && Math.abs(e.vx) > 0.3) q = muestraAnim(ANIM_AOS.correr, ((f/TAU) % 1 + 1) % 1);
+      else if(!a && !e.enAire){ const g = ANIM_AOS.guardia, r = Math.sin(t*3 + e.id)*0.025; q = {};
+        for(const c in g) q[c] = [g[c][0], g[c][1] + (c==='pieA' || c==='pieB' ? 0 : r*(c==='cad' ? 0.6 : 1))]; }
+    }
+    if(q){ cad = q.cad; cue = q.cue; mA = q.manoA; mB = q.manoB; pA = q.pieA; pB = q.pieB; if(e.golpeT > 0) cue = [cue[0] - 0.2, cue[1]]; }
+    else { const K = HUMANO.k; for(const v of [cad, cue, mA, mB, pA, pB]){ v[0] *= K; v[1] *= K; }
+      /* torso corto de AoS5: el cuello va a su largo sobre la misma línea */
+      const dx = cue[0]-cad[0], dy = cue[1]-cad[1], n = Math.hypot(dx, dy) || 1, dc = n - HUMANO.torso;
+      cue = [cad[0] + dx/n*HUMANO.torso, cad[1] + dy/n*HUMANO.torso]; mA = [mA[0] - dx/n*dc, mA[1] - dy/n*dc]; mB = [mB[0] - dx/n*dc, mB[1] - dy/n*dc]; }
+  }
   /* apuntando un arma: los brazos siguen al ángulo */
   if(e.apunta !== null && e.apunta !== undefined && (!a || a.pose==='disparo') && est!=='caido' && !(e.rodando>0)){
     const h = hom(), ang = e.apunta, re = e.retroceso||0;
-    mA = [h[0] + Math.cos(ang)*(0.58 - re), h[1] + Math.sin(ang)*(0.58 - re)];
-    mB = [h[0] + Math.cos(ang)*(0.4 - re), h[1] + Math.sin(ang)*(0.4 - re) - 0.02];
+    const la = hum ? 0.78 : 0.58, lb = hum ? 0.55 : 0.4;
+    mA = [h[0] + Math.cos(ang)*(la - re), h[1] + Math.sin(ang)*(la - re)];
+    mB = [h[0] + Math.cos(ang)*(lb - re), h[1] + Math.sin(ang)*(lb - re) - 0.02];
   }
   const H = hom();
-  const brazoA = ik(H[0], H[1], mA[0], mA[1], L_BRAZO, L_ANTE, false);
-  const brazoB = ik(H[0], H[1], mB[0], mB[1], L_BRAZO, L_ANTE, false);
-  const piernaA = ik(cad[0], cad[1], pA[0], pA[1], L_MUSLO, L_CANILLA, true);
-  const piernaB = ik(cad[0], cad[1], pB[0], pB[1], L_MUSLO, L_CANILLA, true);
+  const lb1 = hum ? HUMANO.brazo : L_BRAZO, lb2 = hum ? HUMANO.ante : L_ANTE, lp1 = hum ? HUMANO.muslo : L_MUSLO, lp2 = hum ? HUMANO.canilla : L_CANILLA;
+  const brazoA = ik(H[0], H[1], mA[0], mA[1], lb1, lb2, false);
+  const brazoB = ik(H[0], H[1], mB[0], mB[1], lb1, lb2, false);
+  const piernaA = ik(cad[0], cad[1], pA[0], pA[1], lp1, lp2, true);
+  const piernaB = ik(cad[0], cad[1], pB[0], pB[1], lp1, lp2, true);
   const d = Math.hypot(cue[0]-cad[0], cue[1]-cad[1]) || 1;
-  cab = [cue[0] + (cue[0]-cad[0])/d*0.2, cue[1] + (cue[1]-cad[1])/d*0.2];
+  const rcab = hum ? HUMANO.cab : 0.2;
+  cab = [cue[0] + (cue[0]-cad[0])/d*rcab, cue[1] + (cue[1]-cad[1])/d*rcab];
   return {cad, cue, cab, hom:H, codoA:[brazoA[0],brazoA[1]], manoA:[brazoA[2],brazoA[3]], codoB:[brazoB[0],brazoB[1]], manoB:[brazoB[2],brazoB[3]],
     rodA:[piernaA[0],piernaA[1]], pieA:[piernaA[2],piernaA[3]], rodB:[piernaB[0],piernaB[1]], pieB:[piernaB[2],piernaB[3]], girar};
 }
@@ -428,14 +459,14 @@ function crear(tipo, lado, x, y, o){
 }
 function crearJugador(x){
   const n = G.nivel, mult = 1 + (n-1)*0.08;
-  const e = crear('jugador', 0, x, 0, {hp:180*mult, hpMax:180*mult, dmgMult:mult, color:'#141414', bandana:'#e0301e'});
+  const e = crear('jugador', 0, x, 0, {hp:180*mult, hpMax:180*mult, dmgMult:mult, color:'#141414', bandana:'#e0301e', esc:HUMANO.esc});
   e.cintas = [[x,1.6],[x,1.6],[x,1.6]]; e.habCd = {giro:0, sismo:0, furia:0}; e.furiaT = 0; e.arma = G.arma && nivelArma(G.arma) ? G.arma : 'punos';
   e.balas = {}; for(const id of ORDEN_ARMAS) if(nivelArma(id)) e.balas[id] = ARMAS[id].carg; e.cadT = 0; e.vehiculo = null;
   return e;
 }
 function crearAliado(id, x, i){
   const d = ALIADOS[id], nv = G.aliados[id]||1, m = 1 + (nv-1)*0.15 + (G.nivel-1)*0.04;
-  return crear('aliado', 0, x, 0, {aid:id, def:d, hp:d.hp*m, hpMax:d.hp*m, dmgMult:m, color:d.color, bandana:d.color, orden:i, esc:d.grosor ? 1.12 : 1, cadT:0});
+  return crear('aliado', 0, x, 0, {aid:id, def:d, hp:d.hp*m, hpMax:d.hp*m, dmgMult:m, color:d.color, bandana:d.color, orden:i, esc:(d.grosor ? 1.12 : 1)*HUMANO.esc, cadT:0});
 }
 function crearZombi(tipo, x, y, o){
   const d = ZOMBIS[tipo], dif = J.nv ? J.nv.dif : 1;
@@ -1231,8 +1262,8 @@ function colorDe(e){ return e.flash > 0 ? '#ffffff' : (e.fuego > 0 && J.t%6 < 3 
 function dibujarPalito(e){
   let P = pose(e); if(e.def && e.def.rastrero && e.estado==='ok') P = tumbar(P);
   const W = aMundo(e, P), z = V.z, d = e.def||{}, s = e.esc;
-  const grosor = (d.gordo ? 1.45 : 1)*(d.flaco ? 0.8 : 1)*(d.grosor||1);
-  const lw = Math.max(2, 0.13*z*s*grosor), rc = Math.max(3, 0.2*z*s*(d.gordo ? 1.05 : 1)*(d.escupe ? 1.2 : 1));
+  const grosor = (d.gordo ? 1.45 : 1)*(d.flaco ? 0.8 : 1)*(d.grosor||1)*(e.lado===0 ? HUMANO.grosor : 1);
+  const lw = Math.max(2, 0.13*z*s*grosor), rc = Math.max(3, (e.lado===0 ? HUMANO.cab : 0.2)*z*s*(d.gordo ? 1.05 : 1)*(d.escupe ? 1.2 : 1));
   const col = colorDe(e), atras = e.flash > 0 ? '#ddd' : (e.lado===0 && e.tipo==='jugador' ? '#3a3a3a' : tonoCol(e.color, -0.35));
   const borde = J.tema.noche >= 0.5 || e.tipo==='jugador';
   const brazoB = [W.hom, W.codoB, W.manoB], piernaB = [W.cad, W.rodB, W.pieB], piernaA = [W.cad, W.rodA, W.pieA], brazoA = [W.hom, W.codoA, W.manoA], torso = [W.cad, W.cue];
@@ -1402,7 +1433,7 @@ function dibujarTrapo(r){
   cx.globalAlpha = Math.min(1, r.t); cx.lineCap = 'round';
   cx.strokeStyle = col; cx.lineWidth = lw; cx.beginPath();
   for(const h of r.huesos){ const a = r.pts[h.a], b = r.pts[h.b]; cx.moveTo(SX(a.x), SY(a.y)); cx.lineTo(SX(b.x), SY(b.y)); } cx.stroke();
-  const c = r.pts.cab; cx.fillStyle = col; cx.beginPath(); cx.arc(SX(c.x), SY(c.y), Math.max(3, 0.2*z*r.esc), 0, TAU); cx.fill();
+  const c = r.pts.cab; cx.fillStyle = col; cx.beginPath(); cx.arc(SX(c.x), SY(c.y), Math.max(3, (r.lado===0 ? HUMANO.cab : 0.2)*z*r.esc), 0, TAU); cx.fill();
   if(r.lado===1){ cx.fillStyle = '#3a7a1a'; cx.beginPath(); cx.arc(SX(r.pts.cue.x), SY(r.pts.cue.y), lw*0.8, 0, TAU); cx.fill(); }
   cx.globalAlpha = 1;
 }
@@ -1644,7 +1675,7 @@ document.querySelectorAll('.tab').forEach(t=> t.addEventListener('click', ev=>{ 
 
 /* dibujar en un lienzo chico con las mismas funciones del juego */
 function enLienzo(c, z, ox, oy, fn){ const vc = cx, vv = Object.assign({}, V); cx = c.getContext('2d'); V.cx = 0; V.cy = 0; V.z = z; V.ox = ox; V.oy = oy; try{ fn(); } finally { cx = vc; Object.assign(V, vv); } }
-function palitoFalso(o){ return Object.assign({id:1, x:0, y:0, vx:0, vy:0, dir:1, esc:1, fase:0, estado:'ok', lado:0, atq:null, apunta:null, golpeT:0, rodando:0, enAire:false, levantaT:0, flash:0, fuego:0, color:'#141414', bandana:'#e0301e'}, o); }
+function palitoFalso(o){ return Object.assign({id:1, x:0, y:0, vx:0, vy:0, dir:1, esc:o.lado===1 ? 1 : HUMANO.esc, fase:0, estado:'ok', lado:0, atq:null, apunta:null, golpeT:0, rodando:0, enAire:false, levantaT:0, flash:0, fuego:0, color:'#141414', bandana:'#e0301e'}, o); }
 function miniatura(c, i){
   const nv = NIVELES[i], t = TEMAS[nv.tema], g = c.getContext('2d'), W = c.width, H = c.height, rr = mulberry(i*999 + 3);
   const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, t.cA); gr.addColorStop(1, t.cB); g.fillStyle = gr; g.fillRect(0, 0, W, H);
