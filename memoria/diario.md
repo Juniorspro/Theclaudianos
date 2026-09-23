@@ -1,6 +1,18 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — nació ARRABAL, el juego de pelea con cartas
+**Pedido textual:** «Ahora haceme un juego parecido a "Skullgirls: Fighting RPG" … controles
+moviles mejores gráficos 2D animaciones menús etc … cada nuevo juego 2D ve mejorandolo en un 100%».
+(Después pidió un selector de idiomas y enseguida dijo «Ignora el segundo mensaje seguí con el
+juego»: no se hizo el selector.)
+
+Qué se hizo: `juegos-pc/Arrabal.html` con 10 ilustraciones de Rezona (6 retratos, 3 escenarios,
+cofre), títeres animados por código, 3 contra 3, especiales, súper con cinemática, campaña,
+colección, árbol y cofre. Detalle en [arrabal](arrabal.md). La regla nueva quedó en el índice.
+
+Qué falta: música generada (audio de Rezona caído); probarlo en un teléfono de verdad.
+
 ### 2026-09-23 — CHICHARRA v2: HD de Rezona, hangar, mapa, ajustes
 **Pedido textual:** «texturas HD a todo haciendo assets con Rezona lab, generación de imágenes música
 menú nuevo etc etc etc, mejoralo en un 100% también agrega animaciones de menú controles etc sin

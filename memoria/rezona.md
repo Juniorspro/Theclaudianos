@@ -35,5 +35,8 @@ Fuente: `docs/GUIA-JUEGOS.md § 1. Preparar Rezona` y `§ 4`. Ver también: [jue
 - **Audio: caído el 23/09/2026.** 11 pedidos (3 músicas ×2, 5 efectos) → `PROVIDER_UNAVAILABLE`
   (`NOIZ_FAILED`), todos. Se reintentó una vez y se pasó al sintetizador. No reintentar en bucle.
 - Música con `duration: 60` → `VALIDATION_ERROR` (terminal); con **30** el pedido entra.
+- El audio **siguió caído** más tarde el mismo 23/09 (otra prueba, mismo `NOIZ_FAILED`).
+- `submit_sprite_generation` dio `CREDIT_RESERVE_FAILED` mientras las imágenes andaban. Y **no acepta
+  imagen de referencia**: no sirve para animar a un mismo personaje en varias acciones.
 - **Subir juegos a Rezona está prohibido** (23/09/2026). Rezona se usa, si acaso, para generar assets.
 - No existe comando para borrar un proyecto subido: ni en el MCP ni en el CLI (`init`, `login`, `status`, `mcp`).

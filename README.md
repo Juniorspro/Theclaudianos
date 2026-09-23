@@ -5,6 +5,7 @@ en vertical (412×892)**.
 
 | ruta | qué es |
 |---|---|
+| `juegos-pc/Arrabal.html` | **Pelea con cartas.** 3 contra 3, seis luchadores originales, gestos táctiles, campaña y cofre. |
 | `juegos-pc/Chicharra.html` | **El juego de acá.** Matamarcianos vertical: oleadas, jefes, tienda, música y efectos sintetizados. |
 | `juegos-pc/Bosque.html` | Juego VHS de terror, de otra línea de trabajo del repo. Referencia, no se toca. |
 | `.claude/skills/` | Las tres skills del repo: `graficos`, `assets-ia`, `banco`. |
