@@ -24,12 +24,13 @@
 | [rezona](rezona.md) | vas a generar o a hornear un asset (imagen, 3D, rig, audio) |
 | [banco](banco.md) | vas a probar o medir algo |
 | [entrega](entrega.md) | pushear, el link para el celular, el CDN de los assets |
+| [juegos2d](juegos2d.md) | vas a hacer o tocar un juego 2D en pixel art (la serie nueva) |
 | [diario](diario.md) | qué pasó en cada sesión y qué quedó sin resolver |
 
 ## Qué hay en cada carpeta
 | carpeta | qué es | detalle en |
 |---|---|---|
-| `juegos-pc/` | `Bosque.html`, el único juego activo (~250 kB, un archivo) | [bosque](bosque.md) |
+| `juegos-pc/` | los juegos, un HTML por juego: `Bosque.html` (3D, **en pausa**) y la serie 2D | [bosque](bosque.md) · [juegos2d](juegos2d.md) |
 | `assets/` | lo generado que el juego baja por CDN (texturas, GLB, cielo) | [entrega](entrega.md) |
 | `herramientas/rezona/` | cliente stdio `rz.py`, pedidos y horneados, `crudo/tareas.json` | [rezona](rezona.md) |
 | `herramientas/banco/` | `correr.py` (juego) y `ver_glb.py` / `ver_anim.py` (modelos) | [banco](banco.md) |

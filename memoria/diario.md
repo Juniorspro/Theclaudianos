@@ -2,6 +2,23 @@
 Una entrada por sesión: qué quedó y qué falta. Lo largo de cada vuelta está en el mensaje del
 commit; acá va lo que otra sesión necesita saber.
 
+## 2026-09-23 — arranca la serie 2D; el Bosque queda en pausa
+**Pedido textual:** «Cada juego 2D nuevo que hagas mejora un 100% más que el anterior con menús
+botones animaciones aún mejores y diferentes historia y eso entre si okey? Deja este proyecto para
+después o sea el del bosque».
+La regla y la tabla de la serie están en [juegos2d](juegos2d.md).
+
+**El Bosque queda así** (todo pusheado, anda): niebla con bruma baja, HDR con el tono en el post,
+tercer nivel de detalle en las copas, la sombra de la linterna en calidad alta. Día 504 llamadas /
+1,73 M triángulos; noche 391 / 1,29 M. Contra el arranque del proyecto: −61 % llamadas, −86 %
+triángulos.
+**Lo que quedó a medio hacer en el Bosque:** el sonido. Se pidieron seis pistas a Rezona (música de
+menú, música del laboratorio, ambiente de noche y tres efectos) y **las seis fallaron con
+`CREDIT_RESERVE_FAILED`** («el servicio de cobro no está disponible»), igual que el 22/09 en el
+repo de la guía; una imagen de prueba falló igual, así que es la cuenta entera, no el audio. El
+plan B (sintetizar la cama de ambiente y el drone de presencia por código, con cargador por nombre
+para que lo generado pise a lo sintetizado) está pensado y **sin escribir**.
+
 ## 2026-09-22 — se instaló la memoria
 Rama `claude/mmm-repo-name-53rbfd`. Llegaron `docs/MEMORIA.md` y `docs/GUIA-JUEGOS.md`.
 Se armó `memoria/` (índice + cinco notas + este diario) y `CLAUDE.md` quedó en tres líneas.
