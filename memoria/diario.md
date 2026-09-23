@@ -1,6 +1,19 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — nació CHICHARRA
+**Pedido textual:** «Recréame este juego hazlo lo más parecidos o que se inspirate con muy buenas
+animaciones menús y soundtrack más efectos de sonido etce y todo lo necesario» (con tres capturas de
+un arcade de naves de celular).
+
+Qué se hizo: `juegos-pc/Chicharra.html`, matamarcianos vertical completo en un solo archivo, y su
+banco en `pruebas/chicharra/`. Todo medido: 5 de 6 niveles ganados por el bot, cero errores, cero
+pedidos a la red, 0,51 ms por cuadro. Detalle y trampas en [chicharra](chicharra.md).
+
+Qué falta: nada bloqueado. Ideas para la próxima — más tipos de jefe (hoy hay 3 pinturas y un solo
+patrón de cuerpo), naves distintas para elegir, y probarlo en un teléfono de verdad (el banco no
+puede decir los FPS reales).
+
 ### 2026-09-23 — escuela de 2D pixel art
 **Pedido textual:** «No los copies pero mira aprende sobre pixel art y otras cosas procedurales y del
 arte 2D quizás después te pida juegos 2D diferentes a estos para no ser copias pero te enseñan bien».

@@ -5,6 +5,7 @@ en vertical (412×892)**.
 
 | ruta | qué es |
 |---|---|
+| `juegos-pc/Chicharra.html` | **El juego de acá.** Matamarcianos vertical: oleadas, jefes, tienda, música y efectos sintetizados. |
 | `juegos-pc/Bosque.html` | Juego VHS de terror, de otra línea de trabajo del repo. Referencia, no se toca. |
 | `.claude/skills/` | Las tres skills del repo: `graficos`, `assets-ia`, `banco`. |
 | `herramientas/rezona/rz.py` | Cliente stdio del MCP de Rezona. |
