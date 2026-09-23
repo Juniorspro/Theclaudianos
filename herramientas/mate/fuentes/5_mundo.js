@@ -58,9 +58,14 @@ function matBaldosa(tipo, opc){
   const c = texBaldosa(tipo, opc.semilla), map = texPixel(c, true), nor = texDatos(normalDeLuma(c, opc.relieve), true);
   const m = new THREE.MeshStandardMaterial({map, normalMap:nor, roughness:opc.rough === undefined ? 0.82 : opc.rough, metalness:opc.metal || 0,
     color:new THREE.Color(opc.tinte || '#ffffff').convertSRGBToLinear()});
+  m.userData.cache = map._cache = nor._cache = true;
   _MAT.set(clave, m); return m;
 }
 /* ---------- geometría fundida: cajas con UV del mundo (2 unidades por textura) ---------- */
+/* tirar lo que se creó para un nivel: geometrías, materiales propios y sus texturas (lo cacheado queda) */
+function tirarMalla(o){ if(!o) return; o.traverse(q => { if(q.geometry && !q.geometry.userData.compartida) q.geometry.dispose();
+  for(const m of [].concat(q.material || [], q.customDepthMaterial || [])){ if(m.userData.cache) continue;
+    for(const k of ['map', 'normalMap', 'emissiveMap', 'alphaMap']) if(m[k] && !m[k]._cache) m[k].dispose(); m.dispose(); } }); }
 function Geo(){ this.p = []; this.n = []; this.u = []; this.i = []; }
 Geo.prototype.cara = function(v, nor, uv){ const b = this.p.length/3;
   for(let k = 0; k < 4; k++){ this.p.push(...v[k]); this.n.push(...nor); this.u.push(...uv[k]); }

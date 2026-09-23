@@ -1,8 +1,8 @@
 
 /* ================================================================ cargar un nivel */
 function cargarNivel(i){
-  const def = NIVELES[i]; J.idx = i; J.nivel = def;
-  for(const e of ENEM) esc.remove(e.malla, e.brazo); for(const o of OBJ) esc.remove(o.malla); if(MATEO){ esc.remove(MATEO.malla, MATEO.luz); }
+  const def = NIVELES[i]; J.idx = i; J.nivel = def; J.gen = (J.gen || 0) + 1;
+  for(const e of ENEM){ esc.remove(e.malla, e.brazo); tirarMalla(e.malla); tirarMalla(e.brazo); } for(const o of OBJ){ esc.remove(o.malla); tirarMalla(o.malla); } if(MATEO){ esc.remove(MATEO.malla, MATEO.luz); tirarMalla(MATEO.malla); }
   ENEM = []; BALAS = []; OBJ = []; J.textos = []; J.fin = null; J.cine = null;
   Object.assign(J, {puntos:0, mult:1, multT:0, muertes:0, tiros:0, aciertos:0, danio:0, reloj:0, killcam:0, vidrio:0, estilo:{}, pista:0});
   armarNivel(def);
@@ -38,7 +38,7 @@ function terminarNivel(){
   if(J.sim){ J.simFin = 1; return; }
   J.fin = {t:0}; SON.fx('puerta'); J.killcam = 0;
   const p = NIVEL.def.estrellas; J.fin.estrellas = J.puntos >= p[2] ? 3 : J.puntos >= p[1] ? 2 : J.puntos >= p[0] ? 1 : 0;
-  setTimeout(() => pantallaResultado(), 900);
+  luego(0.9, () => pantallaResultado());
 }
 
 /* ================================================================ entrada: arrastrar para planear, tocar para tirar */
@@ -103,6 +103,7 @@ function lazo(ts){
   if(J.fundir !== undefined){ const obj = J.fundirA || 0; P_FIN.u.fundido.value += (obj - P_FIN.u.fundido.value)*(1 - Math.exp(-dtR*4)); }
   pasoMundo(dtR*(J.pausa ? 0 : J.ts), J.tr);
   if(J.cine) pasoCine(dtR);
+  if(!J.pausa) pasoLuego(dtR);
   if((J.modo !== 'juego' || J.cine) && !J.pausa){ PART.solidas.paso(dtR); PART.brillos.paso(dtR); pasoFlashes(dtR); }
   if(J.modo === 'menu'){ CAMARA.obj.x = 15 + Math.sin(J.tr*0.06)*5; CAMARA.obj.y = 8.2 + Math.sin(J.tr*0.09)*0.6; HE.est = 'suelo'; HE.vx = 0; }
   moverCamara(dtR*J.ts, dtR);

@@ -2186,9 +2186,14 @@ function matBaldosa(tipo, opc){
   const c = texBaldosa(tipo, opc.semilla), map = texPixel(c, true), nor = texDatos(normalDeLuma(c, opc.relieve), true);
   const m = new THREE.MeshStandardMaterial({map, normalMap:nor, roughness:opc.rough === undefined ? 0.82 : opc.rough, metalness:opc.metal || 0,
     color:new THREE.Color(opc.tinte || '#ffffff').convertSRGBToLinear()});
+  m.userData.cache = map._cache = nor._cache = true;
   _MAT.set(clave, m); return m;
 }
 /* ---------- geometría fundida: cajas con UV del mundo (2 unidades por textura) ---------- */
+/* tirar lo que se creó para un nivel: geometrías, materiales propios y sus texturas (lo cacheado queda) */
+function tirarMalla(o){ if(!o) return; o.traverse(q => { if(q.geometry && !q.geometry.userData.compartida) q.geometry.dispose();
+  for(const m of [].concat(q.material || [], q.customDepthMaterial || [])){ if(m.userData.cache) continue;
+    for(const k of ['map', 'normalMap', 'emissiveMap', 'alphaMap']) if(m[k] && !m[k]._cache) m[k].dispose(); m.dispose(); } }); }
 function Geo(){ this.p = []; this.n = []; this.u = []; this.i = []; }
 Geo.prototype.cara = function(v, nor, uv){ const b = this.p.length/3;
   for(let k = 0; k < 4; k++){ this.p.push(...v[k]); this.n.push(...nor); this.u.push(...uv[k]); }
@@ -2388,7 +2393,7 @@ function fondoTorre(gr, largo){
 
 /* ---------- armar un nivel ---------- */
 function armarNivel(def){
-  if(NIVEL.grupo){ esc.remove(NIVEL.grupo); NIVEL.grupo.traverse(o => { if(o.geometry) o.geometry.dispose(); }); }
+  if(NIVEL.grupo){ esc.remove(NIVEL.grupo); tirarMalla(NIVEL.grupo); }
   const C = CAPITULOS[def.cap]; NIVEL.cap = C; NIVEL.def = def; NIVEL.conos = []; NIVEL.lamparas = []; NIVEL.neones = [];
   NIVEL.mapa = def.mapa.map(f => f.split('')); NIVEL.alto = NIVEL.mapa.length; NIVEL.ancho = Math.max(...def.mapa.map(f => f.length));
   NIVEL.mapa.forEach(f => { while(f.length < NIVEL.ancho) f.push('.'); });
@@ -2405,7 +2410,7 @@ function armarNivel(def){
   const mats = {'#':matBaldosa(C.pared, {relieve:3}), '=':matBaldosa(C.tablon, {relieve:2}), 'B':matBaldosa('madera', {relieve:3, tinte:'#c8b098'}), 'x':matBaldosa('madera', {relieve:3, semilla:5})};
   const suelo = matBaldosa(C.suelo, {relieve:2});
   const geos = {'#':new Geo(), '=':new Geo(), 'x':new Geo(), '<':new Geo(), '>':new Geo(), 'v':new Geo(), base:new Geo(), piso:new Geo()};
-  mats['<'] = matBaldosa('cinta', {relieve:2, rough:0.6}); mats['>'] = mats['<'].clone(); mats['>'].map = mats['<'].map.clone(); mats['>'].map.needsUpdate = true;
+  mats['<'] = matBaldosa('cinta', {relieve:2, rough:0.6}); mats['>'] = mats['<'].clone(); mats['>'].userData = {}; mats['>'].map = mats['<'].map.clone(); mats['>'].map.needsUpdate = true;
   mats.v = matBaldosa('rejilla', {relieve:3, metal:0.4, rough:0.5}); mats.base = matBaldosa('chapa', {relieve:2, metal:0.3, rough:0.6}); NIVEL.madera = {}; NIVEL.cintas = [mats['<'].map, mats['>'].map]; NIVEL.vapores = [];
   const A = NIVEL.alto;
   for(let f = 0; f < A; f++){ const y0 = A - 1 - f;
@@ -2485,6 +2490,11 @@ const GRAV = 30, TIPOS = {
   jefe:    {vida:30, aviso:1.4, cd:0.9, rango:30, bala:15, tiros:5, abre:0.35, hoja:'jefe', tam:1.6, brazo:['#6a5a44', '#4a3e2e', '#e0b490', 'samovar'], puntos:5000}
 };
 const HOJAS = {};
+/* temporizador propio: corre con el juego (no en pausa), y lo que quedó de otro nivel se descarta */
+const LUEGO = [];
+function luego(seg, fn, juego){ LUEGO.push({t:seg, fn, gen:J.gen || 0, juego:!!juego}); }
+function pasoLuego(dtR){ for(let i = LUEGO.length - 1; i >= 0; i--){ const q = LUEGO[i];
+  if(q.gen !== (J.gen || 0)){ LUEGO.splice(i, 1); continue; } q.t -= q.juego ? dtR*J.ts : dtR; if(q.t <= 0){ LUEGO.splice(i, 1); try { q.fn(); } catch(e){ console.error(e); } } } }
 function prepararHojas(){
   HOJAS.heroe = hojaHumano('heroe');
   HOJAS.brazoH = hojaBrazo(P.campera, P.camperaS, P.mascara, 'pistola'); HOJAS.brazoH2 = hojaBrazo(P.camperaS, '#101018', '#16121c', 'pistola');
@@ -2498,13 +2508,13 @@ const HE = {x:0, y:0, vx:0, vy:0, est:'suelo', dir:1, vida:3, invul:0, pared:0, 
 let ENEM = [], BALAS = [], OBJ = [], MATEO = null;
 const ANCHO = 0.55, ALTO = 1.7, ALTO_DESL = 0.7;
 function crearHeroe(x, y){
-  if(HE.malla){ esc.remove(HE.malla, ...HE.brazos, HE.bufanda.malla); }
+  if(HE.malla){ esc.remove(HE.malla, ...HE.brazos, HE.bufanda.malla); for(const m of [HE.malla, ...HE.brazos, HE.bufanda.malla]) tirarMalla(m); }
   Object.assign(HE, {x, y, vx:0, vy:0, est:'suelo', dir:1, vida:3, invul:0, pared:0, desliza:0, anim:0, giro:0, obj:[null, null], enAire:0, bajas:0, muerto:0});
   HE.malla = hacerSprite(HOJAS.heroe, {pie:1}); esc.add(HE.malla);
   HE.brazos = [hacerBrazo(HOJAS.brazoH2), hacerBrazo(HOJAS.brazoH)]; esc.add(...HE.brazos);
   HE.bufanda = crearBufanda(); esc.add(HE.bufanda.malla);
   /* la estela de la cámara lenta: copias del sprite que se apagan */
-  if(HE.fantasmas) esc.remove(...HE.fantasmas);
+  if(HE.fantasmas){ esc.remove(...HE.fantasmas); for(const f of HE.fantasmas) f.material.dispose(); }
   HE.fantasmas = [0, 1, 2, 3].map(i => { const m = new THREE.Mesh(HE.malla.geometry, new THREE.MeshBasicMaterial({map:HE.malla.material.map, transparent:true, opacity:0, depthWrite:false, alphaTest:0.05, blending:THREE.AdditiveBlending, fog:false, color:i % 2 ? new THREE.Color(2.6, 0.5, 0.8) : new THREE.Color(0.5, 1.8, 2.6)})); m.renderOrder = 3; m.visible = false; esc.add(m); return m; });
   HE.rastro = []; HE.rastroT = 0;
 }
@@ -2636,7 +2646,7 @@ function herir(n, desdeX, causa){
   HE.vida -= n; HE.invul = 1.1; J.danio++; J.mult = 1; J.multT = 0; CAMARA.sacude = Math.max(CAMARA.sacude, 1.1); vibrar(60);
   P_FIN.u.herido.value = 1; SON.fx('herido'); sangre(HE.x, HE.y + 1.1, sig(HE.x - desdeX), 14);
   if(causa === 'alambre'){ HE.vy = 9; HE.est = 'aire'; }
-  if(HE.vida <= 0){ HE.muerto = 0.001; HE.est = 'aire'; HE.vy = 6; HE.vx = sig(HE.x - desdeX)*4; SON.fx('herido', {tono:0.7}); SON.musica('muerte'); J.tsObj = 0.25; setTimeout(() => { if(J.modo === 'juego') pantallaMuerte(); }, 1600); }
+  if(HE.vida <= 0){ HE.muerto = 0.001; HE.est = 'aire'; HE.vy = 6; HE.vx = sig(HE.x - desdeX)*4; SON.fx('herido', {tono:0.7}); SON.musica('muerte'); J.tsObj = 0.25; luego(1.6, () => { if(J.modo === 'juego') pantallaMuerte(); }); }
 }
 
 /* ---------- disparos ---------- */
@@ -2718,7 +2728,7 @@ function matar(e, b, causa){
   if(b && b.cabeza) bonos.push(['¡A LA CABEZA!', 100]);
   if(b && b.carambola) bonos.push(['¡CARAMBOLA!', 200]);
   if(causa === 'explosion') bonos.push(['¡KABOOM!', 150]);
-  J.mult = Math.min(8, J.mult + 1); J.multT = 4; if(J.mult > 1) SON.fx('mult', {n:J.mult}); if(bonos.length) setTimeout(() => SON.fx('estilo'), 90);
+  J.mult = Math.min(8, J.mult + 1); J.multT = 4; if(J.mult > 1) SON.fx('mult', {n:J.mult}); if(bonos.length) luego(0.09, () => SON.fx('estilo'));
   const base = e.T.puntos + bonos.reduce((s, q) => s + q[1], 0), pts = base*J.mult;
   J.puntos += pts;
   popup(e.x, e.y + e.alto + 0.4, '+' + pts, 'oro');
@@ -2737,7 +2747,7 @@ function explotar(o){
     PART.solidas.tirar(Object.assign({x:o.x, y:o.y - 0.3, z:rv(-0.6, 0.6), vx:Math.cos(a)*v*0.4, vy:Math.sin(a)*v*0.4 + 2, g:-1.5, roce:1.5, vida:rv(0.8, 1.6), tam:rv(2, 4)}, rgb('#3a3440', 1))); }
   for(const e of ENEM){ if(e.muerto) continue; if(Math.hypot(e.x - o.x, e.y + 0.8 - o.y) < 3){ e.vida = 0; matar(e, {vx:e.x - o.x}, 'explosion'); } }
   if(Math.hypot(HE.x - o.x, HE.y + 0.8 - o.y) < 2.4) herir(1, o.x, 'explosion');
-  for(const q of OBJ) if(q.vivo && q.tipo === 'garrafa' && Math.hypot(q.x - o.x, q.y - o.y) < 3) setTimeout(() => explotar(q), 120);
+  for(const q of OBJ) if(q.vivo && q.tipo === 'garrafa' && Math.hypot(q.x - o.x, q.y - o.y) < 3) luego(0.12, () => explotar(q), true);
   /* las paredes de madera vuelan */
   for(let dy = -2; dy <= 2; dy++) for(let dx = -2; dx <= 2; dx++){ const cx = Math.floor(o.x) + dx, cy = Math.floor(o.y) + dy; if(celda(cx + 0.5, cy + 0.5) === 'B') romperPared(cx, cy); }
 }
@@ -2882,7 +2892,7 @@ function pasoJefe(e, dt){
   e.aviso = 0; J2.ciclo++;
   const c = J2.ciclo;
   if(c % 3 === 0){ saltoJefe(e); return; }
-  if(f >= 2 && c % 2 === 0){ tirarTetera(e); if(f === 3) setTimeout(() => { if(!e.muerto) tirarTetera(e); }, 380); return; }
+  if(f >= 2 && c % 2 === 0){ tirarTetera(e); if(f === 3) luego(0.38, () => { if(!e.muerto) tirarTetera(e); }, true); return; }
   if(f === 3 && c % 4 === 1){ anilloDeBalas(e); return; }
   e.rafaga = f === 1 ? 1 : 2;
 }
@@ -2916,7 +2926,7 @@ function jefeMuere(e){
   decir(e, tr('¡Nooo! ¡Mi hora del té!'), 3);
   for(const o of ENEM) if(!o.muerto && o !== e){ o.vida = 0; matar(o, {vx:o.x - e.x}); }
   for(const b of BALAS) if(b.de !== 'heroe') b.vida = 0;
-  setTimeout(() => { if(J.modo === 'juego') arrancarCine('final'); }, 2600);
+  luego(2.6, () => { if(J.modo !== 'juego') return; arrancarCine('final', () => { const p = NIVEL.def.estrellas; J.fin = {t:0, estrellas:J.puntos >= p[2] ? 3 : J.puntos >= p[1] ? 2 : J.puntos >= p[0] ? 1 : 0}; pantallaResultado(); }); });
 }
 /* la barra del jefe y su nombre, arriba */
 function dibujarBarraJefe(g){
@@ -3402,8 +3412,8 @@ const NIVELES = [
 
 /* ================================================================ cargar un nivel */
 function cargarNivel(i){
-  const def = NIVELES[i]; J.idx = i; J.nivel = def;
-  for(const e of ENEM) esc.remove(e.malla, e.brazo); for(const o of OBJ) esc.remove(o.malla); if(MATEO){ esc.remove(MATEO.malla, MATEO.luz); }
+  const def = NIVELES[i]; J.idx = i; J.nivel = def; J.gen = (J.gen || 0) + 1;
+  for(const e of ENEM){ esc.remove(e.malla, e.brazo); tirarMalla(e.malla); tirarMalla(e.brazo); } for(const o of OBJ){ esc.remove(o.malla); tirarMalla(o.malla); } if(MATEO){ esc.remove(MATEO.malla, MATEO.luz); tirarMalla(MATEO.malla); }
   ENEM = []; BALAS = []; OBJ = []; J.textos = []; J.fin = null; J.cine = null;
   Object.assign(J, {puntos:0, mult:1, multT:0, muertes:0, tiros:0, aciertos:0, danio:0, reloj:0, killcam:0, vidrio:0, estilo:{}, pista:0});
   armarNivel(def);
@@ -3439,7 +3449,7 @@ function terminarNivel(){
   if(J.sim){ J.simFin = 1; return; }
   J.fin = {t:0}; SON.fx('puerta'); J.killcam = 0;
   const p = NIVEL.def.estrellas; J.fin.estrellas = J.puntos >= p[2] ? 3 : J.puntos >= p[1] ? 2 : J.puntos >= p[0] ? 1 : 0;
-  setTimeout(() => pantallaResultado(), 900);
+  luego(0.9, () => pantallaResultado());
 }
 
 /* ================================================================ entrada: arrastrar para planear, tocar para tirar */
@@ -3504,6 +3514,7 @@ function lazo(ts){
   if(J.fundir !== undefined){ const obj = J.fundirA || 0; P_FIN.u.fundido.value += (obj - P_FIN.u.fundido.value)*(1 - Math.exp(-dtR*4)); }
   pasoMundo(dtR*(J.pausa ? 0 : J.ts), J.tr);
   if(J.cine) pasoCine(dtR);
+  if(!J.pausa) pasoLuego(dtR);
   if((J.modo !== 'juego' || J.cine) && !J.pausa){ PART.solidas.paso(dtR); PART.brillos.paso(dtR); pasoFlashes(dtR); }
   if(J.modo === 'menu'){ CAMARA.obj.x = 15 + Math.sin(J.tr*0.06)*5; CAMARA.obj.y = 8.2 + Math.sin(J.tr*0.09)*0.6; HE.est = 'suelo'; HE.vx = 0; }
   moverCamara(dtR*J.ts, dtR);

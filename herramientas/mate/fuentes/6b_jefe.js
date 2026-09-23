@@ -34,7 +34,7 @@ function pasoJefe(e, dt){
   e.aviso = 0; J2.ciclo++;
   const c = J2.ciclo;
   if(c % 3 === 0){ saltoJefe(e); return; }
-  if(f >= 2 && c % 2 === 0){ tirarTetera(e); if(f === 3) setTimeout(() => { if(!e.muerto) tirarTetera(e); }, 380); return; }
+  if(f >= 2 && c % 2 === 0){ tirarTetera(e); if(f === 3) luego(0.38, () => { if(!e.muerto) tirarTetera(e); }, true); return; }
   if(f === 3 && c % 4 === 1){ anilloDeBalas(e); return; }
   e.rafaga = f === 1 ? 1 : 2;
 }
@@ -68,7 +68,7 @@ function jefeMuere(e){
   decir(e, tr('¡Nooo! ¡Mi hora del té!'), 3);
   for(const o of ENEM) if(!o.muerto && o !== e){ o.vida = 0; matar(o, {vx:o.x - e.x}); }
   for(const b of BALAS) if(b.de !== 'heroe') b.vida = 0;
-  setTimeout(() => { if(J.modo === 'juego') arrancarCine('final'); }, 2600);
+  luego(2.6, () => { if(J.modo !== 'juego') return; arrancarCine('final', () => { const p = NIVEL.def.estrellas; J.fin = {t:0, estrellas:J.puntos >= p[2] ? 3 : J.puntos >= p[1] ? 2 : J.puntos >= p[0] ? 1 : 0}; pantallaResultado(); }); });
 }
 /* la barra del jefe y su nombre, arriba */
 function dibujarBarraJefe(g){

@@ -14,6 +14,11 @@ const GRAV = 30, TIPOS = {
   jefe:    {vida:30, aviso:1.4, cd:0.9, rango:30, bala:15, tiros:5, abre:0.35, hoja:'jefe', tam:1.6, brazo:['#6a5a44', '#4a3e2e', '#e0b490', 'samovar'], puntos:5000}
 };
 const HOJAS = {};
+/* temporizador propio: corre con el juego (no en pausa), y lo que quedó de otro nivel se descarta */
+const LUEGO = [];
+function luego(seg, fn, juego){ LUEGO.push({t:seg, fn, gen:J.gen || 0, juego:!!juego}); }
+function pasoLuego(dtR){ for(let i = LUEGO.length - 1; i >= 0; i--){ const q = LUEGO[i];
+  if(q.gen !== (J.gen || 0)){ LUEGO.splice(i, 1); continue; } q.t -= q.juego ? dtR*J.ts : dtR; if(q.t <= 0){ LUEGO.splice(i, 1); try { q.fn(); } catch(e){ console.error(e); } } } }
 function prepararHojas(){
   HOJAS.heroe = hojaHumano('heroe');
   HOJAS.brazoH = hojaBrazo(P.campera, P.camperaS, P.mascara, 'pistola'); HOJAS.brazoH2 = hojaBrazo(P.camperaS, '#101018', '#16121c', 'pistola');
@@ -27,13 +32,13 @@ const HE = {x:0, y:0, vx:0, vy:0, est:'suelo', dir:1, vida:3, invul:0, pared:0, 
 let ENEM = [], BALAS = [], OBJ = [], MATEO = null;
 const ANCHO = 0.55, ALTO = 1.7, ALTO_DESL = 0.7;
 function crearHeroe(x, y){
-  if(HE.malla){ esc.remove(HE.malla, ...HE.brazos, HE.bufanda.malla); }
+  if(HE.malla){ esc.remove(HE.malla, ...HE.brazos, HE.bufanda.malla); for(const m of [HE.malla, ...HE.brazos, HE.bufanda.malla]) tirarMalla(m); }
   Object.assign(HE, {x, y, vx:0, vy:0, est:'suelo', dir:1, vida:3, invul:0, pared:0, desliza:0, anim:0, giro:0, obj:[null, null], enAire:0, bajas:0, muerto:0});
   HE.malla = hacerSprite(HOJAS.heroe, {pie:1}); esc.add(HE.malla);
   HE.brazos = [hacerBrazo(HOJAS.brazoH2), hacerBrazo(HOJAS.brazoH)]; esc.add(...HE.brazos);
   HE.bufanda = crearBufanda(); esc.add(HE.bufanda.malla);
   /* la estela de la cámara lenta: copias del sprite que se apagan */
-  if(HE.fantasmas) esc.remove(...HE.fantasmas);
+  if(HE.fantasmas){ esc.remove(...HE.fantasmas); for(const f of HE.fantasmas) f.material.dispose(); }
   HE.fantasmas = [0, 1, 2, 3].map(i => { const m = new THREE.Mesh(HE.malla.geometry, new THREE.MeshBasicMaterial({map:HE.malla.material.map, transparent:true, opacity:0, depthWrite:false, alphaTest:0.05, blending:THREE.AdditiveBlending, fog:false, color:i % 2 ? new THREE.Color(2.6, 0.5, 0.8) : new THREE.Color(0.5, 1.8, 2.6)})); m.renderOrder = 3; m.visible = false; esc.add(m); return m; });
   HE.rastro = []; HE.rastroT = 0;
 }
@@ -165,7 +170,7 @@ function herir(n, desdeX, causa){
   HE.vida -= n; HE.invul = 1.1; J.danio++; J.mult = 1; J.multT = 0; CAMARA.sacude = Math.max(CAMARA.sacude, 1.1); vibrar(60);
   P_FIN.u.herido.value = 1; SON.fx('herido'); sangre(HE.x, HE.y + 1.1, sig(HE.x - desdeX), 14);
   if(causa === 'alambre'){ HE.vy = 9; HE.est = 'aire'; }
-  if(HE.vida <= 0){ HE.muerto = 0.001; HE.est = 'aire'; HE.vy = 6; HE.vx = sig(HE.x - desdeX)*4; SON.fx('herido', {tono:0.7}); SON.musica('muerte'); J.tsObj = 0.25; setTimeout(() => { if(J.modo === 'juego') pantallaMuerte(); }, 1600); }
+  if(HE.vida <= 0){ HE.muerto = 0.001; HE.est = 'aire'; HE.vy = 6; HE.vx = sig(HE.x - desdeX)*4; SON.fx('herido', {tono:0.7}); SON.musica('muerte'); J.tsObj = 0.25; luego(1.6, () => { if(J.modo === 'juego') pantallaMuerte(); }); }
 }
 
 /* ---------- disparos ---------- */
@@ -247,7 +252,7 @@ function matar(e, b, causa){
   if(b && b.cabeza) bonos.push(['¡A LA CABEZA!', 100]);
   if(b && b.carambola) bonos.push(['¡CARAMBOLA!', 200]);
   if(causa === 'explosion') bonos.push(['¡KABOOM!', 150]);
-  J.mult = Math.min(8, J.mult + 1); J.multT = 4; if(J.mult > 1) SON.fx('mult', {n:J.mult}); if(bonos.length) setTimeout(() => SON.fx('estilo'), 90);
+  J.mult = Math.min(8, J.mult + 1); J.multT = 4; if(J.mult > 1) SON.fx('mult', {n:J.mult}); if(bonos.length) luego(0.09, () => SON.fx('estilo'));
   const base = e.T.puntos + bonos.reduce((s, q) => s + q[1], 0), pts = base*J.mult;
   J.puntos += pts;
   popup(e.x, e.y + e.alto + 0.4, '+' + pts, 'oro');
@@ -266,7 +271,7 @@ function explotar(o){
     PART.solidas.tirar(Object.assign({x:o.x, y:o.y - 0.3, z:rv(-0.6, 0.6), vx:Math.cos(a)*v*0.4, vy:Math.sin(a)*v*0.4 + 2, g:-1.5, roce:1.5, vida:rv(0.8, 1.6), tam:rv(2, 4)}, rgb('#3a3440', 1))); }
   for(const e of ENEM){ if(e.muerto) continue; if(Math.hypot(e.x - o.x, e.y + 0.8 - o.y) < 3){ e.vida = 0; matar(e, {vx:e.x - o.x}, 'explosion'); } }
   if(Math.hypot(HE.x - o.x, HE.y + 0.8 - o.y) < 2.4) herir(1, o.x, 'explosion');
-  for(const q of OBJ) if(q.vivo && q.tipo === 'garrafa' && Math.hypot(q.x - o.x, q.y - o.y) < 3) setTimeout(() => explotar(q), 120);
+  for(const q of OBJ) if(q.vivo && q.tipo === 'garrafa' && Math.hypot(q.x - o.x, q.y - o.y) < 3) luego(0.12, () => explotar(q), true);
   /* las paredes de madera vuelan */
   for(let dy = -2; dy <= 2; dy++) for(let dx = -2; dx <= 2; dx++){ const cx = Math.floor(o.x) + dx, cy = Math.floor(o.y) + dy; if(celda(cx + 0.5, cy + 0.5) === 'B') romperPared(cx, cy); }
 }

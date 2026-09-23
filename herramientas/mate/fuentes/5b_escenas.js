@@ -140,7 +140,7 @@ function fondoTorre(gr, largo){
 
 /* ---------- armar un nivel ---------- */
 function armarNivel(def){
-  if(NIVEL.grupo){ esc.remove(NIVEL.grupo); NIVEL.grupo.traverse(o => { if(o.geometry) o.geometry.dispose(); }); }
+  if(NIVEL.grupo){ esc.remove(NIVEL.grupo); tirarMalla(NIVEL.grupo); }
   const C = CAPITULOS[def.cap]; NIVEL.cap = C; NIVEL.def = def; NIVEL.conos = []; NIVEL.lamparas = []; NIVEL.neones = [];
   NIVEL.mapa = def.mapa.map(f => f.split('')); NIVEL.alto = NIVEL.mapa.length; NIVEL.ancho = Math.max(...def.mapa.map(f => f.length));
   NIVEL.mapa.forEach(f => { while(f.length < NIVEL.ancho) f.push('.'); });
@@ -157,7 +157,7 @@ function armarNivel(def){
   const mats = {'#':matBaldosa(C.pared, {relieve:3}), '=':matBaldosa(C.tablon, {relieve:2}), 'B':matBaldosa('madera', {relieve:3, tinte:'#c8b098'}), 'x':matBaldosa('madera', {relieve:3, semilla:5})};
   const suelo = matBaldosa(C.suelo, {relieve:2});
   const geos = {'#':new Geo(), '=':new Geo(), 'x':new Geo(), '<':new Geo(), '>':new Geo(), 'v':new Geo(), base:new Geo(), piso:new Geo()};
-  mats['<'] = matBaldosa('cinta', {relieve:2, rough:0.6}); mats['>'] = mats['<'].clone(); mats['>'].map = mats['<'].map.clone(); mats['>'].map.needsUpdate = true;
+  mats['<'] = matBaldosa('cinta', {relieve:2, rough:0.6}); mats['>'] = mats['<'].clone(); mats['>'].userData = {}; mats['>'].map = mats['<'].map.clone(); mats['>'].map.needsUpdate = true;
   mats.v = matBaldosa('rejilla', {relieve:3, metal:0.4, rough:0.5}); mats.base = matBaldosa('chapa', {relieve:2, metal:0.3, rough:0.6}); NIVEL.madera = {}; NIVEL.cintas = [mats['<'].map, mats['>'].map]; NIVEL.vapores = [];
   const A = NIVEL.alto;
   for(let f = 0; f < A; f++){ const y0 = A - 1 - f;
