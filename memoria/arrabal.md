@@ -13,6 +13,20 @@ Colectivo), marcos de fileteado porteño en vez de art déco, tangos propios.
 - Campaña de 15 peleas en 3 barrios (la 5.ª de cada uno es jefe), árbol de habilidades de 8 nodos,
   cofre de cartas con fichas (repetidas dan estrella), subir nivel con monedas.
 
+## Modo arcade (23/09/2026)
+Pedido: «Haz el estilo más Arcade el segundo juego». Se sumó, sin tocar la historia con cartas:
+- **Atracción**: la portada corre una pelea demo CPU contra CPU (`M.modo='demo'`) con «TOCÁ PARA
+  EMPEZAR» titilando; un toque va al menú (ARCADE, HISTORIA, cartas, cofre, récords, ajustes).
+- **Arcade**: elegir luchador en grilla con cuenta regresiva de 20 s (al llegar a 0 juega el marcado),
+  VS en diagonal, escalera de 6 (los otros cinco y un jefe final), rondas de 60 s al mejor de tres.
+- Puntaje: daño × 10 + 50 por golpe de combo; bonos al ganar ronda: tiempo × 100, vida (hasta 5.000)
+  y ¡PERFECTO! +10.000. ¿Continuás? de 10 s (el puntaje vuelve a cero). Récords top 5 con iniciales,
+  guardados en `Prog.ranking` (arranca con cinco récords de fábrica).
+- Look de salón: `textoArcade()` (cursiva gorda con degradé y borde), carteles con zoom y temblor
+  («RONDA 1», «¡PELEEN!», «RONDA FINAL»), anuncios de combo en 5/10/15/20 golpes, y `capaCRT()`: líneas de
+  tubo + viñeta + un barrido claro que baja (se apaga en ajustes: «EFECTO DE TUBO»).
+- La historia usa el mismo motor con `modo='historia'` (equipos y relevos, sin rondas).
+
 ## Cómo está armado
 - **En la pelea los personajes son títeres por código**: esqueleto con ángulos (`esqueleto()`),
   poses clave interpoladas con `suave()`, cápsulas de dos tonos + trazo de tinta. Se eligió así porque

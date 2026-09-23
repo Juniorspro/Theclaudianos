@@ -1,6 +1,13 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — ARRABAL, modo arcade
+**Pedido textual:** «Haz el estilo más Arcade el segundo juego».
+Qué se hizo: atracción con demo, modo arcade completo (selección, VS, rondas, puntaje, continuar,
+récords con iniciales) y look de salón (CRT, letras, carteles, anuncios). Detalle en [arrabal](arrabal.md).
+Trampa del día: reescribir un archivo con `open(p,'w').write(open(p).read()...)` lo **vacía** (abrir para
+escribir trunca antes de leer). Leer primero, escribir después.
+
 ### 2026-09-23 — música para CHICHARRA y el sonido en iOS
 **Pedido textual:** «Dame el enlace del juego y al juego anterior agrégale música».
 Qué se hizo: CHICHARRA tiene un tema propio por zona. En los dos juegos se arregló que iOS los deje

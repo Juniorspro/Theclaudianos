@@ -10,6 +10,9 @@ Chromium del contenedor, 412x892, `hasTouch`. **Nunca `npx playwright install`.*
 - `tacto.mjs` — toques reales por CDP: deslizar ↑ salta, mantener cubre, especial con un segundo
   dedo sin que cuente como gesto, pausa y menú.
 - `toque.mjs` — un toque rápido pega y cuatro seguidos arman el combo de 4.
+- `arcade.mjs` — atracción → menú → selección (la cuenta elige sola) → VS → rondas con bonos → la
+  escalera entera con el bot → continuar → iniciales → récords; y que la historia siga andando.
+- `atraccion.mjs` — la demo de la portada corre 2 minutos pasando de pelea en pelea sin trabarse.
 
 Sondas: `window.__A` (`ir`, `pelea`, `saltarIntro`, `quieto`, `bot`, `orden`, `gesto`, `medidor`,
 `nivelar`, `mundo`, `imgs`, `tocar`, `donde`, `darTodo`, `borrar`).
