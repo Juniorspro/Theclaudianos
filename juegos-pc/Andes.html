@@ -32,7 +32,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101828;touch-action:n
 #bPausa{position:absolute;top:8px;right:12px;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.08);
   pointer-events:auto;display:flex;align-items:center;justify-content:center;gap:5px}
 #bPausa i{display:block;width:3px;height:14px;background:#fff;border-radius:1px}
-.capa{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:14px 20px;text-align:center;overflow-y:auto;touch-action:pan-y}
+.capa{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;justify-content:safe center;gap:12px;padding:14px 20px;text-align:center;overflow-y:auto;touch-action:pan-y}
 .capa.ver{display:flex;animation:aparece .6s ease both}
 .capa.velo{background:linear-gradient(180deg,rgba(10,16,34,.35),rgba(10,16,34,.72))}
 @keyframes aparece{from{opacity:0}to{opacity:1}}
@@ -71,6 +71,9 @@ h2{font-weight:200;font-size:30px;letter-spacing:.4em;margin:0 -.4em 4px 0}
 .panel{border:1px solid rgba(255,255,255,.35);border-radius:16px;background:rgba(10,16,34,.45);padding:12px 16px;max-width:560px;width:100%}
 .texto{font-size:12.5px;letter-spacing:.06em;line-height:1.7;text-align:left}
 .texto b{font-weight:500;color:#ffe6b8}
+/* el cómo se juega en dos columnas: en una sola, acostado, el VOLVER quedaba abajo de la pantalla */
+#capaComo .panel{max-width:860px;columns:2 280px;column-gap:26px}
+#capaComo .texto p{margin:0 0 9px;break-inside:avoid}
 .gran{font-size:44px;font-weight:200;letter-spacing:.2em;margin:0 -.2em 0 0}
 .chico{font-size:11px;letter-spacing:.3em;opacity:.85}
 .stat{display:grid;grid-template-columns:80px 1fr;gap:8px;align-items:center;font-size:10px;letter-spacing:.2em;margin:4px 0}
@@ -82,6 +85,9 @@ h2{font-weight:200;font-size:30px;letter-spacing:.4em;margin:0 -.4em 4px 0}
 .item small{display:block;opacity:.75;font-size:10px;letter-spacing:.08em}
 .puntos{display:flex;gap:4px}.puntos i{width:7px;height:7px;border-radius:50%;border:1px solid #fff}.puntos i.si{background:#fff}
 #monedero{position:absolute;top:12px;left:16px;font-size:14px;letter-spacing:.2em;display:flex;align-items:center;gap:7px}
+#idiomas{position:absolute;top:10px;right:12px;display:flex;gap:6px}
+.boton.idi{min-width:0;font-size:10px;letter-spacing:.2em;padding:6px 10px 6px calc(10px + .2em)}
+.boton.idi.ya{background:#fff;color:#1b2440;font-weight:500}
 #monedero i{display:inline-block;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6c0,#f2b632 55%,#b77a10)}
 </style></head><body>
 <div id="pantalla">
@@ -99,6 +105,7 @@ h2{font-weight:200;font-size:30px;letter-spacing:.4em;margin:0 -.4em 4px 0}
 
   <div class="capa" id="capaTitulo">
     <div id="monedero"><i></i><span id="monTit">0</span></div>
+    <div id="idiomas"><button class="boton idi" id="btIdEs" data-l="es">ESPAÑOL</button><button class="boton idi" id="btIdEn" data-l="en">ENGLISH</button><button class="boton idi" id="btIdPt" data-l="pt">PORTUGUÊS</button></div>
     <div class="titulo">ANDES</div>
     <div class="sub">EL DESCENSO</div>
     <div class="botones">
@@ -190,6 +197,113 @@ function cargar(){
 }
 function guardar(){ try{ localStorage.setItem(CLAVE, JSON.stringify(G)); }catch(e){} }
 const G = cargar();
+/* ====================== idiomas: castellano (base), inglés y portugués ======================
+   Todo se escribe en castellano y T() traduce al mostrar: entero si está en el diccionario, y si no
+   por frases sueltas (palabras enteras), así andan los armados como 'GRIND ' + m + ' M'. */
+const IDIOMAS = [['es','ESPAÑOL'], ['en','ENGLISH'], ['pt','PORTUGUÊS']];
+const TR = {
+  en:{
+    /* menús */
+    'EL DESCENSO':'THE DESCENT', 'JUGAR':'PLAY', 'TALLER':'WORKSHOP', 'CÓMO SE JUEGA':'HOW TO PLAY', 'SONIDO':'SOUND', 'SÍ':'ON', 'NO':'OFF',
+    'MONTAÑAS':'MOUNTAINS', 'MONTAÑA':'MOUNTAIN', 'VOLVER':'BACK', 'RIDERS':'RIDERS', 'EQUIPO':'GEAR', 'PAUSA':'PAUSED', 'SEGUIR':'RESUME',
+    'REINICIAR':'RESTART', 'SALIR':'QUIT', 'LLEGASTE':'YOU MADE IT', 'TE CAÍSTE':'WIPEOUT', 'SIGUIENTE':'NEXT', 'DESDE EL SANTUARIO':'FROM THE SHRINE',
+    'DE NUEVO':'AGAIN', 'ELEGIDO':'SELECTED', 'ELEGIR':'SELECT', 'MÁXIMO':'MAXED', 'CERRADA':'LOCKED', 'MORTALES':'FLIPS', 'M DE GRIND':'M GRINDED', 'RÉCORD':'NEW BEST',
+    /* riders y mejoras */
+    'Parejo en todo.':'Balanced at everything.', 'Gira más rápido: mortales dobles fáciles.':'Spins faster: easy double flips.',
+    'La más rápida de la montaña.':'The fastest on the mountain.', 'El abuelo: salta alto y aguanta un golpe más.':'The grandpa: jumps high and takes one more hit.',
+    'CASCO':'HELMET', 'Te salva de un golpe por bajada.':'Saves you from one crash per run.',
+    'PLUMA':'FEATHER', 'La pluma dura más: flotás y siempre caés parado.':'The feather lasts longer: you float and always land on your feet.',
+    'IMÁN':'MAGNET', 'El imán de monedas dura más.':'The coin magnet lasts longer.',
+    'ALAS':'WINGS', 'Las alas duran más y la bufanda carga antes.':'Wings last longer and the scarf charges sooner.',
+    /* montañas y metas */
+    'EL PUEBLO':'THE VILLAGE', 'BOSQUE DE LENGAS':'LENGA FOREST', 'LA TORMENTA':'THE STORM', 'EL ACONCAGUA':'ACONCAGUA',
+    'Amanecer en la pradera':'Dawn on the meadow', 'Techos y llamas al atardecer':'Rooftops and llamas at sunset', 'De noche, con ancianos atrás':'At night, with elders on your tail',
+    'Viento, rayos y hielo':'Wind, lightning and ice', 'La avalancha no perdona':'The avalanche shows no mercy',
+    'LLEGÁ AL REFUGIO':'REACH THE LODGE', 'HACÉ 6 MORTALES':'DO 6 FLIPS', 'JUNTÁ 100 MONEDAS':'COLLECT 100 COINS', 'ATRAPÁ 3 LLAMAS':'CATCH 3 LLAMAS',
+    'REBOTÁ EN 4 TOLDOS':'BOUNCE ON 4 AWNINGS', 'GRINDÁ 150 M':'GRIND 150 M', 'CLAVÁ UN MORTAL DOBLE':'LAND A DOUBLE FLIP', 'VOLÁ 15 S CON LAS ALAS':'FLY 15 S WITH THE WINGS',
+    'HACÉ UNA CADENA DE 6':'MAKE A 6-TRICK CHAIN', 'ESCAPALE A LA AVALANCHA':'OUTRUN THE AVALANCHE', 'CLAVÁ UN MORTAL TRIPLE':'LAND A TRIPLE FLIP', 'LLEGÁ SIN CAERTE':'FINISH WITHOUT FALLING',
+    'META':'GOAL',
+    /* trucos */
+    'MORTAL':'BACKFLIP', 'MORTAL DOBLE':'DOUBLE BACKFLIP', 'MORTAL TRIPLE':'TRIPLE BACKFLIP', 'CUÁDRUPLE':'QUADRUPLE', 'RASANTE':'CLOSE SHAVE', 'PERFECTO':'PERFECT',
+    'ABISMO':'CHASM', 'BESO DE CUERDA':'ROPE KISS', 'GRIND':'GRIND', 'REBOTE':'BOUNCE', 'TECHO':'ROOF', 'ROCA ROTA':'ROCK SMASH', 'LLAMA':'LLAMA',
+    /* avisos y HUD */
+    '¡EL CASCO TE SALVÓ!':'THE HELMET SAVED YOU!', '¡PIÑA CONTRA LA ROCA!':'SMACKED INTO A ROCK!', '¡MALA CAÍDA!':'BAD LANDING!', '¡AL ABISMO!':'INTO THE CHASM!',
+    '¡TE AGARRÓ EL ANCIANO!':'THE ELDER CAUGHT YOU!', '¡TE TAPÓ LA AVALANCHA!':'BURIED BY THE AVALANCHE!', '¡CONTRA LA PARED!':'INTO THE WALL!', '¡AY!':'OUCH!',
+    'SE CERRARON LAS ALAS':'THE WINGS CLOSED', '¡ALAS!':'WINGS!', 'PLUMA · MANTENÉ PARA FLOTAR':'FEATHER · HOLD TO FLOAT', 'BUFANDA LLENA · DOBLE TOQUE EN EL AIRE':'SCARF FULL · DOUBLE TAP IN THE AIR',
+    'SANTUARIO · PROGRESO GUARDADO':'SHRINE · PROGRESS SAVED', '¡UN ANCIANO TE PERSIGUE!':'AN ELDER IS CHASING YOU!', 'EL ANCIANO SE CANSÓ':'THE ELDER GAVE UP',
+    'VIENTO EN CONTRA':'HEADWIND', 'VIENTO A FAVOR':'TAILWIND', '¡LLEGASTE AL REFUGIO!':'YOU REACHED THE LODGE!',
+    'DOBLE TOQUE: ALAS':'DOUBLE TAP: WINGS', 'ANCIANO A':'ELDER', 'AVALANCHA':'AVALANCHE'
+  },
+  pt:{
+    'EL DESCENSO':'A DESCIDA', 'JUGAR':'JOGAR', 'TALLER':'OFICINA', 'CÓMO SE JUEGA':'COMO JOGAR', 'SONIDO':'SOM', 'SÍ':'SIM', 'NO':'NÃO',
+    'MONTAÑAS':'MONTANHAS', 'MONTAÑA':'MONTANHA', 'VOLVER':'VOLTAR', 'RIDERS':'RIDERS', 'EQUIPO':'EQUIPAMENTO', 'PAUSA':'PAUSA', 'SEGUIR':'CONTINUAR',
+    'REINICIAR':'REINICIAR', 'SALIR':'SAIR', 'LLEGASTE':'VOCÊ CHEGOU', 'TE CAÍSTE':'VOCÊ CAIU', 'SIGUIENTE':'PRÓXIMA', 'DESDE EL SANTUARIO':'DO SANTUÁRIO',
+    'DE NUEVO':'DE NOVO', 'ELEGIDO':'ESCOLHIDO', 'ELEGIR':'ESCOLHER', 'MÁXIMO':'MÁXIMO', 'CERRADA':'BLOQUEADA', 'MORTALES':'MORTAIS', 'M DE GRIND':'M DE GRIND', 'RÉCORD':'RECORDE',
+    'Parejo en todo.':'Equilibrado em tudo.', 'Gira más rápido: mortales dobles fáciles.':'Gira mais rápido: mortais duplos fáceis.',
+    'La más rápida de la montaña.':'A mais rápida da montanha.', 'El abuelo: salta alto y aguanta un golpe más.':'O avô: pula alto e aguenta um golpe a mais.',
+    'CASCO':'CAPACETE', 'Te salva de un golpe por bajada.':'Salva você de uma batida por descida.',
+    'PLUMA':'PENA', 'La pluma dura más: flotás y siempre caés parado.':'A pena dura mais: você flutua e sempre cai em pé.',
+    'IMÁN':'ÍMÃ', 'El imán de monedas dura más.':'O ímã de moedas dura mais.',
+    'ALAS':'ASAS', 'Las alas duran más y la bufanda carga antes.':'As asas duram mais e o cachecol carrega antes.',
+    'EL PUEBLO':'A VILA', 'BOSQUE DE LENGAS':'BOSQUE DE LENGAS', 'LA TORMENTA':'A TEMPESTADE', 'EL ACONCAGUA':'O ACONCÁGUA',
+    'Amanecer en la pradera':'Amanhecer na pradaria', 'Techos y llamas al atardecer':'Telhados e lhamas ao entardecer', 'De noche, con ancianos atrás':'De noite, com anciões atrás',
+    'Viento, rayos y hielo':'Vento, raios e gelo', 'La avalancha no perdona':'A avalanche não perdoa',
+    'LLEGÁ AL REFUGIO':'CHEGUE AO REFÚGIO', 'HACÉ 6 MORTALES':'FAÇA 6 MORTAIS', 'JUNTÁ 100 MONEDAS':'JUNTE 100 MOEDAS', 'ATRAPÁ 3 LLAMAS':'PEGUE 3 LHAMAS',
+    'REBOTÁ EN 4 TOLDOS':'QUIQUE EM 4 TOLDOS', 'GRINDÁ 150 M':'FAÇA 150 M DE GRIND', 'CLAVÁ UN MORTAL DOBLE':'ACERTE UM MORTAL DUPLO', 'VOLÁ 15 S CON LAS ALAS':'VOE 15 S COM AS ASAS',
+    'HACÉ UNA CADENA DE 6':'FAÇA UMA SEQUÊNCIA DE 6', 'ESCAPALE A LA AVALANCHA':'FUJA DA AVALANCHE', 'CLAVÁ UN MORTAL TRIPLE':'ACERTE UM MORTAL TRIPLO', 'LLEGÁ SIN CAERTE':'CHEGUE SEM CAIR',
+    'META':'META',
+    'MORTAL':'MORTAL', 'MORTAL DOBLE':'MORTAL DUPLO', 'MORTAL TRIPLE':'MORTAL TRIPLO', 'CUÁDRUPLE':'QUÁDRUPLO', 'RASANTE':'RASANTE', 'PERFECTO':'PERFEITO',
+    'ABISMO':'ABISMO', 'BESO DE CUERDA':'BEIJO NA CORDA', 'GRIND':'GRIND', 'REBOTE':'QUIQUE', 'TECHO':'TELHADO', 'ROCA ROTA':'ROCHA QUEBRADA', 'LLAMA':'LHAMA',
+    '¡EL CASCO TE SALVÓ!':'O CAPACETE TE SALVOU!', '¡PIÑA CONTRA LA ROCA!':'BATEU NA ROCHA!', '¡MALA CAÍDA!':'QUEDA FEIA!', '¡AL ABISMO!':'NO ABISMO!',
+    '¡TE AGARRÓ EL ANCIANO!':'O ANCIÃO TE PEGOU!', '¡TE TAPÓ LA AVALANCHA!':'A AVALANCHE TE COBRIU!', '¡CONTRA LA PARED!':'NA PAREDE!', '¡AY!':'AI!',
+    'SE CERRARON LAS ALAS':'AS ASAS FECHARAM', '¡ALAS!':'ASAS!', 'PLUMA · MANTENÉ PARA FLOTAR':'PENA · SEGURE PARA FLUTUAR', 'BUFANDA LLENA · DOBLE TOQUE EN EL AIRE':'CACHECOL CHEIO · TOQUE DUPLO NO AR',
+    'SANTUARIO · PROGRESO GUARDADO':'SANTUÁRIO · PROGRESSO SALVO', '¡UN ANCIANO TE PERSIGUE!':'UM ANCIÃO ESTÁ TE PERSEGUINDO!', 'EL ANCIANO SE CANSÓ':'O ANCIÃO CANSOU',
+    'VIENTO EN CONTRA':'VENTO CONTRA', 'VIENTO A FAVOR':'VENTO A FAVOR', '¡LLEGASTE AL REFUGIO!':'VOCÊ CHEGOU AO REFÚGIO!',
+    'DOBLE TOQUE: ALAS':'TOQUE DUPLO: ASAS', 'ANCIANO A':'ANCIÃO A', 'AVALANCHA':'AVALANCHE'
+  }
+};
+/* el cómo se juega tiene negritas adentro: va entero por idioma */
+const COMO_TXT = {
+  en:`<p><b>One finger.</b> Tap to <b>jump</b>. Hold in the air to do a <b>backflip</b>; let go to stop spinning. Land with the board <b>parallel to the snow</b> or you eat the mountain.</p>
+      <p><b>Chains:</b> flips, <b>grinds</b> on bunting and rooftops, <b>bounces</b> on awnings, chasms and caught llamas all chain together. Three in a row gives you <b>boost</b>: you go faster and <b>smash rocks</b>.</p>
+      <p><b>The scarf</b> charges with tricks. When it's full, <b>double tap in the air</b> to open your <b>wings</b>: hold to climb, let go to glide.</p>
+      <p>Pass <b>close to the ground</b> mid-flip (close shave) or land on the <b>last meters</b> of a rope and jump right away: extra points.</p>
+      <p><b>Shrine flags</b> save your progress. Watch out for the <b>elders</b> chasing you, the <b>storm</b> and the <b>avalanche</b>.</p>
+      <p style="opacity:.7">PC: space or click. P pauses.</p>`,
+  pt:`<p><b>Um dedo só.</b> Toque para <b>pular</b>. Segure no ar para dar um <b>mortal para trás</b>; solte para parar de girar. Caia com a prancha <b>paralela à neve</b> ou você come a montanha.</p>
+      <p><b>Sequências:</b> mortais, <b>grinds</b> nas bandeirinhas e telhados, <b>quiques</b> nos toldos, abismos e lhamas pegas se encadeiam. Com três seguidos você ganha <b>impulso</b>: vai mais rápido e <b>quebra as rochas</b>.</p>
+      <p><b>O cachecol</b> carrega com manobras. Cheio, <b>toque duplo no ar</b> e você abre as <b>asas</b>: segure para subir, solte para planar.</p>
+      <p>Passe <b>rente ao chão</b> em pleno mortal (rasante) ou caia nos <b>últimos metros</b> de uma corda e pule logo: pontos extras.</p>
+      <p>As <b>bandeiras de santuário</b> salvam o progresso. Cuidado com os <b>anciões</b> que te perseguem, a <b>tempestade</b> e a <b>avalanche</b>.</p>
+      <p style="opacity:.7">PC: espaço ou clique. P pausa.</p>`
+};
+function idiomaInicial(){ let n = 'es'; try{ n = (navigator.language||'es').slice(0,2).toLowerCase(); }catch(e){} return n==='en' || n==='pt' ? n : 'es'; }
+if(!TR[G.idioma] && G.idioma!=='es') G.idioma = idiomaInicial();
+const LOC = ()=> G.idioma==='en' ? 'en-US' : (G.idioma==='pt' ? 'pt-BR' : 'es-AR');
+const TRC = {};   /* por idioma: {re, cache} */
+function T(s){
+  const l = G.idioma; if(l==='es' || s==null) return s; s = String(s); const D = TR[l]; if(!D) return s;
+  if(D[s] !== undefined) return D[s];
+  let C = TRC[l]; if(!C){ const ks = Object.keys(D).sort((a, b)=> b.length - a.length).map(k=> k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    C = TRC[l] = {re:new RegExp('(?<![\\p{L}])(' + ks.join('|') + ')(?![\\p{L}])', 'gu'), cache:new Map()}; }
+  let r = C.cache.get(s); if(r !== undefined) return r;
+  r = s.replace(C.re, m=> D[m]); if(C.cache.size > 600) C.cache.clear(); C.cache.set(s, r); return r;
+}
+/* textos fijos del HTML: se guarda el original en castellano y se traduce desde ahí;
+   quedan afuera el nombre del juego y lo que el JS reescribe */
+const TXT_ES = new Map();
+let COMO_ES = null;
+function ponerSonido(){ $('btSonido').textContent = T('SONIDO')+' '+T(G.sonido ? 'SÍ' : 'NO'); }
+function aplicarIdioma(){
+  document.documentElement.lang = G.idioma==='pt' ? 'pt-BR' : G.idioma;
+  const como = document.querySelector('#capaComo .texto'); if(COMO_ES===null) COMO_ES = como.innerHTML; como.innerHTML = G.idioma==='es' ? COMO_ES : COMO_TXT[G.idioma];
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {acceptNode:n=> n.parentNode.closest('.titulo,script,style,#capaComo .texto,#hud,#monedero,#idiomas,#btSonido,#listaNiveles,#listaRiders,#listaMejoras,#capaTaller h2,#pausaMetas,#resMetas,#resNivel,#resTitulo,#resPts,#resDet') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT});
+  for(let n = w.nextNode(); n; n = w.nextNode()){ if(!TXT_ES.has(n)){ if(!n.nodeValue.trim()) continue; TXT_ES.set(n, n.nodeValue); }
+    const o = TXT_ES.get(n), t = o.trim(); n.nodeValue = o.replace(t, T(t)); }
+  ponerSonido();
+  monedero();
+  document.querySelectorAll('#idiomas button').forEach(b=> b.classList.toggle('ya', b.dataset.l===G.idioma));
+}
 
 /* ---------- riders ---------- */
 const RIDERS = [
@@ -485,7 +599,7 @@ function iniciarNivel(ni, sem, desdeSant){
   J.cam.x = J.p.x + 12; J.cam.y = J.p.y; J.cam.z = 15;
   J.modo = J.demo ? 'menu' : 'juego';
 }
-function aviso(txt, col){ const a = $('aviso'); a.textContent = txt; a.style.color = col||'#fff'; a.style.opacity = 1; clearTimeout(aviso.t); aviso.t = setTimeout(()=> a.style.opacity = 0, 1800); }
+function aviso(txt, col){ const a = $('aviso'); a.textContent = T(txt); a.style.color = col||'#fff'; a.style.opacity = 1; clearTimeout(aviso.t); aviso.t = setTimeout(()=> a.style.opacity = 0, 1800); }
 /* trucos y cadenas */
 function truco(nombre, pts){
   const c = J.cadena || (J.cadena = {n:0, pts:0, nombres:[], t:0});
@@ -500,7 +614,7 @@ function truco(nombre, pts){
 function mostrarCombo(){
   const c = J.cadena, e = $('combo'); if(!c || J.demo){ e.style.opacity = 0; return; }
   const mult = Math.min(6, 1 + 0.5*(c.n-1));
-  e.innerHTML = c.nombres.slice(-3).join(' · ') + '<b>' + Math.round(c.pts) + (c.n>1 ? ' ×'+mult.toFixed(1).replace('.0','') : '') + '</b>';
+  e.innerHTML = c.nombres.slice(-3).map(T).join(' · ') + '<b>' + Math.round(c.pts) + (c.n>1 ? ' ×'+mult.toFixed(1).replace('.0','') : '') + '</b>';
   e.style.opacity = 1;
 }
 function cerrarCadena(perdida){
@@ -863,7 +977,7 @@ function dibujar(){
   cx.globalAlpha = 1;
   for(const a of J.arboles) if(a.frente && a.x > x0 - 5 && a.x < x1 + 5) dibArbol(a, mo, true);
   if(J.aval) dibAvalancha(J.aval, mo);
-  for(const t of J.textos){ cx.globalAlpha = lim(t.t*1.5, 0, 1); cx.fillStyle = t.col; cx.font = '300 13px '+FUENTE; cx.textAlign = 'center'; cx.fillText(t.txt, SX(t.x), SY(t.y)); }
+  for(const t of J.textos){ cx.globalAlpha = lim(t.t*1.5, 0, 1); cx.fillStyle = t.col; cx.font = '300 13px '+FUENTE; cx.textAlign = 'center'; cx.fillText(T(t.txt), SX(t.x), SY(t.y)); }
   cx.globalAlpha = 1;
   cx.restore();
   /* clima */
@@ -1085,7 +1199,7 @@ function dibRider(p, mo){
 }
 function dibAvalancha(av, mo){
   const X = SX(av.x), d = Math.round(J.p.x - av.x);
-  if(!J.demo && X < 30){ const cerca = d < 25; cx.fillStyle = cerca && (J.t>>3)%2 ? '#ffb0a0' : 'rgba(255,255,255,0.9)'; cx.font = '300 12px '+FUENTE; cx.textAlign = 'left'; cx.fillText('◀ AVALANCHA  '+d+' M', 12, ALTO - 14);
+  if(!J.demo && X < 30){ const cerca = d < 25; cx.fillStyle = cerca && (J.t>>3)%2 ? '#ffb0a0' : 'rgba(255,255,255,0.9)'; cx.font = '300 12px '+FUENTE; cx.textAlign = 'left'; cx.fillText('◀ '+T('AVALANCHA')+'  '+d+' M', 12, ALTO - 14);
     cx.fillStyle = 'rgba(255,255,255,'+lim(0.5 - d/120, 0.05, 0.45)+')'; cx.fillRect(0, 0, 14, ALTO); }
   if(X < -150) return;
   const H0 = ALTO;
@@ -1146,7 +1260,7 @@ function hud(){
   if(J.modo!=='juego' || !J.p) return;
   if(++hudT % 3) return;
   const p = J.p;
-  $('hudPts').textContent = Math.round(J.puntos + p.x*2).toLocaleString('es-AR');
+  $('hudPts').textContent = Math.round(J.puntos + p.x*2).toLocaleString(LOC());
   $('hudDist').textContent = Math.round(p.x)+' M';
   $('hudMon').textContent = J.monedasRun;
   $('hudBarra').firstElementChild.style.width = (lim(p.x/J.meta.x,0,1)*100)+'%';
@@ -1155,7 +1269,7 @@ function hud(){
   const po = []; if(p.imanT>0) po.push('IMÁN '+Math.ceil(p.imanT)); if(p.plumaT>0) po.push('PLUMA '+Math.ceil(p.plumaT)); if(p.alasT>0) po.push('ALAS '+Math.ceil(p.alasT)); if(p.casco>0) po.push('CASCO ×'+p.casco);
   if(p.bufanda>=1 && p.alasT<=0) po.push('DOBLE TOQUE: ALAS');
   if(J.anciano) po.push('ANCIANO A '+Math.max(0, Math.round(p.x - J.anciano.x))+' M');
-  $('hudPoderes').innerHTML = po.join('<br>');
+  $('hudPoderes').innerHTML = po.map(T).join('<br>');
 }
 function marcasSantuario(){
   const b = $('hudBarra'); b.querySelectorAll('span').forEach(s=>s.remove());
@@ -1175,7 +1289,7 @@ function revisarMetas(){
   J.nv.metas.forEach(([m, txt], i)=>{ const k = claveMeta(i); if(!G.metas[k] && metaCumple(m)){ G.metas[k] = true; J.nuevas = (J.nuevas||[]).concat(i); guardar(); if(m!=='llegar' && m!=='sincaer'){ aviso('META: '+txt, '#ffd76a'); sfx('perfecto'); } } });
 }
 function metasHtml(ni, nuevas){
-  return NIVELES[ni].metas.map(([m,txt],i)=> '<li class="'+(G.metas[NIVELES[ni].id+':'+i]?'ok':'')+((nuevas||[]).includes(i)?' nueva':'')+'">'+txt+'</li>').join('');
+  return NIVELES[ni].metas.map(([m,txt],i)=> '<li class="'+(G.metas[NIVELES[ni].id+':'+i]?'ok':'')+((nuevas||[]).includes(i)?' nueva':'')+'">'+T(txt)+'</li>').join('');
 }
 
 /* ====================== entrada: un dedo ====================== */
@@ -1205,7 +1319,7 @@ const CAPAS_UI = ['capaTitulo','capaNiveles','capaTaller','capaComo','capaPausa'
 function mostrar(id){ for(const c of CAPAS_UI) $(c).classList.toggle('ver', c===id); $('hud').classList.toggle('ver', !id && J.modo==='juego'); }
 function boton(id, fn){ const b = $(id); const f = ev=>{ ev.preventDefault(); ev.stopPropagation(); audioIni(); sfx('toque'); fn(); pantallaHorizontal(); };
   b.addEventListener('touchend', f, {passive:false}); b.addEventListener('click', ev=>{ if(!('ontouchstart' in window)) f(ev); }); }
-function monedero(){ $('monTit').textContent = G.monedas.toLocaleString('es-AR'); }
+function monedero(){ $('monTit').textContent = G.monedas.toLocaleString(LOC()); }
 /* miniatura pintada de cada montaña: cielo, cordillera y ladera del momento del medio */
 function miniatura(ni){
   const nv = NIVELES[ni], tm = TEMAS[nv.tema], m = tm.momentos[1], c = document.createElement('canvas'); c.width = 300; c.height = 168; const g = c.getContext('2d');
@@ -1226,7 +1340,7 @@ function armarNiveles(){
     const abierto = i < G.abierto, d = document.createElement('div'); d.className = 'tarjeta' + (abierto? '' : ' cerrada');
     const mini = MINIS[i] || (MINIS[i] = miniatura(i)); const c = document.createElement('canvas'); c.width = 300; c.height = 168; c.getContext('2d').drawImage(mini,0,0); d.appendChild(c);
     const ok = nv.metas.filter((_,k)=> G.metas[nv.id+':'+k]).length;
-    const t = document.createElement('div'); t.className = 't'; t.innerHTML = '<b>'+(i+1)+' · '+nv.nom+'</b><small>'+nv.txt.toUpperCase()+'</small><small>'+'●'.repeat(ok)+'○'.repeat(3-ok)+(G.record[nv.id]? ' · '+G.record[nv.id].toLocaleString('es-AR') : '')+(abierto? '' : ' · CERRADA')+'</small>';
+    const t = document.createElement('div'); t.className = 't'; t.innerHTML = '<b>'+(i+1)+' · '+T(nv.nom)+'</b><small>'+T(nv.txt).toUpperCase()+'</small><small>'+'●'.repeat(ok)+'○'.repeat(3-ok)+(G.record[nv.id]? ' · '+G.record[nv.id].toLocaleString(LOC()) : '')+(abierto? '' : ' · '+T('CERRADA'))+'</small>';
     d.appendChild(t);
     const ir = ev=>{ ev.preventDefault(); audioIni(); if(!abierto){ sfx('choque'); return; } sfx('toque'); J.demo = false; J.bot = !!J.botBanco; iniciarNivel(i); pantallaHorizontal(); arrancarJuego(); };
     d.addEventListener('touchstart', ev=>{ d._y = ev.touches[0].clientY; d._x = ev.touches[0].clientX; }, {passive:true});
@@ -1239,17 +1353,17 @@ function arrancarJuego(){ mostrar(null); marcasSantuario(); musicaPoner(J.nv.tem
 function armarTaller(){
   const lr = $('listaRiders'); lr.innerHTML = '';
   for(const r of RIDERS){ const tiene = G.riders[r.id], es = G.rider===r.id, d = document.createElement('div'); d.className = 'item';
-    d.innerHTML = '<div><span style="color:'+r.bufanda+'">●</span> '+r.nom+'<small>'+r.txt+'</small></div>';
-    const b = document.createElement('button'); b.className = 'boton chico' + (es? ' lleno' : ''); b.textContent = es ? 'ELEGIDO' : (tiene ? 'ELEGIR' : r.precio.toLocaleString('es-AR'));
+    d.innerHTML = '<div><span style="color:'+r.bufanda+'">●</span> '+r.nom+'<small>'+T(r.txt)+'</small></div>';
+    const b = document.createElement('button'); b.className = 'boton chico' + (es? ' lleno' : ''); b.textContent = es ? T('ELEGIDO') : (tiene ? T('ELEGIR') : r.precio.toLocaleString(LOC()));
     b.addEventListener('click', ()=>{ if(es) return; if(tiene){ G.rider = r.id; } else if(G.monedas >= r.precio){ G.monedas -= r.precio; G.riders[r.id] = 1; G.rider = r.id; sfx('poder'); } else { sfx('choque'); return; } guardar(); armarTaller(); });
     d.appendChild(b); lr.appendChild(d); }
   const lm = $('listaMejoras'); lm.innerHTML = '';
   for(const m of MEJORAS){ const n = G.mejoras[m.id]||0, d = document.createElement('div'); d.className = 'item';
-    d.innerHTML = '<div>'+m.nom+'<small>'+m.txt+'</small><div class="puntos">'+[0,1,2].map(k=>'<i class="'+(k<n?'si':'')+'"></i>').join('')+'</div></div>';
-    const b = document.createElement('button'); b.className = 'boton chico'; b.textContent = n>=3 ? 'MÁXIMO' : m.precios[n].toLocaleString('es-AR');
+    d.innerHTML = '<div>'+T(m.nom)+'<small>'+T(m.txt)+'</small><div class="puntos">'+[0,1,2].map(k=>'<i class="'+(k<n?'si':'')+'"></i>').join('')+'</div></div>';
+    const b = document.createElement('button'); b.className = 'boton chico'; b.textContent = n>=3 ? T('MÁXIMO') : m.precios[n].toLocaleString(LOC());
     b.addEventListener('click', ()=>{ if(n>=3) return; if(G.monedas >= m.precios[n]){ G.monedas -= m.precios[n]; G.mejoras[m.id] = n+1; guardar(); sfx('poder'); armarTaller(); } else sfx('choque'); });
     d.appendChild(b); lm.appendChild(d); }
-  const h = $('capaTaller').querySelector('h2'); h.textContent = 'TALLER · '+G.monedas.toLocaleString('es-AR');
+  const h = $('capaTaller').querySelector('h2'); h.textContent = T('TALLER')+' · '+G.monedas.toLocaleString(LOC());
 }
 function pausar(){ if(J.modo!=='juego') return; J.modo = 'pausa'; IN.apretado = false; $('pausaMetas').innerHTML = metasHtml(J.ni); mostrar('capaPausa'); }
 function seguir(){ J.modo = 'juego'; mostrar(null); }
@@ -1261,15 +1375,15 @@ function mostrarResultado(){
   if(llego) G.abierto = Math.max(G.abierto, Math.min(NIVELES.length, J.ni+2));
   guardar();
   J.modo = 'res';
-  $('resNivel').textContent = (J.ni+1)+' · '+nv.nom;
-  $('resTitulo').textContent = llego ? 'LLEGASTE' : 'TE CAÍSTE';
-  $('resDet').textContent = Math.round(p.x)+' M · '+J.run.mortales+' MORTALES · '+Math.round(J.run.grind)+' M DE GRIND' + (nuevoRec? ' · RÉCORD' : '');
+  $('resNivel').textContent = (J.ni+1)+' · '+T(nv.nom);
+  $('resTitulo').textContent = T(llego ? 'LLEGASTE' : 'TE CAÍSTE');
+  $('resDet').textContent = T(Math.round(p.x)+' M · '+J.run.mortales+' MORTALES · '+Math.round(J.run.grind)+' M DE GRIND' + (nuevoRec? ' · RÉCORD' : ''));
   $('resMetas').innerHTML = metasHtml(J.ni, J.nuevas);
   $('btResSig').style.display = llego && J.ni+1 < NIVELES.length ? '' : 'none';
   $('btResSantuario').style.display = !llego && J.check ? '' : 'none';
   mostrar('capaRes');
   /* los puntos suben de a poco */
-  const el = $('resPts'), t0 = performance.now(); (function sube(){ const f = Math.min(1, (performance.now()-t0)/1200); el.textContent = Math.round(pts*suave(f)).toLocaleString('es-AR'); if(f<1) requestAnimationFrame(sube); })();
+  const el = $('resPts'), t0 = performance.now(); (function sube(){ const f = Math.min(1, (performance.now()-t0)/1200); el.textContent = Math.round(pts*suave(f)).toLocaleString(LOC()); if(f<1) requestAnimationFrame(sube); })();
 }
 function iniciarDemo(){
   J.demo = true; J.bot = true;
@@ -1284,7 +1398,8 @@ boton('btComo', ()=> mostrar('capaComo'));
 boton('btComoVolver', ()=> mostrar('capaTitulo'));
 boton('btNivVolver', ()=>{ monedero(); mostrar('capaTitulo'); });
 boton('btTalVolver', ()=>{ monedero(); mostrar('capaTitulo'); });
-boton('btSonido', ()=>{ G.sonido = !G.sonido; guardar(); if(amo) amo.gain.value = G.sonido? 0.9 : 0; $('btSonido').textContent = 'SONIDO '+(G.sonido?'SÍ':'NO'); });
+boton('btSonido', ()=>{ G.sonido = !G.sonido; guardar(); if(amo) amo.gain.value = G.sonido? 0.9 : 0; ponerSonido(); });
+for(const [l] of IDIOMAS) boton('btId'+l[0].toUpperCase()+l[1], ()=>{ if(G.idioma===l) return; G.idioma = l; guardar(); aplicarIdioma(); });
 boton('bPausa', pausar);
 boton('btSeguir', seguir);
 boton('btReiniciar', ()=>{ J.demo = false; J.bot = !!J.botBanco; iniciarNivel(J.ni); arrancarJuego(); });
@@ -1319,11 +1434,12 @@ window.__N = {
   anda(n){ for(let i=0;i<n;i++){ if(J.modo!=='juego' && J.modo!=='menu') break; pasarMundo(); } },
   bot(v){ J.bot = v; J.botBanco = v; },
   est(){ const p = J.p; return {modo:J.modo, x:p? Math.round(p.x):0, estado:p? p.estado:'', v:p? +p.v.toFixed(1):0, puntos:Math.round(J.puntos), fin:J.fin, run:J.run, motivo:J.motivo, meta:J.meta? Math.round(J.meta.x):0, calidad:CALIDAD}; },
-  dibujarYa(){ dibujar(); }, medir, mostrar, aMenu, armarNiveles, armarTaller, listo:true,
+  dibujarYa(){ dibujar(); }, medir, mostrar, aMenu, armarNiveles, armarTaller, T, idioma(l){ G.idioma = l; guardar(); aplicarIdioma(); }, listo:true,
 };
 
 /* ====================== arranque ====================== */
 medir();
+aplicarIdioma();
 aMenu();
 requestAnimationFrame(bucle);
 </script>
