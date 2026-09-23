@@ -45,6 +45,11 @@ Pedido: «texturas HD a todo haciendo assets con Rezona lab… música menú nue
 - Banco: 1,0–1,3 ms por cuadro (antes 0,5): los sprites HD cuestan el doble. Sigue siendo SwiftShader.
 - Bot: gana 4 de 6 niveles con las tres naves, sin mejoras (varía entre 4 y 5 por corrida).
 
+## Música por zona (23/09/2026)
+- Tres temas sintetizados propios: `juego` (violeta), `esmeralda` y `carmesi`, más `menu` y `jefe`.
+  Medido: 62, 64 y 88 osciladores en 4 s por zona (son temas distintos). La música de Rezona sigue
+  sin poder generarse; si vuelve, `empaquetar.py` mete los MP3 y `Sonido` los prefiere solo.
+
 ## Cómo está armado
 - **No es pixel art**: se dibuja con gradientes y halos, y cada sprite se **hornea una vez** a un
   lienzo (`K=2`, se dibuja a la mitad). El horneado es lo que lo hace barato.

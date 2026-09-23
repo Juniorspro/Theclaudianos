@@ -88,6 +88,13 @@ Ver también: [juegos](juegos.md) (3D), [repo](repo.md).
 `menu()` y `donde(id)` para tocar de verdad, y una `hoja(nombres)` que arma una lámina de sprites
 agrandados para mirar las animaciones. Un número demasiado redondo suele ser la sonda rota.
 
+## Sonido en iOS (trampa del 23/09/2026)
+- **El audio web respeta el interruptor de silencio del iPhone** y el contexto arranca suspendido: con
+  el teléfono en silencio, el juego queda mudo aunque todo "ande". Arreglo, en cada toque:
+  `navigator.audioSession.type='playback'` (iOS 17+), un `<audio>` mudo en bucle con un WAV `data:`
+  (iOS viejos: pasa la sesión a reproducción) y `ac.resume()` si no está en `running`.
+  Está en `Chicharra.html` y `Arrabal.html` (buscar `SILENCIO`).
+
 ## Medir sin mentir
 200 cuadros de calentamiento y 300 de medición, y comparar **contra el commit anterior en el mismo
 banco**: el mismo dibujo daba 2,7 o 5,6 ms según cómo se midiera. El bot de pruebas tiene que

@@ -1,6 +1,12 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — música para CHICHARRA y el sonido en iOS
+**Pedido textual:** «Dame el enlace del juego y al juego anterior agrégale música».
+Qué se hizo: CHICHARRA tiene un tema propio por zona. En los dos juegos se arregló que iOS los deje
+mudos con el interruptor de silencio (ver [pixel2d](pixel2d.md) § Sonido en iOS). La música de Rezona
+volvió a fallar (7 intentos en el día, `PROVIDER_UNAVAILABLE`).
+
 ### 2026-09-23 — nació ARRABAL, el juego de pelea con cartas
 **Pedido textual:** «Ahora haceme un juego parecido a "Skullgirls: Fighting RPG" … controles
 moviles mejores gráficos 2D animaciones menús etc … cada nuevo juego 2D ve mejorandolo en un 100%».
