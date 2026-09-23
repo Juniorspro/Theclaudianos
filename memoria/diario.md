@@ -1,6 +1,18 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — CHICHARRA v2: HD de Rezona, hangar, mapa, ajustes
+**Pedido textual:** «texturas HD a todo haciendo assets con Rezona lab, generación de imágenes música
+menú nuevo etc etc etc, mejoralo en un 100% también agrega animaciones de menú controles etc sin
+limitarte y usa este md para aprender no copiar ya que este juego no es pixel art».
+
+Qué se hizo: 14 imágenes HD de Rezona (naves, bichos, jefes, fondos) horneadas a 525 KB y metidas
+en el HTML; 3 naves jugables, 3 jefes distintos, 3 zonas; hangar, mapa de niveles, ajustes, tienda y
+fin nuevos y animados; control relativo; sintetizador de música nuevo. Detalle en [chicharra](chicharra.md).
+
+Qué falta: **la música generada** — el audio de Rezona estuvo caído toda la vuelta. Cuando ande:
+generar las 3 pistas (30 s), bajarlas a `assets/chicharra/` y correr `empaquetar.py`.
+
 ### 2026-09-23 — nació CHICHARRA
 **Pedido textual:** «Recréame este juego hazlo lo más parecidos o que se inspirate con muy buenas
 animaciones menús y soundtrack más efectos de sonido etce y todo lo necesario» (con tres capturas de

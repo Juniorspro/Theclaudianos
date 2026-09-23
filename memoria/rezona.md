@@ -28,5 +28,12 @@ Fuente: `docs/GUIA-JUEGOS.md § 1. Preparar Rezona` y `§ 4`. Ver también: [jue
   ~2.500 (repetido) o ~20.000 (único y cercano). → `docs/GUIA-JUEGOS.md § 4.1`
 - Rig: `source_task_id` es el `gtask-…` del modelo propio; **comprobar los clips que llegaron**, no
   los que se pidieron (ya volvieron tres iguales). → `§ 4.3`
+- **Imágenes: andan bien.** 23/09/2026: 14 de 14 al primer intento, de 11 s a 160 s cada una.
+  `transparent: true` recorta bien. `768x1664` pedido → llega `768x1376` (la proporción, no el número).
+- **Bajar lo generado sin `fetch_generated_asset`**: `check_generation_tasks` con `project_id` da el
+  `public_url` de cada ítem listo; con `curl` alcanza. No hace falta la marca `.rezona/`.
+- **Audio: caído el 23/09/2026.** 11 pedidos (3 músicas ×2, 5 efectos) → `PROVIDER_UNAVAILABLE`
+  (`NOIZ_FAILED`), todos. Se reintentó una vez y se pasó al sintetizador. No reintentar en bucle.
+- Música con `duration: 60` → `VALIDATION_ERROR` (terminal); con **30** el pedido entra.
 - **Subir juegos a Rezona está prohibido** (23/09/2026). Rezona se usa, si acaso, para generar assets.
 - No existe comando para borrar un proyecto subido: ni en el MCP ni en el CLI (`init`, `login`, `status`, `mcp`).

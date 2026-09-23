@@ -1,5 +1,6 @@
 # CHICHARRA — el juego de Mariano Peak
-Archivo: `juegos-pc/Chicharra.html` (un solo HTML, ~78 KB, sin red). Banco: `pruebas/chicharra/`.
+Archivo: `juegos-pc/Chicharra.html` (un solo HTML, ~830 KB con los assets adentro, sin red).
+Banco: `pruebas/chicharra/`. Assets: `assets/chicharra/` (WebP horneados) + `herramientas/chicharra/`.
 Ver también: [pixel2d](pixel2d.md) (de dónde salió el método), [repo](repo.md).
 
 ## Qué es
@@ -15,6 +16,34 @@ muy buenas animaciones menús y soundtrack más efectos de sonido».
 - **Rezona: NO.** El usuario pidió «nunca lo subas ahí». Se había subido una vez (proyecto
   `oEZocHewgj`); ni el MCP ni el CLI tienen comando para borrar, así que lo tiene que borrar él
   desde la web de Rezona Lab.
+
+## Versión 2 (23/09/2026): assets HD de Rezona + menús nuevos
+Pedido: «texturas HD a todo haciendo assets con Rezona lab… música menú nuevo… mejoralo en un 100%».
+- **14 imágenes de Rezona**: 3 naves, 5 bichos, 3 jefes, 3 fondos. Crudo 17 MB → **525 KB** en WebP
+  (`herramientas/chicharra/hornear.py`: recorta al contenido, gira la chicharra que salió mirando para
+  arriba) → `empaquetar.py` las mete como `data:` en `<script id="archivos">` al final del `<body>`.
+  El crudo NO se commitea: se rebaja con `curl` del `public_url` del proyecto `nLqnwefrUA`.
+- **Lo generado no reemplaza nada hasta que llega**: el arte de código sigue y cada imagen lo pisa al
+  decodificar (`cargarAssets` → `aplicarAsset`).
+- **Música generada: falló** (ver [rezona](rezona.md)). Suena el sintetizador nuevo (`TEMAS`: acordes,
+  bajo, arpegio, melodía y batería por tema). Si algún día hay `musica-menu/juego/jefe.mp3` en
+  `assets/chicharra/`, `empaquetar.py` las mete y `Sonido` las prefiere solo, sin tocar código.
+- 3 naves con disparo propio (HALCÓN abanico, BRASA pesada 2.500, JADE agujas 5.000); 3 jefes con
+  geometría y ataques propios (`JEFES`), uno por zona; 3 zonas con su fondo.
+- Hangar (vitrina que gira, deslizar para cambiar nave), mapa de niveles con rangos, ajustes
+  (música, efectos, control, sensibilidad, vibración, temblor), tienda con íconos, fin con sello.
+- **Control relativo por defecto**: la nave copia el movimiento del dedo. Se ACUMULAN los
+  movimientos (`Entrada.acx/acy`): en un cuadro pueden llegar varios. Medido: dedo −120,−60 →
+  nave −120,−60, y no salta al apoyar.
+- Botones del juego al APOYAR (bomba, pausa); de menú al LEVANTAR sin correr el dedo.
+- Un dedo que cae sobre la bomba no maneja la nave (`Entrada.filtro`). Medido: 0 px.
+
+## Números de la v2
+- Jefes HD a **250 de ancho** y plantados en `80 + alto/2`: a 300 se metían debajo del HUD.
+  Su geometría está medida sobre 300 y `geoJefe` la escala.
+- Nave HD a 90 de ancho (a 76 se veía chica al lado de los bichos).
+- Banco: 1,0–1,3 ms por cuadro (antes 0,5): los sprites HD cuestan el doble. Sigue siendo SwiftShader.
+- Bot: gana 4 de 6 niveles con las tres naves, sin mejoras (varía entre 4 y 5 por corrida).
 
 ## Cómo está armado
 - **No es pixel art**: se dibuja con gradientes y halos, y cada sprite se **hornea una vez** a un
