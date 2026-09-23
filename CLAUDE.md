@@ -9,7 +9,7 @@ se prueba **en el celular, en vertical (412×892)**.
 |---|---|
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. |
 | `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil, **escenario girado 90°** (se juega apaisado): base militar de arranque, nave de dos cubiertas que se recorre por dentro, seis galaxias que se ganan, caminata espacial con soga, fotos que se venden y álbum de 21 especies. |
-| `juegos-pc/Saltos.html` | **A LOS SALTOS.** Gladiadores 2D pixel art con física de saltos (a la Gladihoppers): 7 clases, cortes y sangre, carrera con edad, fama, mercado y estatuas. Canvas 2D, sin red, **escenario girado 90°** (se juega apaisado). |
+| `juegos-pc/Saltos.html` | **A LOS SALTOS.** Gladiadores 2D pixel art con física de saltos (a la Gladihoppers): 7 clases, cortes y sangre, carrera con edad, fama, mercado y estatuas. Canvas 2D, sin red, **escenario girado 90°** (se juega apaisado), castellano, inglés y portugués. |
 | `docs/GUIA_JUEGOS_2D_PIXEL.md` | Receta para juegos 2D pixel art (escala entera, piezas, banco). La usa `Saltos.html`. |
 | `herramientas/glb/` | `juntar_anim.py` (varios GLB del mismo rig → uno con todos los clips) y `hornear.py` (achicar texturas y recompactar para meterlo en un HTML). |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
@@ -1325,3 +1325,76 @@ Medido:
 - Toques girados, gestos, 49 de 49 peleas, cortes, carrera, tiendas, la sonda de arreglos y un fuzz
   de 500 acciones, sin errores.
 - 4,1 ms por cuadro.
+
+### 2026-09-23 (al) — A LOS SALTOS en tres idiomas, y otra pasada de errores
+**Pedido textual:** «Ahora quiero que arregles los errores existentes y agregues la opción de cambiar el idioma del
+juego a español, inglés y portugués (Cuando el juego se traduzca a uno de estos idioma se debe traducir al 100% EL JUEGO)».
+
+**Idiomas** (`i.js`, parte nueva entre `a.html` y `b.js`; se arma con `armar.sh`):
+- `tr(frase, …)` usa la frase en castellano como clave, con `{0}` para números y nombres.
+- Lo exacto se traduce solo en `lienzoTexto` y en `el()`: botones, carteles, textos pixelados y los
+  carteles de la pelea. Lo compuesto va con plantilla.
+- Las tablas se traducen en el lugar guardando el original: clases con su descripción, armas,
+  escudos, cascos, corazas, rangos y las cinco tiendas con nombre, pestaña, tendero y frases.
+- Los nombres de los gladiadores también: la forma latina en inglés (Tito → TITUS, Cayo → GAIUS,
+  Enomao → OENOMAUS) y la portuguesa en portugués (Caio, Enomau, Gânico), con los 20 apodos
+  (EL LOBO → THE WOLF / O LOBO). Van traducidos al mostrarlos, así las carreras y las estatuas
+  guardadas cambian de idioma sin tocar lo guardado.
+- El título: **LEAPS OF BLOOD** en inglés y **AOS SALTOS** en portugués, que es la misma expresión.
+  Cambian también el `<title>` y el `lang`.
+- En AJUSTES está **IDIOMA** (ESPAÑOL / ENGLISH / PORTUGUÊS) y queda guardado. En la primera visita
+  toma el idioma del celular: en-US → inglés, pt-BR → portugués, cualquier otro → castellano.
+- La fuente pixelada suma Ã Õ Â Ê Ô À y la **Ç con la cedilla abajo** (las marcas ahora pueden ir
+  arriba o abajo de la letra). Los pesos van con coma en castellano y portugués y con punto en inglés.
+- 296 frases por idioma. Los carteles de tienda que no entraban en la fachada se acortaron
+  (OSTIA SHIELDWRIGHT); los que tenían apóstrofo se reescribieron porque la fuente no lo tiene.
+
+**Lo que se arregló**, de dos revisiones del código:
+- **El cadáver se teletransportaba**: el tope contra el muro contaba la punta del arma del brazo ya
+  cortado, que quedaba vieja. Medido: de 12 → 26 → 44 → 59 en tres cuadros (cruzaba al rival) a
+  quedarse en 12,5.
+- **Golpe fantasma al darse vuelta**: la hoja «viajaba» al otro lado a velocidad máxima y pegaba sin
+  ataque. Al cambiar de lado se olvida la posición anterior: 0 golpes fantasma en 60 vueltas.
+- **La hoja cruzaba el escudo por el medio**: `distSegSeg` no veía dos segmentos cruzados en X.
+- El salto apretado y soltado en el aire ahora sale al aterrizar; si al aterrizar ya se aprieta la
+  otra flecha, se descarta.
+- **La victoria se cobra en el momento de ganar** (`cobrar()`): recargar durante el festejo no pierde
+  la plata ni deja al rival para volver a ganarle.
+- Cortar un cadáver ya no suma fama. ENTREGARSE queda como «abandonó la arena».
+- En pausa, los toques del lienzo y las teclas no hacen nada; Escape la cierra.
+- Acostado:
+  - la columna de botones no aplasta el panel (tope de 40%) y los botones de entrenamiento van
+    uno debajo del otro;
+  - la pausa y el resultado no quedan corridos;
+  - el público no está parado sobre el podio;
+  - «PARA PEGAR» ya no se sale de la pantalla;
+  - la puerta, las antorchas y los estandartes de los costados van centrados en lo que se ve y
+    no se pisan;
+  - el consejo de la primera pelea no tapa a los gladiadores;
+  - los carteles flotantes no pasan por debajo de la pausa.
+- El palco y las rejas del podio quedan centrados sobre la arena.
+- Al cambiar la orientación se rearma el menú (dos columnas o una). Se gira sólo en pantallas
+  táctiles claramente verticales. El sondeo del bucle compara con lo que midió `girar()`.
+- El fondo se re-hornea sólo si cambió el tamaño del mundo.
+- El lienzo va con `image-rendering: pixelated`, y se sacó `viewport-fit=cover`: tapaba la botonera
+  con la muesca del iPhone acostado.
+
+Medido:
+- Recorriendo todas las pantallas (portada, ayuda, ajustes, estatuas, pelea rápida, reclutas, ludus,
+  rivales, las cinco tiendas, comprar, no alcanzar, pelea con consejos, carteles y cortes, pausa,
+  entregarse, muerte, victoria con cumpleaños y campeón, borrar carrera, gestos):
+  - inglés: 251 textos distintos a la vista, **0 frases sin traducir y 0 con palabras en castellano**;
+  - portugués: 243 textos, lo mismo.
+- El idioma del celular se toma bien en los cuatro casos probados, y el cambio en AJUSTES sobrevive a
+  una recarga.
+- 49 de 49 peleas, cortes, cuerpos contra el muro 0 de 98, toques y gestos girados, dedo quieto,
+  carrera, tiendas, la sonda de arreglos y un fuzz de 500 acciones, sin errores.
+
+Lo que costó una vuelta:
+- **El título se dibuja letra por letra**: «A LOS SALTOS» nunca pasaba por la traducción. Se traduce
+  antes de partirlo.
+- **Las sondas del banco buscaban filas por su nombre en castellano** y el Chromium del banco está en
+  inglés: con la detección del idioma, fallaban sin que fallara el juego. Van con `locale:'es-AR'`.
+
+Queda para decidir: las jabalinas y redes compradas vuelven llenas en cada pelea (son equipo, no se
+gastan en la carrera).
