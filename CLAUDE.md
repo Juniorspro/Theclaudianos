@@ -1095,3 +1095,42 @@ cuatro ataques, guardia, **dos dedos a la vez**, postura, jabalina y pausa; en g
 deslizar arriba/abajo/hacia el rival y para atrás. Carrera completa: recluta, cuatro victorias con
 mejora, salud que baja 100 → 63 → 47%, mercado, muerte y estatua. 3,4 ms por cuadro en vertical
 (200 de calentamiento, 300 medidos).
+
+### 2026-09-23 (ae) — A LOS SALTOS: pixel art con el doble de detalle
+**Pedido textual:** «Haz el pixel art más detallado».
+
+**El doble de resolución sin cambiar el tamaño**: la física, las zonas de toque y el HUD siguen en
+unidades, pero el mundo se dibuja en una grilla **fina** de 2×2 por unidad (`DET = 2`). El lienzo
+del mundo es de 272×586 en un 412×892 y se agranda ×4 píxeles reales (entero), así que los
+personajes miden lo mismo con **cuatro veces más píxeles**. Todo redondea a la grilla fina (`rf`)
+y los grosores se piden en píxeles finos.
+
+**Sprites con detalle de verdad**, sin redibujar cada grilla a mano:
+- **Scale2x** sobre la grilla de roles: redondea las diagonales y no inventa colores.
+- **Sombreado por luz de arriba a la izquierda**, píxel por píxel: brillo del lado de la luz, sombra
+  en dos pasos del otro, destello en el metal, trama en cuero y tela, poros en la piel, y el
+  **contorno del lado iluminado teñido** del color de adentro (el del otro lado queda negro).
+- La coraza se funde con el torso **antes** de agrandar, así el sombreado ve la silueta entera.
+- Las rejas de los cascos pasaron de cuadros a **barrotes verticales**: agrandados, los cuadros
+  formaban dos ojos y los cascos parecían calaveras.
+
+**Lo dibujado por código, a resolución fina**: brazos y piernas con contorno de un píxel, brillo y
+sombra a lo largo; grebas con rodillera; sandalias con suela y tiras; manica a cuadros con
+brillo; hojas con acanaladura y filo blanco; empuñaduras envueltas en cuero; guardas y pomos de
+bronce con volumen; hachas con el filo brillante; mazas redondas con luz y púas; lanzas con nervio
+en la punta; jabalinas con plumas; restos cortados con el hueso a la vista; sangre en gotas finas.
+
+**El coliseo**: cielo con degradé en bandas y trama 2×2, nubes de cuatro tonos, arcada con
+pilastras, dovelas y fondo de arco, estandartes, escalones con canto y sombra, público de cabeza
+(con pelo) y cuerpo (con sombra), vomitorios, palco imperial con columnas, toldo plegado y el
+emperador con laurel, sillares del podio con luz y sombra y alguna grieta, friso de meandros,
+rejas con remaches, arena con cuatro tonos de grano y piedritas, antorchas con llama de cuatro
+tonos, e hipogeo de sillares.
+
+Lo que costó una vuelta:
+- **Los discos pintados píxel por píxel duplicaron el costo** (3,4 → 7,3 ms por cuadro): manos,
+  rodillas y muñones se hornean una vez por radio y color. Volvió a **3,6 ms**.
+- El HUD sigue en unidades: `disco` es de la grilla de unidades (botones) y `discoF` de la fina.
+
+Medido: 49 de 49 peleas de IA contra IA terminan (4 a 29 s) sin errores ni NaN; toques reales,
+carrera y menús sin errores; 3,6 ms por cuadro en vertical.
