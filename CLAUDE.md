@@ -1001,3 +1001,41 @@ Lo que costó una vuelta:
 Medido: auditoría completa 14/14 en castellano, `TR_FALTA` vacío, fuzz en inglés y calidad media
 sin errores, tutorial entero hasta «hecho», cinco ciclos seguidos de despegar-salir-fotos-vender-
 aterrizar con geometrías, texturas, nodos y memoria estables (82 / 38 / 437 / 23 MB).
+
+### 2026-09-23 (ac) — ambiente sonoro por lugar, y EL VACÍO pesa
+**Pedido textual:** «Quiero que agregues sonidos ambientales a cada lugar en el que este el jugador, la
+base, la nave y cada galaxia, haz que la atmósfera de "el vacio" sea pesada así un ambiente pesado me
+entiendes».
+
+Rezona sigue con `CREDIT_RESERVE_FAILED` (imagen, audio y 3D, probado a las 03:28-03:31), así que todo
+es sintetizado en Web Audio, y cualquier `window.SONIDOS` generado lo sigue pisando.
+
+Cada lugar tiene un **lecho** (capas continuas que se arman al entrar y se paran 4 s después de
+salir) y **sucesos** sueltos cada tantos segundos alrededor del jugador:
+
+| lugar | lecho | sucesos |
+|---|---|---|
+| base | generador que late, grillos en tandas, rumor de ruta | golpe metálico lejano, avión que cruza alto, perro de guardia |
+| nave | aire que circula, ventilador con aspas, línea eléctrica | el casco que se queja, relé, consola que avisa, caño que golpea |
+| Vega Rota | acorde hueco que se desafina, soplo de polvo | crujido de polvo, un tono triste que se cae |
+| El Hervidero | retumbo grave, rugido que respira, crepitar | chasquidos de algo que arde, llamarada |
+| La Quietud | un zumbido de oído finísimo y casi nada | un golpe lejísimos, una copa de vidrio |
+| Coral Profundo | oleaje lento bajo el agua | burbujas, la ballena |
+| El Reverso | colchón que se desfasa y va y vuelve | campana al revés, golpe que llega antes de sonar |
+| **EL VACÍO** | presión de dos sierras a 31 y 31,6 Hz que baten, tritono abajo, ruido pardo, respiración del lecho entero cada 9 s, racimo disonante arriba | algo enorme gime, impacto lejano, metal que raspa, un corazón que no es el tuyo |
+
+La galaxia suena entera en la caminata y **apagada por el casco** desde adentro (pasabajos a 760 Hz).
+En EL VACÍO además **se aprieta la mezcla entera** (un pasabajos de 18 kHz a 3,2 kHz antes del
+compresor) y pesa a la vista: la viñeta pasa de 0,28 a 0,52, el grano de 1 a 1,7 y la exposición late
+un 11% al mismo ritmo que respira el sonido.
+
+Lo que costó una vuelta:
+- **En el parlante de un celular 31 Hz no suena**: lo que se oye son los armónicos. La presión va por
+  un pasabajos a 170 Hz, no a 60, para que queden 62, 93 y 124.
+- **La foto dibuja con `dibujar(0)` y su propia exposición y sin grano**: lo visual del VACÍO sólo se
+  aplica con el tiempo corriendo, si no pisaba el fogonazo de la copia.
+
+Medido con el audio andando: en la base 38% de la energía en graves y 61% en medios; adentro de la
+nave 73% graves; en EL VACÍO **93% graves y 0,2% agudos**, con la mezcla apretada a 3,7 kHz, y el
+lecho más fuerte (0,077 RMS contra 0,03-0,05 de las otras). Las seis galaxias arman su lecho y
+disparan sus sucesos. Auditoría 14/14, fuzz en portugués y fotos en las tres calidades sin errores.

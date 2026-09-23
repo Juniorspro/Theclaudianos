@@ -482,13 +482,186 @@ const SON = (function(){
     { const g = gan(0, sal), lp = fil('lowpass', 150, 1.2, g); osc('sawtooth', 41, lp, t); osc('sawtooth', 41.8, lp, t); capas.peligro = {g}; }
   }
 
+
+  /* ================================================================ ambiente por lugar
+     Cada lugar tiene su LECHO (capas que no paran, armadas al entrar y apagadas al salir) y sus
+     SUCESOS sueltos cada tantos segundos, en algún punto alrededor. La base y la nave se oyen
+     donde están; cada galaxia suena entera en la caminata y apagada por el casco desde adentro.
+     EL VACÍO además aprieta todo lo demás: una presión que tapa los agudos de la mezcla entera. */
+  const AMB = {lechos:{}, niveles:{}, relojes:{}, sucesos:{}, gal:null, galId:null, galOut:null, galLP:null, presion:null, pesado:0};
+  const _pa = new THREE.Vector3();
+  const alrededor = (r0, r1, y0, y1) => { const a = Math.random()*6.2832, r = rnd(r0, r1);
+    return _pa.set(cam.position.x + Math.cos(a)*r, cam.position.y + rnd(y0, y1), cam.position.z + Math.sin(a)*r).clone(); };
+  const lfo = (f, prof, param, t, tipo) => osc(tipo || 'sine', f, gan(prof, param), t);
+  function haciaGal(envio){ const e = ctx.createGain(); e.connect(AMB.galOut); if(envio) e.connect(gan(envio, rev)); return e; }
+  /* un tono que cae (o sube) y se apaga: gemidos, ballenas, campanas */
+  function glisa(d, tipo, f0, f1, t0, dur, pico, ataque, filtro){
+    const g = gan(0, d), dest = filtro ? fil(filtro[0], filtro[1], filtro[2], g) : g, o = osc(tipo, f0, dest, t0, dur + 0.1);
+    o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+    const q = g.gain; q.setValueAtTime(0.0001, t0); q.exponentialRampToValueAtTime(pico, t0 + ataque);
+    q.exponentialRampToValueAtTime(0.0001, t0 + dur); return o; }
+  /* al revés: crece y se corta en seco (EL REVERSO) */
+  function alReves(d, fuente, t0, dur, pico){ const g = gan(0, d); fuente(g, t0, dur + 0.05);
+    const q = g.gain; q.setValueAtTime(0.0001, t0); q.exponentialRampToValueAtTime(pico, t0 + dur); q.setValueAtTime(0, t0 + dur + 0.01); }
+
+  const LECHOS = {
+    /* BASE ALFA al atardecer: el generador de la base, grillos, y el rumor de la ruta */
+    base(g, t, F){
+      const gen = gan(0.55, g); F(osc('sawtooth', 60, fil('lowpass', 170, 0.8, gen), t)); F(osc('sine', 120, gan(0.3, gen), t));
+      F(lfo(0.21, 0.12, gen.gain, t));
+      /* grillos: el chirrido (26 por segundo) va adentro de una tanda que sube y baja */
+      const tanda = gan(0.5, gan(1.4, g)), chirr = gan(0.5, tanda);
+      F(ruido(fil('bandpass', 4300, 14, chirr), t)); F(lfo(26, 0.5, chirr.gain, t, 'square')); F(lfo(0.6, 0.5, tanda.gain, t));
+      F(ruido(fil('lowpass', 110, 0.6, gan(0.9, g)), t));
+    },
+    /* la nave por dentro: el aire que circula, el ventilador y la línea eléctrica */
+    nave(g, t, F){
+      F(ruido(fil('bandpass', 640, 0.6, gan(0.55, g)), t));
+      const ven = gan(0.5, fil('bandpass', 310, 3, gan(0.9, g))); F(ruido(ven, t)); F(lfo(7.3, 0.18, ven.gain, t));
+      F(osc('sine', 240, gan(0.06, g), t)); F(osc('square', 120, fil('lowpass', 700, 1, gan(0.03, g)), t));
+    },
+    /* VEGA ROTA: polvo viejo. Un acorde hueco que se desafina despacio y el soplo del polvo */
+    vega(g, t, F){
+      const p = fil('lowpass', 900, 0.7, gan(0.5, g));
+      const a = osc('triangle', 55, p, t), b = osc('triangle', 82.4, gan(0.6, p), t), c = osc('sine', 110.3, gan(0.35, p), t);
+      F(a); F(b); F(c); F(lfo(0.05, 1.8, b.detune, t)); F(lfo(0.037, 9, c.detune, t));
+      const pol = gan(0.5, fil('bandpass', 1100, 0.6, gan(0.7, g))); F(ruido(pol, t)); F(lfo(0.07, 0.4, pol.gain, t));
+    },
+    /* EL HERVIDERO: demasiado cerca de algo que arde. Retumbo grave y un rugido que respira rápido */
+    hervidero(g, t, F){
+      F(ruido(fil('lowpass', 85, 0.9, gan(1.6, g)), t));
+      const rug = gan(0.5, fil('bandpass', 420, 0.9, gan(0.9, g))); F(ruido(rug, t)); F(lfo(0.33, 0.35, rug.gain, t));
+      const cru = gan(0.4, fil('highpass', 3500, 0.7, gan(0.35, g))); F(ruido(cru, t)); F(lfo(11, 0.4, cru.gain, t, 'square'));
+      F(osc('sawtooth', 73, fil('lowpass', 220, 1, gan(0.18, g)), t));
+    },
+    /* LA QUIETUD: casi nada. Un zumbido de oído finísimo y un fondo que apenas se nota */
+    quietud(g, t, F){
+      const z = gan(0.5, gan(0.035, g)); F(osc('sine', 3150, z, t)); F(lfo(0.02, 0.5, z.gain, t));
+      F(osc('sine', 47, gan(0.25, g), t)); F(ruido(fil('lowpass', 200, 0.5, gan(0.12, g)), t));
+    },
+    /* CORAL PROFUNDO: como bajo el agua. Oleaje lento, un grave tibio y todo apagado */
+    coral(g, t, F){
+      const ola = gan(0.5, fil('lowpass', 380, 0.8, gan(1.3, g))); F(ruido(ola, t)); F(lfo(0.085, 0.45, ola.gain, t));
+      F(osc('sine', 68, gan(0.3, g), t)); const s2 = osc('sine', 102, gan(0.12, g), t); F(s2); F(lfo(0.13, 6, s2.detune, t));
+    },
+    /* EL REVERSO: todo pasa al revés. Un colchón que se desfasa y va y vuelve */
+    reverso(g, t, F){
+      const lp = fil('lowpass', 700, 2, gan(0.35, g)); F(lfo(0.09, 450, lp.frequency, t));
+      F(osc('sawtooth', 110, lp, t)); F(osc('sawtooth', 110.45, lp, t)); F(osc('sawtooth', 164.8, gan(0.4, lp), t));
+      const inv = gan(0.5, fil('bandpass', 2400, 1.5, gan(0.25, g))); F(ruido(inv, t)); F(lfo(0.23, 0.5, inv.gain, t, 'sawtooth'));
+    },
+    /* EL VACÍO: pesado. Una presión grave que late (dos sierras a 31 y 31,6 Hz baten), el tritono
+       abajo, ruido pardo que empuja, una respiración de todo el lecho cada nueve segundos y, muy
+       arriba, un racimo disonante que aparece y se va. En parlante de celular el 31 no suena: se
+       oyen sus armónicos (62, 93, 124), por eso va por un pasabajos a 170 y no a 60 */
+    vacio(g, t, F){
+      const res = gan(0.62, g); F(lfo(0.11, 0.3, res.gain, t));                /* respira */
+      const sub = fil('lowpass', 170, 1.6, gan(1.0, res));
+      F(osc('sawtooth', 31, sub, t)); F(osc('sawtooth', 31.6, sub, t)); F(osc('sawtooth', 44, gan(0.45, sub), t));
+      F(ruido(fil('lowpass', 55, 0.5, gan(2.2, res)), t));
+      F(ruido(fil('bandpass', 180, 0.8, gan(0.4, res)), t));
+      const alto = gan(0.5, gan(0.022, g)); F(lfo(0.031, 0.5, alto.gain, t));
+      for(const f of [622.3, 659.3, 698.5]) F(osc('sine', f, alto, t));
+    }
+  };
+  /* sucesos: [cada mín, cada máx, función]. Los de galaxia van por el filtro del casco */
+  const SUCESOS = {
+    base: [[7, 16, () => { const t = ahora(), d = destino(alrededor(60, 140, 0, 8), 0.5);   /* un golpe metálico lejano */
+              const g = gan(0, d); osc('triangle', rnd(180, 320), g, t, 1.4); osc('triangle', rnd(420, 640), gan(0.5, g), t, 1.0); golpe(g, t, 0.10, 0.003, 1.1); }],
+           [40, 90, () => { const t = ahora(), p = alrededor(300, 500, 120, 200), d = destino(p, 0.5, 60);   /* un avión que cruza alto */
+              const g = gan(0, d), b = fil('bandpass', 600, 0.7, g); ruido(b, t, 14); b.frequency.setValueAtTime(900, t); b.frequency.exponentialRampToValueAtTime(260, t + 13);
+              const q = g.gain; q.setValueAtTime(0.0001, t); q.exponentialRampToValueAtTime(0.9, t + 6); q.exponentialRampToValueAtTime(0.0001, t + 13.5); }],
+           [18, 40, () => { const t = ahora(), d = destino(alrededor(80, 200, 0, 3), 0.6, 20);   /* un perro de guardia, lejos */
+              for(let i = 0; i < (2 + (Math.random()*3|0)); i++) glisa(d, 'sawtooth', 520, 330, t + i*0.42, 0.22, 0.12, 0.02, ['bandpass', 900, 2]); }]],
+    nave: [[9, 22, () => { const t = ahora(), d = destino(alrededor(4, 10, -1, 3), 0.35);    /* el casco se queja */
+              glisa(d, 'sawtooth', rnd(70, 95), rnd(45, 60), t, rnd(1.1, 2.2), 0.08, 0.3, ['bandpass', rnd(300, 500), 7]); }],
+           [5, 12, () => { const t = ahora(), d = destino(alrededor(2, 6, 0, 2), 0.1);        /* un relé */
+              const g = gan(0, d); ruido(fil('bandpass', 3000, 2, g), t, 0.03); golpe(g, t, 0.07, 0.001, 0.02); }],
+           [11, 26, () => { const t = ahora(), d = destino(alrededor(3, 8, 0, 2), 0.15);      /* una consola que avisa */
+              [[1760, 0], [2349, 0.13]].forEach(([f, dt]) => { const g = gan(0, d); osc('sine', f, g, t + dt, 0.12); golpe(g, t + dt, 0.035, 0.004, 0.09); }); }],
+           [14, 30, () => { const t = ahora(), d = destino(alrededor(3, 9, 1, 3), 0.3);       /* un caño que golpea */
+              const g = gan(0, d); osc('sine', rnd(150, 210), g, t, 0.6); golpe(g, t, 0.10, 0.002, 0.45);
+              const g2 = gan(0, d); ruido(fil('bandpass', 1400, 3, g2), t, 0.05); golpe(g2, t, 0.05, 0.001, 0.04); }]],
+    vega: [[6, 14, () => { const t = ahora(), d = haciaGal(0.3);                             /* crujido de polvo */
+              for(let i = 0; i < 6; i++){ const g = gan(0, d); ruido(fil('highpass', 2500, 0.7, g), t + i*rnd(0.03, 0.12), 0.02); golpe(g, t + i*0.07, 0.06, 0.001, 0.015); } }],
+           [16, 34, () => glisa(haciaGal(0.8), 'sine', 330, 311, ahora(), 3.2, 0.07, 1.0)]],       /* un tono triste que se cae */
+    hervidero: [[1.5, 5, () => { const t = ahora(), d = haciaGal(0.2);                         /* chasquidos de algo que arde */
+              for(let i = 0; i < 3; i++){ const g = gan(0, d); ruido(fil('bandpass', rnd(800, 2600), 1.5, g), t + i*rnd(0.05, 0.2), 0.05); golpe(g, t + i*0.1, rnd(0.06, 0.14), 0.001, 0.04); } }],
+           [12, 26, () => { const t = ahora(), d = haciaGal(0.5), g = gan(0, d), b = fil('bandpass', 200, 1.2, g);   /* una llamarada */
+              ruido(b, t, 3.2); b.frequency.setValueAtTime(200, t); b.frequency.exponentialRampToValueAtTime(2200, t + 2.6);
+              const q = g.gain; q.setValueAtTime(0.0001, t); q.exponentialRampToValueAtTime(0.35, t + 1.4); q.exponentialRampToValueAtTime(0.0001, t + 3.1); }]],
+    quietud: [[25, 55, () => { const t = ahora(), d = haciaGal(0.9);                           /* un golpe lejísimos, y nada */
+              const g = gan(0, d); osc('sine', 38, g, t, 4.5); golpe(g, t, 0.5, 0.02, 4.2); }],
+           [30, 70, () => glisa(haciaGal(0.95), 'sine', 1244.5, 1240, ahora(), 5.5, 0.03, 0.02)]], /* una copa de vidrio */
+    coral: [[4, 10, () => { const t = ahora(), d = haciaGal(0.3);                              /* burbujas */
+              for(let i = 0; i < 5; i++){ const f = rnd(280, 520); glisa(d, 'sine', f, f*rnd(2.2, 3.4), t + i*rnd(0.05, 0.16), 0.05, 0.07, 0.005); } }],
+           [18, 40, () => { const t = ahora(), d = haciaGal(0.9), o = glisa(d, 'sine', 170, 150, t, 3.6, 0.16, 1.0);   /* la ballena */
+              o.frequency.setValueAtTime(170, t); o.frequency.linearRampToValueAtTime(265, t + 1.2); o.frequency.linearRampToValueAtTime(150, t + 3.5);
+              osc('sine', 5.5, gan(6, o.detune), t, 3.6); }]],
+    reverso: [[3, 7, () => { const t = ahora(), d = haciaGal(0.2), f = rnd(440, 880);          /* una campana al revés */
+              alReves(d, (g, t0, dur) => { osc('triangle', f, g, t0, dur); osc('sine', f*2.76, gan(0.3, g), t0, dur); }, t, rnd(0.9, 1.6), 0.09); }],
+           [10, 22, () => { const t = ahora(), d = haciaGal(0.3);                              /* un golpe que llega antes de sonar */
+              alReves(d, (g, t0, dur) => { osc('sine', 52, g, t0, dur); ruido(fil('lowpass', 400, 0.7, gan(0.4, g)), t0, dur); }, t, 2.2, 0.35); }]],
+    vacio: [[8, 18, () => { const t = ahora(), d = haciaGal(0.8);                               /* algo enorme gime */
+              glisa(d, 'sawtooth', rnd(52, 62), rnd(34, 40), t, rnd(5, 8), 0.26, 1.8, ['lowpass', 320, 2]);
+              glisa(d, 'sawtooth', rnd(78, 90), rnd(50, 58), t + 0.4, 6, 0.08, 2.2, ['bandpass', 500, 4]); }],
+           [14, 30, () => { const t = ahora(), d = haciaGal(0.95);                              /* un impacto lejano, que se siente */
+              const g = gan(0, d); osc('sine', 42, g, t, 5.5); osc('sine', 63, gan(0.5, g), t, 5); golpe(g, t, 0.75, 0.01, 5.2);
+              const g2 = gan(0, d); ruido(fil('lowpass', 240, 0.7, g2), t, 1.6); golpe(g2, t, 0.35, 0.005, 1.4); }],
+           [11, 24, () => { const t = ahora(), d = haciaGal(0.7), g = gan(0, d), b = fil('bandpass', 1400, 12, g);   /* metal que raspa */
+              ruido(b, t, 3.4); b.frequency.setValueAtTime(rnd(1300, 1700), t); b.frequency.exponentialRampToValueAtTime(rnd(500, 700), t + 3.2);
+              const q = g.gain; q.setValueAtTime(0.0001, t); q.exponentialRampToValueAtTime(0.5, t + 0.9); q.exponentialRampToValueAtTime(0.0001, t + 3.3); }],
+           [20, 40, () => { const t = ahora(), d = haciaGal(0.6);                               /* un corazón que no es el tuyo */
+              for(const [dt, v] of [[0, 1], [0.34, 0.75], [2.1, 0.9], [2.44, 0.6]]){ const g = gan(0, d), w = osc('sine', 46, g, t + dt, 0.5);
+                w.frequency.setValueAtTime(46, t + dt); w.frequency.exponentialRampToValueAtTime(30, t + dt + 0.3); golpe(g, t + dt, 0.5*v, 0.01, 0.4); } }]]
+  };
+  function armarLecho(id, out){
+    const t = ahora(), g = gan(0, out), fuentes = [];
+    LECHOS[id](g, t, n => { fuentes.push(n); return n; });
+    return {g, fuentes, id};
+  }
+  function soltarLecho(L){                                   /* se apaga en 2 s y después se paran las fuentes */
+    const t = ahora(); L.g.gain.setTargetAtTime(0, t, 0.6);
+    L.fuentes.forEach(n => { try { n.stop(t + 4); } catch(e){} });
+  }
+  function ambiente(dt, eva, adentro, esp){
+    const t = ahora();
+    const galId = esp > 0.5 ? GALAXIAS[GAL.actual].id : null;
+    if(galId !== AMB.galId){ if(AMB.gal) soltarLecho(AMB.gal); AMB.gal = galId ? armarLecho(galId, AMB.galOut) : null; AMB.galId = galId;
+      if(galId) AMB.relojes[galId] = null; }
+    const pesado = galId === 'vacio' ? 1 : 0;
+    AMB.pesado += (pesado - AMB.pesado)*Math.min(1, dt*0.4);
+    const nv = AMB.niveles;
+    nv.base = (1 - esp)*(adentro ? 0.35 : 1)*0.05;
+    nv.nave = adentro ? 0.05 : (eva ? 0.006 : 0);
+    nv.gal = galId ? (eva ? 1 : (adentro ? 0.6 : 1))*(galId === 'vacio' ? 0.11 : galId === 'quietud' ? 0.05 : 0.07) : 0;
+    AMB.lechos.base.g.gain.setTargetAtTime(nv.base, t, 0.8);
+    AMB.lechos.nave.g.gain.setTargetAtTime(nv.nave, t, 0.6);
+    if(AMB.gal) AMB.gal.g.gain.setTargetAtTime(nv.gal, t, 1.2);
+    AMB.galLP.frequency.setTargetAtTime(eva ? 16000 : 760, t, 0.4);            /* desde adentro, a través del casco */
+    /* EL VACÍO aprieta la mezcla entera: se tapan los agudos y baja un poco el resto */
+    AMB.presion.frequency.setTargetAtTime(lerp(18000, 3200, AMB.pesado), t, 0.8);
+    for(const lugar of ['base', 'nave', galId]){
+      if(!lugar || !SUCESOS[lugar]) continue;
+      const nivel = lugar === 'base' ? nv.base : lugar === 'nave' ? nv.nave : nv.gal;
+      if(nivel < 0.004) continue;
+      const lista = SUCESOS[lugar];
+      const r = AMB.relojes[lugar] || (AMB.relojes[lugar] = lista.map(s => rnd(s[0]*0.3, s[1]*0.6)));
+      for(let i = 0; i < lista.length; i++){
+        r[i] -= dt;
+        if(r[i] <= 0){ r[i] = rnd(lista[i][0], lista[i][1]); lista[i][2](); AMB.sucesos[lugar] = (AMB.sucesos[lugar] || 0) + 1; }
+      }
+    }
+  }
+
   function arrancar(){
     if(ctx){ if(ctx.state === 'suspended' && !document.hidden) ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
     try { ctx = new AC(); } catch(e){ ctx = null; return; }
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -16; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.25;
-    sal = ctx.createGain(); sal.gain.value = 0.85; sal.connect(comp); comp.connect(ctx.destination);
+    sal = ctx.createGain(); sal.gain.value = 0.85;
+    AMB.presion = fil('lowpass', 18000, 0.5); sal.connect(AMB.presion); AMB.presion.connect(comp); comp.connect(ctx.destination);
     medidor = ctx.createAnalyser(); medidor.fftSize = 2048; comp.connect(medidor);
     ruidoB = ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate);
     const d = ruidoB.getChannelData(0); for(let i = 0; i < d.length; i++) d[i] = Math.random()*2 - 1;
@@ -504,6 +677,8 @@ const SON = (function(){
       ctx.decodeAudioData(u.buffer, b => { bufs[k] = b; }, () => {});
     } catch(e){} });
     armarCapas();
+    AMB.galLP = fil('lowpass', 760, 0.6, sal); AMB.galOut = gan(1, AMB.galLP);
+    AMB.lechos.base = armarLecho('base', sal); AMB.lechos.nave = armarLecho('nave', sal);
   }
 
   /* un efecto por nombre: lo generado si está (con el tono corrido ±10%), si no el sintetizado */
@@ -552,6 +727,7 @@ const SON = (function(){
       capas.resp.b.frequency.setTargetAtTime(c < 0.35 ? 1100 : 780, t, 0.1); }
     else capas.resp.g.gain.setTargetAtTime(0, t, 0.2);
     capas.chorro.g.gain.setTargetAtTime(eva ? SON.chorro*0.05 : 0, t, 0.06);
+    ambiente(dt, eva, adentro, esp);
     const pe = BICHOS.peligro;
     capas.peligro.g.gain.setTargetAtTime(pe*pe*0.5, t, 0.4);
     if(pe > 0.15){ latido -= dt; if(latido <= 0){ latido = 60/(55 + 70*pe); fx('latido', {f:pe}); } }
@@ -593,7 +769,14 @@ const SON = (function(){
   return {arrancar:seguro(arrancar), fx:seguro(fx), cuadro:seguro(cuadro), nivel:seguro(nivel),
           motorEn:seguro((id, pos, niv) => motorEn(id, pos, isFinite(niv) ? niv : 0)), chorro:0,
           estado: () => ctx ? ctx.state : 'sin arrancar',
-          nombres: () => Object.keys(FX), generados: () => Object.keys(bufs)};
+          nombres: () => Object.keys(FX), generados: () => Object.keys(bufs),
+          amb: () => ({niveles:Object.assign({}, AMB.niveles), gal:AMB.galId, pesado:+AMB.pesado.toFixed(2), sucesos:Object.assign({}, AMB.sucesos),
+                       presion:AMB.presion ? Math.round(AMB.presion.frequency.value) : null}),
+          pesado: () => AMB.pesado,
+          espectro: seguro(() => { if(!medidor) return null; const a = new Float32Array(medidor.frequencyBinCount); medidor.getFloatFrequencyData(a);
+            const hz = ctx.sampleRate/medidor.fftSize, banda = (f0, f1) => { let e = 0; for(let i = Math.floor(f0/hz); i < Math.min(a.length, f1/hz); i++) e += Math.pow(10, a[i]/10); return e; };
+            const g = banda(20, 200), m = banda(200, 2000), h = banda(2000, 12000), T = g + m + h || 1;
+            return {graves:+(g/T).toFixed(3), medios:+(m/T).toFixed(3), agudos:+(h/T).toFixed(3)}; })};
 })();
 
 /* -------------------------------------------------------------- renderer */
@@ -4995,8 +5178,17 @@ let ultimo = performance.now(), suavems = 16, dpr = dprTope();
 /* Qué brilla lo decide el ojo: al sol la chapa llega a 4-6 (lineal) y no puede encandilar
    entera; adentro o en el espacio lo que pasa de 2,2 son lámparas, ojos y estrellas. El umbral
    se acomoda en ~0,4 s, como la vista al entrar de la pista a la bodega. */
-let umbralVista = 4.0;
+let umbralVista = 4.0, pesadez = 0, tPesado = 0;
 function dibujar(dt){
+  /* EL VACÍO pesa también a la vista: la viñeta se cierra, sube el grano y la luz late despacio,
+     al mismo ritmo (0,11 por segundo) que respira su sonido */
+  const metaP = VUELO.espacio > 0.5 && GALAXIAS[GAL.actual].id === 'vacio' ? 1 : 0;
+  if(dt){                                   /* la foto dibuja con dt 0 y su propia exposición: no se pisa */
+    pesadez += (metaP - pesadez)*Math.min(1, dt*0.5); tPesado += dt;
+    POST.U.uVineta.value = 0.28 + 0.24*pesadez;
+    POST.U.uGrano.value = 1 + 0.7*pesadez;
+    POST.U.uExpo.value = 1.06*(1 - 0.11*pesadez*(0.5 + 0.5*Math.sin(tPesado*0.691)));
+  }
   const sol = Math.min(1, clave.intensity / LUZ.sol);
   const p = jug.pos, adentro = enNave(p.x, p.y, p.z) ? 1 : 0;
   const meta = 2.2 + 1.8 * sol * (1 - 0.7*adentro);
