@@ -194,8 +194,8 @@ const CABEZAS = {
        ".kmmpwepkk.",".kmmpppppPk",".kmmhpRphk.","..kkhhhhk..","...kppk....","...kppk...."]
 };
 /* Q: tono intermedio de la piel para marcar el músculo sin que parezcan manchas */
-const TORSO = ["...kkkkkk...","..kQppppQk..",".kppppppppk.","kQpppppppppk","kppQQpppQQpk","kpppppppppQk",
-  ".kppQpQpppk.",".kpppppQppk.",".kpQpppppQk.",".kccoocccck.","kqqqqqqqqqqk","kqqqqqqqqqqk",".kqqqkqqqqk.",".kqqk..kqqk."];
+const TORSO = ["..kkkkkk..",".kQppppQk.","kppppppppk","kQppppppQk","kpQQppQQpk","kppppppppk",
+  ".kpQpQppk.",".kppppQpk.",".kQppppQk.",".kccoocck.","kqqqqqqqqk","kqqqqqqqqk",".kqqkqqqk.",".kqk..kqk."];   /* 10 de ancho: más flaco */
 const _v = "............";
 const ARMADURAS = {
   cuero:[_v,".kcCccccCck.","kcCccccccCck","kccCccccCcck","kcccccccccck",".kcCcCcCcCck",".kcccccccck.",".kcCcCcCck..",".kcccccccck.",_v,_v,_v,_v,_v],
@@ -287,7 +287,7 @@ function piezas(def, estatua){
   let grid = TORSO;
   const PATRON = {cuero:(x, y) => (x + y) % 4 === 0 ? 'C' : 'c', escamas:(x, y) => (x + y) % 2 ? 'm' : 'M', lorica:(x, y) => y % 2 ? 'm' : 'M'};
   if(PATRON[def.eq.torso]){ const f = PATRON[def.eq.torso];
-    grid = TORSO.map((fila, y) => y >= 1 && y <= 8 ? [...fila].map((ch, x) => (ch === 'p' || ch === 'P') ? f(x, y) : ch).join('') : fila); }
+    grid = TORSO.map((fila, y) => y >= 1 && y <= 8 ? [...fila].map((ch, x) => (ch === 'p' || ch === 'P' || ch === 'Q') ? f(x, y) : ch).join('') : fila); }
   const p = {pal, cabeza:hornearHD(CABEZAS[casco] || CABEZAS.ret, pal), torso:hornearHD(grid, pal),
              escudo:def.eq.escudo !== 'ninguno' ? hornearHD(ESCUDO_SPR[def.eq.escudo], pal) : null};
   PIEZAS.set(clave, p);
@@ -554,7 +554,7 @@ function segEscudo(g, sk){ const e = escudoDe(g); if(!e) return null;
   /* el escudo va derecho con el torso: su eje es el (0, ±m) del torso girado */
   return {p0:{x:c.x + sk.d*m*Math.sin(A), y:c.y - m*Math.cos(A)}, p1:{x:c.x - sk.d*m*Math.sin(A), y:c.y + m*Math.cos(A)}, c}; }
 function partes(g, sk){
-  const l = [{id:'tor', a:sk.H, b:sk.N, r:4.2}];
+  const l = [{id:'tor', a:sk.H, b:sk.N, r:3.8}];
   if(!g.cortado.cab) l.push({id:'cab', a:sk.C, b:sk.C, r:4.6});
   if(!g.cortado.bA) l.push({id:'bA', a:sk.S, b:sk.bA.mano, r:1.8});
   if(!g.cortado.bE) l.push({id:'bE', a:sk.S2, b:sk.bE.mano, r:1.8});
@@ -1053,11 +1053,11 @@ function dibujarGlad(ctx, g, ox, oy, estatua){
     if(g.cortado[id]){ discoF(ctx, H.x, H.y + 1, 1.3, sangre, true); return; }
     const F = T(pie), R = rodilla(H, F, d, g.suelo && !g.caido && !g.muerto ? kb : 1.5);
     const piel = atras ? tono(pal.p, 0.84) : pal.p;
-    musculo(ctx, H, R, 7, 5, piel);                                   /* muslo: ancho arriba */
+    musculo(ctx, H, R, 6, 4, piel);                                   /* muslo: ancho arriba */
     /* pantorrilla: se abulta abajo de la rodilla y se afina al tobillo */
     const P1 = {x:R.x + (F.x - R.x)*0.35, y:R.y + (F.y - R.y)*0.35};
-    if(g.def.eq.grebas){ const m = atras ? tono(pal.m, 0.85) : pal.m; musculo(ctx, R, P1, 5, 6, m); musculo(ctx, P1, F, 6, 4, m); discoF(ctx, R.x, R.y, 1.2, pal.o, true); }
-    else { musculo(ctx, R, P1, 5, 6, piel); musculo(ctx, P1, F, 6, 4, piel); discoF(ctx, R.x, R.y, 0.9, piel, true);
+    if(g.def.eq.grebas){ const m = atras ? tono(pal.m, 0.85) : pal.m; musculo(ctx, R, P1, 4, 5, m); musculo(ctx, P1, F, 5, 3, m); discoF(ctx, R.x, R.y, 1.1, pal.o, true); }
+    else { musculo(ctx, R, P1, 4, 5, piel); musculo(ctx, P1, F, 5, 3, piel); discoF(ctx, R.x, R.y, 0.8, piel, true);
       trazo(ctx, {x:F.x - 0.9, y:F.y - 2.2}, {x:F.x + 0.9, y:F.y - 2.2}, 1, pal.C); trazo(ctx, {x:F.x - 0.9, y:F.y - 1.3}, {x:F.x + 0.9, y:F.y - 1.3}, 1, pal.C); }
     /* sandalia: suela, pie y tiras */
     const x0 = F.x - d*1.6, x1 = F.x + d*2.8;
@@ -1069,11 +1069,11 @@ function dibujarGlad(ctx, g, ox, oy, estatua){
   const brazo = (b, id, desde, manica, atras) => {
     if(g.cortado[id]){ discoF(ctx, desde.x, desde.y, 1.2, sangre, true); return; }
     const C = Tr(b.codo), M = Tr(b.mano), piel = atras ? tono(pal.p, 0.84) : pal.p;
-    discoF(ctx, desde.x, desde.y, 1.9, K); discoF(ctx, desde.x, desde.y, 1.5, piel, true);   /* hombro */
-    musculo(ctx, desde, C, 6, 4, piel);                                /* brazo: bíceps que se afina al codo */
-    if(manica){ trazoVar(ctx, C, M, 7, 6, K); trazoCuadros(ctx, C, M, 5, pal.a, pal.A); trazo(ctx, {x:C.x, y:C.y - 1/DET}, {x:M.x, y:M.y - 1/DET}, 1, tono(pal.a, 1.25)); }
-    else musculo(ctx, C, M, 5, 3, piel);                               /* antebrazo: ancho abajo del codo, fino en la muñeca */
-    discoF(ctx, M.x, M.y, 1.4, K); discoF(ctx, M.x, M.y, 1.0, piel, true);   /* puño */
+    discoF(ctx, desde.x, desde.y, 1.7, K); discoF(ctx, desde.x, desde.y, 1.3, piel, true);   /* hombro */
+    musculo(ctx, desde, C, 5, 3, piel);                                /* brazo: bíceps que se afina al codo */
+    if(manica){ trazoVar(ctx, C, M, 6, 5, K); trazoCuadros(ctx, C, M, 4, pal.a, pal.A); trazo(ctx, {x:C.x, y:C.y - 1/DET}, {x:M.x, y:M.y - 1/DET}, 1, tono(pal.a, 1.25)); }
+    else musculo(ctx, C, M, 4, 3, piel);                               /* antebrazo: ancho abajo del codo, fino en la muñeca */
+    discoF(ctx, M.x, M.y, 1.3, K); discoF(ctx, M.x, M.y, 0.9, piel, true);   /* puño */
     ctx.fillStyle = tono(piel, 0.7); ctx.fillRect(rf(M.x + d*0.5), rf(M.y - 0.5), 1/DET, 1/DET);   /* pulgar */
   };
   /* de atrás para adelante: pierna de atrás, brazo del arma, torso, pierna de adelante, cabeza,
@@ -1082,7 +1082,7 @@ function dibujarGlad(ctx, g, ox, oy, estatua){
   pierna('pI', sk.pT, true);
   pierna('pD', sk.pD, false);
   brazo(sk.bA, 'bA', S, g.def.eq.manica, true);
-  sprite(ctx, pz.torso, H.x, H.y + resp, 6, 11, g.ang, d);
+  sprite(ctx, pz.torso, H.x, H.y + resp, 5, 11, g.ang, d);
   if(!g.cortado.cab) sprite(ctx, pz.cabeza, N.x, N.y + 0.3, 5, 12, g.ang, d);      /* un poco más arriba: se ve el cuello */
   else { discoF(ctx, N.x, N.y, 1.6, sangre, true); discoF(ctx, N.x, N.y - 0.3, 0.7, '#e8d8c0'); }
   brazo(sk.bE, 'bE', S2, false, false);
@@ -1102,7 +1102,7 @@ function dibujarRestos(ctx, P, ox, oy){
     else if(r.tipo === 'jab'){ const u = {x:Math.cos(r.ang), y:Math.sin(r.ang)}, a = {x:x - u.x*9, y:y - u.y*9}, b = {x:x + u.x*9, y:y + u.y*9};
       trazo(ctx, a, b, 4, K); trazo(ctx, a, b, 2, '#9a6a3a'); trazo(ctx, {x:b.x - u.x*2, y:b.y - u.y*2}, b, 2, '#e4e8f0'); }
     else { const u = {x:Math.cos(r.ang)*r.largo/2, y:Math.sin(r.ang)*r.largo/2}, a = {x:x - u.x, y:y - u.y}, b = {x:x + u.x, y:y + u.y};
-      miembro(ctx, a, b, r.tipo === 'pierna' ? 6 : 4, r.color);
+      miembro(ctx, a, b, r.tipo === 'pierna' ? 5 : 3, r.color);
       if(r.tipo === 'pierna' && r.grebas) miembro(ctx, {x:(a.x + b.x)/2, y:(a.y + b.y)/2}, b, 6, '#d8dce6');
       if(r.tipo === 'brazo' && r.manica) trazoCuadros(ctx, {x:(a.x + b.x)/2, y:(a.y + b.y)/2}, b, 4, '#f0f0f4', '#3c5cc0');
       discoF(ctx, a.x, a.y, 1.2, '#8a0c08', true); discoF(ctx, a.x, a.y, 0.5, '#e8d8c0'); }

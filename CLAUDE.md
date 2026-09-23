@@ -1156,3 +1156,17 @@ Lo que costó una vuelta:
 
 Medido: 49 de 49 peleas terminan (4 a 37 s) sin errores ni NaN, toques y carrera bien; A/B contra el
 commit anterior en el mismo banco: ~1 ms más por cuadro (6-7 contra 4-6 ms), lejos de los 16,7.
+
+### 2026-09-23 (ag) — A LOS SALTOS: gladiadores un poco más flacos
+**Pedido textual:** «Hazlos un poco más flacos, solo un poco entiendes, parecen muy gordos ahora».
+
+- **Torso de 12 a 10 de ancho** en la grilla de roles (antes de agrandar), con el ancla corrida al
+  medio nuevo (x 6 → 5); el radio de choque del torso baja de 4,2 a 3,8.
+- **Miembros un pixel fino más angostos**: muslo 6→4, pantorrilla 5→3 al tobillo, brazo 5→3,
+  antebrazo 4→3, manica 6→5; hombros, rodillas y puños con discos más chicos; los restos cortados
+  también.
+- Las corazas ahora cubren también el rol `Q` (músculo): con el torso nuevo quedaban huecos de piel
+  adentro del cuero y la lorica.
+
+Medido: 49 de 49 peleas de IA contra IA terminan sin errores ni NaN, todas las clases ganan alguna;
+toques, carrera y capturas sin errores; 4,9 ms por cuadro en vertical.
