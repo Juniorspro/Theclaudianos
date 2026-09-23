@@ -9,12 +9,15 @@ import base64, json, os, re
 RAIZ = os.path.join(os.path.dirname(__file__), '..', '..')
 HTML = os.path.join(RAIZ, 'juegos-pc', 'Arrabal.html')
 ASSETS = os.path.join(RAIZ, 'assets', 'arrabal')
-TIPOS = {'.webp': 'image/webp', '.png': 'image/png', '.mp3': 'audio/mpeg'}
+TIPOS = {'.webp': 'image/webp', '.png': 'image/png', '.mp3': 'audio/mpeg', '.json': ''}
 
 archivos = {}
 for n in sorted(os.listdir(ASSETS)):
     base, ext = os.path.splitext(n)
     if ext not in TIPOS:
+        continue
+    if ext == '.json':                   # datos (los cuadros de los sprites): van como objeto
+        archivos[base] = json.load(open(os.path.join(ASSETS, n)))
         continue
     datos = open(os.path.join(ASSETS, n), 'rb').read()
     archivos[base] = 'data:%s;base64,%s' % (TIPOS[ext], base64.b64encode(datos).decode())

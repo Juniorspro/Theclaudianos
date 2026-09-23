@@ -1,5 +1,5 @@
 # ARRABAL — juego de pelea con cartas
-Archivo: `juegos-pc/Arrabal.html` (un solo HTML, ~1,8 MB con el arte adentro, sin red).
+Archivo: `juegos-pc/Arrabal.html` (un solo HTML, ~5,9 MB con el arte adentro, sin red).
 Arte: `assets/arrabal/` + `herramientas/arrabal/`. Banco: `pruebas/arrabal/`. Ver también:
 [pixel2d](pixel2d.md), [chicharra](chicharra.md) (el motor que se reusó), [rezona](rezona.md).
 
@@ -26,6 +26,24 @@ Pedido: «Haz el estilo más Arcade el segundo juego». Se sumó, sin tocar la h
   («RONDA 1», «¡PELEEN!», «RONDA FINAL»), anuncios de combo en 5/10/15/20 golpes, y `capaCRT()`: líneas de
   tubo + viñeta + un barrido claro que baja (se apaga en ajustes: «EFECTO DE TUBO»).
 - La historia usa el mismo motor con `modo='historia'` (equipos y relevos, sin rondas).
+
+## Sprites pintados (23/09/2026)
+Pedido: «personajes de pelea 2D con anatomía humana realista… NO quiero personajes tipo palito…
+con los modelos que te mandé». Los modelos de la hoja de Street Fighter no se copian: se pintaron
+**los 12 propios** con ese estilo (cuerpo entero, manos, pies, ropa).
+- 12 cuadros por luchador: `guardia golpe patada golpeado caido victoria` (hoja a) y `alzada barrida
+  salto bloqueo especial dash` (hoja b), de Rezona con el retrato como referencia (receta en [rezona](rezona.md)).
+- `hornear_sprites.py`: borra la grilla (filas/columnas llenas > 97 %), abre 5x5 para separar poses
+  pegadas por rayas finas, cada mancha a la celda de su centro, tira lo que cae debajo de los pies
+  (texto) y las sombras chatas. Escala por el **alto del cuerpo** (la mancha más grande, sin los peces
+  de La Parca) y la hoja b se empareja por `bloqueo` = `guardia`. Ancla x: columna más cargada del
+  torso. Salen `sprites-<id>.webp` (atlas) + `sprites.json` (`[x,y,w,h,anclaX,anclaY]`).
+- En el juego (a5): `dibujarSprite()` pisa al títere si el atlas llegó; `cuadroSprite()` elige el
+  cuadro por estado y, en un ataque, por la pose clave del golpe (`CUADRO_DE`). La guardia pintada
+  mide `142 × alto × TAM`. `empaquetar.py` mete los `.json` como objeto en `ARCHIVOS`.
+- Trampa: la primera versión del borrado de grilla (> 60 %) cortó a todos en tiras: una columna que
+  cruza dos figuras apiladas ya pasa el 60 %. Mirar siempre el atlas armado.
+- Pesa: 3,1 MB de sprites; el HTML queda en ~5,9 MB.
 
 ## Los seis de la segunda tanda (23/09/2026)
 Pedido: una hoja de sprites de Street Fighter con «Agrega esos modelos de personajes». **No se

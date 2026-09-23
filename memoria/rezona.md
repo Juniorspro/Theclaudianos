@@ -40,3 +40,8 @@ Fuente: `docs/GUIA-JUEGOS.md § 1. Preparar Rezona` y `§ 4`. Ver también: [jue
   imagen de referencia**: no sirve para animar a un mismo personaje en varias acciones.
 - **Subir juegos a Rezona está prohibido** (23/09/2026). Rezona se usa, si acaso, para generar assets.
 - No existe comando para borrar un proyecto subido: ni en el MCP ni en el CLI (`init`, `login`, `status`, `mcp`).
+- **Hojas de poses con imagen de referencia (23/09/2026)**: `submit_image_generation` con el retrato
+  como `source_urls`, `transparent:true`, 1536x1024 (devuelve 1200x896) y «6 poses en reja de 3 x 2,
+  mirando a la DERECHA» sale **coherente** entre poses y entre hojas. Dos hojas por personaje = 12
+  cuadros. Salen con basura a veces: grilla dibujada, texto con el nombre de la pose, sombra de piso.
+  Horneado: `herramientas/arrabal/hornear_sprites.py` (ver [arrabal](arrabal.md) § Sprites pintados).

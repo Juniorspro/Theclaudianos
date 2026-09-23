@@ -1,6 +1,13 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — ARRABAL con sprites pintados
+**Pedido textual:** «Quiero personajes de pelea 2D con anatomía humana realista y proporciones
+normales… NO quiero personajes tipo palito… con los modelos que te mandé».
+Qué se hizo: los 12 luchadores propios pasaron de títeres a sprites pintados (12 cuadros cada uno,
+Rezona con el retrato de referencia). Los de Street Fighter no se copian. Detalle en [arrabal](arrabal.md)
+§ Sprites pintados.
+
 ### 2026-09-23 — ARRABAL, seis luchadores más
 **Pedido textual:** «Agrega esos modelos de personajes» (con una hoja de sprites de Street Fighter).
 Qué se hizo: seis luchadores **originales** de arquetipos parecidos (no se copian personajes con
