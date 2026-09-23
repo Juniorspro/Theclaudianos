@@ -11,7 +11,7 @@ se prueba **en el celular, en vertical (412×892)**. EL TIPO se juega **acostado
 | `juegos-pc/AOscuras.html` | **A OSCURAS.** Táctico de arriba estilo Bullet Echo: linterna en cono, ecos de pasos y tiros, 5 misiones procedurales (equipo, robo en sigilo, dominio, batalla real, jefe). Canvas 2D en píxeles, un archivo, sin red. |
 | `juegos-pc/Andes.html` | **ANDES.** Descenso en tabla al estilo Alto's Adventure: un dedo (tocar salta, mantener gira), mortales, grinds, toldos, llamas, ancianos, avalancha, alas; 5 montañas procedurales con hora del día y clima. Canvas 2D vectorial, acostado, sin red. |
 | `juegos-pc/Bronca.html` | **BRONCA · ZOMBIS.** Palitos contra zombis al estilo Anger of Stick 5: combos, armas que apuntan solas, aliados, robot y helicóptero, experiencia y base con tienda; 5 misiones procedurales (una es defensa) con jefe cada una. Canvas 2D vectorial, acostado, sin red. |
-| `juegos-pc/Brecha.html` | **BRECHA 7.** Tirador táctico en primera persona sobre rieles al estilo SIERRA 7: cubrirse para recargar, brechas en cámara lenta con rehenes, francotirador con caída y viento, convoy con helicóptero; 5 misiones procedurales. three.js r128 por CDN, geometría por código, acostado. |
+| `juegos-pc/Brecha.html` | **BRECHA 7.** Tirador táctico en primera persona sobre rieles al estilo SIERRA 7: cubrirse para recargar, brechas en cámara lenta con rehenes, francotirador con caída y viento, convoy con helicóptero; 5 misiones procedurales. three.js r128 **adentro del archivo** (sin red), geometría por código, acostado. |
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. De otra línea de trabajo. |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -526,4 +526,14 @@ Medido: bot con invencibilidad 15/15 (3 semillas × 5), sin invencibilidad 13/15
 mejoras). Toques reales por CDP 11/11: mira, fuego, fuego arrastrando, cubrirse con otro dedo apuntando, recargar, cambiar
 arma, mira telescópica, granada, pausa, seguir, brecha. CPU ×6 con calidad automática: 32–46 cuadros por segundo (antes 21–32);
 sin frenar, 53–56. Sin errores. Sondas: `window.__S` — `iniciar(n,sem)`, `anda(n)`, `bot(v)`, `dios(v)`, `est()`, `dibujarYa()`.
+
+### 2026-09-23 (15) — BRECHA 7 no abría en el visor de la app
+**Pedido textual:** «solucionalo rápido los errores» + captura: «SIN CONEXIÓN: EL JUEGO NECESITA THREE.JS DEL CDN».
+
+- **El visor de HTML de la app no deja bajar nada de la red**: three.js desde cdnjs no cargaba nunca. Ahora three.js r128 (MIT, 603 KB)
+  va **dentro del HTML** (764 KB en total). Probado con el contexto `offline` de Playwright y cortando todo pedido que no sea `file:`:
+  cero pedidos a la red, sin errores, la misión corre. **Trampa del banco:** con red, el CDN anda y el problema no se ve nunca;
+  para juegos three.js, probar siempre sin red.
+- **INSTRUCCIÓN no tenía salida**: el texto medía 464 px en una pantalla de 412 y el VOLVER quedaba afuera. Texto en dos columnas.
+  Recorrido de menús con toques reales por CDP: todos los botones andan, y ninguno queda tapado ni fuera de pantalla.
 
