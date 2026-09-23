@@ -29,6 +29,7 @@
 | [arrabal](arrabal.md) | toques `juegos-pc/Arrabal.html`, el juego de pelea con cartas (**apaisado** desde el 23/09: en vertical se gira solo) |
 | [cabezones](cabezones.md) | toques `juegos-pc/Cabezones.html`, el fútbol de cabezas (el último 2D: **el próximo lo tiene que superar**) |
 | [chicharra](chicharra.md) | toques `juegos-pc/Chicharra.html`, el juego de esta línea |
+| [idiomas](idiomas.md) | toques textos de un juego o hagas uno nuevo: **todos llevan selector de idioma** (es/en/pt/fr) |
 | [repo](repo.md) | necesites saber qué hay dónde, cómo se prueba y cómo se entrega |
 | [diario](diario.md) | quieras saber qué pasó en las sesiones anteriores y qué quedó a medias |
 
@@ -38,6 +39,7 @@
 | `juegos-pc/` | los HTML: `Arrabal.html`, `Cabezones.html`, `Chicharra.html` (de acá) y `Bosque.html` (otra línea) | [repo](repo.md) |
 | `.claude/skills/` | `graficos`, `assets-ia`, `banco` | [juegos](juegos.md), [rezona](rezona.md) |
 | `herramientas/rezona/` | `rz.py` (cliente stdio del MCP) y scripts de horneado | [rezona](rezona.md) |
+| `herramientas/comun/` | `idioma.js` y `poner_idioma.py`: el selector de idiomas de todos los juegos | [idiomas](idiomas.md) |
 | `herramientas/arrabal/`, `herramientas/cabezones/` | horneado de arte, música y efectos de cada juego | [arrabal](arrabal.md), [cabezones](cabezones.md) |
 | `pruebas/arrabal/`, `pruebas/cabezones/`, `pruebas/chicharra/` | los bancos de cada juego | la nota del juego |
 | `docs/` | `GUIA-JUEGOS.md` (la receta), `MANUAL_JUEGOS.md` y `TRASPASO_BOSQUE.md` (referencia) | [repo](repo.md) |

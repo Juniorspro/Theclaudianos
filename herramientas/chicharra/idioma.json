@@ -1,0 +1,349 @@
+{
+"en": {
+"AJUSTES": "SETTINGS",
+"AL HANGAR": "TO HANGAR",
+"ALAS": "WINGS",
+"ARRASTRÁ EN CUALQUIER LADO": "DRAG ANYWHERE",
+"BAJO EL DEDO": "UNDER THE FINGER",
+"BICHOS": "BUGS",
+"BLINDAJE": "ARMOR",
+"BOMBA": "BOMB",
+"BOMBAS": "BOMBS",
+"CADENCIA": "FIRE RATE",
+"CAMPO ESMERALDA": "EMERALD FIELD",
+"COMBO": "COMBO",
+"COMBO MÁXIMO": "MAX COMBO",
+"CONTROL": "CONTROLS",
+"EFECTOS": "SOUND FX",
+"ENJAMBRE ORBITAL": "ORBITAL SWARM",
+"EQUILIBRADA · ABANICO": "BALANCED · FAN SHOT",
+"ESCUDO": "SHIELD",
+"GOLPES RECIBIDOS": "HITS TAKEN",
+"HALCÓN": "FALCON",
+"HANGAR": "HANGAR",
+"IMÁN": "MAGNET",
+"JEFE": "BOSS",
+"JUGAR": "PLAY",
+"La nave copia el movimiento de tu dedo,": "The ship copies your finger’s movement,",
+"La nave va arriba de tu dedo.": "The ship flies above your finger.",
+"así nunca la tapás. Arrastrá desde donde quieras.": "so you never cover it. Drag from anywhere.",
+"MANTIS DE ACERO": "STEEL MANTIS",
+"MAPA ESTELAR": "STAR MAP",
+"MEJORAS": "UPGRADES",
+"MONEDAS": "COINS",
+"MOTORES": "ENGINES",
+"MÚSICA": "MUSIC",
+"NEBULOSA VIOLETA": "VIOLET NEBULA",
+"NIVELES": "LEVELS",
+"NO": "NO",
+"PAUSA": "PAUSE",
+"POTENCIA": "POWER",
+"PUNTAJE": "SCORE",
+"REINA CHICHARRA": "CICADA QUEEN",
+"RELATIVO": "RELATIVE",
+"RÉCORD": "RECORD",
+"SE ACERCA ALGO GRANDE": "SOMETHING BIG IS COMING",
+"SEGUIR": "CONTINUE",
+"SENSIBILIDAD": "SENSITIVITY",
+"SÍ": "YES",
+"TEMBLOR DE PANTALLA": "SCREEN SHAKE",
+"TOCÁ UN NIVEL PARA SALTAR": "TAP A LEVEL TO WARP",
+"VELOCIDAD": "SPEED",
+"VIBRACIÓN": "VIBRATION",
+"empieza con alas": "starts with wings",
+"junta monedas lejos": "grabs coins from afar",
+"¡ALERTA!": "ALERT!",
+"¡NUEVO RÉCORD!": "NEW RECORD!",
+"¡PIEZA ROTA!": "PART BROKEN!",
+"BLOQUEADA": "LOCKED",
+"BRASA": "EMBER",
+"COLOSO VIOLETA": "VIOLET COLOSSUS",
+"DESBLOQUEAR": "UNLOCK",
+"ESTRELLA CARMESÍ": "CRIMSON STAR",
+"JADE": "JADE",
+"LA NAVE SIGUE A TU DEDO": "THE SHIP FOLLOWS YOUR FINGER",
+"MÁX": "MAX",
+"PESADA · CAÑONES DOBLES": "HEAVY · TWIN CANNONS",
+"REINTENTAR": "RETRY",
+"TE DERRIBARON": "YOU WERE SHOT DOWN",
+"VELOZ · AGUJA LÁSER": "FAST · LASER NEEDLE",
+"+1 bomba": "+1 bomb",
+"+1 nave": "+1 ship",
+"+12% de daño": "+12% damage",
+"+8% de velocidad": "+8% speed"
+},
+"pt": {
+"AJUSTES": "AJUSTES",
+"AL HANGAR": "AO HANGAR",
+"ALAS": "ASAS",
+"ARRASTRÁ EN CUALQUIER LADO": "ARRASTE EM QUALQUER LUGAR",
+"BAJO EL DEDO": "SOB O DEDO",
+"BICHOS": "INSETOS",
+"BLINDAJE": "BLINDAGEM",
+"BOMBA": "BOMBA",
+"BOMBAS": "BOMBAS",
+"CADENCIA": "CADÊNCIA",
+"CAMPO ESMERALDA": "CAMPO ESMERALDA",
+"COMBO": "COMBO",
+"COMBO MÁXIMO": "COMBO MÁXIMO",
+"CONTROL": "CONTROLE",
+"EFECTOS": "EFEITOS",
+"ENJAMBRE ORBITAL": "ENXAME ORBITAL",
+"EQUILIBRADA · ABANICO": "EQUILIBRADA · LEQUE",
+"ESCUDO": "ESCUDO",
+"GOLPES RECIBIDOS": "GOLPES RECEBIDOS",
+"HALCÓN": "FALCÃO",
+"HANGAR": "HANGAR",
+"IMÁN": "ÍMÃ",
+"JEFE": "CHEFE",
+"JUGAR": "JOGAR",
+"La nave copia el movimiento de tu dedo,": "A nave copia o movimento do seu dedo,",
+"La nave va arriba de tu dedo.": "A nave fica acima do seu dedo.",
+"así nunca la tapás. Arrastrá desde donde quieras.": "assim você nunca a cobre. Arraste de onde quiser.",
+"MANTIS DE ACERO": "LOUVA-A-DEUS DE AÇO",
+"MAPA ESTELAR": "MAPA ESTELAR",
+"MEJORAS": "MELHORIAS",
+"MONEDAS": "MOEDAS",
+"MOTORES": "MOTORES",
+"MÚSICA": "MÚSICA",
+"NEBULOSA VIOLETA": "NEBULOSA VIOLETA",
+"NIVELES": "NÍVEIS",
+"NO": "NÃO",
+"PAUSA": "PAUSA",
+"POTENCIA": "POTÊNCIA",
+"PUNTAJE": "PONTUAÇÃO",
+"REINA CHICHARRA": "RAINHA CIGARRA",
+"RELATIVO": "RELATIVO",
+"RÉCORD": "RECORDE",
+"SE ACERCA ALGO GRANDE": "ALGO GRANDE SE APROXIMA",
+"SEGUIR": "CONTINUAR",
+"SENSIBILIDAD": "SENSIBILIDADE",
+"SÍ": "SIM",
+"TEMBLOR DE PANTALLA": "TREMOR DE TELA",
+"TOCÁ UN NIVEL PARA SALTAR": "TOQUE UM NÍVEL PARA SALTAR",
+"VELOCIDAD": "VELOCIDADE",
+"VIBRACIÓN": "VIBRAÇÃO",
+"empieza con alas": "começa com asas",
+"junta monedas lejos": "pega moedas de longe",
+"¡ALERTA!": "ALERTA!",
+"¡NUEVO RÉCORD!": "NOVO RECORDE!",
+"¡PIEZA ROTA!": "PEÇA QUEBRADA!",
+"BLOQUEADA": "BLOQUEADA",
+"BRASA": "BRASA",
+"COLOSO VIOLETA": "COLOSSO VIOLETA",
+"DESBLOQUEAR": "DESBLOQUEAR",
+"ESTRELLA CARMESÍ": "ESTRELA CARMESIM",
+"JADE": "JADE",
+"LA NAVE SIGUE A TU DEDO": "A NAVE SEGUE SEU DEDO",
+"MÁX": "MÁX",
+"PESADA · CAÑONES DOBLES": "PESADA · CANHÕES DUPLOS",
+"REINTENTAR": "TENTAR DE NOVO",
+"TE DERRIBARON": "VOCÊ FOI ABATIDO",
+"VELOZ · AGUJA LÁSER": "VELOZ · AGULHA LASER",
+"+1 bomba": "+1 bomba",
+"+1 nave": "+1 nave",
+"+12% de daño": "+12% de dano",
+"+8% de velocidad": "+8% de velocidade"
+},
+"fr": {
+"AJUSTES": "RÉGLAGES",
+"AL HANGAR": "AU HANGAR",
+"ALAS": "AILES",
+"ARRASTRÁ EN CUALQUIER LADO": "GLISSE N’IMPORTE OÙ",
+"BAJO EL DEDO": "SOUS LE DOIGT",
+"BICHOS": "INSECTES",
+"BLINDAJE": "BLINDAGE",
+"BOMBA": "BOMBE",
+"BOMBAS": "BOMBES",
+"CADENCIA": "CADENCE",
+"CAMPO ESMERALDA": "CHAMP ÉMERAUDE",
+"COMBO": "COMBO",
+"COMBO MÁXIMO": "COMBO MAX",
+"CONTROL": "CONTRÔLES",
+"EFECTOS": "EFFETS",
+"ENJAMBRE ORBITAL": "ESSAIM ORBITAL",
+"EQUILIBRADA · ABANICO": "ÉQUILIBRÉ · ÉVENTAIL",
+"ESCUDO": "BOUCLIER",
+"GOLPES RECIBIDOS": "COUPS REÇUS",
+"HALCÓN": "FAUCON",
+"HANGAR": "HANGAR",
+"IMÁN": "AIMANT",
+"JEFE": "BOSS",
+"JUGAR": "JOUER",
+"La nave copia el movimiento de tu dedo,": "Le vaisseau copie le mouvement de ton doigt,",
+"La nave va arriba de tu dedo.": "Le vaisseau vole au-dessus de ton doigt.",
+"así nunca la tapás. Arrastrá desde donde quieras.": "tu ne le caches jamais. Glisse d’où tu veux.",
+"MANTIS DE ACERO": "MANTE D’ACIER",
+"MAPA ESTELAR": "CARTE STELLAIRE",
+"MEJORAS": "AMÉLIORATIONS",
+"MONEDAS": "PIÈCES",
+"MOTORES": "MOTEURS",
+"MÚSICA": "MUSIQUE",
+"NEBULOSA VIOLETA": "NÉBULEUSE VIOLETTE",
+"NIVELES": "NIVEAUX",
+"NO": "NON",
+"PAUSA": "PAUSE",
+"POTENCIA": "PUISSANCE",
+"PUNTAJE": "SCORE",
+"REINA CHICHARRA": "REINE CIGALE",
+"RELATIVO": "RELATIF",
+"RÉCORD": "RECORD",
+"SE ACERCA ALGO GRANDE": "QUELQUE CHOSE DE GROS ARRIVE",
+"SEGUIR": "CONTINUER",
+"SENSIBILIDAD": "SENSIBILITÉ",
+"SÍ": "OUI",
+"TEMBLOR DE PANTALLA": "TREMBLEMENT",
+"TOCÁ UN NIVEL PARA SALTAR": "TOUCHE UN NIVEAU POUR SAUTER",
+"VELOCIDAD": "VITESSE",
+"VIBRACIÓN": "VIBRATION",
+"empieza con alas": "commence avec des ailes",
+"junta monedas lejos": "attire les pièces de loin",
+"¡ALERTA!": "ALERTE !",
+"¡NUEVO RÉCORD!": "NOUVEAU RECORD !",
+"¡PIEZA ROTA!": "PIÈCE CASSÉE !",
+"BLOQUEADA": "VERROUILLÉ",
+"BRASA": "BRAISE",
+"COLOSO VIOLETA": "COLOSSE VIOLET",
+"DESBLOQUEAR": "DÉBLOQUER",
+"ESTRELLA CARMESÍ": "ÉTOILE POURPRE",
+"JADE": "JADE",
+"LA NAVE SIGUE A TU DEDO": "LE VAISSEAU SUIT TON DOIGT",
+"MÁX": "MAX",
+"PESADA · CAÑONES DOBLES": "LOURD · CANONS DOUBLES",
+"REINTENTAR": "RÉESSAYER",
+"TE DERRIBARON": "TU AS ÉTÉ ABATTU",
+"VELOZ · AGUJA LÁSER": "RAPIDE · AIGUILLE LASER",
+"+1 bomba": "+1 bombe",
+"+1 nave": "+1 vaisseau",
+"+12% de daño": "+12 % de dégâts",
+"+8% de velocidad": "+8 % de vitesse"
+},
+"_re": {
+"en": [
+[
+"^NIVEL (\\d+)$",
+"LEVEL $1"
+],
+[
+"^NIVEL (\\d+) · (.+)$",
+"LEVEL $1 · {$2}"
+],
+[
+"^¡NIVEL (\\d+) LIMPIO!$",
+"LEVEL $1 CLEARED!"
+],
+[
+"^ARMA (\\d+)$",
+"WEAPON $1"
+],
+[
+"^FASE (\\d+)$",
+"PHASE $1"
+],
+[
+"^(\\d+) OLEADAS · (.+)$",
+"$1 WAVES · {$2}"
+],
+[
+"^(\\d+) MONEDAS$",
+"$1 COINS"
+],
+[
+"^FALTAN (\\d+) MONEDAS$",
+"$1 COINS SHORT"
+],
+[
+"^\\+(\\d+)  \\(\\+60 rango\\)$",
+"+$1  (+60 range)"
+],
+[
+"^(.+) · (.+)$",
+"{$1} · {$2}"
+]
+],
+"pt": [
+[
+"^NIVEL (\\d+)$",
+"NÍVEL $1"
+],
+[
+"^NIVEL (\\d+) · (.+)$",
+"NÍVEL $1 · {$2}"
+],
+[
+"^¡NIVEL (\\d+) LIMPIO!$",
+"NÍVEL $1 LIMPO!"
+],
+[
+"^ARMA (\\d+)$",
+"ARMA $1"
+],
+[
+"^FASE (\\d+)$",
+"FASE $1"
+],
+[
+"^(\\d+) OLEADAS · (.+)$",
+"$1 ONDAS · {$2}"
+],
+[
+"^(\\d+) MONEDAS$",
+"$1 MOEDAS"
+],
+[
+"^FALTAN (\\d+) MONEDAS$",
+"FALTAM $1 MOEDAS"
+],
+[
+"^\\+(\\d+)  \\(\\+60 rango\\)$",
+"+$1  (+60 alcance)"
+],
+[
+"^(.+) · (.+)$",
+"{$1} · {$2}"
+]
+],
+"fr": [
+[
+"^NIVEL (\\d+)$",
+"NIVEAU $1"
+],
+[
+"^NIVEL (\\d+) · (.+)$",
+"NIVEAU $1 · {$2}"
+],
+[
+"^¡NIVEL (\\d+) LIMPIO!$",
+"NIVEAU $1 TERMINÉ !"
+],
+[
+"^ARMA (\\d+)$",
+"ARME $1"
+],
+[
+"^FASE (\\d+)$",
+"PHASE $1"
+],
+[
+"^(\\d+) OLEADAS · (.+)$",
+"$1 VAGUES · {$2}"
+],
+[
+"^(\\d+) MONEDAS$",
+"$1 PIÈCES"
+],
+[
+"^FALTAN (\\d+) MONEDAS$",
+"IL MANQUE $1 PIÈCES"
+],
+[
+"^\\+(\\d+)  \\(\\+60 rango\\)$",
+"+$1  (+60 portée)"
+],
+[
+"^(.+) · (.+)$",
+"{$1} · {$2}"
+]
+]
+}
+}
