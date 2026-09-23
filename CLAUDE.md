@@ -10,6 +10,7 @@ se prueba **en el celular, en vertical (412×892)**. EL TIPO se juega **acostado
 | `juegos-pc/ElTipo.html` | **EL TIPO.** Beat'em up de plataformas al estilo Dan The Man: canvas 2D, un archivo, sin red, 5 niveles procedurales con jefe cada uno. |
 | `juegos-pc/AOscuras.html` | **A OSCURAS.** Táctico de arriba estilo Bullet Echo: linterna en cono, ecos de pasos y tiros, 5 misiones procedurales (equipo, robo en sigilo, dominio, batalla real, jefe). Canvas 2D en píxeles, un archivo, sin red. |
 | `juegos-pc/Andes.html` | **ANDES.** Descenso en tabla al estilo Alto's Adventure: un dedo (tocar salta, mantener gira), mortales, grinds, toldos, llamas, ancianos, avalancha, alas; 5 montañas procedurales con hora del día y clima. Canvas 2D vectorial, acostado, sin red. |
+| `juegos-pc/Bronca.html` | **BRONCA · ZOMBIS.** Palitos contra zombis al estilo Anger of Stick 5: combos, armas que apuntan solas, aliados, robot y helicóptero, experiencia y base con tienda; 5 misiones procedurales (una es defensa) con jefe cada una. Canvas 2D vectorial, acostado, sin red. |
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. De otra línea de trabajo. |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -422,3 +423,37 @@ Sondas: `window.__N` — `iniciar(n,sem)`, `anda(n)`, `bot(v)`, `est()`, `dibuja
 - **Trampa:** a 30 m/s el salto cubre tanta montaña que si la loma sube hacia la roca pasás 0,5 m por encima del piso
   (se esperaban 2). El salto crece con la velocidad (+1,4 % por m/s sobre 18) y las rocas no van donde la loma empieza a subir.
 - Piloto: 13/15 y 14/15 (dos juegos de semillas); CPU ×6 con calidad automática 48–52 cuadros por segundo.
+
+### 2026-09-23 (12) — BRONCA · ZOMBIS, estilo Anger of Stick 5
+**Pedido textual:** «GENERAME un juego HTML single, dónde el juego trate de una copia parecida a Anger of Stick 5: Zombie, investiga
+todo sobre ese juego y dame 5 niveles completos procedural y de mecánicas goty de verdad y usa lo anterior aprendido de menú y
+modelos procedurales y hazlo incluso mejor».
+
+`juegos-pc/Bronca.html`, acostado con el giro sólo por CSS y pantalla completa + `orientation.lock` al primer toque, como ANDES.
+- **Palitos por cinemática inversa**: `pose(e)` arma cada pose en coordenadas locales (x adelante, y arriba, pies en el origen) con IK
+  de dos huesos; `aMundo()` la pasa al mundo. Al morir, la misma pose se vuelve **muñeco de trapo** (verlet) y puede perder un miembro.
+- **Combate**: combo piña-piña-patada-gancho (el gancho levanta), patada voladora en el aire, doble salto que cancela el golpe, doble
+  toque = rodar con invulnerabilidad. Con arma, el puño **dispara solo** al zombi más cercano si está lejos. Habilidades GIRO, SISMO y
+  FURIA con recarga. Hit-stop con `J.congelado`, cámara lenta con `J.lento`.
+- **8 zombis** (caminante, corredor, gordo que explota, escupidor, blindado con casco, saltador, rastrero, cuervo) y **5 jefes** con fases
+  al 66 y 33 % y avisos: Gordo Podrido (ondas de suelo, vómito), Cirujano (carga, salto, bisturíes), Capataz (martillazo), Tanque (escudo de
+  frente, se atonta si choca la pared) y La Madre (marcas rojas con tentáculos, lluvia ácida, crías).
+- **Misiones**: calles con zombis dormidos, arenas cerradas con oleadas y zona de jefe; el Refugio es defensa de una puerta con seis
+  oleadas; en el Hospital y el Laboratorio hay robot para subirse, el Puente se cruza en helicóptero. Aliados (5, hasta 3 a la vez),
+  experiencia y nivel, base con arsenal, equipo y habilidades (3 niveles cada cosa), rango S–D y 3 estrellas.
+
+Trampas que costaron una vuelta:
+- **La arena contaba a los zombis dormidos de más adelante** y no se limpiaba nunca: el mismo defecto que tuvo EL TIPO. Ahora sólo
+  cuentan los despiertos. El bot con invencibilidad pasó de 1/5 a 5/5.
+- **El fondo daba 10–14 cuadros por segundo con CPU ×6.** El JS del paso cuesta 0,12 ms; todo era pintar. Cielo y capa lejana van
+  juntos en un lienzo **opaco**; las otras dos capas, recortadas a las filas que tienen algo. Y lo que más pesaba: **copiar en medio
+  píxel** hace que el navegador reescale la imagen entera en cada cuadro. Con copias 1:1 en píxeles enteros del lienzo y sin suavizado,
+  a calidad 1 pasó de 18,7 a 39,3 cuadros por segundo; con calidad automática, 44–52.
+- La calidad automática medía cada 90 cuadros: a 10 cuadros por segundo tardaba 9 s en reaccionar. Ahora mide cada 40.
+- **«El puño no pega» en el banco de toques era un disparo**: con pistola y un zombi dormido a menos de 20 m, el puño dispara y no queda
+  `atq`. Pegarle a un dormido ahora lo despierta.
+
+Medido: bot sin invencibilidad 11/15 dos veces (3 semillas × 5; casi siempre pierde contra el Tanque o La Madre, sin comprar mejoras),
+con invencibilidad 5/5 en dos semillas; misiones de 2,5 a 6 minutos. Toques reales por CDP: caminar, pegar con un segundo dedo, saltar,
+rodar, habilidades, cambiar arma, pausa y seguir. Sin errores. Sondas: `window.__B` — `iniciar(n,sem)`, `anda(n)`, `bot(v)`, `dios(v)`,
+`est()`, `dibujarYa()`.
