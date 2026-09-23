@@ -1191,3 +1191,72 @@ Las cinco pestañas del mercado eran el mismo panel marrón con otra lista. Ahor
 - La fachada se repinta a 10 cuadros por segundo y se corta sola cuando sale del DOM. Los horneados van en caché.
 
 Medido: las cinco abren sin errores, con su color de panel; la compra descuenta y el tendero agradece; sin plata no compra y el tendero lo dice; al volver no queda ninguna fachada viva. Carrera y toques sin errores.
+
+### 2026-09-23 (ai) — A LOS SALTOS: pasada de errores
+**Pedido textual:** «Ahora corrige cualquier posible error existente dentro del juego, cualquier error por más mínimo que sea, arreglalo».
+
+Se revisó el código por partes: datos, sprites y sonido; física y combate; dibujo y controles; menús, carrera y tiendas. Cada hallazgo se verificó contra el código y los que se podían medir, se midieron.
+
+**Combate**
+- **Lo cortado volvía a crecer.** `cortado[k] = 90` era a la vez la marca y el contador del chorro. A los 1,5 s llegaba a 0 y la cabeza, el brazo y el arma volvían al cuerpo: medido, **55 de 55** gladiadores con un corte. Ahora la marca es para siempre y el chorro lleva su propio contador. Medido después: **0 de 55**.
+- Con eso apareció una pelea sin final posible: los dos sin brazo del arma y sin segunda. En ese caso los muñones no paran de sangrar.
+- El que ganaba podía morir en los 3 s del festejo, por la sangre o por una jabalina en el aire, y la victoria contaba igual. En el cierre ya no se desangra ni le pegan proyectiles.
+- **La hoja atravesaba sin tocar**: una punta rápida recorre ~15 unidades por cuadro y la cabeza mide 9. Ahora se prueba también por dónde pasó (hasta 3 cortes intermedios).
+- Los golpes del mismo cuadro valen los dos: antes siempre ganaba el primero en la lista, o sea el jugador.
+- El salto soltado en el aire sale al aterrizar (el buffer existía pero no hacía nada).
+- La red que choca contra el escudo ya no deja una jabalina en el piso.
+- La parada con la segunda espada ya no sacude el brazo equivocado.
+- El empujón entre cuerpos no mete a nadie en la pared.
+- La jabalina empuja hacia donde viaja.
+- La puntería de la IA usa la semilla, y un tiro con el rival encima no da infinito.
+
+**Controles**
+- **Pausa → ENTREGARSE → NO sacaba de la pelea sin castigo** y dejaba la próxima congelada en «LISTOS...». El NO vuelve a la pausa y cada pelea arranca sin pausa.
+- En gestos, **el dedo quieto no daba guardia**: un dedo quieto no manda `touchmove`. Ahora se revisa cada cuadro y la guardia es de cada dedo.
+- Un `touchcancel` del sistema tiraba un golpe: ahora sólo suelta.
+- El pad de gestos se comía el borde del ▶.
+- El clic derecho dejaba un botón apretado.
+- Pausar o perder el foco a mitad de una carga de salto lo hacía saltar al volver. Esconder la pestaña pausa la pelea.
+- El atraso no se acumula en un celular lento: antes, al aliviarse, la pelea corría ×4.
+
+**Dibujo y HUD**
+- El brazo y el arma cortados salían espejados si el dueño miraba a la izquierda. La manica y las grebas cortadas salían siempre del color del tracio. La mancha del cuello de la cabeza caía del lado equivocado.
+- Hacha, bipenne, maza y rompecráneos caídos rebotaban para siempre: su piso era −1 y se reponían en −3. Medido: de 288 caídas repetidas a 61, los rebotes naturales.
+- Lo caído atravesaba las paredes: el tope salía del medio del arma y no de la punta.
+- **Nombres de 9 letras** (CARPÓFORO) pisaban el cuerpito del HUD. El cuerpito va del lado de afuera. Si los dos nombres no entran, se acorta una letra del rival.
+- «RED 2 JAB 3» pisaba la pausa: va en dos renglones.
+- El ▶ y el escudo se tocaban.
+- Los carteles flotantes se cortaban contra el borde.
+- Con la sacudida asomaban bandas negras.
+- Había público parado encima del palco del emperador.
+- Las estatuas tenían el filo blanco.
+- El arma y el escudo no seguían al puño al respirar.
+- Un error de dibujo dejaba la pila de `save` creciendo.
+
+**Fuente, sonido y escala**
+- La fuente no tenía **`$`, `◀` ni `▶`**: «MÉDICO · 45 ?» y los selectores de pelea rápida eran seis «?». El `·` estaba corrido.
+- En iOS el audio no volvía después de una llamada (queda `interrupted`).
+- Después de un cuadro trabado sonaban todas las notas juntas.
+- La última nota de la fanfarria se cortaba.
+- El tope de DPR en 3 rompía la escala entera en teléfonos a 3,5.
+
+**Carrera y tienda**
+- Recargar la página en plena pelea anulaba la muerte: ahora cuenta como abandonar la arena. Recargar en «¡VICTORIA!» ya no pierde el punto de entrenamiento.
+- Entrenar un atributo que ya está en 30 gastaba el punto.
+- El cumpleaños decía «perdiste 1» sin sacar nada.
+- Un empate en carrera decía «Lo mató X». Ahora dice «cayó junto con».
+- El rango CAMPEÓN salía sin haber ganado: ahora es ASPIRANTE.
+- Decía «1 victorias».
+- BORRAR CARRERA ahora pide confirmación.
+- Un ajuste corrupto en el navegador rompía la pantalla de ajustes.
+- **Una fila GRATIS tiraba equipo caro sin aviso**, y volver a tenerlo costaba otra vez. Lo comprado queda en el ludus: volver a ponérselo dice PONER y es gratis.
+- El dimaquero perdía para siempre su segunda espada: ahora la recupera al sacarse el escudo.
+- Un arma a dos manos ahora saca el escudo, y el escudero no te vende uno mientras la tengas.
+- Textos de la tienda: «CUBRE 16 · PESO 0,38» en mayúscula y con coma, y AL TOPE con las jabalinas y las redes llenas.
+
+Medido:
+- 49 de 49 peleas de IA contra IA terminan (4 a 30 s, mediana 12), sin errores ni NaN, y todas las clases ganan alguna.
+- 98 peleas más con cortes, todas terminan.
+- Toques, gestos, carrera y las cinco tiendas sin errores. La sonda de cada arreglo dio lo esperado.
+- Dos fuzz de 600 acciones (toques, dedos sostenidos, dos dedos, cancelaciones, rotaciones y pestaña escondida) con cero errores y ningún estado imposible.
+- 3,5 ms por cuadro en vertical.

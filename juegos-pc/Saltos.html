@@ -87,7 +87,7 @@ const rf = v => Math.round(v*DET)/DET;
 let DPR = 1, PXd = 6, PXf = 3, ES = 3, AM = 136, AH = 296, SUELO = 170, CSSW = 412, CSSH = 892;
 function medir(){
   CSSW = lienzo.clientWidth || innerWidth; CSSH = lienzo.clientHeight || innerHeight;
-  DPR = Math.min(devicePixelRatio || 1, 3);
+  DPR = Math.min(devicePixelRatio || 1, 4);
   const w = Math.round(CSSW*DPR), h = Math.round(CSSH*DPR);
   if(lienzo.width !== w || lienzo.height !== h){ lienzo.width = w; lienzo.height = h; }
   PXf = Math.max(1, Math.floor(Math.min(w/(132*DET), h/(200*DET))));   /* píxeles reales por píxel FINO: ENTERO */
@@ -123,7 +123,7 @@ Y:'#...##...#.#.#...#....#....#....#..', Z:'#####....#...#...#...#...#....#####'
 '!':'..#....#....#....#....#.........#..', '¡':'..#.........#....#....#....#....#..', '?':'.###.#...#....#...#...#.........#..',
 '¿':'..#.........#...#...#....#...#.###.', '-':'...............###.................', '+':'.......#....#..#####..#....#.......',
 '/':'....#....#...#...#...#...#....#....', "'":'..#....#...........................', '%':'##..###..#...#...#...#...#..###..##',
-'(':'...#...#...#....#....#.....#.....#.', ')':'.#.....#.....#....#....#...#...#...', '·':'...............#...................',
+'(':'...#...#...#....#....#.....#.....#.', ')':'.#.....#.....#....#....#...#...#...', '·':'.................#.................', '$':'..#...#####.#...###...#.#####...#..', '◀':'...#...##..###.####..###...##....#.', '▶':'.#....##...###..####.###..##...#...',
 '×':'.....#...#.#.#...#...#.#.#...#.....', '=':'..........#####.....#####..........', '#':'.#.#.#####.#.#..#.#.#####.#.#......',
 ' ':'...................................'
 };
@@ -363,7 +363,7 @@ const APODOS = ['EL ROJO','EL TORO','DE TRACIA','DE CAPUA','EL MUDO','CARNICERO'
   'DE HISPANIA','EL GALO','EL SIRIO','ROMPEHUESOS','EL CALVO','PIEDRA','DE NUMIDIA','EL ZURDO','MEDIO DIENTE','EL OSO'];
 const PIELES = ['#e8a878','#d09060','#b87a4c','#946244','#f0c098','#80563a'];
 const PELOS = ['#4a2c16','#2a1a10','#8a5a2a','#c8a060','#bcbcbc','#1c1410'];
-const RANGOS = [['TIRO',0],['NOVATO',25],['LUCHADOR',80],['VETERANO',180],['CAMPEÓN',360],['LEYENDA',700]];
+const RANGOS = [['TIRO',0],['NOVATO',25],['LUCHADOR',80],['VETERANO',180],['ASPIRANTE',360],['LEYENDA',700]];
 const rangoDe = f => { let r = RANGOS[0][0]; for(const [n, u] of RANGOS) if(f >= u) r = n; return r; };
 
 /* un gladiador nuevo: clase, nombre, cuerpo y equipo; «extra» son puntos de más repartidos */
@@ -429,14 +429,14 @@ const SON = (function(){
     negado(){ const t = ahora(), g = gan(0, salida(0, 0)); osc('square', 140, fil('lowpass', 900, 1, g), t, 0.25); env(g, t, 0.08, 0.004, 0.2); },
     /* fanfarria de trompas (cornu): tres notas de sierra por un pasabajos */
     fanfarria(o){ const t = ahora(), d = salida(0, 0.4), notas = o && o.triste ? [293.7, 277.2, 220] : [293.7, 440, 587.3];
-      notas.forEach((f, i) => { const g = gan(0, d), b = fil('lowpass', 1800, 1, g); osc('sawtooth', f, b, t + i*0.22, 0.6); osc('sawtooth', f*1.005, b, t + i*0.22, 0.6);
+      notas.forEach((f, i) => { const g = gan(0, d), b = fil('lowpass', 1800, 1, g); const dur = i === 2 ? 1.05 : 0.6; osc('sawtooth', f, b, t + i*0.22, dur); osc('sawtooth', f*1.005, b, t + i*0.22, dur);
         env(g, t + i*0.22, 0.10, 0.04, i === 2 ? 0.9 : 0.25); }); },
     rugido(o){ const t = ahora(), d = salida(0, 0.5), g = gan(0, d), b = fil('bandpass', 700, 0.6, g);
       ruido(b, t, 2.8); ruido(fil('bandpass', 1500, 0.8, gan(0.5, g)), t, 2.8);
       const q = g.gain; q.setValueAtTime(0.0001, t); q.exponentialRampToValueAtTime(0.35*(o.f || 1), t + 0.4); q.exponentialRampToValueAtTime(0.0001, t + 2.7); }
   };
   function arrancar(){
-    if(ctx){ if(ctx.state === 'suspended') ctx.resume(); return; }
+    if(ctx){ if(ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => {}); return; }     /* en iOS queda 'interrupted' después de una llamada */
     const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
     try { ctx = new AC(); } catch(e){ ctx = null; return; }
     const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
@@ -462,7 +462,7 @@ const SON = (function(){
   function tambor(t, v){ const g = gan(0, gMus); ruido(fil('bandpass', 1200, 0.8, g), t, 0.15); env(g, t, v, 0.002, 0.1);
     const g2 = gan(0, gMus); osc('triangle', 190, g2, t, 0.1); env(g2, t, v*0.6, 0.002, 0.08); }
   function musica(){
-    const t0 = ahora();
+    const t0 = ahora(); if(proxT < t0) proxT = t0;        /* después de un cuadro trabado no salen todas las notas juntas */
     while(proxT < t0 + 0.25){
       const t = proxT;
       if(modo === 'pelea'){
@@ -490,12 +490,14 @@ const SON = (function(){
     bMult.frequency.setTargetAtTime(600 + 500*e, t, 0.4);
     try { musica(); } catch(e2){}
   }
-  document.addEventListener('visibilitychange', () => { if(!ctx) return; if(document.hidden) ctx.suspend(); else ctx.resume(); });
+  document.addEventListener('visibilitychange', () => { if(!ctx) return; if(document.hidden) ctx.suspend().catch(() => {}); else ctx.resume().catch(() => {}); });
   return {arrancar, fx, cuadro, modo(m){ modo = m; }, estado:() => ctx ? ctx.state : 'sin arrancar'};
 })();
 
 /* ================================================================ estado global y ajustes */
 const AJ = Object.assign({sangre:'mucha', sonido:true, controles:'botones', vibrar:true}, leer('saltos.ajustes', {}));
+if(!['mucha', 'poca', 'nada'].includes(AJ.sangre)) AJ.sangre = 'mucha';
+if(AJ.controles !== 'gestos') AJ.controles = 'botones';
 const J = {t:0, modo:'portada', pelea:null, congelado:0, emocion:0, sacude:0, pausa:false, carrera:leer('saltos.carrera', null),
   estatuas:leer('saltos.estatuas', []), primera:!leer('saltos.visto', false)};
 const ARENA_W = 184, PARED = 9, GRAV = 0.24;
@@ -511,13 +513,14 @@ function nuevoLuchador(def, x, dir, jugador, dif){
   for(const k in max) hp[k] = max[k]*s;
   const g = {def, x, y:0, vx:0, vy:0, ang:0, va:0, suelo:true, comp:0, dir, jug:!!jugador, dif:dif === undefined ? 0.5 : dif,
     caido:0, muerto:0, postura:0, a:-1.9, av:0, e:0.25, a2:0.4, av2:0, e2:0.4, esc:0.5,
-    ataque:null, ataque2:null, cdPost:0, hp, max, cortado:{}, sangre:100, sangrado:0, aturdido:0, enredado:0,
+    ataque:null, ataque2:null, cdPost:0, hp, max, cortado:{}, chorro:{}, sangre:100, sangrado:0, aturdido:0, enredado:0,
     jab:def.jab || 0, red:def.red || 0, carga:0, sosten:0, dirCarga:0, pidioSalto:0,
     ctrl:{izq:false, der:false, atk:null, guardia:false, postura:false, lanzar:false},
     ia:{t:30 + RI(0, 30), hop:null, guardT:0, reac:false, quieto:0}, tip:null, tip2:null, v1:0, v2:0,
     golpes:0, dano:0, cortes:0, ultTocado:0, pisada:0, causa:'', fase:rv(0, 6.3)};
   return g;
 }
+const puedeDanar = g => !!(armaDe(g) || arma2De(g) || (g.jab > 0 && !g.cortado.bA));
 const armaDe = g => (!g.cortado.bA && g.def.eq.arma) ? ARMAS[g.def.eq.arma] : null;
 const arma2De = g => (!g.cortado.bE && g.def.eq.segunda) ? ARMAS[g.def.eq.segunda] : null;
 const escudoDe = g => (!g.cortado.bE && g.def.eq.escudo !== 'ninguno') ? ESCUDOS[g.def.eq.escudo] : null;
@@ -629,7 +632,7 @@ function pasoLuchador(g, o, P){
   if(quiere !== 0 && g.suelo){ if(g.dirCarga !== quiere){ g.carga = 0; g.dirCarga = quiere; } g.carga = Math.min(1, g.carga + 1/34); g.sosten++; }
   if(quiere === 0 && g.dirCarga !== 0){
     if(g.suelo && puede) saltar(g, g.dirCarga, Math.max(0.18, g.carga));
-    else g.pidioSalto = 8;
+    else { g.pidioSalto = 8; g.dirPedida = g.dirCarga; g.cargaPedida = g.carga; }
     g.dirCarga = 0; g.carga = 0; g.sosten = 0;
   }
   if(g.pidioSalto > 0){ g.pidioSalto--; }
@@ -661,10 +664,11 @@ function pasoLuchador(g, o, P){
       g.comp = Math.min(1, fuerte/5.5);
       if(fuerte > 1.5){ SON.fx('cae', {pan:panDe(g), f:fuerte/5}); polvo(P, g.x, 5 + fuerte*1.5); }
       if(!g.muerto && Math.abs(g.ang) > 1.05) caer(g);
-      if(!g.muerto && g.pidioSalto > 0 && !g.caido){ g.pidioSalto = 0; }
+      if(!g.muerto && g.pidioSalto > 0 && !g.caido && g.aturdido <= 0 && g.dirPedida){ g.pidioSalto = 0; g.saltoYa = true; }
     }
     g.y = 0; g.vy = 0; g.suelo = true; g.vx *= g.caido || g.muerto ? 0.8 : 0.72;
   } else g.suelo = false;
+  if(g.saltoYa){ g.saltoYa = false; saltar(g, g.dirPedida, Math.max(0.18, g.cargaPedida || 0)); }   /* el salto soltado justo antes de tocar el piso */
   if(g.x < PARED + 3){ g.x = PARED + 3; g.vx = Math.abs(g.vx)*0.35; }
   if(g.x > ARENA_W - PARED - 3){ g.x = ARENA_W - PARED - 3; g.vx = -Math.abs(g.vx)*0.35; }
   g.comp *= 0.84; if(g.carga > 0) g.comp = Math.max(g.comp, g.carga*0.55);
@@ -682,18 +686,19 @@ function pasoLuchador(g, o, P){
   } else {
     const k = g.suelo ? 0.055 : 0.014;
     g.va += -g.ang*k - g.va*(g.suelo ? 0.16 : 0.04) + (g.suelo ? 0 : g.vx*g.dir*0.0015);
-    if(g.cortado.pI !== g.cortado.pD) g.va += 0.004*g.dir*(g.cortado.pI ? -1 : 1);
+    if(!!g.cortado.pI !== !!g.cortado.pD) g.va += 0.004*g.dir*(g.cortado.pI ? -1 : 1);
     g.ang += g.va;
     if(g.suelo && Math.abs(g.ang) > 1.15) caer(g);
   }
   /* sangre que se va */
-  if(!g.muerto || g.muerto < 400){
+  if((!g.muerto || g.muerto < 400) && !(P.fin && !g.muerto)){
+    if(P.inerme) g.sangrado = Math.max(g.sangrado, 2.6*Object.keys(g.cortado).length);   /* sin con qué pelear: los muñones no paran */
     g.sangre -= g.sangrado/60; g.sangrado *= 0.9994;
     if(g.sangrado > 0.15 && Math.random() < g.sangrado*0.08) gota(P, sk0.H.x + rv(-3, 3), sk0.H.y - rv(0, 8), rv(-0.3, 0.3), 0);
     if(g.sangre <= 0 && !g.muerto) morir(g, P, 'desangrado');
   }
   /* muñones que chorrean */
-  for(const k in g.cortado) if(g.cortado[k] > 0){ g.cortado[k]--;
+  for(const k in g.chorro) if(g.chorro[k] > 0){ g.chorro[k]--;
     const p = k === 'cab' ? sk0.N : k === 'bA' ? sk0.S : k === 'bE' ? sk0.S2 : sk0.H;
     if(Math.random() < 0.6) gota(P, p.x, p.y, rv(-0.6, 0.6) + g.vx*0.5, rv(-2.2, -0.6)); }
 }
@@ -707,7 +712,7 @@ function caer(g){ if(g.caido || g.muerto) return; g.caido = Math.round(Math.max(
   SON.fx('cae', {pan:panDe(g), f:1.2}); J.emocion += 0.12; }
 function morir(g, P, causa){
   if(g.muerto) return;
-  g.muerto = 1; g.ataque = g.ataque2 = null; g.causa = causa; g.va += (g.va >= 0 ? 1 : -1)*0.03 + rv(-0.02, 0.02);
+  g.muerto = 1; g.ataque = g.ataque2 = null; g.causa = causa; g.va += (g.va >= 0 ? 1 : -1)*0.03 + R(-0.02, 0.02);
   SON.fx('grito', {pan:panDe(g)}); SON.fx('rugido', {f:1.3}); J.emocion = 1;
   if(causa !== 'decapitado') P.textos.push({txt:causa === 'desangrado' ? '¡DESANGRADO!' : '¡MUERTO!', x:g.x, y:-44, t:120, grad:'rojo'});
   vibrar(80);
@@ -724,15 +729,15 @@ function armadura(g, parte){
   if(parte === 'bE') return e.escudo === 'ninguno' && e.manica ? 0.15 : 0;
   return e.grebas ? 0.3 : 0;
 }
-function golpear(A, B, P, parte, v, pt, arma, ext){
+function golpear(A, B, P, parte, v, pt, arma, ext, dirG){
   const dmgBase = arma ? arma.dano : 5, tipo = arma ? arma.tipo : 'contundente';
   let dmg = dmgBase*lim(v/6.5, 0.35, 1.45)*(0.55 + A.def.fue/24)*MULT[parte]*(1 - armadura(B, parte));
   if(tipo === 'punta' && ext > 0.7) dmg *= 1.25;
   if(parte === 'cab' && v > 8) dmg *= 1.15;
   if(B.caido) dmg *= 1.15;
-  B.hp[parte] -= dmg; B.ultTocado = 0; A.golpes++; A.dano += dmg;
+  B.hp[parte] -= dmg; P.quieto = 0; A.golpes++; A.dano += dmg;
   B.sangrado += dmg*0.016*(tipo === 'contundente' ? 0.5 : 1);
-  const d = A.dir, empuje = (0.5 + dmg*0.05)*(tipo === 'contundente' ? 1.7 : 1);
+  const d = dirG || A.dir, empuje = (0.5 + dmg*0.05)*(tipo === 'contundente' ? 1.7 : 1);
   B.vx += d*empuje; if(B.suelo) B.vy -= 0.6 + dmg*0.03;
   B.va += d*B.dir*(0.035 + dmg*0.0035)*(parte === 'cab' ? 1.7 : parte.startsWith('p') ? -1.2 : 1);
   if(tipo === 'contundente' && dmg > 11) B.aturdido = Math.max(B.aturdido, 34);
@@ -754,19 +759,19 @@ function golpear(A, B, P, parte, v, pt, arma, ext){
 }
 function cortar(B, P, parte, d){
   const sk = esqueleto(B), pz = piezas(B.def);
-  B.cortado[parte] = 90; B.sangrado += parte === 'cab' ? 3 : 0.9; B.hp[parte] = 0;
+  B.cortado[parte] = true; B.chorro[parte] = 90; B.sangrado += parte === 'cab' ? 3 : 0.9; B.hp[parte] = 0;
   const base = {vx:d*rv(1.2, 2.4) + B.vx*0.5, vy:rv(-4, -2.2), va:rv(-0.3, 0.3)*d, sangra:120, suelo:false, def:B.def, dir:B.dir};
   if(parte === 'cab') P.restos.push(Object.assign({tipo:'cab', spr:pz.cabeza, x:sk.C.x, y:sk.C.y, ang:B.ang}, base));
   else if(parte === 'bA' || parte === 'bE'){
     const b = parte === 'bA' ? sk.bA : sk.bE;
-    P.restos.push(Object.assign({tipo:'brazo', x:(sk.S.x + b.mano.x)/2, y:(sk.S.y + b.mano.y)/2, ang:b.ang, largo:9, color:pz.pal.p, manica:parte === 'bA' && B.def.eq.manica}, base));
+    P.restos.push(Object.assign({tipo:'brazo', x:(sk.S.x + b.mano.x)/2, y:(sk.S.y + b.mano.y)/2, ang:b.ang, largo:9, color:pz.pal.p, manica:parte === 'bA' && B.def.eq.manica, qa:pz.pal.a, qA:pz.pal.A}, base));
     const arm = parte === 'bA' ? B.def.eq.arma : B.def.eq.segunda;
     if(arm) P.restos.push(Object.assign({tipo:'arma', arma:ARMAS[arm], x:b.mano.x, y:b.mano.y, ang:b.ang}, base, {vx:base.vx*0.7, vy:base.vy*1.1}));
     if(parte === 'bE' && B.def.eq.escudo !== 'ninguno') P.restos.push(Object.assign({tipo:'escudo', spr:pz.escudo, x:b.mano.x, y:b.mano.y, ang:B.ang}, base, {vx:-d*0.6}));
     if(parte === 'bA'){ B.ataque = null; }
   } else {
     const p = parte === 'pI' ? sk.pT : sk.pD;
-    P.restos.push(Object.assign({tipo:'pierna', x:(sk.H.x + p.x)/2, y:(sk.H.y + p.y)/2, ang:Math.PI/2, largo:12, color:pz.pal.p, grebas:B.def.eq.grebas}, base));
+    P.restos.push(Object.assign({tipo:'pierna', x:(sk.H.x + p.x)/2, y:(sk.H.y + p.y)/2, ang:Math.PI/2, largo:12, color:pz.pal.p, grebas:B.def.eq.grebas, metal:pz.pal.m}, base));
   }
   sangrar(P, sk.H.x, sk.H.y - 6, d, 40);
   SON.fx('corte', {pan:panDe(B)}); SON.fx('rugido', {f:1});
@@ -776,12 +781,19 @@ function cortar(B, P, parte, d){
 }
 /* ¿qué tocó esta hoja? escudo, arma del otro o una parte del cuerpo */
 function probarHoja(A, B, P, skA, skB, b, arma, cual){
-  const h = filo(b, arma), at = cual === 1 ? A.ataque : A.ataque2;
-  const prev = cual === 1 ? A.tip : A.tip2, v = prev ? Math.hypot(h.p1.x - prev.x, h.p1.y - prev.y) : 0;
-  if(cual === 1){ A.tip = h.p1; A.v1 = v; } else { A.tip2 = h.p1; A.v2 = v; }
+  const hc = filo(b, arma), at = cual === 1 ? A.ataque : A.ataque2;
+  const prev = cual === 1 ? A.tip : A.tip2, v = prev ? Math.hypot(hc.p1.x - prev.x, hc.p1.y - prev.y) : 0;
+  const ant = cual === 1 ? A.hoja1 : A.hoja2;
+  if(cual === 1){ A.tip = hc.p1; A.v1 = v; A.hoja1 = hc; } else { A.tip2 = hc.p1; A.v2 = v; A.hoja2 = hc; }
+  /* barrido: una hoja rápida recorre hasta 15 unidades por cuadro, más que una cabeza; se prueba también por dónde pasó */
+  const segs = [];
+  if(ant && v > 5){ const n = Math.min(3, Math.ceil(v/5) - 1);
+    for(let i = 1; i <= n; i++){ const s = i/(n + 1); segs.push({p0:{x:lerp(ant.p0.x, hc.p0.x, s), y:lerp(ant.p0.y, hc.p0.y, s)}, p1:{x:lerp(ant.p1.x, hc.p1.x, s), y:lerp(ant.p1.y, hc.p1.y, s)}}); } }
+  segs.push(hc);
   const act = activo(at);
-  if(A.muerto || (!act && v < 3.4) || (at && at.golpeo)) return;
+  if((A === P.a ? P.mA : P.mB) || (!act && v < 3.4) || (at && at.golpeo)) return;
   if(!at && (J.t - (A.sueltoT || 0)) < 14) return;
+  for(const h of segs){
   /* escudo */
   const se = segEscudo(B, skB);
   if(se && !B.muerto && distSegSeg(h.p0, h.p1, se.p0, se.p1) < 1.8){
@@ -800,7 +812,7 @@ function probarHoja(A, B, P, skA, skB, b, arma, cual){
     if(distSegSeg(h.p0, h.p1, {x:bB.mano.x, y:bB.mano.y}, hB.p1) < 1.5){
       if(at) at.golpeo = true; else A.sueltoT = J.t;
       if(cual === 1) A.av *= -0.5; else A.av2 *= -0.5;
-      B.av *= -0.3;
+      if(bB === skB.bE) B.av2 *= -0.3; else B.av *= -0.3;
       P.parad = (P.parad || 0) + 1; chispas(P, (h.p1.x + hB.p1.x)/2, (h.p1.y + hB.p1.y)/2, 9); SON.fx('metal', {pan:panDe(B), f:1});
       J.congelado = Math.max(J.congelado, 2); J.emocion += 0.02;
       return;
@@ -818,6 +830,8 @@ function probarHoja(A, B, P, skA, skB, b, arma, cual){
     if(B.muerto){ sangrar(P, mejor.q.x, mejor.q.y, A.dir, 8); SON.fx('carne', {pan:panDe(B), f:0.5});
       if(B.hp[mejor.p.id] !== undefined && !B.cortado[mejor.p.id] && mejor.p.id !== 'tor' && arma.tipo === 'corte' && v > 4) cortar(B, P, mejor.p.id, A.dir); return; }
     golpear(A, B, P, mejor.p.id, Math.max(v, act ? 3 : 0), mejor.q, arma, cual === 1 ? A.e : A.e2);
+    return;
+  }
   }
 }
 /* choque de cuerpos: no se atraviesan (salvo que uno pase por arriba) */
@@ -828,6 +842,8 @@ function empujarCuerpos(a, b){
     const s = dx === 0 ? 1 : sig(dx), p = (7 - Math.abs(dx))/2;
     a.x -= s*p; b.x += s*p;
     const m = (a.vx + b.vx)/2; a.vx = m - s*0.4; b.vx = m + s*0.4;
+    const x0 = PARED + 3, x1 = ARENA_W - PARED - 3;
+    for(const [g, o] of [[a, b], [b, a]]){ if(g.x < x0){ o.x += x0 - g.x; g.x = x0; } else if(g.x > x1){ o.x -= g.x - x1; g.x = x1; } }
   }
 }
 
@@ -836,7 +852,7 @@ function lanzar(g, o, P){
   const sk = esqueleto(g), esRed = g.red > 0 && (g.jab <= 0 || rnd() < 0.5);
   if(esRed) g.red--; else g.jab--;
   const dx = o.x - sk.S.x, dy = (o.y - 16) - sk.S.y, vx = lim(Math.abs(dx)/24, 2.4, 5.2)*sig(dx);
-  const t = Math.abs(dx/vx), vy = (dy - 0.5*GRAV*0.7*t*t)/t + (g.jug ? 0 : rv(-0.5, 0.5)*(1.2 - g.dif));
+  const t = Math.max(6, Math.abs(dx/vx)), vy = (dy - 0.5*GRAV*0.7*t*t)/t + (g.jug ? 0 : R(-0.5, 0.5)*(1.2 - g.dif));
   P.proy.push({tipo:esRed ? 'red' : 'jabalina', x:sk.S.x, y:sk.S.y - 2, vx, vy, ang:Math.atan2(vy, vx), dueno:g, vivo:true, t:0, clavado:false});
   SON.fx('jabalina', {pan:panDe(g)});
 }
@@ -848,16 +864,16 @@ function pasoProyectiles(P){
     if(j.y >= 0){ j.y = 0; j.vivo = false; j.clavado = j.tipo === 'jabalina'; if(j.clavado) SON.fx('clavo', {pan:0}); polvo(P, j.x, 4); continue; }
     if(j.x < 0 || j.x > ARENA_W){ j.vivo = false; continue; }
     const B = j.dueno === P.a ? P.b : P.a, sk = esqueleto(B);
-    if(B.muerto > 100) continue;
+    if(B.muerto > 100 || P.fin) continue;
     const punta = {x:j.x + Math.cos(j.ang)*6, y:j.y + Math.sin(j.ang)*6};
     const se = segEscudo(B, sk);
     if(se && distSeg(punta, se.p0, se.p1) < 2.5){ j.vivo = false; j.caida = true; j.vx *= -0.2; SON.fx('madera', {pan:panDe(B)}); chispas(P, punta.x, punta.y, 4);
-      P.restos.push({tipo:'jab', x:j.x, y:j.y, vx:-j.vx*0.2 - B.dir*0.5, vy:-1.5, ang:j.ang, va:0.2, suelo:false, sangra:0}); continue; }
+      if(j.tipo === 'jabalina') P.restos.push({tipo:'jab', x:j.x, y:j.y, vx:-j.vx*0.2 - B.dir*0.5, vy:-1.5, ang:j.ang, va:0.2, suelo:false, sangra:0}); continue; }
     for(const p of partes(B, sk)){
       if(distSeg(punta, p.a, p.b) < p.r + 1){
         j.vivo = false;
         if(j.tipo === 'red'){ B.enredado = B.def.eq.casco === 'secutor' ? 70 : 170; SON.fx('madera', {pan:panDe(B)}); P.textos.push({txt:'¡ENREDADO!', x:B.x, y:-42, t:80, grad:'azul'}); }
-        else golpear(j.dueno, B, P, p.id, Math.hypot(j.vx, j.vy)*1.3, punta, {dano:14, tipo:'punta'}, 1);
+        else golpear(j.dueno, B, P, p.id, Math.hypot(j.vx, j.vy)*1.3, punta, {dano:14, tipo:'punta'}, 1, sig(j.vx));
         break;
       }
     }
@@ -921,15 +937,17 @@ function pasoEfectos(P){
     if(r.suelo && Math.abs(r.vx) < 0.02 && r.sangra <= 0) continue;
     r.vy += GRAV; r.x += r.vx; r.y += r.vy; r.ang += r.va;
     if(r.sangra > 0){ r.sangra--; if(Math.random() < 0.35) gota(P, r.x, r.y, rv(-0.3, 0.3), rv(-0.8, 0)); }
-    const piso = r.tipo === 'cab' ? -4 : r.tipo === 'escudo' ? -3 : -1;
+    const piso = r.tipo === 'cab' ? -4 : r.tipo === 'escudo' ? -3 : r.tipo === 'arma' && (r.arma.forma === 'hacha' || r.arma.forma === 'maza') ? -3 : -1;
     if(r.y > piso){ r.y = piso; if(Math.abs(r.vy) > 1.2){ SON.fx(r.tipo === 'arma' || r.tipo === 'jab' ? 'clavo' : 'cae', {f:0.4}); }
       r.vy *= -0.35; r.vx *= 0.7; r.suelo = true;
       /* lo largo queda acostado en el piso (antes seguía girando y se clavaba de punta) */
-      if(r.tipo !== 'cab' && r.tipo !== 'escudo'){ r.ang = Math.cos(r.ang) >= 0 ? 0 : Math.PI; r.va = 0; } else r.va *= 0.6;
-      if(r.tipo === 'arma') r.y = -1 - (r.arma.forma === 'hacha' || r.arma.forma === 'maza' ? 2 : 0); }
-    const medio = r.tipo === 'arma' ? r.arma.largo/2 : (r.largo || 4)/2;
-    if(r.x < PARED + medio){ r.x = PARED + medio; r.vx = Math.abs(r.vx)*0.4; }
-    if(r.x > ARENA_W - PARED - medio){ r.x = ARENA_W - PARED - medio; r.vx = -Math.abs(r.vx)*0.4; }
+      if(r.tipo !== 'cab' && r.tipo !== 'escudo'){ r.ang = Math.cos(r.ang) >= 0 ? 0 : Math.PI; r.va = 0; } else r.va *= 0.6;  }
+    const cx = (r.dir || 1)*Math.cos(r.ang);
+    let lo, hi;
+    if(r.tipo === 'arma'){ const p = r.x + cx*r.arma.largo, q = r.x - cx*2.2; lo = Math.min(p, q); hi = Math.max(p, q); }
+    else { const m = r.tipo === 'jab' ? 9 : r.tipo === 'cab' || r.tipo === 'escudo' ? 4 : (r.largo || 4)/2; lo = r.x - m*Math.max(0.5, Math.abs(cx)); hi = r.x + m*Math.max(0.5, Math.abs(cx)); }
+    if(lo < PARED){ r.x += PARED - lo; r.vx = Math.abs(r.vx)*0.4; }
+    else if(hi > ARENA_W - PARED){ r.x -= hi - (ARENA_W - PARED); r.vx = -Math.abs(r.vx)*0.4; }
   }
 }
 /* la sangre queda en la arena: un lienzo del ancho de la arena y 11 filas de hondo */
@@ -1004,7 +1022,7 @@ function sprite(ctx, spr, x, y, ax, ay, ang, d){          /* spr en píxeles fin
 function dibujarArma(ctx, m, ang, d, arma, pal){
   const u = {x:d*Math.cos(ang), y:Math.sin(ang)}, n = {x:-u.y*d, y:u.x*d};
   const P2 = (t, s) => ({x:m.x + u.x*t + n.x*(s || 0), y:m.y + u.y*t + n.y*(s || 0)});
-  const met = pal ? pal.m : '#dfe4ec', bron = pal ? pal.o : '#e0ae3c', mad = pal ? pal.c : '#8a5a2c', L = arma.largo, f = arma.forma;
+  const blanco = pal ? tono(pal.m, 1.2) : '#ffffff', met = pal ? pal.m : '#dfe4ec', bron = pal ? pal.o : '#e0ae3c', mad = pal ? pal.c : '#8a5a2c', L = arma.largo, f = arma.forma;
   const mango = (a0, a1, g) => { trazo(ctx, P2(a0), P2(a1), g + 2, K); trazoCuadros(ctx, P2(a0), P2(a1), g, tono(mad, 0.7), mad); };
   if(f === 'espada' || f === 'sica'){
     const curva = f === 'sica' ? 2.4 : 0, pt = (t, s) => P2(t, (s || 0) + curva*Math.pow(Math.max(0, t - 2)/(L - 2), 2));
@@ -1013,7 +1031,7 @@ function dibujarArma(ctx, m, ang, d, arma, pal){
     for(let t = 2; t < L; t += 0.5){ const g = t > L - 2.5 ? 3 : 5; trazo(ctx, pt(t), pt(t + 0.5), g, K); }
     for(let t = 2; t < L; t += 0.5){ const g = t > L - 2.5 ? 1 : 3; trazo(ctx, pt(t), pt(t + 0.5), g, met); }
     for(let t = 2.5; t < L - 2.5; t += 0.5) trazo(ctx, pt(t), pt(t + 0.5), 1, tono(met, 0.62));          /* acanaladura */
-    for(let t = 2; t < L - 1; t += 0.5) trazo(ctx, pt(t, 0.75), pt(t + 0.5, 0.75), 1, '#ffffff');        /* filo */
+    for(let t = 2; t < L - 1; t += 0.5) trazo(ctx, pt(t, 0.75), pt(t + 0.5, 0.75), 1, blanco);        /* filo */
     discoF(ctx, P2(-2.8).x, P2(-2.8).y, 0.9, bron, true);
   } else if(f === 'hacha'){
     const g = arma.grande ? 1.3 : 1, cab = t => (4.8 - Math.abs(t - (L - 3.3*g))*0.75)*g;
@@ -1022,7 +1040,7 @@ function dibujarArma(ctx, m, ang, d, arma, pal){
       trazo(ctx, P2(t, 0), P2(t, w), 3, K); if(arma.grande) trazo(ctx, P2(t, 0), P2(t, -w), 3, K); }
     for(let t = L - 6*g; t <= L - 0.5; t += 0.25){ const w = cab(t);
       trazo(ctx, P2(t, 0.4), P2(t, w - 0.3), 1, t < L - 3.3*g ? tono(met, 0.8) : met);
-      trazo(ctx, P2(t, w - 0.9), P2(t, w - 0.3), 1, '#ffffff');
+      trazo(ctx, P2(t, w - 0.9), P2(t, w - 0.3), 1, blanco);
       if(arma.grande){ trazo(ctx, P2(t, -0.4), P2(t, -w + 0.3), 1, tono(met, 0.85)); trazo(ctx, P2(t, -w + 0.9), P2(t, -w + 0.3), 1, '#f4f6fa'); } }
     trazo(ctx, P2(L - 3.3*g, -0.6), P2(L - 3.3*g, 0.6), 2, bron);
   } else if(f === 'maza'){
@@ -1037,13 +1055,13 @@ function dibujarArma(ctx, m, ang, d, arma, pal){
     trazo(ctx, P2(-7), P2(L - 5), 4, K); trazo(ctx, P2(-7), P2(L - 5), 2, mad); trazo(ctx, P2(-7, -0.25), P2(L - 5, -0.25), 1, tono(mad, 1.3));
     if(f === 'lanza'){
       for(let t = L - 5; t < L; t += 0.25){ const w = t < L - 2 ? 1.1 : 1.1*(L - t)/2; trazo(ctx, P2(t, -w), P2(t, w), 3, K); }
-      for(let t = L - 5; t < L - 0.3; t += 0.25){ const w = t < L - 2 ? 0.8 : 0.8*(L - t)/2; trazo(ctx, P2(t, -w), P2(t, 0), 1, '#ffffff'); trazo(ctx, P2(t, 0), P2(t, w), 1, tono(met, 0.75)); }
+      for(let t = L - 5; t < L - 0.3; t += 0.25){ const w = t < L - 2 ? 0.8 : 0.8*(L - t)/2; trazo(ctx, P2(t, -w), P2(t, 0), 1, blanco); trazo(ctx, P2(t, 0), P2(t, w), 1, tono(met, 0.75)); }
       trazo(ctx, P2(L - 5.3, -1), P2(L - 5.3, 1), 2, bron);
     } else {
       trazo(ctx, P2(L - 5, -3.2), P2(L - 5, 3.2), 4, K);
       for(const s of [-3, 0, 3]){ trazo(ctx, P2(L - 5, s), P2(L - 0.5, s), 4, K); trazo(ctx, P2(L - 0.5, s), P2(L + 0.5, s), 2, K); }
       trazo(ctx, P2(L - 5, -3), P2(L - 5, 3), 2, met);
-      for(const s of [-3, 0, 3]){ trazo(ctx, P2(L - 5, s), P2(L - 0.2, s), 2, met); trazo(ctx, P2(L - 4.5, s - 0.3), P2(L - 0.6, s - 0.3), 1, '#ffffff'); }
+      for(const s of [-3, 0, 3]){ trazo(ctx, P2(L - 5, s), P2(L - 0.2, s), 2, met); trazo(ctx, P2(L - 4.5, s - 0.3), P2(L - 0.6, s - 0.3), 1, blanco); }
     }
   }
 }
@@ -1094,10 +1112,10 @@ function dibujarGlad(ctx, g, ox, oy, estatua){
   if(!g.cortado.cab) sprite(ctx, pz.cabeza, N.x, N.y + 0.3, 5, 12, g.ang, d);      /* un poco más arriba: se ve el cuello */
   else { discoF(ctx, N.x, N.y, 1.6, sangre, true); discoF(ctx, N.x, N.y - 0.3, 0.7, '#e8d8c0'); }
   brazo(sk.bE, 'bE', S2, false, false);
-  if(pz.escudo && !g.cortado.bE){ const M = T(sk.bE.mano), e = pz.escudo;
+  if(pz.escudo && !g.cortado.bE){ const M = Tr(sk.bE.mano), e = pz.escudo;
     sprite(ctx, e, M.x + d*1.5, M.y, e.width/2/DET, e.height/2/DET, g.ang, d); }
-  const a2 = arma2De(g); if(a2) dibujarArma(ctx, T(sk.bE.mano), sk.bE.ang, d, a2, estatua ? pal : null);
-  const a = armaDe(g); if(a) dibujarArma(ctx, T(sk.bA.mano), sk.bA.ang, d, a, estatua ? pal : null);
+  const a2 = arma2De(g); if(a2) dibujarArma(ctx, Tr(sk.bE.mano), sk.bE.ang, d, a2, estatua ? pal : null);
+  const a = armaDe(g); if(a) dibujarArma(ctx, Tr(sk.bA.mano), sk.bA.ang, d, a, estatua ? pal : null);
   if(g.enredado > 0){ const c = T(sk.N);
     for(let i = -6; i <= 6; i += 2){ trazo(ctx, {x:c.x - 7, y:c.y + i}, {x:c.x + 7, y:c.y + i + 3}, 1, '#e4dab8'); trazo(ctx, {x:c.x + i, y:c.y - 7}, {x:c.x + i + 3, y:c.y + 9}, 1, '#b8ac88'); } }
 }
@@ -1105,14 +1123,14 @@ function dibujarRestos(ctx, P, ox, oy){
   for(const r of P.restos){
     const x = r.x + ox, y = r.y + oy;
     if(r.tipo === 'cab' || r.tipo === 'escudo'){ sprite(ctx, r.spr, x, y, r.spr.width/2/DET, r.spr.height/2/DET, r.ang, r.dir || 1);
-      if(r.tipo === 'cab'){ discoF(ctx, x + Math.sin(r.ang)*3, y + Math.cos(r.ang)*3, 1, '#8a0c08'); } }
-    else if(r.tipo === 'arma') dibujarArma(ctx, {x, y}, r.ang, 1, r.arma);
+      if(r.tipo === 'cab'){ discoF(ctx, x - (r.dir || 1)*Math.sin(r.ang)*3, y + Math.cos(r.ang)*3, 1, '#8a0c08'); } }
+    else if(r.tipo === 'arma') dibujarArma(ctx, {x, y}, r.ang, r.dir || 1, r.arma);
     else if(r.tipo === 'jab'){ const u = {x:Math.cos(r.ang), y:Math.sin(r.ang)}, a = {x:x - u.x*9, y:y - u.y*9}, b = {x:x + u.x*9, y:y + u.y*9};
       trazo(ctx, a, b, 4, K); trazo(ctx, a, b, 2, '#9a6a3a'); trazo(ctx, {x:b.x - u.x*2, y:b.y - u.y*2}, b, 2, '#e4e8f0'); }
-    else { const u = {x:Math.cos(r.ang)*r.largo/2, y:Math.sin(r.ang)*r.largo/2}, a = {x:x - u.x, y:y - u.y}, b = {x:x + u.x, y:y + u.y};
+    else { const u = {x:(r.dir || 1)*Math.cos(r.ang)*r.largo/2, y:Math.sin(r.ang)*r.largo/2}, a = {x:x - u.x, y:y - u.y}, b = {x:x + u.x, y:y + u.y};
       miembro(ctx, a, b, r.tipo === 'pierna' ? 5 : 3, r.color);
-      if(r.tipo === 'pierna' && r.grebas) miembro(ctx, {x:(a.x + b.x)/2, y:(a.y + b.y)/2}, b, 6, '#d8dce6');
-      if(r.tipo === 'brazo' && r.manica) trazoCuadros(ctx, {x:(a.x + b.x)/2, y:(a.y + b.y)/2}, b, 4, '#f0f0f4', '#3c5cc0');
+      if(r.tipo === 'pierna' && r.grebas) miembro(ctx, {x:(a.x + b.x)/2, y:(a.y + b.y)/2}, b, 6, r.metal || '#d8dce6');
+      if(r.tipo === 'brazo' && r.manica) trazoCuadros(ctx, {x:(a.x + b.x)/2, y:(a.y + b.y)/2}, b, 4, r.qa || '#f0f0f4', r.qA || '#3c5cc0');
       discoF(ctx, a.x, a.y, 1.2, '#8a0c08', true); discoF(ctx, a.x, a.y, 0.5, '#e8d8c0'); }
   }
 }
@@ -1141,7 +1159,7 @@ function dibujarEfectos(ctx, P, ox, oy){
     for(let i = 0; i < 10; i++){ const a = i/10*Math.PI*2, rr = (i % 2 ? r*0.45 : r) - 0.6; trazo(ctx, {x, y}, {x:x + Math.cos(a)*rr, y:y + Math.sin(a)*rr}, 2, k ? '#fff8c0' : '#ffd040'); }
     discoF(ctx, x, y, 1, '#ffffff');
   }
-  for(const t of P.textos) texto(ctx, t.txt, t.x + ox, t.y + oy - 10, t.grad);
+  for(const t of P.textos){ const w = lienzoTexto(t.txt, t.grad).width/2 + 2; texto(ctx, t.txt, Math.round(lim(t.x + ox, w, Math.max(w, AM - w))), t.y + oy - 10, t.grad); }
 }
 
 /* ================================================================ el coliseo (fondos cacheados en píxeles finos)
@@ -1233,14 +1251,17 @@ function armarFondo(){
   gb.fillStyle = gr2; gb.fillRect(0, AR, bw, bh - AR);
   /* gente que se mueve (encima de la horneada) */
   const gente = [];
-  for(let i = 0; i < 180; i++){ const fila = RI(0, 12); if(fila === 5) continue;
-    gente.push({x:rG()*W, y:top + 20 + fila*5, c:colores[Math.floor(rG()*colores.length)], p:PIELES[Math.floor(rG()*4)], h:pelo[Math.floor(rG()*pelo.length)], f:rG()*6.3, v:0.7 + rG()*0.8}); }
+  const palco = {x0:(pc - 4)/D - 3, x1:(pc + 68)/D, y0:(py - 11)/D - 3, y1:(py + 30)/D};
+  for(let i = 0; i < 180; i++){ const fila = Math.floor(rG()*13); if(fila === 5) continue;
+    const gx0 = rG()*W, gy0 = top + 20 + fila*5; if(gx0 > palco.x0 && gx0 < palco.x1 && gy0 > palco.y0 && gy0 < palco.y1) continue;
+    gente.push({x:gx0, y:gy0, c:colores[Math.floor(rG()*colores.length)], p:PIELES[Math.floor(rG()*4)], h:pelo[Math.floor(rG()*pelo.length)], f:rG()*6.3, v:0.7 + rG()*0.8}); }
   FONDO.cache = {cielo, gradas, bajo, gente, W, top, altoG};
 }
 function dibujarFondo(ctx, camX){
   if(!FONDO.cache) armarFondo();
   const F = FONDO.cache, e = lim(J.emocion, 0, 1.2), u = 1/DET;
   ctx.drawImage(F.cielo, 0, 0, F.cielo.width*u, F.cielo.height*u);
+  ctx.drawImage(F.cielo, 0, 0, F.cielo.width, 1, 0, -8, F.cielo.width*u, 8);            /* con la sacudida no asoma el negro de arriba */
   const gx = rf(-camX*0.6 - (F.W - AM)/2 + (ARENA_W - AM)/2*0.6);
   ctx.drawImage(F.gradas, gx, 0, F.gradas.width*u, F.gradas.height*u);
   for(const p of F.gente){
@@ -1272,6 +1293,7 @@ function dibujarFondo(ctx, camX){
     ctx.fillStyle = '#fff8c0'; ctx.fillRect(fx - 0.5, fy - 1.5, 1, 1);
   }
   ctx.drawImage(F.bajo, rf(-camX) - 1, SUELO, F.bajo.width*u, F.bajo.height*u);
+  ctx.fillStyle = '#0c0806'; ctx.fillRect(0, AH, AM, 8);
 }
 
 /* ================================================================ íconos del HUD (grillas con contorno automático) */
@@ -1305,9 +1327,9 @@ function icono(nombre, col, espejo, vertical){
 const IN = {}, EDGE = {};
 let ZONAS = {};
 function armarZonas(){
-  const cy = AH - 40, cx = AM - 36, d = 23;
+  const cy = AH - 40, cx = AM - 35, d = 23;
   ZONAS = {
-    izq:{x:18, y:cy, r:15}, der:{x:50, y:cy, r:15},
+    izq:{x:18, y:cy, r:15}, der:{x:49, y:cy, r:15},
     postura:{x:18, y:cy - 34, r:9}, jab:{x:50, y:cy - 34, r:9},
     arriba:{x:cx, y:cy - d, r:11}, abajo:{x:cx, y:cy + d, r:11}, estocada:{x:cx + d, y:cy, r:11},
     guardia:{x:cx - d, y:cy, r:11}, rapido:{x:cx, y:cy, r:11},
@@ -1316,7 +1338,7 @@ function armarZonas(){
 }
 const toques = new Map();
 function zonaEn(wx, wy){
-  if(AJ.controles === 'gestos' && wx > AM*0.45 && wy > SUELO + 8) return 'pad';
+  if(AJ.controles === 'gestos' && wx > Math.max(AM*0.45, ZONAS.der.x + ZONAS.der.r + 5) && wy > SUELO + 8) return 'pad';
   let mejor = null, md = 1e9;
   for(const k in ZONAS){ const z = ZONAS[k], d = Math.hypot(wx - z.x, wy - z.y); if(d < z.r + 4 && d < md){ md = d; mejor = k; } }
   return mejor;
@@ -1330,28 +1352,33 @@ function tocarIni(id, cx, cy){
   if(z !== 'pad'){ IN[z] = true; EDGE[z] = true; }
 }
 function tocarMov(id, cx, cy){ const t = toques.get(id); if(!t || t.z !== 'pad') return;
-  if(Math.hypot(cx - t.x0, cy - t.y0) > 14) t.mov = true;
-  if(!t.mov && performance.now() - t.t0 > 260) IN.guardia = true; }
+  if(Math.hypot(cx - t.x0, cy - t.y0) > 14) t.mov = true; }
+/* un dedo quieto en el pad más de 260 ms es guardia (un dedo quieto no manda touchmove) */
+function padGuardia(){ let g = false; const ahora = performance.now();
+  for(const t of toques.values()) if(t.z === 'pad' && !t.mov && ahora - t.t0 > 260){ t.guardia = true; g = true; }
+  return g; }
 function tocarFin(id, cx, cy){
   const t = toques.get(id); if(!t) return; toques.delete(id);
   if(t.z !== 'pad'){ IN[t.z] = false; return; }
   const dx = cx - t.x0, dy = cy - t.y0, dist = Math.hypot(dx, dy);
-  if(IN.guardia && !t.mov){ IN.guardia = false; return; }
-  IN.guardia = false;
+  if(t.guardia && !t.mov) return;
   const P = J.pelea, dir = P ? P.a.dir : 1;
   if(dist < 16) EDGE.rapido = true;
   else if(Math.abs(dy) > Math.abs(dx)) EDGE[dy < 0 ? 'arriba' : 'abajo'] = true;
   else if(sig(dx) === dir) EDGE.estocada = true;
   else { IN.guardiaT = 28; }
 }
-addEventListener('touchstart', e => { SON.arrancar(); if(J.modo !== 'pelea' || e.target !== lienzo) return; e.preventDefault();
+addEventListener('touchstart', e => { SON.arrancar(); if(J.modo !== 'pelea' || e.target !== lienzo) return; if(e.cancelable) e.preventDefault();
   for(const t of e.changedTouches) tocarIni(t.identifier, t.clientX, t.clientY); }, {passive:false});
-addEventListener('touchmove', e => { if(J.modo !== 'pelea') return; if(e.target === lienzo) e.preventDefault();
+addEventListener('touchmove', e => { if(J.modo !== 'pelea') return; if(e.target === lienzo && e.cancelable) e.preventDefault();
   for(const t of e.changedTouches) tocarMov(t.identifier, t.clientX, t.clientY); }, {passive:false});
 const finToque = e => { for(const t of e.changedTouches) tocarFin(t.identifier, t.clientX, t.clientY); };
-addEventListener('touchend', finToque, {passive:true}); addEventListener('touchcancel', finToque, {passive:true});
+addEventListener('touchend', finToque, {passive:true});
+/* si el sistema cancela el toque no se pega: sólo se suelta */
+addEventListener('touchcancel', e => { for(const t of e.changedTouches){ const q = toques.get(t.identifier); if(!q) continue; toques.delete(t.identifier); if(q.z !== 'pad') IN[q.z] = false; } }, {passive:true});
 let mouseAbajo = false;
-lienzo.addEventListener('mousedown', e => { SON.arrancar(); mouseAbajo = true; tocarIni('m', e.clientX, e.clientY); });
+lienzo.addEventListener('mousedown', e => { SON.arrancar(); if(e.button !== 0) return; mouseAbajo = true; tocarIni('m', e.clientX, e.clientY); });
+lienzo.addEventListener('contextmenu', e => e.preventDefault());
 addEventListener('mousemove', e => { if(mouseAbajo) tocarMov('m', e.clientX, e.clientY); });
 addEventListener('mouseup', e => { if(mouseAbajo){ mouseAbajo = false; tocarFin('m', e.clientX, e.clientY); } });
 addEventListener('pointerup', () => SON.arrancar(), {passive:true});
@@ -1362,13 +1389,16 @@ addEventListener('keydown', e => { SON.arrancar(); const k = TECLAS[e.code]; if(
   /* en el teclado las flechas de ataque son «hacia la derecha»: se traducen al rival */
   IN[k] = true; EDGE[k] = true; });
 addEventListener('keyup', e => { const k = TECLAS[e.code]; if(k) IN[k] = false; });
-addEventListener('blur', () => { for(const k in IN) IN[k] = false; toques.clear(); });
+function soltarTodo(){ for(const k in IN) IN[k] = false; toques.clear(); mouseAbajo = false;
+  const a = J.pelea && J.pelea.a; if(a){ a.dirCarga = 0; a.carga = 0; a.sosten = 0; } }     /* el salto a medio cargar no sale solo al volver */
+addEventListener('blur', soltarTodo);
+document.addEventListener('visibilitychange', () => { if(document.hidden){ soltarTodo(); if(J.pelea && J.pelea.modo !== 'demo') pausar(); } });
 let buffer = null;
 function controlJugador(g){
   const c = g.ctrl;
   c.izq = !!IN.izq; c.der = !!IN.der;
   if(IN.guardiaT > 0) IN.guardiaT--;
-  c.guardia = !!IN.guardia || IN.guardiaT > 0;
+  c.guardia = !!IN.guardia || padGuardia() || IN.guardiaT > 0;
   const atk = EDGE.arriba ? 'arriba' : EDGE.abajo ? 'abajo' : EDGE.estocada ? 'adelante' : EDGE.rapido ? 'rapido' : null;
   if(atk) buffer = {atk, t:14};
   c.atk = null;
@@ -1385,7 +1415,7 @@ function nuevaPelea(defA, defB, modo, opc){
     part:[], restos:[], proy:[], estrellas:[], textos:[], manchas:man, t:0, fin:0, ganador:null, quieto:0};
   /* los carteles no se enciman: el nuevo sube por encima de los que siguen vivos cerca */
   P.textos.push = function(o){ for(const t of this) if(Math.abs(t.x - o.x) < 40 && Math.abs(t.y - o.y) < 10) o.y = t.y - 10; return Array.prototype.push.call(this, o); };
-  J.pelea = P; J.emocion = 0.2; J.camX = (ARENA_W - AM)/2; buffer = null;
+  J.pelea = P; J.pausa = false; J.emocion = 0.2; J.camX = (ARENA_W - AM)/2; buffer = null;
   for(const k in IN) IN[k] = false; toques.clear();
   return P;
 }
@@ -1398,6 +1428,8 @@ function pasoPelea(P){
   pasoLuchador(a, b, P); pasoLuchador(b, a, P);
   empujarCuerpos(a, b);
   const ska = esqueleto(a), skb = esqueleto(b);
+  P.mA = a.muerto; P.mB = b.muerto;                   /* los golpes del mismo cuadro valen los dos */
+  P.inerme = !puedeDanar(a) && !puedeDanar(b);
   for(const [A, B, sA, sB] of [[a, b, ska, skb], [b, a, skb, ska]]){
     const w1 = armaDe(A), w2 = arma2De(A);
     if(w1) probarHoja(A, B, P, sA, sB, sA.bA, w1, 1);
@@ -1407,8 +1439,10 @@ function pasoPelea(P){
   J.emocion *= 0.996;
   if(!P.ganador && (a.muerto || b.muerto)){
     P.ganador = a.muerto && b.muerto ? 'nadie' : (a.muerto ? b : a); P.fin = 1;
+    if(P.modo === 'carrera' && P.ganador === a && J.carrera){ J.carrera.enPelea = false; guardar('saltos.carrera', J.carrera); }   /* ya ganó: recargar en el festejo no lo mata */
     if(P.modo !== 'demo') SON.fx('fanfarria', {triste:P.ganador !== a});
   }
+  if(P.fin && P.ganador !== 'nadie' && P.ganador.muerto) P.ganador = 'nadie';
   if(P.fin){ P.fin++; if(P.fin === 180) terminarPelea(P); }
   /* cámara */
   const mid = (a.x + b.x)/2, obj = AM >= ARENA_W ? (ARENA_W - AM)/2 : lim(mid - AM/2, 0, ARENA_W - AM);
@@ -1418,10 +1452,12 @@ const vidaDe = g => g.muerto ? 0 : lim(Math.min(g.hp.tor/g.max.tor, g.hp.cab/g.m
 
 /* ================================================================ HUD */
 function colorVida(f){ return f > 0.6 ? '#58c028' : f > 0.3 ? '#f0c030' : f > 0 ? '#e83424' : '#1a1210'; }
-function panel(c, g, x, y, der){
-  const nom = g.def.nombre.split(' ')[0], w = 46;
-  const x0 = der ? x - w : x;
-  texto(c, nom, der ? x : x0, y, g.jug ? 'oro' : 'blanco', der ? {der:true} : {izq:true});
+function panel(c, g, x, y, der, maxW){
+  /* el cuerpito va del lado de afuera y el nombre hacia adentro: un nombre de 9 letras (CARPÓFORO) ya no lo pisa */
+  let nom = g.def.nombre.split(' ')[0]; if(maxW) nom = nom.slice(0, maxW);
+  const w = 44, bx = der ? x - 9 : x + 1, xi = der ? x - 12 : x + 12;
+  const x0 = der ? xi - w : xi;
+  texto(c, nom, xi, y, g.jug ? 'oro' : 'blanco', der ? {der:true} : {izq:true});
   const v = vidaDe(g); g.rastro = g.rastro === undefined ? v : Math.max(v, g.rastro - 0.004);
   c.fillStyle = K; c.fillRect(x0, y + 13, w, 6);
   c.fillStyle = '#4a2a1a'; c.fillRect(x0 + 1, y + 14, w - 2, 4);
@@ -1430,15 +1466,17 @@ function panel(c, g, x, y, der){
   c.fillStyle = colorVida(v); c.fillRect(der ? x0 + 1 + (w - 2) - wv : x0 + 1, y + 14, wv, 4);
   c.fillStyle = 'rgba(255,255,255,0.35)'; c.fillRect(der ? x0 + 1 + (w - 2) - wv : x0 + 1, y + 14, wv, 1);
   /* el cuerpo en chiquito: cada parte con su color de salud, negra si se cortó */
-  const bx = der ? x0 - 11 : x0 + w + 3, by = y + 1, f = k => g.cortado[k] ? '#000' : colorVida(g.hp[k]/g.max[k]);
+  const by = y + 1, f = k => g.cortado[k] ? '#000' : colorVida(g.hp[k]/g.max[k]);
   c.fillStyle = 'rgba(20,12,8,0.6)'; c.fillRect(bx - 1, by - 1, 10, 19);
   c.fillStyle = f('cab'); c.fillRect(bx + 3, by, 3, 3);
   c.fillStyle = f('tor'); c.fillRect(bx + 3, by + 4, 3, 6);
   c.fillStyle = f('bE'); c.fillRect(bx + 1, by + 4, 1, 6); c.fillStyle = f('bA'); c.fillRect(bx + 7, by + 4, 1, 6);
   c.fillStyle = f('pI'); c.fillRect(bx + 3, by + 11, 1, 6); c.fillStyle = f('pD'); c.fillRect(bx + 5, by + 11, 1, 6);
   /* sangre */
-  const sx = der ? x0 : x0; c.fillStyle = '#a8140e'; c.fillRect(sx, y + 21, Math.round((w/2)*lim(g.sangre/100, 0, 1)), 2);
-  if(g.jab > 0 || g.red > 0){ texto(c, (g.red ? 'RED ' + g.red + ' ' : '') + (g.jab ? 'JAB ' + g.jab : ''), der ? x : x0, y + 24, 'gris', der ? {der:true} : {izq:true}); }
+  c.fillStyle = '#a8140e'; c.fillRect(der ? x0 + w - Math.round((w/2)*lim(g.sangre/100, 0, 1)) : x0, y + 21, Math.round((w/2)*lim(g.sangre/100, 0, 1)), 2);
+  /* jabalinas y redes en renglones propios: juntas medían 69 y pisaban la pausa */
+  let yy = y + 24;
+  for(const s of [g.red ? 'RED ' + g.red : '', g.jab ? 'JAB ' + g.jab : '']) if(s){ texto(c, s, der ? x : x, yy, 'gris', der ? {der:true} : {izq:true}); yy += 10; }
 }
 function boton(c, z, icon, apretado, extra){
   if(!z) return;
@@ -1452,7 +1490,10 @@ function hud(){
   const c = cxH, P = J.pelea; c.clearRect(0, 0, AM, AH);
   if(J.modo === 'portada'){ titulo(c); return; }
   if(!P || J.modo !== 'pelea') return;
-  panel(c, P.a, 2, 3, false); panel(c, P.b, AM - 2, 3, true);
+  /* los dos nombres juntos no pueden pasarse del ancho que queda entre los cuerpitos (6 por letra): se acorta primero el del rival */
+  let mA = P.a.def.nombre.split(' ')[0].length, mB = P.b.def.nombre.split(' ')[0].length; const cabe = Math.floor((AM - 32)/6);
+  while(mA + mB > cabe){ if(mB >= mA) mB--; else mA--; }
+  panel(c, P.a, 2, 3, false, mA); panel(c, P.b, AM - 2, 3, true, mB);
   const a = P.a, oro = '#ffd878', dir = a.dir;
   if(!P.fin){
     boton(c, ZONAS.pausa, null, false, y => { c.fillStyle = oro; c.fillRect(ZONAS.pausa.x - 3, y - 3, 2, 6); c.fillRect(ZONAS.pausa.x + 1, y - 3, 2, 6); });
@@ -1472,11 +1513,11 @@ function hud(){
       const x0 = Math.round(AM*0.47), y0 = SUELO + 14;
       c.fillStyle = 'rgba(40,22,12,0.5)'; c.fillRect(x0, y0, AM - x0 - 3, AH - y0 - 4);
       c.fillStyle = '#e8b060'; c.fillRect(x0, y0, AM - x0 - 3, 1); c.fillRect(x0, AH - 5, AM - x0 - 3, 1);
-      texto(c, 'DESLIZÁ', (x0 + AM)/2, y0 + 8, 'gris'); texto(c, 'PARA PEGAR', (x0 + AM)/2, y0 + 20, 'gris');
+      texto(c, 'DESLIZÁ', (x0 + AM)/2, y0 + 16, 'gris'); texto(c, 'PARA PEGAR', (x0 + AM)/2, y0 + 28, 'gris');
     }
     if(J.primera && J.pelea.modo === 'carrera' && P.t < 900){
       const y = SUELO + 13; c.fillStyle = 'rgba(20,12,8,0.7)'; c.fillRect(0, y - 1, AM, 12);
-      texto(c, ['FLECHAS: CARGÁ Y SOLTÁ', 'LA DERECHA PEGA', 'EL ESCUDO TE CUBRE', 'ARRIBA: POSTURA'][Math.floor(P.t/225) % 4], AM/2, y - 1, 'blanco');
+      texto(c, (AJ.controles === 'gestos' ? ['FLECHAS: CARGÁ Y SOLTÁ', 'DESLIZÁ PARA PEGAR', 'DEDO QUIETO: GUARDIA', 'ARRIBA: POSTURA'] : ['FLECHAS: CARGÁ Y SOLTÁ', 'LA DERECHA PEGA', 'EL ESCUDO TE CUBRE', 'ARRIBA: POSTURA'])[Math.floor(P.t/225) % 4], AM/2, y - 1, 'blanco');
     }
   }
   if(P.t < 80){ const s = P.t < 40 ? 'LISTOS...' : '¡PELEEN!'; texto(c, s, AM/2, SUELO - 90, P.t < 40 ? 'blanco' : 'fuego', {esc:2}); }
@@ -1511,6 +1552,7 @@ function dibujar(){
   const sx = J.sacude > 0.3 ? rv(-J.sacude, J.sacude) : 0, sy = J.sacude > 0.3 ? rv(-J.sacude, J.sacude)*0.6 : 0;
   const cam = rf((J.camX || 0) + sx);
   cxM.save(); cxM.translate(0, rf(sy));
+  try {
   dibujarFondo(cxM, cam);
   if(P){
     cxM.drawImage(P.manchas, -cam - 1, SUELO, P.manchas.width/DET, P.manchas.height/DET);
@@ -1520,7 +1562,7 @@ function dibujar(){
     dibujarProy(cxM, P, ox, oy);
     dibujarEfectos(cxM, P, ox, oy);
   }
-  cxM.restore();
+  } finally { cxM.restore(); }
   cxP.setTransform(1, 0, 0, 1, 0, 0);
   cxP.drawImage(cvM, 0, 0, AM*PXd, AH*PXd);
   hud();
@@ -1529,11 +1571,11 @@ function dibujar(){
 function bucle(ts){
   requestAnimationFrame(bucle);
   const dt = Math.min(100, ts - (ultimo || ts)); ultimo = ts; acum += dt;
-  let n = 0;
+  let n = 0; acum = Math.min(acum, 4*CUADRO);          /* un celular lento no acumula atraso */
   while(acum >= CUADRO && n < 4){ acum -= CUADRO; n++;
     if(J.congelado > 0){ J.congelado--; J.t++; continue; }     /* golpe que frena: no consume la entrada */
     pasar(); }
-  if(J.t % 15 === 0 && (lienzo.width !== Math.round((lienzo.clientWidth || innerWidth)*Math.min(devicePixelRatio || 1, 3)))) medir();
+  if(J.t % 15 === 0 && (lienzo.width !== Math.round((lienzo.clientWidth || innerWidth)*Math.min(devicePixelRatio || 1, 4)))) medir();
   SON.cuadro();
   try { dibujar(); } catch(e){ if(!bucle.err){ bucle.err = e; console.error(e); } }
 }
@@ -1594,7 +1636,11 @@ function reclutas(){
   dMenu.append(p, btn('VOLVER', portada, 'gris'));
 }
 function ludus(){
-  const C = J.carrera, d = C.def; J.modo = 'menu'; if(!J.pelea || J.pelea.modo !== 'demo' || J.pelea.fin) demo(); limpiar(true);
+  const C = J.carrera, d = C.def; J.modo = 'menu'; if(!J.pelea || J.pelea.modo !== 'demo' || J.pelea.fin) demo();
+  /* recargar la página en plena pelea no la borra: cuenta como entregarse */
+  if(C.enPelea){ C.enPelea = false; return fin('MUERTO', C.actual ? C.actual.def.nombre : null, 'abandono'); }
+  if(C.pendiente) return entrenar(C, 'Te quedó un punto para entrenar.');
+  limpiar(true);
   const p = el('div', 'panel'); p.append(pixelTxt('EL LUDUS', 'oro', 2));
   const f = el('div', 'fila'); f.style.cursor = 'default'; f.append(retrato(d, 3));
   f.append(el('div', 'info', '<b>' + d.nombre + '</b><br>' + nomClase(d.clase) + ' · ' + d.edad + ' años<br>' + rangoDe(d.fama) + (C.campeon ? ' · <b>CAMPEÓN</b>' : '') + ' · FAMA ' + d.fama +
@@ -1613,8 +1659,10 @@ function mejorarEquipo(def, nivel){
   if(nivel > 140 && rnd() < 0.6) def.eq.torso = def.clase === 'fanatico' ? 'nada' : 'escamas';
   if(nivel > 280 && rnd() < 0.6 && def.clase !== 'fanatico') def.eq.torso = 'lorica';
   if(nivel > 120){ def.eq.grebas = true; def.eq.manica = true; }
-  if(nivel > 200 && rnd() < 0.5){ const m = {gladio:'spatha', sica:'spatha', hacha:'bipenne', lanza:'tridente', tridente:'tridente', maza:'rompe'}; def.eq.arma = m[def.eq.arma] || def.eq.arma;
-    if(def.eq.segunda) def.eq.segunda = def.eq.arma === 'bipenne' ? 'hacha' : def.eq.arma; }
+  if(nivel > 200 && rnd() < 0.5){ const m = {gladio:'spatha', sica:'spatha', hacha:'bipenne', lanza:'tridente', tridente:'tridente', maza:'rompe'}, nueva = m[def.eq.arma] || def.eq.arma;
+    if(!(def.eq.segunda && ARMAS[nueva].grande)) def.eq.arma = nueva;           /* el de dos espadas no cambia a una de dos manos */
+    if(def.eq.segunda) def.eq.segunda = def.eq.arma === 'bipenne' ? 'hacha' : def.eq.arma;
+    if(ARMAS[def.eq.arma].grande){ def.eq.escudo = 'ninguno'; def.eq.segunda = null; } }
 }
 function armarRivales(){
   const d = J.carrera.def, f = d.fama, base = Math.floor(f/16);
@@ -1639,13 +1687,13 @@ function rivalesPant(){
   dMenu.append(p, btn('VOLVER', ludus, 'gris'));
 }
 function pelearCarrera(r){
-  const C = J.carrera; C.actual = r; J.modo = 'pelea'; SON.modo('pelea'); dMenu.className = '';
+  const C = J.carrera; C.actual = r; C.enPelea = true; guardar('saltos.carrera', C); J.modo = 'pelea'; SON.modo('pelea'); dMenu.className = '';
   nuevaPelea(C.def, JSON.parse(JSON.stringify(r.def)), 'carrera', {dif:r.dif});
 }
 function resultadoCarrera(P){
   const C = J.carrera, d = C.def, r = C.actual, gano = P.ganador === P.a;
-  J.pelea = P; SON.modo('menu');
-  if(!gano) return fin('MUERTO', r.def.nombre, P.a.causa);
+  J.pelea = P; SON.modo('menu'); C.enPelea = false;
+  if(!gano) return fin('MUERTO', r.def.nombre, P.ganador === 'nadie' ? 'juntos' : P.a.causa);
   d.peleas++; d.ganadas++;
   const bonus = P.a.cortes*4 + (P.b.causa === 'decapitado' ? 8 : 0);
   d.monedas += r.monedas; d.fama += r.fama + bonus;
@@ -1654,18 +1702,25 @@ function resultadoCarrera(P){
   C.historial.push(r.def.nombre); C.rivales = null;
   let aviso = '';
   if(d.peleas % 3 === 0){ d.edad++;
-    if(d.edad >= 31){ const k = elegir(['fue', 'res', 'agi']); d[k] = Math.max(3, d[k] - 1); aviso = 'Cumpliste ' + d.edad + ': perdiste 1 de ' + k.toUpperCase() + '.'; }
+    const pierde = ['fue', 'res', 'agi'].filter(k => d[k] > 3);
+    if(d.edad >= 31 && pierde.length){ const k = elegir(pierde); d[k]--; aviso = 'Cumpliste ' + d.edad + ': perdiste 1 de ' + k.toUpperCase() + '.'; }
     else aviso = 'Cumpliste ' + d.edad + ' años.'; }
+  if(d.edad < 38) C.pendiente = true;                    /* el punto queda guardado aunque se recargue la página */
   guardar('saltos.carrera', C); J.primera = false; guardar('saltos.visto', true);
   if(d.edad >= 38) return fin('RETIRADO');
-  J.modo = 'menu'; limpiar(true);
-  const p = el('div', 'panel'); p.append(pixelTxt('¡VICTORIA!', 'oro', 3));
-  p.append(el('div', 'texto', 'Ganaste <b>' + r.monedas + ' $</b> y <b>' + (r.fama + bonus) + ' de fama</b>' + (bonus ? ' (el público pagó el espectáculo)' : '') + '.<br>Salud ' + d.salud + '%. ' + aviso +
-    (r.campeon ? '<br><b>¡SOS EL CAMPEÓN DEL COLISEO!</b>' : '') + '<br><br>Elegí qué entrenar:'));
+  entrenar(C, 'Ganaste <b>' + r.monedas + ' $</b> y <b>' + (r.fama + bonus) + ' de fama</b>' + (bonus ? ' (el público pagó el espectáculo)' : '') + '.<br>Salud ' + d.salud + '%. ' + aviso +
+    (r.campeon ? '<br><b>¡SOS EL CAMPEÓN DEL COLISEO!</b>' : ''), true);
+}
+function entrenar(C, txt, victoria){
+  const d = C.def; J.modo = 'menu'; limpiar(true);
+  const p = el('div', 'panel'); p.append(pixelTxt(victoria ? '¡VICTORIA!' : 'ENTRENAMIENTO', 'oro', victoria ? 3 : 2));
+  const quedan = [['fue', 'FUERZA'], ['res', 'RESISTENCIA'], ['agi', 'AGILIDAD']].filter(([k]) => d[k] < 30);
+  p.append(el('div', 'texto', txt + '<br><br>' + (quedan.length ? 'Elegí qué entrenar:' : 'Ya no hay nada más para entrenar: estás al máximo.')));
   dMenu.append(p);
   const f = el('div', 'fila2');
-  for(const [k, n] of [['fue', 'FUERZA'], ['res', 'RESISTENCIA'], ['agi', 'AGILIDAD']])
-    f.append(btn('+1 ' + n, () => { d[k] = Math.min(30, d[k] + 1); SON.fx('moneda'); guardar('saltos.carrera', C); ludus(); }, 'chico'));
+  for(const [k, n] of quedan)
+    f.append(btn('+1 ' + n, () => { d[k] = Math.min(30, d[k] + 1); C.pendiente = false; SON.fx('moneda'); guardar('saltos.carrera', C); ludus(); }, 'chico'));
+  if(!quedan.length) f.append(btn('SEGUIR', () => { C.pendiente = false; guardar('saltos.carrera', C); ludus(); }, 'oro'));
   dMenu.append(f);
 }
 function fin(causa, asesino, como){
@@ -1677,25 +1732,45 @@ function fin(causa, asesino, como){
   J.modo = 'menu'; limpiar(true); SON.modo('menu');
   const p = el('div', 'panel'); p.append(pixelTxt(causa === 'MUERTO' ? 'CAYÓ EN LA ARENA' : 'SE RETIRÓ', causa === 'MUERTO' ? 'rojo' : 'oro', 2));
   const f = el('div', 'fila'); f.style.cursor = 'default'; f.append(retrato(d, 3, true));
-  f.append(el('div', 'info', '<b>' + d.nombre + '</b><br>' + nomClase(d.clase) + ' · ' + d.edad + ' años<br>' + d.ganadas + ' victorias · FAMA ' + d.fama + '<br>' +
-    (causa === 'MUERTO' ? 'Lo ' + (como === 'decapitado' ? 'decapitó' : como === 'desangrado' ? 'desangró' : 'mató') + ' ' + (asesino || 'la arena') + '.' : 'Colgó el gladio con vida.') + '<br>Su estatua ya está en el salón.'));
+  const muerte = como === 'juntos' ? 'Cayó junto con ' + (asesino || 'su rival') + ': murieron los dos.' : como === 'abandono' ? 'Abandonó la arena ante ' + (asesino || 'su rival') + ': el público no perdona.' :
+    'Lo ' + (como === 'decapitado' ? 'decapitó' : como === 'desangrado' ? 'desangró' : 'mató') + ' ' + (asesino || 'la arena') + '.';
+  f.append(el('div', 'info', '<b>' + d.nombre + '</b><br>' + nomClase(d.clase) + ' · ' + d.edad + ' años<br>' + d.ganadas + (d.ganadas === 1 ? ' victoria' : ' victorias') + ' · FAMA ' + d.fama + '<br>' +
+    (causa === 'MUERTO' ? muerte : 'Colgó el gladio con vida.') + '<br>Su estatua ya está en el salón.'));
   p.append(f); dMenu.append(p, btn('NUEVA CARRERA', reclutas, 'oro'), btn('MENÚ', portada, 'gris'));
 }
-function confirmar(txt, si){ limpiar(true); const p = el('div', 'panel'); p.append(el('div', 'texto', txt)); dMenu.append(p, btn('SÍ', si, 'oro'), btn('NO', () => J.carrera ? ludus() : portada(), 'gris')); }
+function confirmar(txt, si, no){ limpiar(true); const p = el('div', 'panel'); p.append(el('div', 'texto', txt)); dMenu.append(p, btn('SÍ', si, 'oro'), btn('NO', no || (() => J.carrera ? ludus() : portada()), 'gris')); }
 
 /* ----- mercado ----- */
+const coma = v => String(v).replace('.', ',');
+/* lo comprado queda en el ludus: volver a ponérselo no se paga otra vez */
+function tieneDe(d){
+  if(!d.tiene) d.tiene = {arma:{}, escudo:{}, casco:{}, torso:{}};
+  const t = d.tiene; t.arma[d.eq.arma] = t.escudo[d.eq.escudo] = t.casco[d.eq.casco] = t.torso[d.eq.torso] = true;
+  if(d.eq.segunda) t.arma[d.eq.segunda] = true;
+  t.arma.gladio = t.escudo.ninguno = t.casco.ninguno = t.torso.nada = true;
+  return t;
+}
 const TIENDA = {
-  armas:  () => Object.keys(ARMAS).filter(k => ARMAS[k].precio > 0 || k === 'gladio').map(k => ({k, n:ARMAS[k].n, precio:ARMAS[k].precio, info:'DAÑO ' + ARMAS[k].dano + ' · LARGO ' + ARMAS[k].largo + ' · PESO ' + ARMAS[k].peso,
-            usa:d => d.eq.arma === k, pon:d => { d.eq.arma = k; if(d.eq.segunda) d.eq.segunda = ARMAS[k].grande ? null : k; }})),
-  escudos:() => Object.keys(ESCUDOS).map(k => ({k, n:ESCUDOS[k].n, precio:ESCUDOS[k].precio, info:k === 'ninguno' ? 'las dos manos libres' : 'cubre ' + ESCUDOS[k].medio*2 + ' px · PESO ' + ESCUDOS[k].peso,
-            usa:d => d.eq.escudo === k, pon:d => { d.eq.escudo = k; if(k !== 'ninguno') d.eq.segunda = null; }})),
-  cascos: () => Object.keys(CASCOS).map(k => ({k, n:CASCOS[k].n, precio:CASCOS[k].precio, info:'PROTEGE ' + Math.round(CASCOS[k].prot*100) + '% LA CABEZA', usa:d => d.eq.casco === k, pon:d => { d.eq.casco = k; }})),
-  corazas:() => Object.keys(CORAZAS).map(k => ({k, n:CORAZAS[k].n, precio:CORAZAS[k].precio, info:'PROTEGE ' + Math.round(CORAZAS[k].prot*100) + '% EL TORSO', usa:d => d.eq.torso === k, pon:d => { d.eq.torso = k; }})),
+  armas:  () => Object.keys(ARMAS).filter(k => ARMAS[k].precio > 0 || k === 'gladio').map(k => ({k, n:ARMAS[k].n, precio:ARMAS[k].precio, grupo:'arma',
+            info:'DAÑO ' + ARMAS[k].dano + ' · LARGO ' + ARMAS[k].largo + ' · PESO ' + coma(ARMAS[k].peso) + (ARMAS[k].grande ? ' · A DOS MANOS' : ''),
+            usa:d => d.eq.arma === k,
+            pon:d => { d.eq.arma = k;
+              if(ARMAS[k].grande){ d.eq.segunda = null; d.eq.escudo = 'ninguno'; }          /* a dos manos: ni segunda ni escudo */
+              else if(d.clase === 'dimaquero' && d.eq.escudo === 'ninguno') d.eq.segunda = k;
+              else if(d.eq.segunda) d.eq.segunda = k; }})),
+  escudos:() => Object.keys(ESCUDOS).map(k => ({k, n:ESCUDOS[k].n, precio:ESCUDOS[k].precio, grupo:'escudo',
+            info:k === 'ninguno' ? 'LAS DOS MANOS LIBRES' : 'CUBRE ' + ESCUDOS[k].medio*2 + ' · PESO ' + coma(ESCUDOS[k].peso),
+            usa:d => d.eq.escudo === k,
+            no:d => k !== 'ninguno' && ARMAS[d.eq.arma].grande ? 'dos' : null,
+            pon:d => { d.eq.escudo = k; if(k !== 'ninguno') d.eq.segunda = null;
+              else if(d.clase === 'dimaquero' && !ARMAS[d.eq.arma].grande) d.eq.segunda = d.eq.arma; }})),     /* el dimaquero recupera su segunda espada */
+  cascos: () => Object.keys(CASCOS).map(k => ({k, n:CASCOS[k].n, precio:CASCOS[k].precio, grupo:'casco', info:'PROTEGE ' + Math.round(CASCOS[k].prot*100) + '% LA CABEZA', usa:d => d.eq.casco === k, pon:d => { d.eq.casco = k; }})),
+  corazas:() => Object.keys(CORAZAS).map(k => ({k, n:CORAZAS[k].n, precio:CORAZAS[k].precio, grupo:'torso', info:'PROTEGE ' + Math.round(CORAZAS[k].prot*100) + '% EL TORSO', usa:d => d.eq.torso === k, pon:d => { d.eq.torso = k; }})),
   otros:  () => [
     {k:'manica', n:'MANICA', precio:160, info:'30% EN EL BRAZO DEL ARMA', usa:d => d.eq.manica, pon:d => { d.eq.manica = true; }},
     {k:'grebas', n:'GREBAS', precio:160, info:'30% EN LAS PIERNAS', usa:d => d.eq.grebas, pon:d => { d.eq.grebas = true; }},
-    {k:'jab', n:'JABALINA', precio:60, info:'UNA MÁS PARA TIRAR (HASTA 3)', usa:d => d.jab >= 3, pon:d => { d.jab = Math.min(3, d.jab + 1); }, cuenta:d => d.jab},
-    {k:'red', n:'RED', precio:80, info:'ENREDA AL RIVAL (HASTA 2)', usa:d => d.red >= 2, pon:d => { d.red = Math.min(2, d.red + 1); }, cuenta:d => d.red}]
+    {k:'jab', n:'JABALINA', precio:60, info:'UNA MÁS PARA TIRAR (HASTA 3)', usa:d => d.jab >= 3, tope:true, pon:d => { d.jab = Math.min(3, d.jab + 1); }, cuenta:d => d.jab},
+    {k:'red', n:'RED', precio:80, info:'ENREDA AL RIVAL (HASTA 2)', usa:d => d.red >= 2, tope:true, pon:d => { d.red = Math.min(2, d.red + 1); }, cuenta:d => d.red}]
 };
 /* cada tienda es otra: su tendero, su fachada con el muestrario de verdad, su cartel con su
    emblema, sus colores y su voz. col = [fondo, fila, luz, sombra, anillo, precio, resaltado] */
@@ -1978,15 +2053,18 @@ function mercado(tab, dicho){
   const top = el('div', 'fila'); top.style.cursor = 'default';
   top.append(retrato(d, 2), el('div', 'info', '<b>' + d.nombre + '</b><br><b>' + d.monedas + ' $</b><br>' + equipoTxt(d)));
   p.append(top);
+  const tiene = tieneDe(d);
   for(const it of TIENDA[tab]()){
-    const usa = it.usa(d), puede = d.monedas >= it.precio;
+    const usa = it.usa(d), mio = it.grupo && tiene[it.grupo][it.k], precio = mio ? 0 : it.precio, puede = d.monedas >= precio;
     const f = el('div', 'fila' + (usa ? ' sel' : puede ? '' : ' no'));
     f.append(previa(tab, it, d));
     f.append(el('div', 'info', '<b>' + it.n + '</b>' + (it.cuenta ? ' (' + it.cuenta(d) + ')' : '') + '<br>' + it.info));
-    f.append(el('div', 'precio', usa ? 'EN USO' : it.precio ? it.precio + ' $' : 'GRATIS'));
+    f.append(el('div', 'precio', usa ? (it.tope ? 'AL TOPE' : 'EN USO') : mio && it.precio ? 'PONER' : precio ? precio + ' $' : 'GRATIS'));
     f.addEventListener('click', () => { if(usa){ return; }
+      if(it.no && it.no(d)){ SON.fx('negado'); voz.innerHTML = '<b>' + T.quien + ':</b> «Con un arma a dos manos no te queda mano para el escudo.»'; return; }
       if(!puede){ SON.fx('negado'); voz.innerHTML = '<b>' + T.quien + ':</b> «' + T.pobre + '»'; return; }
-      d.monedas -= it.precio; it.pon(d); SON.fx('moneda'); SON.fx(T.fx); guardar('saltos.carrera', C); mercado(tab, T.gracias); });
+      d.monedas -= precio; it.pon(d); if(it.grupo) tiene[it.grupo][it.k] = true; tieneDe(d);
+      SON.fx(precio ? 'moneda' : 'clic'); SON.fx(T.fx); guardar('saltos.carrera', C); mercado(tab, precio ? T.gracias : 'Lo tuyo, como lo dejaste.'); });
     p.append(f);
   }
   dMenu.append(cab, p, btn('VOLVER', ludus, 'gris'));
@@ -2017,10 +2095,10 @@ function resultadoRapida(P){
 /* ----- pausa, estatuas, ajustes, ayuda ----- */
 function pausar(){
   if(J.modo !== 'pelea' || !J.pelea || J.pelea.fin) return;
-  J.pausa = true; for(const k in IN) IN[k] = false; limpiar(false);
+  J.pausa = true; soltarTodo(); limpiar(false);
   const car = J.pelea.modo === 'carrera';
   dMenu.append(pixelTxt('PAUSA', 'oro', 3), btn('SEGUIR', () => { J.pausa = false; dMenu.className = ''; }, 'oro'),
-    btn(car ? 'ENTREGARSE' : 'ABANDONAR', () => { if(car) confirmar('Entregarse es morir: el público no perdona.', () => { J.pausa = false; morir(J.pelea.a, J.pelea, 'muerto'); dMenu.className = ''; J.modo = 'pelea'; });
+    btn(car ? 'ENTREGARSE' : 'ABANDONAR', () => { if(car) confirmar('Entregarse es morir: el público no perdona.', () => { J.pausa = false; morir(J.pelea.a, J.pelea, 'muerto'); dMenu.className = ''; J.modo = 'pelea'; }, pausar);
       else { J.pausa = false; portada(); } }, 'gris'));
 }
 function estatuas(){
@@ -2028,8 +2106,8 @@ function estatuas(){
   const p = el('div', 'panel'); p.append(pixelTxt('SALÓN DE ESTATUAS', 'oro', 2));
   if(!J.estatuas.length) p.append(el('div', 'texto', 'Todavía no hay nadie. Los gladiadores que caigan o se retiren van a quedar acá, en piedra.'));
   for(const s of J.estatuas){ const d = s.def, f = el('div', 'fila'); f.style.cursor = 'default';
-    f.append(retrato(d, 2, true), el('div', 'info', '<b>' + d.nombre + '</b>' + (s.campeon ? ' · CAMPEÓN' : '') + '<br>' + nomClase(d.clase) + ' · ' + d.edad + ' años<br>' + d.ganadas + ' victorias · FAMA ' + d.fama + '<br>' +
-      (s.causa === 'MUERTO' ? 'Cayó ante ' + (s.asesino || 'la arena') : 'Se retiró con vida')));
+    f.append(retrato(d, 2, true), el('div', 'info', '<b>' + d.nombre + '</b>' + (s.campeon ? ' · CAMPEÓN' : '') + '<br>' + nomClase(d.clase) + ' · ' + d.edad + ' años<br>' + d.ganadas + (d.ganadas === 1 ? ' victoria' : ' victorias') + ' · FAMA ' + d.fama + '<br>' +
+      (s.causa === 'MUERTO' ? (s.como === 'juntos' ? 'Cayó junto con ' : 'Cayó ante ') + (s.asesino || 'la arena') : 'Se retiró con vida')));
     p.append(f); }
   dMenu.append(p, btn('VOLVER', portada, 'gris'));
 }
@@ -2041,7 +2119,9 @@ function ajustes(){
   p.append(op('SONIDO', AJ.sonido ? 'SÍ' : 'NO', () => { AJ.sonido = !AJ.sonido; }));
   p.append(op('CONTROLES', AJ.controles === 'botones' ? 'BOTONES' : 'GESTOS', () => { AJ.controles = AJ.controles === 'botones' ? 'gestos' : 'botones'; }));
   p.append(op('VIBRAR', AJ.vibrar ? 'SÍ' : 'NO', () => { AJ.vibrar = !AJ.vibrar; }));
-  if(J.carrera) p.append(op('BORRAR CARRERA', J.carrera.def.nombre.split(' ')[0], () => { J.carrera = null; guardar('saltos.carrera', null); }));
+  if(J.carrera){ const f = el('div', 'fila'); f.append(el('div', 'info', '<b>BORRAR CARRERA</b>'), el('div', 'precio', J.carrera.def.nombre.split(' ')[0]));
+    f.addEventListener('click', () => { SON.fx('clic'); confirmar('¿Borrar la carrera de ' + J.carrera.def.nombre + '? No queda estatua.', () => { J.carrera = null; guardar('saltos.carrera', null); ajustes(); }, ajustes); });
+    p.append(f); }
   dMenu.append(p, btn('VOLVER', portada, 'gris'));
 }
 function ayuda(){
@@ -2051,7 +2131,7 @@ function ayuda(){
     'A la derecha, los golpes: <b>▲</b> tajo de arriba · <b>▼</b> barrido bajo · <b>la espada</b> estocada hacia el rival · <b>el círculo</b> golpe rápido · <b>el escudo</b> mantené para cubrirte.<br><br>' +
     '<b>Las dos flechas</b> de arriba a la izquierda cambian la postura: alta pega más fuerte, baja es más rápida y cubre más. La lanza tira la jabalina (o la red).<br><br>' +
     'Cada parte del cuerpo tiene su vida: una cabeza o un torso deshechos matan, un brazo cortado suelta el arma, una pierna cortada casi no te deja saltar. Y la sangre se va.<br><br>' +
-    'En la <b>carrera</b> cada victoria da monedas, fama y un punto para entrenar. Con los años se pierde fuerza. Si morís, no hay vuelta: queda tu estatua.<br><br>' +
+    'En la <b>carrera</b> cada victoria da monedas, fama y un punto para entrenar. Con los años se pierde FUE, RES o AGI. Si morís, no hay vuelta: queda tu estatua.<br><br>' +
     'Teclado: A/D saltan · ↑ ↓ → golpean · ← cubre · espacio rápido · Q postura · E jabalina.'));
   dMenu.append(p, btn('VOLVER', portada, 'gris'));
 }
@@ -2069,6 +2149,7 @@ window.__S = {
   iaVsIa(){ const P = J.pelea; P.a.jug = false; P.a.dif = 0.6; return true; },
   semilla(s){ rnd = mulberry(semilla32(String(s))); },
   dibujarYa(){ dibujar(); }, portada, reclutas, ludus, mercado, rivalesPant, ajustes, estatuas, rapida, ayuda,
+  crearDef, pausar, cortar:(k, parte, d) => cortar(J.pelea[k], J.pelea, parte, d || 1), txt:s => { const c = lienzoTexto(s); return c.getContext('2d').getImageData(0, 0, c.width, c.height).data.join(); },
   dmenu:() => dMenu.innerText, listo:true
 };
 
