@@ -82,6 +82,10 @@ h2{margin:0;font-size:34px;letter-spacing:3px;font-style:italic;color:#ff5a3a;te
 .barraXP{width:260px;height:12px;border:2px solid #000;background:#2a1010;border-radius:6px;overflow:hidden}
 .barraXP b{display:block;height:100%;width:0;background:linear-gradient(90deg,#5ad04a,#b8ff6a);transition:width 1.2s ease}
 #monedero{position:absolute;top:10px;left:14px;font-size:20px;letter-spacing:1px;color:#ffc83a;text-shadow:0 2px 0 #000}
+/* selector de idioma: arriba a la derecha de la portada, el elegido en oro */
+#idiomas{position:absolute;top:8px;right:12px;display:flex;gap:6px}
+#idiomas .boton{font-size:12px;letter-spacing:1px;padding:4px 9px;box-shadow:0 3px 0 #000,inset 0 2px 0 rgba(255,255,255,.35)}
+#idiomas .boton.ya{background:linear-gradient(180deg,#ffc83a,#b86a08);color:#1a0a00;text-shadow:none}
 #aviso{position:absolute;left:0;right:0;top:30%;text-align:center;font-size:34px;letter-spacing:3px;font-style:italic;pointer-events:none;opacity:0;
   -webkit-text-stroke:2px #000;paint-order:stroke fill;text-shadow:0 4px 0 #000;transition:opacity .25s}
 </style></head><body>
@@ -103,6 +107,7 @@ h2{margin:0;font-size:34px;letter-spacing:3px;font-style:italic;color:#ff5a3a;te
 
   <div class="capa" id="capaTitulo">
     <div id="monedero">$ 0</div>
+    <div id="idiomas"><button class="boton gris chico" data-l="es">ESPAÑOL</button><button class="boton gris chico" data-l="en">ENGLISH</button><button class="boton gris chico" data-l="pt">PORTUGUÊS</button></div>
     <div class="titulo">BRONCA</div>
     <div class="sub">ZOMBIS</div>
     <div class="botones" style="margin-top:14px">
@@ -239,6 +244,136 @@ const NIVELES = [
   {id:'puente', nom:'EL PUENTE', txt:'Cruzá en helicóptero bajo la tormenta. Abajo espera el tanque.', tema:3, zonas:4, tipos:{caminante:3, corredor:3, saltador:2, cuervo:3, blindado:2, escupidor:1}, jefe:3, dif:1.7, heli:true},
   {id:'lab', nom:'EL LABORATORIO', txt:'Donde empezó todo. Todos los mutantes y la madre.', tema:4, zonas:5, tipos:{caminante:2, corredor:3, gordo:2, escupidor:2, blindado:2, saltador:2, rastrero:2}, jefe:4, dif:2.0, robot:true},
 ];
+/* ====================== idiomas: castellano (base), inglés y portugués ======================
+   Todo se escribe en castellano y T() traduce al mostrar: entero si está en el diccionario, y si no
+   por frases sueltas (palabras enteras), así andan también los armados como 'OLEADA ' + n. */
+const IDIOMAS = [['es','ESPAÑOL'], ['en','ENGLISH'], ['pt','PORTUGUÊS']];
+const TR = {
+  en:{
+    /* menús */
+    'ZOMBIS':'ZOMBIES', 'BRONCA · ZOMBIS':'BRONCA · ZOMBIES', 'A LA CALLE':'HIT THE STREETS', 'LA BASE':'THE BASE', 'CÓMO SE JUEGA':'HOW TO PLAY',
+    'SONIDO: SÍ':'SOUND: ON', 'SONIDO: NO':'SOUND: OFF', 'MISIONES':'MISSIONS', 'VOLVER':'BACK', 'ARSENAL':'ARSENAL', 'EQUIPO':'SQUAD', 'HABILIDADES':'SKILLS',
+    'PAUSA':'PAUSED', 'SEGUIR':'RESUME', 'REINICIAR':'RESTART', 'SALIR':'QUIT', 'SIGUIENTE':'NEXT', 'DE NUEVO':'AGAIN', 'NIVEL':'LEVEL', '¡NIVEL':'LEVEL',
+    'CERRADA · terminá la anterior':'LOCKED · beat the previous one',
+    'COMPRAR':'BUY', 'MEJORAR':'UPGRADE', 'LLEVANDO':'EQUIPPED', 'LLEVAR':'EQUIP', 'CONTRATAR':'HIRE', 'EN EL EQUIPO':'IN THE SQUAD', 'EQUIPO LLENO':'SQUAD FULL',
+    'SUMAR':'ADD', 'AL MÁXIMO':'MAXED', 'Recarga:':'Cooldown:',
+    '¡SE TERMINÓ LA PLAGA!':'THE PLAGUE IS OVER!', '¡LIMPIASTE LA ZONA!':'ZONE CLEARED!', 'ROMPIERON LA PUERTA':'THEY BROKE THE DOOR', 'TE COMIERON':'YOU GOT EATEN',
+    'DAÑO':'DAMAGE', 'COMBO MÁXIMO':'MAX COMBO', 'TIEMPO':'TIME', 'PLATA':'CASH', 'premio':'bonus', 'EXPERIENCIA':'EXPERIENCE',
+    /* mandos, armas y habilidades */
+    'GIRO':'SPIN', 'SISMO':'QUAKE', 'FURIA':'FURY', 'TORBELLINO':'WHIRLWIND', 'BAJAR':'EXIT',
+    'PUÑOS':'FISTS', 'PISTOLA':'PISTOL', 'ESCOPETA':'SHOTGUN', 'AMETRA':'M.GUN', 'LLAMAS':'FLAMER', 'COHETES':'ROCKETS', 'KATANA':'KATANA',
+    'Balas infinitas. Rápida y segura.':'Infinite ammo. Fast and reliable.',
+    'Siete perdigones: barre a los de adelante.':'Seven pellets: sweeps whoever is in front.',
+    'Lluvia de plomo. Se gasta rápido.':'A rain of lead. Runs dry fast.',
+    'Quema: siguen perdiendo vida un rato.':'Burns: they keep losing health for a while.',
+    'Explota y levanta a todos. Pocas balas.':'Blows up and launches everyone. Little ammo.',
+    'Cuerpo a cuerpo: casi el doble de daño y corta miembros.':'Melee: almost double damage and it cuts off limbs.',
+    'Patadas giratorias que pegan a todos alrededor.':'Spinning kicks that hit everyone around you.',
+    'Saltás y clavás el puño: onda que tira a todos al piso.':'You leap and slam your fist: a shockwave knocks everyone down.',
+    'Seis segundos de doble daño, más velocidad y aura roja.':'Six seconds of double damage, more speed and a red aura.',
+    /* aliados */
+    'EL TANO':'BIG TANO', 'LA FLACA':'SKINNY', 'DOC':'DOC', 'CHISPA':'SPARKY', 'KAGE':'KAGE',
+    'Grandote con martillo. Aguanta todo.':'Big guy with a hammer. Takes anything.',
+    'Francotiradora: pega fuerte desde lejos.':'Sniper: hits hard from far away.',
+    'Médico: cura al que esté peor cada 6 s.':'Medic: heals whoever is worst off every 6 s.',
+    'Tira granadas a los grupos.':'Throws grenades at groups.',
+    'Ninja: katana y piques rapidísimos.':'Ninja: katana and lightning dashes.',
+    /* jefes y misiones */
+    'EL GORDO PODRIDO':'THE ROTTEN FATSO', 'EL CIRUJANO':'THE SURGEON', 'EL CAPATAZ':'THE FOREMAN', 'EL TANQUE':'THE TANK', 'LA MADRE':'THE MOTHER',
+    'LA CIUDAD':'THE CITY', 'EL HOSPITAL':'THE HOSPITAL', 'EL REFUGIO':'THE SHELTER', 'EL PUENTE':'THE BRIDGE', 'EL LABORATORIO':'THE LAB',
+    'Salí del barrio. Arriba el gordo podrido.':'Get out of the neighborhood. The rotten fatso waits on top.',
+    'Luces que parpadean, escupidores y un robot en el garaje.':'Flickering lights, spitters and a robot in the garage.',
+    'Defensa: aguantá la puerta seis oleadas. Vienen de los dos lados.':'Defense: hold the door for six waves. They come from both sides.',
+    'Cruzá en helicóptero bajo la tormenta. Abajo espera el tanque.':'Cross by helicopter through the storm. The tank waits below.',
+    'Donde empezó todo. Todos los mutantes y la madre.':'Where it all began. Every mutant and the mother.',
+    /* en juego */
+    'CAYÓ':'IS DOWN', 'VOLVIÓ':'IS BACK', '¡DOC TE LEVANTÓ!':'DOC GOT YOU UP!', '¡FURIA!':'FURY!', '¡ROBOT!':'ROBOT!', '¡HELICÓPTERO!':'HELICOPTER!',
+    '¡SE ROMPIÓ!':'IT BROKE!', '¡ATERRIZAJE!':'LANDING!', 'SE ENOJA':'GETS ANGRY', 'ESTÁ FURIOSO':'IS FURIOUS', '¡ATONTADO! ¡DALE!':'STUNNED! HIT IT!',
+    '¡LLUVIA ÁCIDA!':'ACID RAIN!', '¡DEFENDÉ LA PUERTA!':'DEFEND THE DOOR!', '¡ZONA BLOQUEADA!':'ZONE LOCKED!', '¡VAMOS! ▶':'GO! ▶',
+    'OLEADA':'WAVE', 'DE':'OF', 'RESPIRÁ…':'BREATHE…', 'EN 5':'IN 5', '¡ROMPIERON LA PUERTA!':'THEY BROKE THE DOOR!',
+    'ROBOT':'ROBOT', 'HELI':'HELI', 'PUERTA':'DOOR', 'ZONA':'ZONE', 'SEGUÍ ▶':'GO ON ▶', 'GOLPES':'HITS', 'SUBITE ▼':'GET IN ▼',
+    '+VIDA':'+HEALTH', '+BALAS':'+AMMO', '+CURA':'+HEAL'
+  },
+  pt:{
+    'ZOMBIS':'ZUMBIS', 'BRONCA · ZOMBIS':'BRONCA · ZUMBIS', 'A LA CALLE':'PRA RUA', 'LA BASE':'A BASE', 'CÓMO SE JUEGA':'COMO JOGAR',
+    'SONIDO: SÍ':'SOM: SIM', 'SONIDO: NO':'SOM: NÃO', 'MISIONES':'MISSÕES', 'VOLVER':'VOLTAR', 'ARSENAL':'ARSENAL', 'EQUIPO':'EQUIPE', 'HABILIDADES':'HABILIDADES',
+    'PAUSA':'PAUSA', 'SEGUIR':'CONTINUAR', 'REINICIAR':'REINICIAR', 'SALIR':'SAIR', 'SIGUIENTE':'PRÓXIMA', 'DE NUEVO':'DE NOVO', 'NIVEL':'NÍVEL', '¡NIVEL':'NÍVEL',
+    'CERRADA · terminá la anterior':'BLOQUEADA · termine a anterior',
+    'COMPRAR':'COMPRAR', 'MEJORAR':'MELHORAR', 'LLEVANDO':'EQUIPADA', 'LLEVAR':'EQUIPAR', 'CONTRATAR':'CONTRATAR', 'EN EL EQUIPO':'NA EQUIPE', 'EQUIPO LLENO':'EQUIPE CHEIA',
+    'SUMAR':'CHAMAR', 'AL MÁXIMO':'NO MÁXIMO', 'Recarga:':'Recarga:',
+    '¡SE TERMINÓ LA PLAGA!':'A PRAGA ACABOU!', '¡LIMPIASTE LA ZONA!':'ZONA LIMPA!', 'ROMPIERON LA PUERTA':'ARROMBARAM A PORTA', 'TE COMIERON':'TE DEVORARAM',
+    'DAÑO':'DANO', 'COMBO MÁXIMO':'COMBO MÁXIMO', 'TIEMPO':'TEMPO', 'PLATA':'GRANA', 'premio':'bônus', 'EXPERIENCIA':'EXPERIÊNCIA',
+    'GIRO':'GIRO', 'SISMO':'SISMO', 'FURIA':'FÚRIA', 'TORBELLINO':'REDEMOINHO', 'BAJAR':'DESCER',
+    'PUÑOS':'PUNHOS', 'PISTOLA':'PISTOLA', 'ESCOPETA':'ESCOPETA', 'AMETRA':'METRA', 'LLAMAS':'CHAMAS', 'COHETES':'FOGUETES', 'KATANA':'KATANA',
+    'Balas infinitas. Rápida y segura.':'Balas infinitas. Rápida e segura.',
+    'Siete perdigones: barre a los de adelante.':'Sete balins: varre quem está na frente.',
+    'Lluvia de plomo. Se gasta rápido.':'Chuva de chumbo. Acaba rápido.',
+    'Quema: siguen perdiendo vida un rato.':'Queima: continuam perdendo vida por um tempo.',
+    'Explota y levanta a todos. Pocas balas.':'Explode e levanta todo mundo. Pouca munição.',
+    'Cuerpo a cuerpo: casi el doble de daño y corta miembros.':'Corpo a corpo: quase o dobro de dano e corta membros.',
+    'Patadas giratorias que pegan a todos alrededor.':'Chutes giratórios que acertam todos em volta.',
+    'Saltás y clavás el puño: onda que tira a todos al piso.':'Você salta e crava o punho: uma onda derruba todo mundo.',
+    'Seis segundos de doble daño, más velocidad y aura roja.':'Seis segundos de dano dobrado, mais velocidade e aura vermelha.',
+    'EL TANO':'O TANO', 'LA FLACA':'A MAGRELA', 'DOC':'DOC', 'CHISPA':'FAÍSCA', 'KAGE':'KAGE',
+    'Grandote con martillo. Aguanta todo.':'Grandalhão com martelo. Aguenta tudo.',
+    'Francotiradora: pega fuerte desde lejos.':'Atiradora de elite: bate forte de longe.',
+    'Médico: cura al que esté peor cada 6 s.':'Médico: cura quem estiver pior a cada 6 s.',
+    'Tira granadas a los grupos.':'Joga granadas nos grupos.',
+    'Ninja: katana y piques rapidísimos.':'Ninja: katana e arrancadas rapidíssimas.',
+    'EL GORDO PODRIDO':'O GORDO PODRE', 'EL CIRUJANO':'O CIRURGIÃO', 'EL CAPATAZ':'O CAPATAZ', 'EL TANQUE':'O TANQUE', 'LA MADRE':'A MÃE',
+    'LA CIUDAD':'A CIDADE', 'EL HOSPITAL':'O HOSPITAL', 'EL REFUGIO':'O REFÚGIO', 'EL PUENTE':'A PONTE', 'EL LABORATORIO':'O LABORATÓRIO',
+    'Salí del barrio. Arriba el gordo podrido.':'Saia do bairro. Lá em cima, o gordo podre.',
+    'Luces que parpadean, escupidores y un robot en el garaje.':'Luzes piscando, cuspidores e um robô na garagem.',
+    'Defensa: aguantá la puerta seis oleadas. Vienen de los dos lados.':'Defesa: segure a porta por seis ondas. Vêm dos dois lados.',
+    'Cruzá en helicóptero bajo la tormenta. Abajo espera el tanque.':'Atravesse de helicóptero na tempestade. Lá embaixo espera o tanque.',
+    'Donde empezó todo. Todos los mutantes y la madre.':'Onde tudo começou. Todos os mutantes e a mãe.',
+    'CAYÓ':'CAIU', 'VOLVIÓ':'VOLTOU', '¡DOC TE LEVANTÓ!':'O DOC TE LEVANTOU!', '¡FURIA!':'FÚRIA!', '¡ROBOT!':'ROBÔ!', '¡HELICÓPTERO!':'HELICÓPTERO!',
+    '¡SE ROMPIÓ!':'QUEBROU!', '¡ATERRIZAJE!':'POUSO!', 'SE ENOJA':'SE IRRITA', 'ESTÁ FURIOSO':'ENFURECEU', '¡ATONTADO! ¡DALE!':'ATORDOADO! MANDA VER!',
+    '¡LLUVIA ÁCIDA!':'CHUVA ÁCIDA!', '¡DEFENDÉ LA PUERTA!':'DEFENDA A PORTA!', '¡ZONA BLOQUEADA!':'ZONA BLOQUEADA!', '¡VAMOS! ▶':'VAMOS! ▶',
+    'OLEADA':'ONDA', 'DE':'DE', 'RESPIRÁ…':'RESPIRA…', 'EN 5':'EM 5', '¡ROMPIERON LA PUERTA!':'ARROMBARAM A PORTA!',
+    'ROBOT':'ROBÔ', 'HELI':'HELI', 'PUERTA':'PORTA', 'ZONA':'ZONA', 'SEGUÍ ▶':'SIGA ▶', 'GOLPES':'GOLPES', 'SUBITE ▼':'SOBE AÍ ▼',
+    '+VIDA':'+VIDA', '+BALAS':'+BALAS', '+CURA':'+CURA'
+  }
+};
+/* cómo se juega tiene negritas adentro: va entero por idioma */
+const COMO_TXT = {
+  en:`<p><b>◀ ▶</b> walk · double tap = <b>roll</b> and dodge. <b>Up arrow</b> jumps (twice: double jump).</p>
+      <p><b>Red fist:</b> you hit. Up close: a combo of punch, punch, kick and an <b>uppercut that launches them</b>. From afar with a gun: it <b>fires on its own</b> at the nearest zombie. In the air: <b>flying kick</b>.</p>
+      <p><b>SPIN, QUAKE and FURY</b> are your skills: they recharge on their own. <b>WEAPON</b> switches between fists and whatever you carry.</p>
+      <p>Zombies drop <b>experience</b> and <b>cash</b>. You level up, and at <b>THE BASE</b> you buy weapons, allies and upgrades.</p>
+      <p>Up to <b>3 allies</b> fight by your side. If you see a <b>robot</b> or a <b>helicopter</b>, get in. Red barrels explode.</p>
+      <p style="opacity:.7">PC: A/D or arrows, W or space jumps, J hits, K/L/I skills, Q switches weapon, P pause.</p>`,
+  pt:`<p><b>◀ ▶</b> andar · toque duplo = <b>rolar</b> desviando. <b>Seta para cima</b> pula (duas vezes: pulo duplo).</p>
+      <p><b>Punho vermelho:</b> você bate. De perto: combo de soco, soco, chute e <b>gancho que levanta</b>. De longe e com arma: <b>atira sozinho</b> no zumbi mais próximo. No ar: <b>voadora</b>.</p>
+      <p><b>GIRO, SISMO e FÚRIA</b> são suas habilidades: recarregam sozinhas. <b>ARMA</b> troca entre os punhos e o que você tiver.</p>
+      <p>Os zumbis soltam <b>experiência</b> e <b>grana</b>. Você sobe de nível e na <b>BASE</b> compra armas, aliados e melhorias.</p>
+      <p>Até <b>3 aliados</b> lutam com você. Se vir um <b>robô</b> ou um <b>helicóptero</b>, sobe nele. Os barris vermelhos explodem.</p>
+      <p style="opacity:.7">PC: A/D ou setas, W ou espaço pula, J bate, K/L/I habilidades, Q troca arma, P pausa.</p>`
+};
+function idiomaInicial(){ let n = 'es'; try{ n = (navigator.language||'es').slice(0,2).toLowerCase(); }catch(e){} return n==='en' || n==='pt' ? n : 'es'; }
+if(!TR[G.idioma] && G.idioma!=='es') G.idioma = idiomaInicial();
+const TRC = {};   /* por idioma: {re, cache} */
+function T(s){
+  const l = G.idioma; if(l==='es' || s==null) return s; s = String(s); const D = TR[l]; if(!D) return s;
+  if(D[s] !== undefined) return D[s];
+  let C = TRC[l]; if(!C){ const ks = Object.keys(D).sort((a, b)=> b.length - a.length).map(k=> k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    C = TRC[l] = {re:new RegExp('(?<![\\p{L}])(' + ks.join('|') + ')(?![\\p{L}])', 'gu'), cache:new Map()}; }
+  let r = C.cache.get(s); if(r !== undefined) return r;
+  r = s.replace(C.re, m=> D[m]); if(C.cache.size > 600) C.cache.clear(); C.cache.set(s, r); return r;
+}
+/* textos fijos del HTML: se guarda el original en castellano y se traduce desde ahí */
+const TXT_ES = new Map();
+let COMO_ES = null, TITULO_ES = null;
+function aplicarIdioma(){
+  document.documentElement.lang = G.idioma==='pt' ? 'pt-BR' : G.idioma;
+  if(TITULO_ES===null) TITULO_ES = document.title; document.title = T(TITULO_ES);
+  const como = document.querySelector('#capaComo .texto'); if(como){ if(COMO_ES===null) COMO_ES = como.innerHTML; como.innerHTML = G.idioma==='es' ? COMO_ES : COMO_TXT[G.idioma]; }
+  /* afuera: el nombre del juego y lo que el JS reescribe */
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {acceptNode:n=> n.parentNode.closest('.titulo,script,style,#capaComo .texto,#aviso,#armaNom,#armaBal,#monedero,#btSonido,#listaMisiones,#listaBase,#baseTit,#resTit,#rango,#resDet,#resEst,#resNivel,#idiomas') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT});
+  for(let n = w.nextNode(); n; n = w.nextNode()){ if(!TXT_ES.has(n)){ if(!n.nodeValue.trim()) continue; TXT_ES.set(n, n.nodeValue); }
+    const o = TXT_ES.get(n), t = o.trim(); n.nodeValue = o.replace(t, T(t)); }
+  document.querySelectorAll('#idiomas button').forEach(b=> b.classList.toggle('ya', b.dataset.l===G.idioma));
+}
 /* ---------- temas ---------- */
 const TEMAS = [
   {cA:'#ff9a5a', cB:'#ffd8a0', lejos:'#b8604a', medio:'#7a3a36', cerca:'#3a1c20', piso:'#2a2226', pisoL:'#4a3a3a', niebla:'#e8a07a', noche:0, lluvia:false},
@@ -667,7 +802,7 @@ function pasarTrapos(){
 function goo(x, y, emp){ J.parts.push({x, y, vx:(emp||0)*vr(0.3,1) + vr(-2.5,2.5), vy:vr(1,6), t:vr(0.4,0.9), col: Math.random()<0.5 ? '#6ab02a' : '#3a7a1a', r:vr(0.05,0.12), g:1, mancha:true}); }
 function chispa(x, y, col){ for(let i=0;i<4;i++) J.parts.push({x, y, vx:vr(-5,5), vy:vr(-2,5), t:vr(0.1,0.25), col, r:0.04, g:0.4, brilla:true}); }
 function polvo(x, y, n){ for(let i=0;i<n;i++) J.parts.push({x:x+vr(-0.4,0.4), y:y+0.05, vx:vr(-3,3), vy:vr(0.3,1.5), t:vr(0.3,0.7), col:'rgba(200,190,180,0.5)', r:vr(0.1,0.25), g:0.2, humo:true}); }
-function aviso(txt, col){ const a = $('aviso'); a.textContent = txt; a.style.color = col||'#fff'; a.style.opacity = 1; clearTimeout(aviso.t); aviso.t = setTimeout(()=> a.style.opacity = 0, 1700); }
+function aviso(txt, col){ const a = $('aviso'); a.textContent = T(txt); a.style.color = col||'#fff'; a.style.opacity = 1; clearTimeout(aviso.t); aviso.t = setTimeout(()=> a.style.opacity = 0, 1700); }
 
 /* ====================== el jugador ====================== */
 const IN = {izq:false, der:false, saltoH:false, salto:false, ataque:false, h1:false, h2:false, h3:false, arma:false, bajar:false, rodar:0, tIzq:-99, tDer:-99};
@@ -1248,7 +1383,7 @@ function dibujarProp(p){
   } else if(p.tipo==='robot'){ if(!p.vivo) return;
     dibujarRobot({x, y:0, dir:1, esc:1, fase:0, vx:0, vy:0, estado:'ok', lado:0, id:5, atq:null, apunta:null, golpeT:0, rodando:0, enAire:false, levantaT:0}, false);
     const j = J.jug; if(j && !j.vehiculo && Math.abs(j.x - x) < 9){ cx.font = `${Math.round(0.5*z)}px ${FUENTE}`; cx.textAlign = 'center'; cx.lineWidth = 3; cx.strokeStyle = '#000'; cx.fillStyle = J.t%40 < 24 ? '#9cff6a' : '#fff';
-      const y = SY(3.7 + Math.sin(J.t*0.1)*0.1); cx.strokeText('SUBITE ▼', sx, y); cx.fillText('SUBITE ▼', sx, y); }
+      const y = SY(3.7 + Math.sin(J.t*0.1)*0.1); const tt = T('SUBITE ▼'); cx.strokeText(tt, sx, y); cx.fillText(tt, sx, y); }
   }
 }
 
@@ -1444,7 +1579,7 @@ function dibujarItem(it){
   else if(it.tipo==='botiquin'){ luz(x, y, 0.6*z, '#ffffff', 0.35); cx.fillStyle = '#f2f2f2'; cx.fillRect(x - 0.26*z, y - 0.2*z, 0.52*z, 0.4*z); cx.fillStyle = '#e02020'; cx.fillRect(x - 0.05*z, y - 0.15*z, 0.1*z, 0.3*z); cx.fillRect(x - 0.15*z, y - 0.05*z, 0.3*z, 0.1*z); }
   else if(it.tipo==='balas'){ cx.fillStyle = '#4a5a2a'; cx.fillRect(x - 0.28*z, y - 0.18*z, 0.56*z, 0.36*z); cx.fillStyle = '#ffc83a'; for(let k=0;k<4;k++) cx.fillRect(x - 0.2*z + k*0.11*z, y - 0.3*z, 0.06*z, 0.14*z); }
   else if(it.tipo==='arma'){ luz(x, y, 0.8*z, '#ffc83a', 0.45); cx.fillStyle = '#6a4a2a'; cx.fillRect(x - 0.4*z, y - 0.25*z, 0.8*z, 0.5*z); cx.strokeStyle = '#3a2a1a'; cx.lineWidth = 2; cx.strokeRect(x - 0.4*z, y - 0.25*z, 0.8*z, 0.5*z);
-    cx.font = `${Math.round(0.26*z)}px ${FUENTE}`; cx.textAlign = 'center'; cx.fillStyle = '#ffc83a'; cx.fillText(ARMAS[it.arma].nom, x, y + 0.09*z); }
+    cx.font = `${Math.round(0.26*z)}px ${FUENTE}`; cx.textAlign = 'center'; cx.fillStyle = '#ffc83a'; cx.fillText(T(ARMAS[it.arma].nom), x, y + 0.09*z); }
 }
 function dibujarEfectos(){
   const z = V.z;
@@ -1473,7 +1608,7 @@ function dibujarParts(){
     if(p.humo){ cx.globalAlpha = Math.min(1, p.t*1.5); cx.fillStyle = p.col; cx.beginPath(); cx.arc(x, y, r*(1.6 - p.t*0.5), 0, TAU); cx.fill(); cx.globalAlpha = 1; }
     else { cx.fillStyle = p.col; cx.fillRect(x - r, y - r, r*2, r*2); } }
   for(const t of J.textos){ const x = SX(t.x), y = SY(t.y), s = t.grande ? 0.6 : 0.42, pop = 1 + Math.max(0, (t.t - 0.55))*3;
-    cx.font = `${Math.round(s*V.z*pop)}px ${FUENTE}`; cx.textAlign = 'center'; cx.globalAlpha = Math.min(1, t.t*2.5); cx.lineWidth = 3; cx.strokeStyle = '#000'; cx.strokeText(t.txt, x, y); cx.fillStyle = t.col; cx.fillText(t.txt, x, y); }
+    cx.font = `${Math.round(s*V.z*pop)}px ${FUENTE}`; cx.textAlign = 'center'; cx.globalAlpha = Math.min(1, t.t*2.5); cx.lineWidth = 3; cx.strokeStyle = '#000'; const tt = T(t.txt); cx.strokeText(tt, x, y); cx.fillStyle = t.col; cx.fillText(tt, x, y); }
   cx.globalAlpha = 1;
 }
 
@@ -1483,7 +1618,7 @@ function barra(x, y, w, h, f, col, trail){
   cx.fillStyle = '#000'; cx.fillRect(x - 2, y - 2, w + 4, h + 4); cx.fillStyle = '#3a1010'; cx.fillRect(x, y, w, h);
   if(trail !== undefined){ cx.fillStyle = '#fff'; cx.fillRect(x, y, w*lim(trail, 0, 1), h); }
   cx.fillStyle = col; cx.fillRect(x, y, w*lim(f, 0, 1), h); cx.fillStyle = 'rgba(255,255,255,0.25)'; cx.fillRect(x, y, w*lim(f, 0, 1), Math.max(1, h*0.3)); }
-function texto(t, x, y, px, col, al){ cx.font = `${px}px ${FUENTE}`; cx.textAlign = al||'left'; cx.lineWidth = 3; cx.strokeStyle = '#000'; cx.strokeText(t, x, y); cx.fillStyle = col; cx.fillText(t, x, y); }
+function texto(t, x, y, px, col, al){ t = T(t); cx.font = `${px}px ${FUENTE}`; cx.textAlign = al||'left'; cx.lineWidth = 3; cx.strokeStyle = '#000'; cx.strokeText(t, x, y); cx.fillStyle = col; cx.fillText(t, x, y); }
 function hud(){
   const j = J.jug; if(!j || J.demo) return;
   cx.lineJoin = 'round';
@@ -1537,7 +1672,7 @@ function botonesHab(j){
     const cd = HABS[h].cd*(1 - (nivelHab(h)-1)*0.12), fr = j.vehiculo && h!=='sismo' ? 1 : lim(j.habCd[h]/cd, 0, 1), r = Math.round(fr*40)/40;
     if(r !== HAB_UI[id]){ HAB_UI[id] = r; $(id).firstChild.style.transform = 'scaleY('+r+')'; $(id).style.borderColor = r===0 ? '#ffc83a' : ''; } }
   const nom = j.vehiculo ? (j.vehiculo.tipo==='robot' ? 'ROBOT' : 'HELI') : ARMAS[j.arma].nom, b = j.vehiculo || ARMAS[j.arma].melee ? '' : (j.balas[j.arma]===Infinity ? '∞' : ''+(j.balas[j.arma]||0));
-  if(nom !== HAB_UI.arma){ HAB_UI.arma = nom; $('armaNom').textContent = nom; }
+  if(nom !== HAB_UI.arma){ HAB_UI.arma = nom; $('armaNom').textContent = T(nom); }
   if(b !== HAB_UI.bal){ HAB_UI.bal = b; $('armaBal').textContent = b; }
 }
 
@@ -1647,7 +1782,7 @@ document.addEventListener('fullscreenchange', ()=> setTimeout(medir, 60));
 
 /* ====================== menús ====================== */
 const CAPAS_UI = ['capaTitulo','capaMisiones','capaBase','capaComo','capaPausa','capaRes'];
-function mostrar(id){ if(id){ clearTimeout(aviso.t); $('aviso').style.opacity = 0; } for(const c of CAPAS_UI) $(c).classList.toggle('ver', c===id); $('mandos').classList.toggle('ver', !id && J.modo==='juego'); if(id) soltarTodo(); $('monedero').textContent = '$ '+G.monedas+'   ·   NIVEL '+G.nivel; }
+function mostrar(id){ if(id){ clearTimeout(aviso.t); $('aviso').style.opacity = 0; } for(const c of CAPAS_UI) $(c).classList.toggle('ver', c===id); $('mandos').classList.toggle('ver', !id && J.modo==='juego'); if(id) soltarTodo(); $('monedero').textContent = T('$ '+G.monedas+'   ·   NIVEL '+G.nivel); }
 function boton(id, fn){ $(id).addEventListener('click', ev=>{ ev.preventDefault(); audioIni(); sfx('toque'); fn(); pantallaHorizontal(); }); }
 function iniciarDemo(){ J.demo = true; J.bot = true; const ni = Math.floor(Math.random()*Math.min(5, G.abierto + 1)); iniciarNivel(ni, 'DEMO'+Math.floor(Math.random()*9999)); J.modo = 'menu';
   /* la portada arranca en la primera arena, donde está la bronca */
@@ -1662,8 +1797,11 @@ boton('btBase', ()=>{ armarBase(BASE.tab); mostrar('capaBase'); });
 boton('btBaseVolver', ()=> mostrar('capaTitulo'));
 boton('btComo', ()=> mostrar('capaComo'));
 boton('btComoVolver', ()=> mostrar('capaTitulo'));
-boton('btSonido', ()=>{ G.sonido = !G.sonido; guardar(); if(amo) amo.gain.value = G.sonido ? 0.85 : 0; $('btSonido').textContent = 'SONIDO: '+(G.sonido ? 'SÍ' : 'NO'); });
-$('btSonido').textContent = 'SONIDO: '+(G.sonido ? 'SÍ' : 'NO');
+boton('btSonido', ()=>{ G.sonido = !G.sonido; guardar(); if(amo) amo.gain.value = G.sonido ? 0.85 : 0; $('btSonido').textContent = T('SONIDO: '+(G.sonido ? 'SÍ' : 'NO')); });
+$('btSonido').textContent = T('SONIDO: '+(G.sonido ? 'SÍ' : 'NO'));
+/* idioma: se guarda con el resto y se vuelve a aplicar a todo lo que está a la vista */
+document.querySelectorAll('#idiomas button').forEach(b=> b.addEventListener('click', ev=>{ ev.preventDefault(); audioIni(); sfx('toque');
+  G.idioma = b.dataset.l; guardar(); aplicarIdioma(); $('btSonido').textContent = T('SONIDO: '+(G.sonido ? 'SÍ' : 'NO')); HAB_UI.arma = ''; mostrar('capaTitulo'); pantallaHorizontal(); }));
 boton('btSeguir', seguir);
 boton('btReiniciar', ()=> jugar(J.ni));
 boton('btSalir', aMenu);
@@ -1695,7 +1833,7 @@ function armarMisiones(){
   NIVELES.forEach((nv, i)=>{ const ab = i < G.abierto, d = document.createElement('div'); d.className = 'tarjeta'+(ab ? '' : ' cerrada'); d.style.animationDelay = (i*0.07)+'s';
     const c = document.createElement('canvas'); c.width = 300; c.height = 156; miniatura(c, i);
     const t = document.createElement('div'); t.className = 't'; const e = G.estrellas[i]||0;
-    t.innerHTML = (i+1)+'. '+nv.nom+'<div class="est">'+'★'.repeat(e)+'☆'.repeat(3-e)+' '+(G.rangos[i]||'')+'</div><small>'+(ab ? nv.txt : 'CERRADA · terminá la anterior')+'</small>';
+    t.innerHTML = (i+1)+'. '+T(nv.nom)+'<div class="est">'+'★'.repeat(e)+'☆'.repeat(3-e)+' '+(G.rangos[i]||'')+'</div><small>'+T(ab ? nv.txt : 'CERRADA · terminá la anterior')+'</small>';
     d.append(c, t); d.addEventListener('click', ()=>{ audioIni(); if(!ab){ sfx('duele'); return; } sfx('toque'); pantallaHorizontal(); jugar(i); }); L.append(d); });
 }
 /* ---------- la base: arsenal, equipo y habilidades ---------- */
@@ -1714,13 +1852,13 @@ function icono(c, tipo, id){
 }
 function armarBase(tab){
   BASE.tab = tab; document.querySelectorAll('.tab').forEach(t=> t.classList.toggle('ya', t.dataset.t===tab));
-  $('baseTit').textContent = 'LA BASE  ·  $ '+G.monedas+'  ·  NIVEL '+G.nivel;
+  $('baseTit').textContent = T('LA BASE  ·  $ '+G.monedas+'  ·  NIVEL '+G.nivel);
   const L = $('listaBase'); L.innerHTML = '';
   const fila = (tipo, id, nom, txt, nv, maxNv, botones)=>{ const d = document.createElement('div'); d.className = 'item';
     const c = document.createElement('canvas'); c.width = 112; c.height = 112; icono(c, tipo, id);
-    const t = document.createElement('div'); t.className = 'd'; t.innerHTML = nom+'<small>'+txt+'</small>'+(maxNv ? '<span class="puntos">'+'●'.repeat(nv)+'○'.repeat(maxNv-nv)+'</span>' : '');
+    const t = document.createElement('div'); t.className = 'd'; t.innerHTML = T(nom)+'<small>'+T(txt)+'</small>'+(maxNv ? '<span class="puntos">'+'●'.repeat(nv)+'○'.repeat(maxNv-nv)+'</span>' : '');
     const bs = document.createElement('div'); bs.style.cssText = 'display:flex;flex-direction:column;gap:4px';
-    for(const b of botones){ const x = document.createElement('button'); x.className = 'boton chico '+(b.cls||''); x.textContent = b.txt; x.style.fontSize = '13px'; x.style.padding = '5px 9px';
+    for(const b of botones){ const x = document.createElement('button'); x.className = 'boton chico '+(b.cls||''); x.textContent = T(b.txt); x.style.fontSize = '13px'; x.style.padding = '5px 9px';
       if(b.no) x.style.opacity = 0.45; x.addEventListener('click', ev=>{ ev.preventDefault(); audioIni(); if(b.no){ sfx('duele'); return; } b.fn(); sfx(b.sfx||'moneda'); guardar(); armarBase(BASE.tab); }); bs.append(x); }
     bs.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:4px'; t.append(bs); d.append(c, t); L.append(d); };
   if(tab==='arsenal'){
@@ -1752,12 +1890,12 @@ function mostrarResultado(){
   if(gano){ G.estrellas[ni] = Math.max(G.estrellas[ni]||0, est); const orden = 'SABCD'; if(!G.rangos[ni] || orden.indexOf(rango) < orden.indexOf(G.rangos[ni])) G.rangos[ni] = rango; G.abierto = Math.max(G.abierto, Math.min(5, ni + 2)); }
   guardar();
   const mm = Math.floor(s.t/60), ss = Math.floor(s.t%60);
-  $('resTit').textContent = gano ? (ni===4 ? '¡SE TERMINÓ LA PLAGA!' : '¡LIMPIASTE LA ZONA!') : (J.torre && !J.torre.vivo ? 'ROMPIERON LA PUERTA' : 'TE COMIERON');
+  $('resTit').textContent = T(gano ? (ni===4 ? '¡SE TERMINÓ LA PLAGA!' : '¡LIMPIASTE LA ZONA!') : (J.torre && !J.torre.vivo ? 'ROMPIERON LA PUERTA' : 'TE COMIERON'));
   $('resTit').style.color = gano ? '#9cff6a' : '#ff5a3a';
   $('rango').textContent = rango; $('rango').style.color = {S:'#ffc83a', A:'#9cff6a', B:'#5ab8ff', C:'#fff', D:'#ff5a3a'}[rango];
-  $('resDet').innerHTML = 'ZOMBIS <b>'+s.bajas+'</b><br>DAÑO <b>'+Math.round(s.dano)+'</b><br>COMBO MÁXIMO <b>'+J.comboMax+'</b><br>TIEMPO <b>'+mm+':'+String(ss).padStart(2,'0')+'</b><br>PLATA <b>+'+oro+'</b>'+(bonus ? ' (premio '+bonus+')' : '')+'<br>EXPERIENCIA <b>+'+s.xp+'</b>';
+  $('resDet').innerHTML = T('ZOMBIS <b>'+s.bajas+'</b><br>DAÑO <b>'+Math.round(s.dano)+'</b><br>COMBO MÁXIMO <b>'+J.comboMax+'</b><br>TIEMPO <b>'+mm+':'+String(ss).padStart(2,'0')+'</b><br>PLATA <b>+'+oro+'</b>'+(bonus ? ' (premio '+bonus+')' : '')+'<br>EXPERIENCIA <b>+'+s.xp+'</b>');
   $('resEst').textContent = '★'.repeat(est)+'☆'.repeat(3-est);
-  $('resNivel').textContent = 'NIVEL '+G.nivel+'  ·  '+G.xp+' / '+xpPara(G.nivel);
+  $('resNivel').textContent = T('NIVEL '+G.nivel+'  ·  '+G.xp+' / '+xpPara(G.nivel));
   $('resXP').style.transition = 'none'; $('resXP').style.width = '0%'; requestAnimationFrame(()=> requestAnimationFrame(()=>{ $('resXP').style.transition = ''; $('resXP').style.width = Math.round(G.xp/xpPara(G.nivel)*100)+'%'; }));
   $('btResSig').style.display = gano && ni < 4 ? '' : 'none';
   J.modo = 'res'; mostrar('capaRes');
@@ -1785,11 +1923,12 @@ window.__B = {
   bot(v){ J.bot = v; }, dios(v){ J.dios = v; },
   est(){ const j = J.jug, z = J.zonas.findIndex(z=> z.estado!=='limpia'); return {modo:J.modo, ni:J.ni, x: j ? +j.x.toFixed(1) : 0, hp: j ? Math.round(j.hp) : 0, hpMax: j ? Math.round(j.hpMax) : 0, vivo: j ? j.vivo : false, L:Math.round(J.L), zona:z, zonas:J.zonas.length,
     jefe: J.jefe ? Math.round(J.jefe.hp) : null, torre: J.torre ? Math.round(J.torre.hp) : null, zombis:zombis().length, fin:J.fin, bajas:J.stats ? J.stats.bajas : 0, t:J.stats ? +J.stats.t.toFixed(1) : 0, nivel:G.nivel, vehiculo: j && j.vehiculo ? j.vehiculo.tipo : null, calidad:CALIDAD}; },
-  dibujarYa(){ dibujar(); }, medir, mostrar, aMenu, armarMisiones, armarBase, mostrarResultado, listo:true,
+  dibujarYa(){ dibujar(); }, medir, T, aplicarIdioma, mostrar, aMenu, armarMisiones, armarBase, mostrarResultado, listo:true,
 };
 
 /* ====================== arranque ====================== */
 medir();
+aplicarIdioma();
 aMenu();
 requestAnimationFrame(bucle);
 </script>
