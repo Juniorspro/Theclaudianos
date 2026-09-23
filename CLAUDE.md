@@ -537,3 +537,18 @@ sin frenar, 53–56. Sin errores. Sondas: `window.__S` — `iniciar(n,sem)`, `an
 - **INSTRUCCIÓN no tenía salida**: el texto medía 464 px en una pantalla de 412 y el VOLVER quedaba afuera. Texto en dos columnas.
   Recorrido de menús con toques reales por CDP: todos los botones andan, y ninguno queda tapado ni fuera de pantalla.
 
+### 2026-09-23 (16) — BRECHA 7 en tres idiomas
+**Pedido textual:** «agrega al menú de inicio un selector de idioma de inglés, español y portugués».
+
+- Selector en la portada (ESPAÑOL · ENGLISH · PORTUGUÊS), se guarda en `G.idioma`; la primera vez sale de `navigator.language`.
+- **Todo se sigue escribiendo en castellano** y `T()` traduce al mostrar: entero si el texto está en `TR[idioma]`, y si no frase por
+  frase con una sola regex de palabras enteras (`(?<!\p{L})…(?!\p{L})`, la más larga primero) y caché. Así andan solos los textos
+  armados como `'OLEADA ' + n`, `'COMPRAR $' + p` o el objetivo con `· 3 HOSTILES`. Portugués de Brasil.
+- Enganches: `textoH` (todo el HUD), `aviso`, `fila`/`barrasArma`/`armarMisiones`/`armarEquipo`, informe y medallas (las claves de
+  `G.medallas` siguen en castellano). El HTML fijo se traduce recorriendo los nodos de texto y guardando el original.
+  La instrucción tiene negritas adentro: va entera por idioma (`COMO_TXT`).
+- **Trampa:** el recorrido traducía también el nombre del juego («BREACH 7», «INVADIR 7»). `.titulo` queda afuera, igual que los
+  elementos que el JS reescribe (si no, se traduciría un texto ya traducido).
+- Medido: recorrido completo en inglés y portugués (portada, operaciones, equipo, armería, instrucción, HUD, aviso, pausa, informe):
+  sin restos en castellano y todo entra; el idioma queda guardado. Toques 11/11, menús sin botones tapados, sin red y sin errores.
+

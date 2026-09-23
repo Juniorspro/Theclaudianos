@@ -64,6 +64,9 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101214;touch-action:n
 .boton.verde{border-left-color:#5ad07a}
 .boton.oro{border-left-color:#ffb43a}
 .boton.chico{min-width:0;font-size:12px;padding:7px 12px;letter-spacing:2px}
+#idiomas{margin-top:4px;gap:6px}
+#idiomas .boton{font-size:11px;padding:6px 10px;border-left-color:#3a4148;opacity:.75}
+#idiomas .boton.ya{border-left-color:#d63a2a;opacity:1;color:#fff}
 h2{margin:0;font-size:24px;letter-spacing:6px;font-weight:bold;color:#fff}
 h2 small{display:block;font-size:11px;letter-spacing:4px;color:#d63a2a;font-weight:normal}
 .fila{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:stretch}
@@ -129,6 +132,7 @@ h2 small{display:block;font-size:11px;letter-spacing:4px;color:#d63a2a;font-weig
       <button class="boton gris" id="btComo">INSTRUCCIÓN</button>
       <button class="boton gris chico" id="btSonido">SONIDO: SÍ</button>
     </div>
+    <div id="idiomas" class="botones"><button class="boton chico" data-l="es">ESPAÑOL</button><button class="boton chico" data-l="en">ENGLISH</button><button class="boton chico" data-l="pt">PORTUGUÊS</button></div>
   </div>
   <div class="capa velo" id="capaMisiones">
     <h2><small>ELEGÍ LA OPERACIÓN</small>OPERACIONES</h2>
@@ -356,7 +360,145 @@ setInterval(()=>{
     MUS.t += paso; MUS.i++;
   }
 }, 40);
-if(!window.THREE){ document.getElementById("carga").textContent = "NO SE PUDO CARGAR EL MOTOR 3D"; throw new Error("sin three"); }
+
+/* ====================== idiomas: español (base), inglés y portugués ======================
+   Cada texto se escribe en castellano y T() lo traduce: entero si está en el diccionario, y si no
+   por frases sueltas (palabras enteras), así sirven también los armados como 'OLEADA ' + n. */
+const IDIOMAS = [['es','ESPAÑOL'], ['en','ENGLISH'], ['pt','PORTUGUÊS']];
+const TR = {
+  en:{
+    /* menús */
+    'UNIDAD TÁCTICA · OPERACIONES ESPECIALES':'TACTICAL UNIT · SPECIAL OPERATIONS', 'OPERACIONES':'OPERATIONS', 'ARMERÍA':'ARMORY', 'INSTRUCCIÓN':'BRIEFING',
+    'SONIDO':'SOUND', 'SÍ':'ON', 'NO':'OFF', 'IDIOMA':'LANGUAGE', 'ELEGÍ LA OPERACIÓN':'CHOOSE YOUR OPERATION', 'VOLVER':'BACK', 'OPERACIÓN':'OPERATION', 'EQUIPO':'GEAR',
+    'DESPLEGAR':'DEPLOY', 'ARMAS':'WEAPONS', 'MEJORAS':'UPGRADES', 'ANTES DE SALIR':'BEFORE YOU GO', 'OPERACIÓN EN CURSO':'OPERATION IN PROGRESS', 'PAUSA':'PAUSED',
+    'SEGUIR':'RESUME', 'REINICIAR':'RESTART', 'ABORTAR':'ABORT', 'INFORME':'REPORT', 'MISIÓN CUMPLIDA':'MISSION COMPLETE', 'MISIÓN FALLIDA':'MISSION FAILED',
+    'SIGUIENTE':'NEXT', 'REPETIR':'RETRY', 'CARGANDO…':'LOADING…', 'CUBRIR':'COVER', 'AIRE':'BREATH', 'BRECHA':'BREACH',
+    'CLASIFICADO · cumplí la anterior':'CLASSIFIED · complete the previous one', 'CLASIFICADO':'CLASSIFIED', 'CUMPLIDA':'DONE', 'ACTIVA':'ACTIVE',
+    'DAÑO':'DAMAGE', 'CADENCIA':'FIRE RATE', 'PRECISIÓN':'ACCURACY', 'CARGADOR':'MAGAZINE', 'L96 · ASIGNADO':'L96 · ASSIGNED',
+    'La operación es de francotirador: se sale con el L96 y la pistola.':'This is a sniper operation: you go in with the L96 and the pistol.',
+    'EN MANO':'EQUIPPED', 'LLEVAR':'TAKE', 'Chaleco':'Vest', 'casco':'helmet', 'botiquín':'medkit', 'cegadoras':'flashbangs', 'Vida':'Health',
+    'EN USO':'IN USE', 'COMPRADA':'OWNED', 'COMPRAR':'BUY', 'AL MÁXIMO':'MAXED', 'MEJORAR':'UPGRADE',
+    'SIN RASGUÑOS':'UNTOUCHED', 'TIRADOR':'MARKSMAN', 'SALVADOR':'SAVIOR', 'FANTASMA':'GHOST', 'RELÁMPAGO':'LIGHTNING',
+    'TIEMPO':'TIME', 'BAJAS':'KILLS', 'A LA CABEZA':'HEADSHOTS', 'REHENES':'HOSTAGES', 'DAÑO RECIBIDO':'DAMAGE TAKEN', 'PAGA':'PAY',
+    /* armas, mejoras, equipo */
+    'Pistola. Semiautomática, precisa y con muchos cargadores.':'Pistol. Semi-automatic, accurate, plenty of magazines.',
+    'Subfusil. Mucha cadencia, poco retroceso, poco alcance.':'SMG. High fire rate, low recoil, short range.',
+    'Fusil de asalto. El que sirve para todo.':'Assault rifle. Good for everything.',
+    'Escopeta. Ocho perdigones: de cerca borra, de lejos rasguña.':'Shotgun. Eight pellets: erases up close, scratches from afar.',
+    'Tirador. Semiautomático, pega fuerte y tiene mira de 3x.':'Marksman rifle. Semi-automatic, hits hard, 3x scope.',
+    'Francotirador de cerrojo. Mira de 7x. La bala tarda y la mueve el viento.':'Bolt-action sniper. 7x scope. The bullet takes time and the wind moves it.',
+    'SILENCIADOR':'SUPPRESSOR', 'No te delatan los disparos (clave en el puerto). −8 % de daño.':'Your shots don\'t give you away (key at the port). −8 % damage.',
+    'MIRA HOLO':'HOLO SIGHT', 'La mira se pega más a los blancos y el zoom es un 20 % mayor.':'The reticle sticks to targets more and zoom is 20 % stronger.',
+    'CARGADOR EXT.':'EXT. MAG', '+40 % de balas por cargador.':'+40 % rounds per magazine.', 'EMPUÑADURA':'GRIP', '−35 % de retroceso y de dispersión.':'−35 % recoil and spread.',
+    'CHALECO':'VEST', '+30 de vida por nivel.':'+30 health per level.', 'CASCO':'HELMET', 'Recibís un 12 % menos por nivel.':'You take 12 % less damage per level.',
+    'BOTIQUÍN':'MEDKIT', 'Cura 50 una vez por misión (toque largo en la vida). Se usa solo si vas a morir.':'Heals 50 once per mission. Used automatically when you are about to die.',
+    'CEGADORAS':'FLASHBANGS', 'Aturden a todos los que miran unos 3 segundos.':'Stun everyone looking for about 3 seconds.',
+    'silenciador':'suppressor', 'mira holo':'holo sight', 'cargador ext.':'ext. mag', 'empuñadura':'grip',
+    /* enemigos y misiones */
+    'ESCOPETERO':'SHOTGUNNER', 'PESADO':'HEAVY', 'ESCUDO':'SHIELD', 'COHETERO':'ROCKETEER', 'FRANCOTIRADOR':'SNIPER', 'CAPTOR':'CAPTOR', 'EL COLOSO':'THE COLOSSUS',
+    'DEPÓSITO':'WAREHOUSE', 'EMBAJADA':'EMBASSY', 'PUERTO':'PORT', 'AUTOPISTA':'HIGHWAY', 'BÚNKER':'BUNKER', 'SIN DATOS':'NO DATA', 'RUTA 5':'ROUTE 5',
+    'Asalto a un depósito tomado. Avance, cubiertas y una brecha con rehén al fondo.':'Assault on a seized warehouse. Push forward, use cover, and breach to the hostage at the back.',
+    'Rehenes en tres salones. Brechas en cámara lenta y secuestradores con cuenta regresiva. Hay reloj.':'Hostages in three halls. Slow-motion breaches and captors on a countdown. On the clock.',
+    'Francotirador desde una grúa. Viento, caída de la bala y un blanco que escapa en auto.':'Sniping from a crane. Wind, bullet drop and a target escaping by car.',
+    'Escolta de convoy en movimiento. Camionetas, puentes, cohetes y un helicóptero.':'Escort a moving convoy. Trucks, bridges, rockets and a helicopter.',
+    'El laboratorio bajo tierra. Escudos, pesados y El Coloso con su minigun.':'The underground lab. Shields, heavies and The Colossus with his minigun.',
+    /* en juego */
+    'usaste uno':'you used one', 'TE ABATIERON':'YOU WERE TAKEN DOWN', 'EJECUTARON AL REHÉN':'THE HOSTAGE WAS EXECUTED', 'CASCO ROTO':'HELMET BROKEN', 'PLACA ROTA':'PLATE BROKEN',
+    'CABEZA':'HEADSHOT', 'BAJA':'KILL', '¡COHETE!':'ROCKET!', 'LE DISTE A UN REHÉN':'YOU HIT A HOSTAGE', 'LE DISTE A UN CIVIL':'YOU HIT A CIVILIAN',
+    '¡HELICÓPTERO ABAJO!':'HELICOPTER DOWN!', 'VEHÍCULO':'VEHICLE', '¡PUENTE!':'BRIDGE!', '¡HELICÓPTERO!':'HELICOPTER!', '¡EL OBJETIVO ESCAPA!':'THE TARGET IS ESCAPING!',
+    'bajá al chofer':'take out the driver', '¡CARGADORES!':'AMMO!', 'AVANZANDO':'MOVING UP', '¡TOMARON UN REHÉN!':'THEY TOOK A HOSTAGE!', 'a la cabeza':'aim for the head',
+    'rompé las placas':'break the plates', 'OLEADA':'WAVE', 'DESPEJADO':'CLEAR', 'DERRIBÁ A EL COLOSO':'TAKE DOWN THE COLOSSUS', 'SALVÁ AL REHÉN':'SAVE THE HOSTAGE',
+    'LIMPIÁ LA ZONA':'CLEAR THE AREA', 'EMBOSCADA':'AMBUSH', 'tocá el botón para entrar':'tap the button to go in', 'PREPARÁ LA BRECHA':'READY THE BREACH',
+    'LIMPIÁ EL CUARTO':'CLEAR THE ROOM', 'REHENES A SALVO':'HOSTAGES SAFE', 'PUESTO':'POST', 'viento':'wind', 'EL OBJETIVO ESCAPÓ':'THE TARGET GOT AWAY',
+    'EL OBJETIVO: EL CHOFER':'TARGET: THE DRIVER', 'NEUTRALIZÁ LOS BLANCOS':'NEUTRALIZE THE TARGETS', 'DERRIBÁ EL HELICÓPTERO':'SHOOT DOWN THE HELICOPTER',
+    'PROTEGÉ EL CONVOY':'PROTECT THE CONVOY', 'SE ACABÓ EL TIEMPO':'TIME\'S UP', 'ENTRADA':'ENTRY',
+    'RECARGANDO':'RELOADING', 'VIDA':'HEALTH', 'A CUBIERTO':'IN COVER', 'HOSTIL':'HOSTILE', 'HOSTILES':'HOSTILES', 'VIENTO':'WIND', '¡ALARMA!':'ALARM!', 'HELICÓPTERO':'HELICOPTER',
+    'NO SE PUDO CARGAR EL MOTOR 3D':'THE 3D ENGINE COULD NOT LOAD'
+  },
+  pt:{
+    'UNIDAD TÁCTICA · OPERACIONES ESPECIALES':'UNIDADE TÁTICA · OPERAÇÕES ESPECIAIS', 'OPERACIONES':'OPERAÇÕES', 'ARMERÍA':'ARSENAL', 'INSTRUCCIÓN':'BRIEFING',
+    'SONIDO':'SOM', 'SÍ':'SIM', 'NO':'NÃO', 'IDIOMA':'IDIOMA', 'ELEGÍ LA OPERACIÓN':'ESCOLHA A OPERAÇÃO', 'VOLVER':'VOLTAR', 'OPERACIÓN':'OPERAÇÃO', 'EQUIPO':'EQUIPAMENTO',
+    'DESPLEGAR':'INICIAR', 'ARMAS':'ARMAS', 'MEJORAS':'MELHORIAS', 'ANTES DE SALIR':'ANTES DE SAIR', 'OPERACIÓN EN CURSO':'OPERAÇÃO EM ANDAMENTO', 'PAUSA':'PAUSA',
+    'SEGUIR':'CONTINUAR', 'REINICIAR':'REINICIAR', 'ABORTAR':'ABORTAR', 'INFORME':'RELATÓRIO', 'MISIÓN CUMPLIDA':'MISSÃO CUMPRIDA', 'MISIÓN FALLIDA':'MISSÃO FRACASSADA',
+    'SIGUIENTE':'PRÓXIMA', 'REPETIR':'REPETIR', 'CARGANDO…':'CARREGANDO…', 'CUBRIR':'COBRIR', 'AIRE':'FÔLEGO', 'BRECHA':'INVADIR',
+    'CLASIFICADO · cumplí la anterior':'CONFIDENCIAL · cumpra a anterior', 'CLASIFICADO':'CONFIDENCIAL', 'CUMPLIDA':'CUMPRIDA', 'ACTIVA':'ATIVA',
+    'DAÑO':'DANO', 'CADENCIA':'CADÊNCIA', 'PRECISIÓN':'PRECISÃO', 'CARGADOR':'PENTE', 'L96 · ASIGNADO':'L96 · DESIGNADO',
+    'La operación es de francotirador: se sale con el L96 y la pistola.':'É uma operação de atirador de elite: você vai com o L96 e a pistola.',
+    'EN MANO':'EQUIPADA', 'LLEVAR':'LEVAR', 'Chaleco':'Colete', 'casco':'capacete', 'botiquín':'kit médico', 'cegadoras':'granadas de luz', 'Vida':'Vida',
+    'EN USO':'EM USO', 'COMPRADA':'COMPRADA', 'COMPRAR':'COMPRAR', 'AL MÁXIMO':'NO MÁXIMO', 'MEJORAR':'MELHORAR',
+    'SIN RASGUÑOS':'SEM ARRANHÕES', 'TIRADOR':'ATIRADOR', 'SALVADOR':'SALVADOR', 'FANTASMA':'FANTASMA', 'RELÁMPAGO':'RELÂMPAGO',
+    'TIEMPO':'TEMPO', 'BAJAS':'ABATES', 'A LA CABEZA':'NA CABEÇA', 'REHENES':'REFÉNS', 'DAÑO RECIBIDO':'DANO RECEBIDO', 'PAGA':'PAGAMENTO',
+    'Pistola. Semiautomática, precisa y con muchos cargadores.':'Pistola. Semiautomática, precisa e com muitos pentes.',
+    'Subfusil. Mucha cadencia, poco retroceso, poco alcance.':'Submetralhadora. Muita cadência, pouco recuo, pouco alcance.',
+    'Fusil de asalto. El que sirve para todo.':'Fuzil de assalto. Serve para tudo.',
+    'Escopeta. Ocho perdigones: de cerca borra, de lejos rasguña.':'Escopeta. Oito balins: de perto apaga, de longe arranha.',
+    'Tirador. Semiautomático, pega fuerte y tiene mira de 3x.':'Fuzil de precisão. Semiautomático, bate forte e tem mira de 3x.',
+    'Francotirador de cerrojo. Mira de 7x. La bala tarda y la mueve el viento.':'Rifle de ferrolho. Mira de 7x. A bala demora e o vento a desvia.',
+    'SILENCIADOR':'SILENCIADOR', 'No te delatan los disparos (clave en el puerto). −8 % de daño.':'Seus tiros não te denunciam (essencial no porto). −8 % de dano.',
+    'MIRA HOLO':'MIRA HOLO', 'La mira se pega más a los blancos y el zoom es un 20 % mayor.':'A mira gruda mais nos alvos e o zoom é 20 % maior.',
+    'CARGADOR EXT.':'PENTE EXT.', '+40 % de balas por cargador.':'+40 % de balas por pente.', 'EMPUÑADURA':'EMPUNHADURA', '−35 % de retroceso y de dispersión.':'−35 % de recuo e de dispersão.',
+    'CHALECO':'COLETE', '+30 de vida por nivel.':'+30 de vida por nível.', 'CASCO':'CAPACETE', 'Recibís un 12 % menos por nivel.':'Você recebe 12 % menos por nível.',
+    'BOTIQUÍN':'KIT MÉDICO', 'Cura 50 una vez por misión (toque largo en la vida). Se usa solo si vas a morir.':'Cura 50 uma vez por missão. É usado sozinho quando você vai morrer.',
+    'CEGADORAS':'GRANADAS DE LUZ', 'Aturden a todos los que miran unos 3 segundos.':'Atordoam todos que olham por uns 3 segundos.',
+    'silenciador':'silenciador', 'mira holo':'mira holo', 'cargador ext.':'pente ext.', 'empuñadura':'empunhadura',
+    'ESCOPETERO':'ESCOPETEIRO', 'PESADO':'PESADO', 'ESCUDO':'ESCUDO', 'COHETERO':'LANÇA-FOGUETES', 'FRANCOTIRADOR':'ATIRADOR DE ELITE', 'CAPTOR':'SEQUESTRADOR', 'EL COLOSO':'O COLOSSO',
+    'DEPÓSITO':'DEPÓSITO', 'EMBAJADA':'EMBAIXADA', 'PUERTO':'PORTO', 'AUTOPISTA':'RODOVIA', 'BÚNKER':'BUNKER', 'SIN DATOS':'SEM DADOS', 'RUTA 5':'RODOVIA 5',
+    'Asalto a un depósito tomado. Avance, cubiertas y una brecha con rehén al fondo.':'Assalto a um depósito tomado. Avanço, coberturas e uma invasão com refém no fundo.',
+    'Rehenes en tres salones. Brechas en cámara lenta y secuestradores con cuenta regresiva. Hay reloj.':'Reféns em três salões. Invasões em câmera lenta e sequestradores com contagem regressiva. Tem relógio.',
+    'Francotirador desde una grúa. Viento, caída de la bala y un blanco que escapa en auto.':'Atirador de elite num guindaste. Vento, queda da bala e um alvo que foge de carro.',
+    'Escolta de convoy en movimiento. Camionetas, puentes, cohetes y un helicóptero.':'Escolta de comboio em movimento. Caminhonetes, pontes, foguetes e um helicóptero.',
+    'El laboratorio bajo tierra. Escudos, pesados y El Coloso con su minigun.':'O laboratório subterrâneo. Escudos, pesados e O Colosso com sua minigun.',
+    'usaste uno':'você usou um', 'TE ABATIERON':'VOCÊ FOI ABATIDO', 'EJECUTARON AL REHÉN':'EXECUTARAM O REFÉM', 'CASCO ROTO':'CAPACETE QUEBRADO', 'PLACA ROTA':'PLACA QUEBRADA',
+    'CABEZA':'CABEÇA', 'BAJA':'ABATE', '¡COHETE!':'FOGUETE!', 'LE DISTE A UN REHÉN':'VOCÊ ACERTOU UM REFÉM', 'LE DISTE A UN CIVIL':'VOCÊ ACERTOU UM CIVIL',
+    '¡HELICÓPTERO ABAJO!':'HELICÓPTERO ABATIDO!', 'VEHÍCULO':'VEÍCULO', '¡PUENTE!':'PONTE!', '¡HELICÓPTERO!':'HELICÓPTERO!', '¡EL OBJETIVO ESCAPA!':'O ALVO ESTÁ FUGINDO!',
+    'bajá al chofer':'derrube o motorista', '¡CARGADORES!':'MUNIÇÃO!', 'AVANZANDO':'AVANÇANDO', '¡TOMARON UN REHÉN!':'PEGARAM UM REFÉM!', 'a la cabeza':'mire na cabeça',
+    'rompé las placas':'quebre as placas', 'OLEADA':'ONDA', 'DESPEJADO':'LIMPO', 'DERRIBÁ A EL COLOSO':'DERRUBE O COLOSSO', 'SALVÁ AL REHÉN':'SALVE O REFÉM',
+    'LIMPIÁ LA ZONA':'LIMPE A ÁREA', 'EMBOSCADA':'EMBOSCADA', 'tocá el botón para entrar':'toque o botão para entrar', 'PREPARÁ LA BRECHA':'PREPARE A INVASÃO',
+    'LIMPIÁ EL CUARTO':'LIMPE A SALA', 'REHENES A SALVO':'REFÉNS A SALVO', 'PUESTO':'POSTO', 'viento':'vento', 'EL OBJETIVO ESCAPÓ':'O ALVO FUGIU',
+    'EL OBJETIVO: EL CHOFER':'ALVO: O MOTORISTA', 'NEUTRALIZÁ LOS BLANCOS':'NEUTRALIZE OS ALVOS', 'DERRIBÁ EL HELICÓPTERO':'DERRUBE O HELICÓPTERO',
+    'PROTEGÉ EL CONVOY':'PROTEJA O COMBOIO', 'SE ACABÓ EL TIEMPO':'O TEMPO ACABOU', 'ENTRADA':'ENTRADA',
+    'RECARGANDO':'RECARREGANDO', 'VIDA':'VIDA', 'A CUBIERTO':'PROTEGIDO', 'HOSTIL':'HOSTIL', 'HOSTILES':'HOSTIS', 'VIENTO':'VENTO', '¡ALARMA!':'ALARME!', 'HELICÓPTERO':'HELICÓPTERO',
+    'NO SE PUDO CARGAR EL MOTOR 3D':'NÃO FOI POSSÍVEL CARREGAR O MOTOR 3D'
+  }
+};
+/* la instrucción tiene negritas adentro: va entera por idioma */
+const COMO_TXT = {
+  en:`<p><b>The team moves on its own.</b> You aim and shoot: drag your finger across the screen to move the reticle and hold <b>FIRE</b>.</p>
+      <p><b>AIM</b> zooms in and tightens the reticle. A <b>headshot</b> drops anyone without a helmet. Heavies wear plates: break them or go for the head.</p>
+      <p><b>COVER</b>: hold it to hide behind cover. They can't hit you there, you reload faster and recover some health. Release it to lean out.</p>
+      <p>In front of a door, <b>BREACH</b> appears: the door gets kicked in and time slows down for a few seconds. <b>Don't shoot the hostages</b> (white shirts).</p>
+      <p>With the sniper rifle, <b>wind</b> and <b>distance</b> move the bullet. <b>BREATH</b> holds your breath and steadies the scope. The flashbang stuns everyone for three seconds.</p>
+      <p style="color:#5a636b">PC: mouse aims, click fires, right click or Z aims, space covers, R reloads, Q weapon, G grenade, E breach, Shift breath, P pause.</p>`,
+  pt:`<p><b>A equipe avança sozinha.</b> Você mira e atira: arraste o dedo pela tela para mover a mira e segure <b>FOGO</b>.</p>
+      <p><b>MIRAR</b> aproxima e firma a mira. Um tiro na <b>cabeça</b> derruba qualquer um sem capacete. Os pesados usam placas: quebre-as ou procure a cabeça.</p>
+      <p><b>COBRIR</b>: segure para se esconder atrás da cobertura. Ali não te acertam, você recarrega mais rápido e recupera um pouco de vida. Solte para aparecer.</p>
+      <p>Diante de uma porta aparece <b>INVADIR</b>: a porta é arrombada e o tempo desacelera por alguns segundos. <b>Não acerte os reféns</b> (camisa branca).</p>
+      <p>Com o atirador de elite, o <b>vento</b> e a <b>distância</b> desviam a bala. <b>FÔLEGO</b> prende a respiração e deixa a mira parada. A granada de luz atordoa todos por três segundos.</p>
+      <p style="color:#5a636b">PC: o mouse mira, clique atira, botão direito ou Z mira, espaço cobre, R recarrega, Q arma, G granada, E invadir, Shift fôlego, P pausa.</p>`
+};
+function idiomaInicial(){ const n = (navigator.language||'es').slice(0,2).toLowerCase(); return n==='en' || n==='pt' ? n : 'es'; }
+if(!G.idioma) G.idioma = idiomaInicial();
+const TRC = {};   /* por idioma: {re, cache} */
+function T(s){
+  const l = G.idioma; if(l==='es' || s==null) return s; s = String(s); const D = TR[l]; if(!D) return s;
+  if(D[s] !== undefined) return D[s];
+  let C = TRC[l]; if(!C){ const ks = Object.keys(D).sort((a, b)=> b.length - a.length).map(k=> k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    C = TRC[l] = {re:new RegExp('(?<![\\p{L}])(' + ks.join('|') + ')(?![\\p{L}])', 'gu'), cache:new Map()}; }
+  let r = C.cache.get(s); if(r !== undefined) return r;
+  r = s.replace(C.re, m=> D[m]); if(C.cache.size > 600) C.cache.clear(); C.cache.set(s, r); return r;
+}
+/* textos fijos del HTML: se guarda el original en castellano y se traduce desde ahí */
+const TXT_ES = new Map();
+let COMO_ES = null;
+function aplicarIdioma(){
+  document.documentElement.lang = G.idioma;
+  const como = document.querySelector('#capaComo .texto'); if(como){ if(COMO_ES===null) COMO_ES = como.innerHTML; como.innerHTML = G.idioma==='es' ? COMO_ES : COMO_TXT[G.idioma]; }
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {acceptNode:n=> n.parentNode.closest('.titulo,script,style,#capaComo .texto,#listaMisiones,#listaEquipo,#listaArmeria,#medallas,#resumen,#aviso,#btSonido,#eqMision,#resTit,#resSub,#rango,#resEst,#armTit,#dinero,#idiomas') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT});
+  for(let n = w.nextNode(); n; n = w.nextNode()){ if(!TXT_ES.has(n)){ if(!n.nodeValue.trim()) continue; TXT_ES.set(n, n.nodeValue); }
+    const o = TXT_ES.get(n), t = o.trim(); n.nodeValue = o.replace(t, T(t)); }
+  document.querySelectorAll('#idiomas button').forEach(b=> b.classList.toggle('ya', b.dataset.l===G.idioma));
+}
+if(!window.THREE){ document.getElementById("carga").textContent = T("NO SE PUDO CARGAR EL MOTOR 3D"); throw new Error("sin three"); }
 
 /* ====================== escena ====================== */
 const cv3 = $('lienzo3d'), cvH = $('hud'), hx = cvH.getContext('2d');
@@ -1496,10 +1638,10 @@ function terminar(gano, motivo){
 /* ====================== HUD ====================== */
 const HUDV = {hp:1, ras:1};
 function aPantalla(p){ const v = p.clone().project(cam); return v.z < 1 ? {x:(v.x*0.5 + 0.5)*ANCHO, y:(-v.y*0.5 + 0.5)*ALTO, ok:Math.abs(v.x) < 1.2 && Math.abs(v.y) < 1.2} : null; }
-function textoH(t, x, y, px, col, al, peso){ hx.font = (peso||'bold') + ' ' + px + "px 'Arial Narrow','Roboto Condensed',Arial,sans-serif"; hx.textAlign = al||'left'; hx.fillStyle = 'rgba(0,0,0,0.55)'; hx.fillText(t, x + 1, y + 1); hx.fillStyle = col; hx.fillText(t, x, y); }
+function textoH(t, x, y, px, col, al, peso){ t = T(t); hx.font = (peso||'bold') + ' ' + px + "px 'Arial Narrow','Roboto Condensed',Arial,sans-serif"; hx.textAlign = al||'left'; hx.fillStyle = 'rgba(0,0,0,0.55)'; hx.fillText(t, x + 1, y + 1); hx.fillStyle = col; hx.fillText(t, x, y); }
 function barraH(x, y, w, h, f, col, ras){ hx.fillStyle = 'rgba(0,0,0,0.5)'; hx.fillRect(x - 1, y - 1, w + 2, h + 2); if(ras !== undefined){ hx.fillStyle = '#e8eaec'; hx.fillRect(x, y, w*lim(ras,0,1), h); } hx.fillStyle = col; hx.fillRect(x, y, w*lim(f,0,1), h); }
 function texto(t, col){ J.textos.push({t, col, v:1.1}); }
-function aviso(t, col, sub){ const a = $('aviso'); a.innerHTML = t + (sub ? '<small>' + sub + '</small>' : ''); a.style.color = col||'#fff'; a.style.opacity = 1; clearTimeout(aviso.t); aviso.t = setTimeout(()=> a.style.opacity = 0, 1800); }
+function aviso(t, col, sub){ const a = $('aviso'); a.innerHTML = T(t) + (sub ? '<small>' + T(sub) + '</small>' : ''); a.style.color = col||'#fff'; a.style.opacity = 1; clearTimeout(aviso.t); aviso.t = setTimeout(()=> a.style.opacity = 0, 1800); }
 function hud(){
   hx.setTransform(RH, 0, 0, RH, 0, 0); hx.clearRect(0, 0, ANCHO, ALTO);
   if(J.modo!=='juego' && J.modo!=='pausa') return;
@@ -1590,8 +1732,11 @@ boton('btMisVolver', ()=> mostrar('capaTitulo'));
 boton('btArmeria', ()=>{ armarArmeria(ARM.tab); mostrar('capaArmeria'); });
 boton('btArmVolver', ()=> mostrar(ARM.volver||'capaTitulo'));
 boton('btComo', ()=> mostrar('capaComo')); boton('btComoVolver', ()=> mostrar('capaTitulo'));
-boton('btSonido', ()=>{ G.sonido = !G.sonido; guardar(); if(amo) amo.gain.value = G.sonido ? 0.9 : 0; $('btSonido').textContent = 'SONIDO: ' + (G.sonido ? 'SÍ' : 'NO'); });
-$('btSonido').textContent = 'SONIDO: ' + (G.sonido ? 'SÍ' : 'NO');
+boton('btSonido', ()=>{ G.sonido = !G.sonido; guardar(); if(amo) amo.gain.value = G.sonido ? 0.9 : 0; textoSonido(); });
+function textoSonido(){ $('btSonido').textContent = T('SONIDO') + ': ' + T(G.sonido ? 'SÍ' : 'NO'); }
+textoSonido();
+document.querySelectorAll('#idiomas button').forEach(b=> b.addEventListener('click', ev=>{ ev.preventDefault(); audioIni(); sfx('boton'); G.idioma = b.dataset.l; guardar(); aplicarIdioma(); textoSonido(); pantallaHorizontal(); }));
+aplicarIdioma();
 boton('btEqIr', ()=> jugar(misionElegida)); boton('btEqVolver', ()=> mostrar('capaMisiones'));
 boton('btSeguir', seguir); boton('btReiniciar', ()=> jugar(J.mi)); boton('btSalir', aMenu);
 boton('btResSig', ()=>{ misionElegida = Math.min(4, J.mi + 1); armarEquipo(); mostrar('capaEquipo'); });
@@ -1626,21 +1771,21 @@ function armarMisiones(){
   MISIONES.forEach((m, i)=>{ const ab = i < G.abierto, d = document.createElement('div'); d.className = 'carpeta' + (ab ? '' : ' cerrada'); d.style.animationDelay = (i*0.06) + 's';
     const c = document.createElement('canvas'); c.width = 316; c.height = 160; miniatura(c, i);
     const t = document.createElement('div'); t.className = 't'; const e = G.estrellas[i]||0;
-    t.innerHTML = (i+1) + '. ' + m.nom + '<small>' + m.lugar + '</small><div class="est">' + '★'.repeat(e) + '☆'.repeat(3-e) + '  ' + (G.rangos[i]||'') + '</div><small>' + (ab ? m.txt : 'CLASIFICADO · cumplí la anterior') + '</small>';
-    const s = document.createElement('div'); s.className = 'sello'; s.textContent = !ab ? 'CLASIFICADO' : (e ? 'CUMPLIDA' : 'ACTIVA'); s.style.color = s.style.borderColor = !ab ? '#5a636b' : (e ? '#5ad07a' : '#ffb43a');
+    t.innerHTML = (i+1) + '. ' + T(m.nom) + '<small>' + T(m.lugar) + '</small><div class="est">' + '★'.repeat(e) + '☆'.repeat(3-e) + '  ' + (G.rangos[i]||'') + '</div><small>' + (ab ? T(m.txt) : T('CLASIFICADO · cumplí la anterior')) + '</small>';
+    const s = document.createElement('div'); s.className = 'sello'; s.textContent = T(!ab ? 'CLASIFICADO' : (e ? 'CUMPLIDA' : 'ACTIVA')); s.style.color = s.style.borderColor = !ab ? '#5a636b' : (e ? '#5ad07a' : '#ffb43a');
     d.append(c, t, s); d.addEventListener('click', ()=>{ audioIni(); if(!ab){ sfx('vacio'); return; } sfx('boton'); pantallaHorizontal(); misionElegida = i; armarEquipo(); mostrar('capaEquipo'); }); L.append(d); });
 }
 function barrasArma(id){ const A = ARMAS[id], f = (v, m)=> '<i><b style="width:' + Math.round(lim(v/m, 0.05, 1)*100) + '%"></b></i>';
-  return '<div class="barras"><span>DAÑO</span>' + f(A.dmg*(A.perd||1), 180) + '<span>CADENCIA</span>' + f(1/A.cad, 14) + '<span>PRECISIÓN</span>' + f(0.06 - A.disp, 0.06) + '<span>CARGADOR</span>' + f(A.carg, 40) + '</div>'; }
+  return '<div class="barras"><span>' + T('DAÑO') + '</span>' + f(A.dmg*(A.perd||1), 180) + '<span>' + T('CADENCIA') + '</span>' + f(1/A.cad, 14) + '<span>' + T('PRECISIÓN') + '</span>' + f(0.06 - A.disp, 0.06) + '<span>' + T('CARGADOR') + '</span>' + f(A.carg, 40) + '</div>'; }
 function fila(L, icono, nom, txt, botones, extra){ const d = document.createElement('div'); d.className = 'item';
   const c = document.createElement('canvas'); c.width = 184; c.height = 92; icono(c);
-  const t = document.createElement('div'); t.className = 'd'; t.innerHTML = nom + '<small>' + txt + '</small>' + (extra||'');
+  const t = document.createElement('div'); t.className = 'd'; t.innerHTML = T(nom) + '<small>' + T(txt) + '</small>' + (extra||'');
   const bs = document.createElement('div'); bs.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:5px';
-  for(const b of botones){ const x = document.createElement('button'); x.className = 'boton chico ' + (b.cls||''); x.textContent = b.txt; if(b.no) x.style.opacity = 0.4;
+  for(const b of botones){ const x = document.createElement('button'); x.className = 'boton chico ' + (b.cls||''); x.textContent = T(b.txt); if(b.no) x.style.opacity = 0.4;
     x.addEventListener('click', ev=>{ ev.preventDefault(); audioIni(); if(b.no){ sfx('vacio'); return; } b.fn(); sfx(b.sfx||'moneda'); guardar(); b.rehacer(); }); bs.append(x); }
   t.append(bs); d.append(c, t); L.append(d); }
 function armarEquipo(){
-  const m = MISIONES[misionElegida]; $('eqMision').textContent = (misionElegida+1) + '. ' + m.nom + ' · ' + m.lugar; const L = $('listaEquipo'); L.innerHTML = '';
+  const m = MISIONES[misionElegida]; $('eqMision').textContent = (misionElegida+1) + '. ' + T(m.nom) + ' · ' + T(m.lugar); const L = $('listaEquipo'); L.innerHTML = '';
   const rehacer = armarEquipo;
   if(m.tipo==='franco') fila(L, c=> iconoArma(c, 'l96'), 'L96 · ASIGNADO', 'La operación es de francotirador: se sale con el L96 y la pistola.', [], barrasArma('l96'));
   else for(const id of ORDEN_ARMAS) if(G.armas[id] && ARMAS[id].clase==='primaria') fila(L, c=> iconoArma(c, id), ARMAS[id].nom, ARMAS[id].txt, [G.primaria===id ? {txt:'EN MANO', cls:'verde', fn(){}, rehacer, sfx:'boton'} : {txt:'LLEVAR', cls:'gris', fn(){ G.primaria = id; }, rehacer, sfx:'recargaB'}], barrasArma(id));
@@ -1677,13 +1822,13 @@ function mostrarResultado(){
   for(const [nom, cond] of MEDALLAS){ const si = cond(s); if(si) (G.medallas[m.id] = G.medallas[m.id] || {})[nom] = 1; const ya = G.medallas[m.id] && G.medallas[m.id][nom];
     const d = document.createElement('div'); d.className = 'medalla' + (si || ya ? ' si' : ''); const c = document.createElement('canvas'); c.width = c.height = 60; const g = c.getContext('2d');
     g.strokeStyle = si || ya ? '#ffb43a' : '#3a4148'; g.lineWidth = 5; g.beginPath(); for(let k=0;k<6;k++){ const a = k/6*TAU - Math.PI/2; g.lineTo(30 + Math.cos(a)*24, 30 + Math.sin(a)*24); } g.closePath(); g.stroke(); g.fillStyle = g.strokeStyle; g.font = 'bold 20px Arial'; g.textAlign = 'center'; g.fillText('7', 30, 38);
-    d.append(c); d.append(nom); med.append(d); }
+    d.append(c); d.append(T(nom)); med.append(d); }
   guardar();
   const mm = Math.floor(s.t/60), ss = Math.floor(s.t%60);
-  $('resTit').textContent = gano ? 'MISIÓN CUMPLIDA' : 'MISIÓN FALLIDA'; $('resTit').style.color = gano ? '#5ad07a' : '#ff6a4a'; $('resSub').textContent = gano ? m.nom + ' · INFORME' : J.fin.motivo;
+  $('resTit').textContent = T(gano ? 'MISIÓN CUMPLIDA' : 'MISIÓN FALLIDA'); $('resTit').style.color = gano ? '#5ad07a' : '#ff6a4a'; $('resSub').textContent = T(gano ? m.nom + ' · INFORME' : J.fin.motivo);
   $('rango').textContent = rango; $('resEst').textContent = '★'.repeat(est) + '☆'.repeat(3 - est);
   $('resumen').innerHTML = ['TIEMPO', mm + ':' + String(ss).padStart(2,'0'), 'BAJAS', s.bajas, 'A LA CABEZA', s.cabezas, 'PRECISIÓN', Math.round(s.acc*100) + ' %', 'REHENES', s.rehenesTot ? s.rehenes + ' / ' + s.rehenesTot : '—', 'DAÑO RECIBIDO', Math.round(s.recibido), 'PAGA', '$ ' + plata]
-    .map((v, k)=> k%2 ? '<b>' + v + '</b>' : '<span>' + v + '</span>').join('');
+    .map((v, k)=> k%2 ? '<b>' + v + '</b>' : '<span>' + T(v) + '</span>').join('');
   $('btResSig').style.display = gano && mi < 4 ? '' : 'none';
   J.modo = 'res'; mostrar('capaRes'); if(document.pointerLockElement) document.exitPointerLock();
 }
