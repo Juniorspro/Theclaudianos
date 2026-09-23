@@ -96,10 +96,10 @@ function moverCaja(o, dt, w, h){
   const nx = o.x + o.vx*dt;
   if(!choca(nx, o.y, w, h)) o.x = nx; else { golpeX = sig(o.vx); const paso = 0.02*sig(o.vx); while(!choca(o.x + paso, o.y, w, h)) o.x += paso; o.vx = 0; }
   const ny = o.y + o.vy*dt;
-  if(o.vy <= 0){ const tb = tablonDebajo(o.x, o.y, ny, w); if(tb !== null){ o.y = tb; o.vy = 0; piso = true; } }
+  if(o.vy <= 0 && !(o.bajando > 0)){ const tb = tablonDebajo(o.x, o.y, ny, w); if(tb !== null){ o.y = tb; o.vy = 0; piso = true; } }
   if(!piso){ if(!choca(o.x, ny, w, h)) o.y = ny; else { if(o.vy < 0) piso = true; else techo = true;
     const paso = 0.02*sig(o.vy); while(!choca(o.x, o.y + paso, w, h)) o.y += paso; o.vy = 0; } }
-  if(!piso && o.vy <= 0 && (choca(o.x, o.y - 0.03, w, h) || tablonDebajo(o.x, o.y, o.y - 0.03, w) !== null)) piso = true;
+  if(!piso && o.vy <= 0 && (choca(o.x, o.y - 0.03, w, h) || (!(o.bajando > 0) && tablonDebajo(o.x, o.y, o.y - 0.03, w) !== null))) piso = true;
   return {golpeX, piso, techo};
 }
 /* la cinta lleva lo que tiene encima; el vapor empuja para arriba hasta 6 baldosas */
@@ -115,6 +115,58 @@ function veLinea(x0, y0, x1, y1){ const d = Math.hypot(x1 - x0, y1 - y0), n = Ma
   for(let i = 1; i < n; i++){ const t = i/n, c = celda(x0 + (x1 - x0)*t, y0 + (y1 - y0)*t); if(c !== 'x' && SOLIDOS.has(c)) return false; } return true; }
 
 /* ---------- el héroe: planeo, salto, deslizamiento, pared ---------- */
+/* ---------- las dos palancas: la izquierda mueve, salta y desliza; la derecha apunta y tira ---------- */
+const CTRL = {mx:0, my:0, ax:0, ay:0, apunta:false, t:0, arribaAntes:false, blanco:null};
+const VEL_PIE = 6.4, V_SALTO = 16.5, V_PARED = 14.5;
+function PAL(){ return J.simPal !== undefined ? J.simPal : AJ.controles !== 'arrastre'; }
+function controlPalancas(dt){
+  const C = CTRL, mx = Math.abs(C.mx) > 0.22 ? lim(C.mx, -1, 1) : 0, arriba = C.my < -0.5, abajo = C.my > 0.62;
+  HE.coyote = HE.est === 'suelo' || HE.est === 'desliza' ? 0.1 : Math.max(0, (HE.coyote || 0) - dt);
+  if(arriba && !C.arribaAntes) HE.bufSalto = 0.14; C.arribaAntes = arriba;
+  HE.bufSalto = Math.max(0, (HE.bufSalto || 0) - dt); HE.bajando = Math.max(0, (HE.bajando || 0) - dt);
+  if(mx && !C.apunta && HE.est !== 'pared') HE.dir = sig(mx);
+  if(HE.est === 'suelo'){ HE.vx += (mx*VEL_PIE - HE.vx)*(1 - Math.exp(-dt*(mx ? 13 : 18)));
+    if(abajo && Math.abs(HE.vx) > 4 && !HE.bufSalto){ HE.est = 'desliza'; HE.vx = sig(HE.vx)*11.5; HE.desliza = 1; if(!J.sim) SON.fx('desliza'); }
+    else if(abajo && !mx && celda(HE.x, HE.y - 0.5) === '='){ HE.bajando = 0.25; HE.est = 'aire'; HE.enAire = 0; HE.y -= 0.03; } }
+  else if(HE.est === 'aire'){ HE.vx += (mx*VEL_PIE - HE.vx)*(1 - Math.exp(-dt*(mx ? 5 : 0.6)));
+    if(!arriba && HE.saltoAlto && HE.vy > 3){ HE.vy *= 0.45; HE.saltoAlto = false; } }             /* soltar antes: salto corto */
+  if(HE.bufSalto > 0){
+    if(HE.est === 'pared'){ HE.vx = -HE.paredLado*7.5; HE.vy = V_PARED; HE.dir = -HE.paredLado; }
+    else if(HE.coyote > 0){ HE.vy = V_SALTO; if(HE.est === 'desliza') HE.vx *= 0.8; }
+    else return;
+    HE.est = 'aire'; HE.saltoAlto = true; HE.bufSalto = 0; HE.coyote = 0; HE.enAire = 0; HE.giro = 0; HE.bajas = 0;
+    if(!J.sim){ SON.fx('salto'); polvo(HE.x, HE.y, 6); } }
+  /* empujar para el otro lado sin saltar: se suelta de la pared (el salto, que va primero, gana) */
+  if(HE.est === 'pared' && mx && sig(mx) === -HE.paredLado && !arriba){ HE.est = 'aire'; HE.vx = mx*3; }
+}
+/* ¿pasa una bala? (a diferencia de la vista, el cajón la frena) */
+function lineaBala(x0, y0, x1, y1){ const d = Math.hypot(x1 - x0, y1 - y0), n = Math.ceil(d*4); for(let i = 1; i < n; i++){ const t = i/n; if(SOLIDOS.has(celda(x0 + (x1 - x0)*t, y0 + (y1 - y0)*t))) return false; } return true; }
+/* el mejor blanco en la dirección de la palanca: el de menor ángulo, que se vea y esté a tiro */
+function blancoDir(ax, ay){
+  const ox = HE.x, oy = HE.y + 1.25, a0 = Math.atan2(ay, ax); let mejor = null, md = 0.45;
+  const dif = a => { let d = Math.abs(a - a0) % (Math.PI*2); return d > Math.PI ? Math.PI*2 - d : d; };
+  const probar = (x, y, cosa, yc) => { const d = Math.hypot(x - ox, y - oy); if(d > 24 || d < 0.3) return; const s = dif(Math.atan2(y - oy, x - ox)) + d*0.004;
+    if(s < md && lineaBala(ox, oy, x, y)){ md = s; mejor = {cosa, cabeza:yc !== undefined && dif(Math.atan2(yc - oy, x - ox)) < Math.min(0.06, dif(Math.atan2(y - oy, x - ox)))}; } };
+  for(const e of ENEM) if(!e.muerto && enPantalla(e.x, e.y)) probar(e.x, e.y + e.alto*0.6, e, e.y + e.alto*0.9);
+  for(const b of BALAS) if(b.tetera && b.vida > 0) probar(b.x, b.y, b);
+  for(const o of OBJ) if(o.vivo && o.tipo !== 'puerta' && enPantalla(o.x, o.y)) probar(o.x, o.y - 0.4, o);
+  return mejor;
+}
+/* tirar hacia donde apunta la palanca, sin blanco */
+function dispararDir(ax, ay){
+  const p = {x:HE.x + ax*10, y:HE.y + 1.25 + ay*10 + 0.4, vivo:true}; HE.obj = [p, p];
+  disparar({cosa:{x:p.x, y:p.y - 0.4 - 0.1, vivo:true, libre:true}, cabeza:false});
+}
+function pasoApunte(dtR){
+  const C = CTRL; if(!PAL() || HE.muerto || J.fin){ C.blanco = null; return; }
+  if(!C.apunta){ C.blanco = null; C.t = Math.min(C.t, 0.05); return; }
+  const n = Math.hypot(C.ax, C.ay) || 1, ax = C.ax/n, ay = -C.ay/n;
+  C.blanco = blancoDir(ax, ay);
+  if(C.blanco){ HE.obj = [C.blanco.cosa, C.blanco.cosa]; } else { const p = {x:HE.x + ax*10, y:HE.y + 1.25 + ay*10 + 0.4, vivo:true}; HE.obj = [p, p]; }
+  if(Math.abs(ax) > 0.15) HE.dir = sig(ax);
+  C.t -= dtR*(0.55 + 0.45*J.ts);
+  if(C.t <= 0){ C.t = 0.16; if(C.blanco) disparar(C.blanco); else dispararDir(ax, ay); }
+}
 function puedePlanear(){ return !HE.muerto && (HE.est === 'suelo' || HE.est === 'pared' || (HE.est === 'desliza' && Math.abs(HE.vx) < 3)); }
 function vDePlaneo(dx, dy){                          /* el arrastre va al revés: tirás para atrás, salta para adelante */
   let vx = -dx*4.2, vy = -dy*4.2; const m = Math.hypot(vx, vy), max = 17; if(m > max){ vx *= max/m; vy *= max/m; }
@@ -141,18 +193,19 @@ function trayectoria(dx, dy){
 function pasoHeroe(dt){
   if(HE.muerto){ HE.muerto += dt; HE.vy -= GRAV*dt; moverCaja(HE, dt, ANCHO/2, 0.6); HE.vx *= Math.exp(-3*dt); return; }
   HE.invul = Math.max(0, HE.invul - dt);
+  if(PAL()) controlPalancas(dt);
   const altoAhora = HE.est === 'desliza' ? ALTO_DESL : ALTO;
-  if(HE.est === 'suelo'){ HE.vx *= Math.exp(-14*dt); }
+  if(HE.est === 'suelo'){ if(!PAL()) HE.vx *= Math.exp(-14*dt); }
   else if(HE.est === 'desliza'){ HE.vx *= Math.exp(-2.1*dt); if(Math.abs(HE.vx) < 1.2 && !choca(HE.x, HE.y, ANCHO/2, ALTO)){ HE.est = 'suelo'; HE.vx = 0; } }
   else if(HE.est === 'pared'){ HE.pared -= dt; HE.vy = Math.max(HE.vy - 6*dt, -1.1); if(HE.pared <= 0 || !choca(HE.x + HE.paredLado*0.05, HE.y, ANCHO/2, ALTO)){ HE.est = 'aire'; HE.vx = -HE.paredLado*1.5; } }
   if(HE.est === 'aire' || HE.est === 'desliza') HE.vy -= GRAV*dt;
-  if(HE.est === 'aire'){ HE.enAire += dt; const gira = Math.abs(HE.vx) > 6 && HE.vy > -2; if(gira && !HE.giro && !J.sim) SON.fx('voltereta'); HE.giro += dt*(gira ? 11 : 0)*HE.dir; }
+  if(HE.est === 'aire'){ HE.enAire += dt; const gira = Math.abs(HE.vx) > (PAL() ? 8 : 6) && HE.vy > -2; if(gira && !HE.giro && !J.sim) SON.fx('voltereta'); HE.giro += dt*(gira ? 11 : 0)*HE.dir; }
   const r = moverCaja(HE, dt, ANCHO/2, altoAhora);
   if(HE.est === 'suelo' || HE.est === 'desliza') cinta(HE, dt, ANCHO/2, altoAhora);
   if(vapor(HE, dt) && HE.est !== 'aire'){ HE.est = 'aire'; HE.enAire = 0; HE.giro = 0; HE.bajas = 0; }
   if(HE.est === 'aire'){
     if(r.piso){ HE.est = 'suelo'; HE.giro = 0; HE.anim = 0; SON.fx('aterriza'); polvo(HE.x, HE.y, 8); HE.aterriza = 0.18; HE.bajas = 0; }
-    else if(r.golpeX && HE.vy < 8){ HE.est = 'pared'; HE.paredLado = r.golpeX; HE.pared = 2.0; HE.vy = Math.max(HE.vy, -0.5); HE.vx = 0; HE.dir = -r.golpeX; HE.giro = 0; SON.fx('pared'); }
+    else if(r.golpeX && HE.vy < 8 && (!PAL() || CTRL.mx*r.golpeX > 0.3)){ HE.est = 'pared'; HE.paredLado = r.golpeX; HE.pared = 2.0; HE.vy = Math.max(HE.vy, -0.5); HE.vx = 0; HE.dir = -r.golpeX; HE.giro = 0; SON.fx('pared'); }
   } else if(HE.est === 'suelo' || HE.est === 'desliza'){ if(!r.piso){ HE.est = 'aire'; HE.enAire = 0; } }
   /* peligros: alambre de púas, vidrios, la puerta */
   const t0 = celda(HE.x, HE.y + 0.3), t1 = celda(HE.x, HE.y + 1.2);
@@ -189,7 +242,7 @@ function enPantalla(x, y){ const p = aPantalla(x, y); return p.x > -10 && p.x < 
 function disparar(b){
   if(HE.muerto || J.fin || J.cine) return;
   const c = b.cosa, i = HE.proxBrazo; HE.proxBrazo ^= 1;
-  HE.obj[i] = c; if(HE.obj[i ^ 1] === null || (HE.obj[i ^ 1].muerto || HE.obj[i ^ 1].vivo === false)) HE.obj[i ^ 1] = c;
+  if(!c.libre){ HE.obj[i] = c; if(HE.obj[i ^ 1] === null || (HE.obj[i ^ 1].muerto || HE.obj[i ^ 1].vivo === false)) HE.obj[i ^ 1] = c; }
   const br = HE.brazos[i], boca = bocaDe(br);
   const tx = c.x, ty = c.y + (c.alto ? (b.cabeza ? c.alto*0.9 : c.alto*0.6) : 0.1);
   const a = Math.atan2(ty - boca.y, tx - boca.x) + rv(-0.012, 0.012);

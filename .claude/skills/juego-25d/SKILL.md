@@ -38,6 +38,18 @@ y el banco está en `herramientas/mate/banco/`. **Se edita la fuente, nunca el H
 - Estela de cámara lenta: copias aditivas del sprite. **`alphaTest` corta la opacidad**: con opacidad
   0,5 y `alphaTest 0,5` no se ve nada.
 
+## Controles: dos palancas (y el arrastre como opción)
+- Cada mitad de la pantalla es una palanca que **nace donde se apoya el dedo** y cuya base sigue al dedo
+  si se va lejos. Izquierda: caminar, arriba salta (soltar antes = salto corto, con tiempo de coyote y
+  salto guardado), abajo corriendo desliza, abajo quieto sobre un tablón baja. Derecha: apunta y tira
+  sola; la mira se engancha al blanco de **menor ángulo** que la bala pueda alcanzar (el cajón tapa la
+  bala aunque no la vista). Un toque corto sobre un enemigo le tira. En el aire apuntando, cámara lenta.
+- **El salto va antes que el «soltarse de la pared»**: la diagonal arriba-y-afuera de un jugador de
+  verdad soltaba la pared y el salto de pared no salía nunca. Lo encontró `alcancePal`.
+- Agarrarse a la pared sólo empujando hacia ella; sin eso, con palancas uno se pega a todo.
+- `alcancePal()` simula las palancas (caminar, saltos de tres alturas con cinco direcciones, deslizar,
+  bajar del tablón, saltos de pared) y `alcance()` el arrastre: los dos modos se verifican.
+
 ## Niveles
 - Mapas de texto armados con piezas en Python (`niveles.py`: `suelo`, `r`, `tablon`, `p`), en metros y
   desde abajo; el JSON sale solo. Las filas se **completan** al cargar.

@@ -14,7 +14,8 @@ function guardar(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catc
 const K = '#0a0610';
 
 /* ================================================================ ajustes */
-const AJ = Object.assign({idioma:null, calidad:'alta', musica:0.8, efectos:1, vibrar:true}, leer('mate.ajustes', {}));
+const AJ = Object.assign({idioma:null, calidad:'alta', musica:0.8, efectos:1, vibrar:true, controles:'palancas'}, leer('mate.ajustes', {}));
+if(!['palancas', 'arrastre'].includes(AJ.controles)) AJ.controles = 'palancas';
 if(!['es', 'en', 'pt'].includes(AJ.idioma)){ const l = (navigator.language || 'es').slice(0, 2).toLowerCase(); AJ.idioma = l === 'pt' ? 'pt' : l === 'en' ? 'en' : 'es'; }
 if(!['alta', 'media', 'baja'].includes(AJ.calidad)) AJ.calidad = 'alta';
 AJ.musica = lim(+AJ.musica || 0, 0, 1); AJ.efectos = lim(+AJ.efectos || 0, 0, 1);

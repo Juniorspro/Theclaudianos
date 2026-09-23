@@ -1,0 +1,12 @@
+const {chromium}=require('/tmp/ui/node_modules/playwright');
+(async()=>{const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']});
+ const p=await b.newPage({viewport:{width:412,height:892},hasTouch:true,isMobile:true,deviceScaleFactor:2.625,locale:'es-AR'});
+ const errs=[]; p.on('pageerror',e=>errs.push('PAGE '+e.message+' '+(e.stack||'').split('\n')[1]));
+ await p.goto('file:///tmp/ui/mate_b.html'); await p.waitForTimeout(1500);
+ await p.evaluate(()=>{ __M.jugar(1,false); __M.saltarCine(); }); await p.waitForTimeout(600);
+ const info=async n=>console.log(n, JSON.stringify(await p.evaluate(()=>{ const c=document.getElementById('gl'), h=document.getElementById('hud'); return {m:__M.medida(), gl:[c.width,c.height,c.style.width,c.style.height], hud:[h.width,h.height], st:document.getElementById('stage').style.transform}; })));
+ await info('vertical'); await p.screenshot({path:'/tmp/ui/mate/g1.png'});
+ await p.setViewportSize({width:892,height:412}); await p.waitForTimeout(900); await info('acostado'); await p.screenshot({path:'/tmp/ui/mate/g2.png'});
+ await p.setViewportSize({width:412,height:892}); await p.waitForTimeout(900); await info('vertical2');
+ await p.setViewportSize({width:390,height:844}); await p.waitForTimeout(900); await info('otro');
+ console.log(errs); await b.close(); })();

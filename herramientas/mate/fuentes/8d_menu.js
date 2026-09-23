@@ -117,8 +117,9 @@ const PANTALLAS = {
       [tr('CALIDAD'), tr(AJ.calidad.toUpperCase()), d => { AJ.calidad = cal[(cal.indexOf(AJ.calidad) - d + 3) % 3]; aplicarCalidad(); }],
       [tr('MÚSICA'), AJ.musica, d => { AJ.musica = lim(Math.round(AJ.musica*10 + d)/10, 0, 1); SON.volumen(); }],
       [tr('EFECTOS'), AJ.efectos, d => { AJ.efectos = lim(Math.round(AJ.efectos*10 + d)/10, 0, 1); SON.volumen(); SON.fx('disparo'); }],
+      [tr('CONTROLES'), AJ.controles === 'arrastre' ? tr('ARRASTRE') : tr('PALANCAS'), () => { AJ.controles = AJ.controles === 'arrastre' ? 'palancas' : 'arrastre'; DEDOS.clear(); CTRL.mx = CTRL.my = 0; CTRL.apunta = false; J.planeo = null; }],
       [tr('VIBRACIÓN'), AJ.vibrar ? tr('SÍ') : tr('NO'), () => { AJ.vibrar = !AJ.vibrar; vibrar(40); }]];
-    filas.forEach((f, i) => { const y = 32 + i*24;
+    filas.forEach((f, i) => { const y = 30 + i*Math.min(24, Math.floor((H - 70)/filas.length));
       texto(g, f[0], x, y + 4, 'gris', {izq:true});
       boton(g, 'm' + i, x + w - 132, y, 18, 15, '◀', {fn:() => { f[2](-1); guardar('mate.ajustes', AJ); }});
       boton(g, 'p' + i, x + w - 18, y, 18, 15, '▶', {fn:() => { f[2](1); guardar('mate.ajustes', AJ); }});
@@ -161,7 +162,7 @@ const PANTALLAS = {
     const t = UI.t; g.fillStyle = 'rgba(40,0,8,' + Math.min(0.55, t) + ')'; g.fillRect(0, 0, W, H);
     const k = suave(Math.min(1, t*2)); texto(g, tr('TE BAJARON'), W/2, Math.round(lerp(-20, H*0.2, k)), 'rojo', {esc:W > 420 ? 3 : 2});
     if(t > 0.5){ const tips = ['Tocá a un enemigo en el aire: todo va en cámara lenta.', 'El círculo que se vacía avisa cuándo te van a tirar.', 'Dos dedos, dos enemigos: cada brazo apunta por su lado.', 'Deslizarte te hace más chico: las balas pasan por arriba.', 'Una bala contra la chapa busca sola al enemigo más cercano.', 'Las garrafas no perdonan. A nadie.'];
-      partir(tr(tips[UI.tip % tips.length]), 44).forEach((l, i) => texto(g, l, W/2, Math.round(H*0.48) + i*9, 'blanco')); }
+      partir(tr(PAL() && TIPS_PAL[tips[UI.tip % tips.length]] || tips[UI.tip % tips.length]), 44).forEach((l, i) => texto(g, l, W/2, Math.round(H*0.48) + i*9, 'blanco')); }
     if(t > 0.8){ const y = H - 34, bw = 110;
       boton(g, 'reint', W/2 - bw - 6, y, bw, 18, tr('REINTENTAR'), {principal:true, foco:true, fn:revivir});
       boton(g, 'reini', W/2 + 6, y, bw, 18, tr('REINICIAR NIVEL'), {fn:() => empezarNivel(J.idx, false)}); }
@@ -204,6 +205,9 @@ function pantallaResultado(){
   PROG.abierto = Math.max(PROG.abierto, Math.min(NIVELES.length - 1, J.idx + 1)); guardarProg();
   J.modo = 'resultado'; UI.p = 'resultado'; UI.t = 0; SON.musica('victoria'); SON.intensidad(0);
 }
+const TIPS_PAL = {'Tocá a un enemigo en el aire: todo va en cámara lenta.':'Apuntá en el aire con la palanca derecha: todo va en cámara lenta.',
+  'Dos dedos, dos enemigos: cada brazo apunta por su lado.':'La mira se engancha sola al enemigo más cercano a donde apuntás.',
+  'Deslizarte te hace más chico: las balas pasan por arriba.':'Corré y bajá la palanca: deslizándote, las balas pasan por arriba.'};
 function pantallaMuerte(){ J.modo = 'muerte'; UI.p = 'muerte'; UI.t = 0; UI.tip++; }
 /* reaparece en el último lugar seguro: lo que ya cayó queda caído */
 function revivir(){

@@ -759,5 +759,55 @@ const FRASES = [
 "SAKE",
 "SAKE",
 "SAKE"
+],
+[
+"Palanca izquierda para moverte. Empujala para arriba y saltás.",
+"Left stick to move. Push it up to jump.",
+"Alavanca esquerda para andar. Empurre para cima e você pula."
+],
+[
+"Palanca derecha para apuntar y tirar. En el aire, el tiempo se frena.",
+"Right stick to aim and shoot. In the air, time slows down.",
+"Alavanca direita para mirar e atirar. No ar, o tempo desacelera."
+],
+[
+"Corré y tirá la palanca para abajo: te deslizás por debajo.",
+"Run and pull the stick down: you slide underneath.",
+"Corra e puxe a alavanca para baixo: você desliza por baixo."
+],
+[
+"Saltá contra la pared empujando hacia ella, y después para arriba.",
+"Jump into a wall pushing toward it, then push up.",
+"Pule contra a parede empurrando para ela, e depois para cima."
+],
+[
+"Apuntá en el aire con la palanca derecha: todo va en cámara lenta.",
+"Aim with the right stick while airborne: everything goes slow-mo.",
+"Mire com a alavanca direita no ar: tudo fica em câmera lenta."
+],
+[
+"La mira se engancha sola al enemigo más cercano a donde apuntás.",
+"The reticle locks onto the enemy closest to where you aim.",
+"A mira trava sozinha no inimigo mais próximo de onde você mira."
+],
+[
+"Corré y bajá la palanca: deslizándote, las balas pasan por arriba.",
+"Run and pull the stick down: while sliding, bullets fly overhead.",
+"Corra e puxe a alavanca: deslizando, as balas passam por cima."
+],
+[
+"CONTROLES",
+"CONTROLS",
+"CONTROLES"
+],
+[
+"PALANCAS",
+"STICKS",
+"ALAVANCAS"
+],
+[
+"ARRASTRE",
+"DRAG",
+"ARRASTAR"
 ]
 ];

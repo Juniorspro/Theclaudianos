@@ -10,7 +10,7 @@ se prueba **en el celular, en vertical (412×892)**.
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. |
 | `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil, **escenario girado 90°** (se juega apaisado): base militar de arranque, nave de dos cubiertas que se recorre por dentro, seis galaxias que se ganan, caminata espacial con soga, fotos que se venden y álbum de 21 especies. |
 | `juegos-pc/Saltos.html` | **A LOS SALTOS.** Gladiadores 2D pixel art con física de saltos (a la Gladihoppers): 7 clases, cortes y sangre, carrera con edad, fama, mercado y estatuas. Canvas 2D, sin red, **escenario girado 90°** (se juega apaisado), castellano, inglés y portugués. |
-| `juegos-pc/Mate.html` | **MATE AMARGO.** Pixel art 2.5D a lo *My Friend Pedro: Ripe for Revenge*: personajes 2D en planos, mundo 3D iluminado con rayos de dios, 9 niveles en 3 capítulos, jefe, cinemáticas, menús, música sintetizada, ES/EN/PT. Se juega apaisado. |
+| `juegos-pc/Mate.html` | **MATE AMARGO.** Pixel art 2.5D a lo *My Friend Pedro: Ripe for Revenge*: personajes 2D en planos, mundo 3D iluminado con rayos de dios, 9 niveles en 3 capítulos, jefe, cinemáticas, menús, música sintetizada, ES/EN/PT. Dos palancas (o arrastre, en OPCIONES). Se juega apaisado. |
 | `herramientas/mate/` | Fuentes de `Mate.html` por partes (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`). **Se edita la fuente, no el HTML.** |
 | `.claude/skills/juego-25d` | Receta del 2.5D pixel art: render, sprites, niveles verificados, cinemáticas, menús, idiomas. |
 | `docs/GUIA_JUEGOS_2D_PIXEL.md` | Receta para juegos 2D pixel art (escala entera, piezas, banco). La usa `Saltos.html`. |
@@ -1461,3 +1461,26 @@ las frenó antes de que devolvieran nada, así que esta vuelta quedó con lo que
 
 Medido además: girar el celular en caliente en pleno nivel acomoda el lienzo y el HUD sin errores; fuzz y auditoría de idiomas limpios.
 Quedan sin revisar a fondo el audio y la entrada; es lo primero de la próxima pasada si se pide.
+
+### 2026-09-23 (ao) — MATE AMARGO con dos palancas
+**Pedido textual:** «Hey arregla el movimiento quizás un joystick ayudaría más en ambos lados uno de disparo y otro de moverte».
+
+Ahora se juega con **dos palancas**, y el arrastre de antes queda en OPCIONES → CONTROLES (PALANCAS / ARRASTRE):
+- **Izquierda, moverse**: camina a 6,4 m/s; para arriba salta 4,5 baldosas (soltando antes, salto corto), con 0,1 s de coyote y
+  el salto guardado 0,14 s; para abajo corriendo se desliza; para abajo quieto sobre un tablón se baja. Contra la pared, empujando
+  hacia ella se agarra; para arriba salta de la pared.
+- **Derecha, tirar**: apunta y dispara solo cada 0,16 s. La mira se engancha al enemigo, tetera, garrafa o chapa de **menor
+  ángulo** respecto de donde apuntás y que la bala pueda alcanzar; si apuntás a la cabeza, corchetes rojos y tiro a la cabeza. Sin
+  blanco tira derecho. Un toque corto sobre un enemigo también le tira. En el aire apuntando, el tiempo se frena.
+- Las dos palancas nacen donde apoyás el dedo en cada mitad y su base sigue al dedo; quietas, apenas una marca en cada rincón.
+- Las pistas de Mateo y los consejos de la pantalla de muerte se cuentan según el control elegido, en los tres idiomas.
+
+Lo que costó una vuelta:
+- **El salto de pared no salía nunca**: empujar para el otro lado soltaba la pared antes de procesar el salto, y la diagonal
+  arriba-y-afuera es justo lo que hace un jugador. La nueva sonda `alcancePal` dio tres niveles imposibles (1-2, 2-3 y 3-1, los
+  tres con tiro de pared); con el salto primero, los ocho con puerta se terminan.
+- **La mira se enganchaba detrás de un cajón** y las balas se lo comían: el enganche usa la línea de la bala, no la de la vista.
+
+Medido con dos dedos de verdad: la palanca a la derecha camina a 6,4; arriba salta a 7,7; la derecha apuntando engancha al matón y
+lo baja; saltando y apuntando la cámara lenta llega a 0,3. Los 8 niveles con puerta se terminan con las dos palancas y con el
+arrastre; el jefe muere en las tres fases; `TR_FALTA` vacío; fuzz de 300 acciones sin errores.
