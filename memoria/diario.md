@@ -1,6 +1,17 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — escuela de 2D pixel art
+**Pedido textual:** «No los copies pero mira aprende sobre pixel art y otras cosas procedurales y del
+arte 2D quizás después te pida juegos 2D diferentes a estos para no ser copias pero te enseñan bien».
+
+Qué se hizo: se estudiaron `GUIA_JUEGOS_2D_PIXEL.md` (EL TIPO) y `luz-mala-1.html` (LUZ MALA, 5.426
+líneas) **sin copiarlos al repo**, y salió la nota [pixel2d](pixel2d.md). El HTML no se leyó entero
+(~88 mil tokens): se leyeron las cabeceras de los 22 módulos y cinco bloques puntuales.
+
+Qué falta: sigue sin definirse **qué juego es Mariano Peak**. Cuando se pida uno 2D, tiene que ser
+**distinto** a esos dos — la nota es método, no molde.
+
 ### 2026-09-22 — memoria y receta instaladas
 **Pedido:** llegaron `MEMORIA.md` y `GUIA-JUEGOS.md` (sin texto, sólo los archivos).
 

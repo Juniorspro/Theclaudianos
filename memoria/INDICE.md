@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 2026-09-22. Cómo se mantiene: `MEMORIA.md` en la raíz.
+Última puesta al día: 2026-09-23. Cómo se mantiene: `MEMORIA.md` en la raíz.
 
 ## Reglas que no se discuten
 - **Nunca** cuadros de `AskUserQuestion` — «se buguea, uso celular». Preguntar en texto plano.
@@ -20,7 +20,8 @@
 | nota | abrila cuando… |
 |---|---|
 | [rezona](rezona.md) | vayas a generar un asset, bajarlo, subir el juego o el login falle |
-| [juegos](juegos.md) | toques render, luz, niebla, vegetación, personaje o post-proceso |
+| [juegos](juegos.md) | hagas **3D**: render, luz, niebla, vegetación, personaje, post-proceso |
+| [pixel2d](pixel2d.md) | hagas **2D pixel art**: escala, sprites, luz, mundo procedural, sonido |
 | [repo](repo.md) | necesites saber qué hay dónde, cómo se prueba y cómo se entrega |
 | [diario](diario.md) | quieras saber qué pasó en las sesiones anteriores y qué quedó a medias |
 
