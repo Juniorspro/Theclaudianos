@@ -11,6 +11,7 @@ se prueba **en el celular, en vertical (412×892)**. EL TIPO se juega **acostado
 | `juegos-pc/AOscuras.html` | **A OSCURAS.** Táctico de arriba estilo Bullet Echo: linterna en cono, ecos de pasos y tiros, 5 misiones procedurales (equipo, robo en sigilo, dominio, batalla real, jefe). Canvas 2D en píxeles, un archivo, sin red. |
 | `juegos-pc/Andes.html` | **ANDES.** Descenso en tabla al estilo Alto's Adventure: un dedo (tocar salta, mantener gira), mortales, grinds, toldos, llamas, ancianos, avalancha, alas; 5 montañas procedurales con hora del día y clima. Canvas 2D vectorial, acostado, sin red. |
 | `juegos-pc/Bronca.html` | **BRONCA · ZOMBIS.** Palitos contra zombis al estilo Anger of Stick 5: combos, armas que apuntan solas, aliados, robot y helicóptero, experiencia y base con tienda; 5 misiones procedurales (una es defensa) con jefe cada una. Canvas 2D vectorial, acostado, sin red. |
+| `juegos-pc/Brecha.html` | **BRECHA 7.** Tirador táctico en primera persona sobre rieles al estilo SIERRA 7: cubrirse para recargar, brechas en cámara lenta con rehenes, francotirador con caída y viento, convoy con helicóptero; 5 misiones procedurales. three.js r128 por CDN, geometría por código, acostado. |
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. De otra línea de trabajo. |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -486,4 +487,43 @@ animaciones y golpes a la perfección si o si» y después «Puedes usar tiktok 
 - Comparación cuadro original / pose del juego: `juegos-pc/referencias/aos_calco_comparar.jpg`.
 
 Medido: bot con invencibilidad 5/5, sin invencibilidad 12/15 (antes 11/15); toques por CDP como antes; sin errores.
+
+### 2026-09-23 (14) — BRECHA 7, estilo SIERRA 7
+**Pedido textual:** «GENERAME un juego HTML single, dónde el juego trate de una copia parecida a SIERRA 7 - Tactical Shooter, investiga
+todo sobre ese juego y dame 5 niveles completos procedural y de mecánicas goty de verdad y usa lo anterior aprendido de menú y
+modelos procedurales y hazlo incluso mejor».
+
+`juegos-pc/Brecha.html`: primera persona sobre rieles, three.js r128 (cdnjs), acostado con el giro sólo por CSS y pantalla
+completa + `orientation.lock` al primer toque, como ANDES y BRONCA.
+- **Mundo por código**: cada cuarto se funde en una malla con color por vértice (`Obra`) y sus cajas sólidas van a `MUNDO.cajas`
+  para los rayos. Los tiros son rayos analíticos contra cajas, cápsulas del cuerpo y la caja girada del escudo; nada de raycaster.
+- **Soldados**: esqueleto de 16 puntos con IK de dos huesos en 3D (`poseSoldado`, `aMundo3`, `vestir`); al morir, muñeco de
+  trapo verlet. Casco y placas que se rompen, escudo que se corre al disparar, cabeza = daño ×.
+- **Misiones**: Depósito (asalto con cubiertas y brecha final con rehén), Embajada (tres salones con brecha en cámara lenta,
+  captores con cuenta regresiva, reloj de 5 min), Puerto (francotirador en tres puestos de grúa: caída, viento, aguantar el aire,
+  blanco que escapa en auto), Autopista (convoy: camionetas, motos, cohetes y helicóptero) y Búnker (escudos, pesados y El Coloso).
+  Armería con 6 armas, 4 mejoras y equipo; rango, estrellas y medallas.
+- Calidad automática por el intervalo real entre cuadros; sombras sólo afuera (adentro los techos dejaban todo negro).
+
+Trampas que costaron una vuelta:
+- **Cámara, boca del arma y caja del escudo se actualizaban al dibujar**: el paso del banco usaba posiciones viejas. Todo va en `pasar()`.
+- **El botón BRECHA nunca anduvo con el dedo**: `pasarJugador` borraba `IN.brecha` antes de que `pasarEtapa` lo leyera. El bot
+  entraba igual (`|| J.bot`) y lo tapaba. Lo encontró la prueba de toques por CDP, no el bot.
+- **Enemigos detrás de cubierta alta para siempre**: si pasan 6 s sin verse (pared, civil en la línea o fuera del giro de la mira),
+  se mudan a un lugar a la vista. El criterio de «se ve» tiene que ser **el mismo** que usa el bot (cabeza o pecho, 0,2 m): con
+  0,3 vs 0,2 un enemigo quedaba justo en el borde y no se mudaba nunca.
+- **Rehenes con las manos arriba tapaban la línea de tiro** y el bot les pegaba (el control por ángulo miraba cabeza, pecho y pelvis,
+  no los brazos). Ahora `civEnLinea` tira cinco rayos contra el cuerpo entero, y los rehenes se tiran al piso con las manos en la nuca.
+- **El giro de la mira tenía tope 1,05 rad** y en las brechas el que entra por un costado tiene enemigos a 1,1: quedaba apuntando al
+  tope. 1,35 adentro.
+- **El bot francotirador nunca disparaba a un blanco en movimiento**: miraba el error antes de corregir la puntería, y el blanco se
+  mueve más que la tolerancia en un cuadro. Se mira el error que queda.
+- **La baranda de la grúa tapaba media vista** (el ojo quedaba 15 cm arriba de ella): plataforma más baja y baranda al lado del jugador.
+- **El francotirador enemigo pegaba el 94 % de los tiros** a cualquier distancia (láser = alcance 500): 55 % y 30 de daño.
+- **El HUD a DPR 2 costaba un tercio del cuadro** en celulares lentos: su escala baja con la calidad automática (tope nuevo 0,4).
+
+Medido: bot con invencibilidad 15/15 (3 semillas × 5), sin invencibilidad 13/15 (pierde el convoy o El Coloso, sin comprar
+mejoras). Toques reales por CDP 11/11: mira, fuego, fuego arrastrando, cubrirse con otro dedo apuntando, recargar, cambiar
+arma, mira telescópica, granada, pausa, seguir, brecha. CPU ×6 con calidad automática: 32–46 cuadros por segundo (antes 21–32);
+sin frenar, 53–56. Sin errores. Sondas: `window.__S` — `iniciar(n,sem)`, `anda(n)`, `bot(v)`, `dios(v)`, `est()`, `dibujarYa()`.
 
