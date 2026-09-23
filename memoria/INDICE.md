@@ -26,7 +26,7 @@
 | [rezona](rezona.md) | vayas a generar un asset, bajarlo, subir el juego o el login falle |
 | [juegos](juegos.md) | hagas **3D**: render, luz, niebla, vegetación, personaje, post-proceso |
 | [pixel2d](pixel2d.md) | hagas **2D pixel art**: escala, sprites, luz, mundo procedural, sonido |
-| [arrabal](arrabal.md) | toques `juegos-pc/Arrabal.html`, el juego de pelea con cartas |
+| [arrabal](arrabal.md) | toques `juegos-pc/Arrabal.html`, el juego de pelea con cartas (**apaisado** desde el 23/09: en vertical se gira solo) |
 | [chicharra](chicharra.md) | toques `juegos-pc/Chicharra.html`, el juego de esta línea |
 | [repo](repo.md) | necesites saber qué hay dónde, cómo se prueba y cómo se entrega |
 | [diario](diario.md) | quieras saber qué pasó en las sesiones anteriores y qué quedó a medias |

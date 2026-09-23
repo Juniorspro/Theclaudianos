@@ -1,6 +1,17 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — ARRABAL apaisado, con botones y animaciones de 24 cuadros
+**Pedido textual:** «Agrega que sea más con botones que una zona así, también mejora en un 100% la
+interfaz a algo más cómodo también haz que cada personaje o sea cada animación golpe 1 etc tenga 24
+fotogramas que debes generar ahora también varias animaciones Idle etc etc etc más goty y también
+gira 90° el juego».
+Qué se hizo: juego apaisado (se gira solo con el teléfono parado), mando de palito + botones,
+todas las pantallas rehechas, y 96 animaciones de 24 cuadros (8 por luchador) sacadas de videos
+de Rezona. Detalle en [arrabal](arrabal.md) § Apaisado, mando de botones y animaciones.
+Trampa del día: `pkill -f "while pgrep"` mató también a la propia terminal (el patrón estaba en su
+línea de comando). Y `pgrep -f patrón` dentro de un `while` se encuentra a sí mismo.
+
 ### 2026-09-23 — ARRABAL: efectos de sonido de los golpes
 **Pedido textual:** «Ponle efectos de sonido a los golpes».
 Qué se hizo: impactos grabados por capas (efectos.py), con variantes y capa de arma; el sintetizador

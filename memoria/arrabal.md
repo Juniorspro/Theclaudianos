@@ -1,5 +1,5 @@
 # ARRABAL — juego de pelea con cartas
-Archivo: `juegos-pc/Arrabal.html` (un solo HTML, ~8,6 MB con el arte y la música adentro, sin red).
+Archivo: `juegos-pc/Arrabal.html` (un solo HTML, ~33 MB con el arte, las animaciones y la música adentro, sin red).
 Arte: `assets/arrabal/` + `herramientas/arrabal/`. Banco: `pruebas/arrabal/`. Ver también:
 [pixel2d](pixel2d.md), [chicharra](chicharra.md) (el motor que se reusó), [rezona](rezona.md).
 
@@ -26,6 +26,38 @@ Pedido: «Haz el estilo más Arcade el segundo juego». Se sumó, sin tocar la h
   («RONDA 1», «¡PELEEN!», «RONDA FINAL»), anuncios de combo en 5/10/15/20 golpes, y `capaCRT()`: líneas de
   tubo + viñeta + un barrido claro que baja (se apaga en ajustes: «EFECTO DE TUBO»).
 - La historia usa el mismo motor con `modo='historia'` (equipos y relevos, sin rondas).
+
+## Apaisado, mando de botones y animaciones de 24 cuadros (23/09/2026)
+Pedido: «más con botones que una zona… mejora en un 100% la interfaz… cada animación golpe 1 etc
+tenga 24 fotogramas… varias animaciones Idle… más goty y también gira 90° el juego».
+- **Apaisado**: `ALTO=412` fijo y `ANCHO` = lo que dé la pantalla (700–1000). Si el teléfono está
+  parado, `Pantalla.medir()` gira el lienzo 90° por CSS (`translate(centro) rotate(90deg)`): arriba
+  del juego = derecha del teléfono; `aMundo()` deshace el giro y `aVentana()` es su inverso (lo usa
+  `__A.donde`). Con la rotación bloqueada se juega igual.
+- **Mando** (`a13_mando.js`): palito flotante (el dedo que arranca en la mitad izquierda; la base
+  sigue al dedo), GOLPE, FUERTE, dos RAYOS (especiales con su enfriamiento), SÚPER y CUBRIR. Se lee
+  cada paso desde `Entrada.dedos` (en la pelea `Entrada.filtro` devuelve siempre verdadero: no hay
+  gestos). Arriba salta (diagonal si va de costado), abajo barre, doble toque de costado corre o
+  retrocede, palito atrás cubre si el rival ataca. Prueba: `pruebas/arrabal/mando.mjs`.
+- Escenario = pantalla entera (`ESC.y0=0`, `suelo=ALTO-44`), `MUNDO_W=1300`, el fondo cubre el ancho
+  con margen de parallax. HUD nuevo arriba (barras inclinadas con rastro, medallón del reloj,
+  rondas, pausa chica). Todas las pantallas rehechas en dos columnas; el mapa corre de costado
+  (`pasarScrollX`) y las listas suben al arrastrar (`pasarScroll` va de `-max` a 0).
+- **Animaciones de 24 cuadros** desde video: la herramienta de sprites animados de Higgsfield
+  (`autosprite`) **no está habilitada** («Job set type not supported»). Salida: Rezona
+  `submit_video_generation` desde la pose base (`herramientas/arrabal/fuentes/<id>.jpg`, fondo verde
+  o magenta plano, publicadas en el repo para tener URL pública), 4 s (mínimo que acepta), 480p,
+  1:1, cámara quieta. `pedir_animaciones.py` (12 en vuelo, reintenta los errores pasajeros, textos
+  alternativos para el filtro de contenido) y `hornear_animaciones.py` (recorte suave + despill,
+  tramo de movimiento o ciclo que cierra, 24 cuadros con **ancla fija por animación**, cuadros
+  repetidos reusan el recorte, atlas `anim-<id>.webp` + `anim.json`).
+- 8 animaciones: idle, caminar, golpe, patada, especial, golpeado, caida, victoria. En el juego
+  `animDe()` elige por estado y avanza con el golpe (`fr/dur × 24`); lo demás (salto, barrida,
+  bloqueo, dash) sigue con los cuadros sueltos. Los atlas pesan ~1,1 MB c/u: se decodifican **sólo
+  los que están en escena** (`imgAnim`/`soltarAnims`): los doce juntos no entran en la memoria de un
+  teléfono.
+- Filtro de contenido de Rezona: rebotó «teenage boy», la victoria de Mate y el golpe con ancla de
+  La Parca → reescritos (`ALTERNATIVO`).
 
 ## Efectos de sonido de los golpes (23/09/2026)
 Pedido: «Ponle efectos de sonido a los golpes». Antes eran un tono + un soplo sintetizados al vuelo.

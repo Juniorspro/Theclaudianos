@@ -1,15 +1,15 @@
 # Banco de ARRABAL
 
-Chromium del contenedor, 412x892, `hasTouch`. **Nunca `npx playwright install`.**
+Chromium del contenedor, `hasTouch`. El juego es apaisado: en 412x892 se gira solo (así se prueba el giro), en 892x412 va derecho. **Nunca `npx playwright install`.**
 `mkdir -p /tmp/banco && cd /tmp/banco && npm i playwright-core`, copiar los `.mjs` y correrlos.
 
 - `menus.mjs` — portada, mapa, equipo, colección, detalle, árbol, cofre (captura cada pantalla).
 - `pelea.mjs` — cadena de 4, lanzar + aéreos, los 12 especiales y los 6 súper (daño medido), y
   peleas enteras del bot **con el equipo nivelado** (con cartas nivel 1 contra el barrio 3 pierde
   siempre: eso es la progresión, no un error).
-- `tacto.mjs` — toques reales por CDP: deslizar ↑ salta, mantener cubre, especial con un segundo
-  dedo sin que cuente como gesto, pausa y menú.
-- `toque.mjs` — un toque rápido pega y cuatro seguidos arman el combo de 4.
+- `mando.mjs` — el mando apaisado por CDP: GOLPE pega, el palito camina y salta, CUBRIR se sostiene,
+  palito + golpe a la vez. Correr con `412x892` (teléfono parado: el juego se gira solo) y `892x412`.
+- `musica.mjs` / `efectos.mjs` — la banda sonora decodifica y el bucle se ajusta; cada golpe suena.
 - `arcade.mjs` — atracción → menú → selección (la cuenta elige sola) → VS → rondas con bonos → la
   escalera entera con el bot → continuar → iniciales → récords; y que la historia siga andando.
 - `atraccion.mjs` — la demo de la portada corre 2 minutos pasando de pelea en pelea sin trabarse.
