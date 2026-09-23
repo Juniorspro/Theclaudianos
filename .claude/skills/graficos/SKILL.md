@@ -44,6 +44,11 @@ description: Reglas de render de three.js que ya costaron una vuelta cada una �
   medio texel para adentro.
 - `Group.add()` devuelve **el grupo**, no el hijo.
 
+- Un sistema de partículas que sólo avanza en el juego **se congela** en menús y cinemáticas, y un
+  hueco reciclado hereda la marca de «pegada»: se reinicia todo al tirar la partícula.
+- Un pase radial de rayos de dios arrastra **cualquier** píxel brillante (o NaN) en diagonal.
+- Ver también `juego-25d` para el pixel art en 3D (grilla de 16 texeles por unidad y escala entera).
+
 ## Rendimiento
 - Lo que siempre se paga es el **relleno de píxeles**: dibujar a un destino reducido y estirar.
 - `renderer.info.render` se pone a cero al empezar **cada** `render()`, y la sombra es otra pasada:

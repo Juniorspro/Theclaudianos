@@ -10,6 +10,9 @@ se prueba **en el celular, en vertical (412×892)**.
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. |
 | `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil, **escenario girado 90°** (se juega apaisado): base militar de arranque, nave de dos cubiertas que se recorre por dentro, seis galaxias que se ganan, caminata espacial con soga, fotos que se venden y álbum de 21 especies. |
 | `juegos-pc/Saltos.html` | **A LOS SALTOS.** Gladiadores 2D pixel art con física de saltos (a la Gladihoppers): 7 clases, cortes y sangre, carrera con edad, fama, mercado y estatuas. Canvas 2D, sin red, **escenario girado 90°** (se juega apaisado), castellano, inglés y portugués. |
+| `juegos-pc/Mate.html` | **MATE AMARGO.** Pixel art 2.5D a lo *My Friend Pedro: Ripe for Revenge*: personajes 2D en planos, mundo 3D iluminado con rayos de dios, 9 niveles en 3 capítulos, jefe, cinemáticas, menús, música sintetizada, ES/EN/PT. Se juega apaisado. |
+| `herramientas/mate/` | Fuentes de `Mate.html` por partes (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`). **Se edita la fuente, no el HTML.** |
+| `.claude/skills/juego-25d` | Receta del 2.5D pixel art: render, sprites, niveles verificados, cinemáticas, menús, idiomas. |
 | `docs/GUIA_JUEGOS_2D_PIXEL.md` | Receta para juegos 2D pixel art (escala entera, piezas, banco). La usa `Saltos.html`. |
 | `herramientas/glb/` | `juntar_anim.py` (varios GLB del mismo rig → uno con todos los clips) y `hornear.py` (achicar texturas y recompactar para meterlo en un HTML). |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
@@ -1398,3 +1401,46 @@ Lo que costó una vuelta:
 
 Queda para decidir: las jabalinas y redes compradas vuelven llenas en cada pelea (son equipo, no se
 gastan en la carrera).
+
+### 2026-09-23 (am) — MATE AMARGO, pixel art 2.5D
+**Pedido textual:** «Harás un nuevo juego pixel art pero en 2.5D los personajes todo debe ser 2D más el fondo y el ambiente
+iluminación god 3D y usa y mejora tus skills en un 1000% mejorando menú y viendo todo sobre este juego, todo menú sonido música
+efectos visuales CINEMÁTICAS, todo debe ser goty y tiene Rezona https://rezona.ai/api-keys?code=WORZ-2D6G-DCDR-SABU Si se te vence
+la key mándame un link parecido te doy otra, hazlo bro el mejor juego hasta ahora» (con una captura de *My Friend Pedro: Ripe for Revenge*).
+
+`juegos-pc/Mate.html` (282 KB, un archivo, three r128 del CDN). Un enmascarado de bufanda roja y **Mateo**, su mate que habla, contra
+**Lord Earl Grey**, el barón del té que prohibió el mate en Puerto Yerba.
+
+- **Jugabilidad de Ripe for Revenge**: no se camina. Se arrastra para atrás y se suelta para saltar (de costado, para deslizarse); el
+  tiempo se frena mientras se planea y en el aire con enemigos a la vista; se toca a cada enemigo para tirarle y **cada brazo apunta
+  por su lado**. Pared para agarrarse y saltar de nuevo, tablones que se cruzan desde abajo, vidrios que estallan en cámara lenta,
+  garrafas que explotan y vuelan paredes de madera, chapas que desvían la bala al enemigo más cercano, alambre, cintas y vapor.
+  Enemigos que avisan con un círculo que se vacía (rojo el tirador, con láser), multiplicador ×8, bonos de estilo, tres estrellas.
+- **Nueve niveles** en tres capítulos (puerto con lluvia y faro, fábrica de té al atardecer, torre de neón) y **el jefe** en la
+  azotea: tres fases (abanico y saltos; teteras que revientan en el aire y si le explotan cerca le duelen, y refuerzos; furia con
+  anillo de balas), barra de vida y frases.
+- **Cinemáticas**: viñetas ilustradas por código con paneo, retratos que mueven la boca, diálogos a máquina de escribir con voz,
+  carteles de capítulo y el del jefe con la cámara del motor, final y créditos.
+- **Menús en la grilla de píxeles**: título con logo de letras gordas en 3D, principal, capítulos con estrellas y récords,
+  opciones (idioma, calidad, música, efectos, vibración), pausa, resultado con conteo y estrellas, muerte con reintento desde el
+  último lugar seguro.
+- **Sonido todo sintetizado** (lo armó un agente aparte): electro-tango noir, 9 temas con capas por intensidad, 44 efectos, ambientes
+  por capítulo, voces de diálogo, y la cámara lenta baja la altura y cierra el filtro.
+- **Español, inglés y portugués al 100%**.
+
+Rezona: la llave que pasó el usuario era de otra sesión; el login nuevo quedó esperando aprobación. Todo lo del juego sale de código.
+
+Lo que costó una vuelta cada uno:
+- **Un NaN de la bufanda** (normales calculadas con todo en cero) se veía negro en el cuadro y como un fantasma blanco con estela
+  en el brillo y los rayos. Se aisló apagando capas y pintando los NaN de magenta.
+- **La voltereta giraba sobre los pies** y el cuerpo quedaba dos metros al costado.
+- **Fuera del mapa por abajo era sólido**: los pozos tenían piso invisible.
+- **Dos niveles imposibles** los encontró la búsqueda antes de jugarlos: faltaba el piso bajo el puente del carguero y el vapor no
+  llegaba al tablón de las calderas.
+- La fábrica **se quemaba entera**: ventanales a 9 de emisión y conos que venían hacia la cámara.
+- Las partículas **se congelaban** fuera del juego, y el reflejo de la luna en el mar se leía como una mancha rota.
+- `const` usado antes de declararse, otra vez: `UI` y `PROG` en el objeto de sondas, `FRASES` antes de `tr()`.
+
+Medido: los 8 niveles con puerta se terminan (`alcance`), ningún enemigo queda fuera de vista; el jefe muere pasando por las tres
+fases en 40 s de simulación; `TR_FALTA` vacío en inglés y portugués; fuzz de 500 acciones sin errores ni NaN; audio sin efectos
+faltantes. Lógica 0,1 ms por cuadro, 56 a 72 llamadas de dibujo.

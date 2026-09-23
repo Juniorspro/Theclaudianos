@@ -45,3 +45,14 @@ en un marco girado infla la caja), `anda(n)`, `assets()`.
 ## Entrada en el banco
 Los botones responden a **`touchstart`**, no a `click` (`'ontouchstart' in window` es true y el
 camino de click se saltea a propósito).
+
+## Sondas de MATE AMARGO (`herramientas/mate/banco/`)
+- `alc.js N…`: búsqueda de todos los saltos desde cada lugar pisable; `fin`, enemigos sueltos y mapa con `*`.
+- `jefe2.js`: la pelea del jefe acelerada a 1/60 por paso; cuenta saltos, teteras, anillos y fases.
+- `idiomas.js en pt`: recorre menús, cinemáticas y pistas y devuelve `TR_FALTA`.
+- `pantallas.js ancho alto dpr idioma`: todas las pantallas de menú en cualquier viewport.
+- `fuzz.js N`: toques, arrastres, dos dedos, cancelaciones, cambios de nivel y de pestaña; NaN y errores.
+- **Una sonda que «saltea» una cinemática vaciándole el guion la deja colgada**: el juego queda en pausa
+  y la sonda mide un mundo quieto (las partículas, congeladas). Se usa `__M.saltarCine()`.
+- **El rayo contra `Points` pega en partículas muertas**: su posición queda aunque `tam` sea 0.
+  Para saber qué se dibuja en un píxel, preguntar por las vivas o apagar capas.

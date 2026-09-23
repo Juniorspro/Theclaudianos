@@ -1083,12 +1083,13 @@ const SON = (() => {
   /* ------------------------------------------------------------ piezas de síntesis */
   /* osciladores de la música y del ambiente: quedan anotados para que el lento los baje de tono */
   const OSC_M = [];
+  let repAct = null;                                  /* el tema que está programando: sus osciladores se cortan al soltarlo */
   const detL = () => -kLento*190;
   function oscM(tipo, f, t, fin, det){
     const o = C.createOscillator();
     if(ONDA[tipo]) o.setPeriodicWave(ONDA[tipo]); else o.type = tipo;
     o.frequency.setValueAtTime(f, t); o.detune.value = (det || 0) + detL();
-    OSC_M.push({o, d0:det || 0, fin}); o.start(t); o.stop(fin); return o;
+    const rg = {o, d0:det || 0, fin}; OSC_M.push(rg); if(repAct) repAct.oscs.push(rg); o.start(t); o.stop(fin); return o;
   }
   function oscF(tipo, f, t, fin){ const o = C.createOscillator(); if(ONDA[tipo]) o.setPeriodicWave(ONDA[tipo]); else o.type = tipo;
     o.frequency.setValueAtTime(f, t); o.start(t); o.stop(fin); return o; }
@@ -1371,13 +1372,13 @@ const SON = (() => {
   let semilla = 7;
   function nuevoRep(nom, entra){
     const T = TEMAS[nom], now = ya();
-    const r = {nom, T, paso:0, t:now + 0.08, vivo:true, muere:0, cap:{}, cv:{}, rnd:mulberry(semilla++*977 + 13)};
+    const r = {nom, T, paso:0, t:now + 0.08, vivo:true, muere:0, cap:{}, cv:{}, oscs:[], rnd:mulberry(semilla++*977 + 13)};
     r.bus = G(0, N.mus); r.bus.gain.setValueAtTime(0.0001, now); r.bus.gain.linearRampToValueAtTime(T.vol || 1, now + entra);
     r.cap.base = G(1, r.bus);
     for(const n of CAPAS){ r.cv[n] = T.capas ? objCapa(T, n) : 0; r.cap[n] = G(r.cv[n], r.bus); }
     r.on = n => r.cv[n] > 0.004 || objCapa(T, n) > 0.004;
     N.ecoD.delayTime.setTargetAtTime(60/T.bpm*0.75, now, 0.1);
-    if(T.jingle){ T.jingle(r, r.t); r.vivo = false; r.muere = r.t + T.dur + 2.5; }
+    if(T.jingle){ repAct = r; try { T.jingle(r, r.t); } finally { repAct = null; } r.vivo = false; r.muere = r.t + T.dur + 2.5; }
     return r;
   }
   function soltar(r, fund){ const now = ya(), p = r.bus.gain;
@@ -1393,7 +1394,7 @@ const SON = (() => {
       while(r.t < hasta && n++ < 16){
         const T = r.T, s = r.paso % 16, c = Math.floor(r.paso/16), intro = c < T.intro, cb = intro ? c % T.A.length : (c - T.intro) % T.A.length;
         const sp = durPaso(r), x = {r, s, c, cb, v:intro ? 0 : Math.floor((c - T.intro)/T.A.length), intro, ac:T.A[cb], t:r.t, sp, on:r.on};
-        try { T.toca(x); } catch(e){ err(e); }
+        repAct = r; try { T.toca(x); } catch(e){ err(e); } repAct = null;
         r.t += sp; r.paso++;
       }
     }
@@ -1546,7 +1547,7 @@ const SON = (() => {
       lp.connect(ws); ws.connect(g); adsr(g.gain, t, 0.04, 0.8, 0.55, t + 1.6, 1.4, 0.22);
       TN({t, f:80, f2:28, fd:1.2, d:1.6, v:0.9, dest:d}); RZ({t, d:0.4, v:0.6, f:1200, f2:200, tipo:'lowpass', col:'pardo', dest:d});
       RZ({t, d:0.03, v:0.5, f:3000, tipo:'highpass', dest:d}); return 3.6; },
-    pagina(t, o, d){ const g = G(0.6, d), l = oscF('square', 38, t, t + 0.35), lg = G(0.35); l.connect(lg); lg.connect(g.gain);
+    pagina(t, o, d){ const g = G(0.6, d), l = oscF('square', 38, t, t + 0.35), lg = G(0.35); l.connect(F('lowpass', 160, 0.7, lg)); lg.connect(g.gain);
       RZ({t, a:0.03, d:0.22, v:0.5, f:3000*o.tono, f2:1800*o.tono, q:0.8, col:'rosa', dest:g}); RZ({t:t + 0.2, d:0.05, v:0.3, f:500, tipo:'lowpass', col:'rosa', dest:d}); return 0.4; },
     trueno(t, o, d){ const k = o.tono, cerca = (o.vol === undefined ? 1 : o.vol) > 0.6;
       if(cerca){ RZ({t, d:0.18, v:0.8, f:1500*k, tipo:'highpass', q:0.5, dest:d}); RZ({t:t + 0.03, d:0.3, v:0.6, f:3000*k, f2:500, tipo:'lowpass', dest:d}); }
@@ -1556,7 +1557,7 @@ const SON = (() => {
       s.connect(lp); TN({t, a:0.05, f:48, f2:30, d:2, v:0.35, dest:d}); return 4.6; },
     helicoptero(t, o, d){ const dur = 5, dir = (o.x || 0) < 0 ? -1 : 1, p = C.createStereoPanner(), g = G(0, p), chop = G(0.5, g), l = oscF('sawtooth', 12.6, t, t + dur), lg = G(0.5);
       p.pan.setValueAtTime(-dir*0.95, t); p.pan.linearRampToValueAtTime(dir*0.95, t + dur); p.connect(d);
-      l.frequency.linearRampToValueAtTime(10.8, t + dur); l.connect(lg); lg.connect(chop.gain);           /* las palas, con Doppler */
+      l.frequency.linearRampToValueAtTime(10.8, t + dur); l.connect(F('lowpass', 60, 0.7, lg)); lg.connect(chop.gain);           /* las palas, con Doppler */
       const s = fuente('rosa', t, t + dur), lp = F('lowpass', 900, 0.8, chop), r = oscF('sawtooth', 80, t, t + dur), rl = F('lowpass', 260, 1, G(0.3, chop));
       s.playbackRate.setValueAtTime(1.1, t); s.playbackRate.linearRampToValueAtTime(0.9, t + dur); r.frequency.linearRampToValueAtTime(68, t + dur);
       s.connect(lp); r.connect(rl);
@@ -1750,7 +1751,9 @@ const SON = (() => {
       for(const r of REPS) if(r.vivo && r.T.capas) for(const n of CAPAS){ const v = objCapa(r.T, n);
         if(Math.abs(v - r.cv[n]) > 0.01 || (v !== r.cv[n] && (v === 0 || v === 1))){ r.cv[n] = v; r.cap[n].gain.setTargetAtTime(v, now, 0.35); } }
       bombear(); pasoAmb();
-      for(let i = REPS.length - 1; i >= 0; i--){ const r = REPS[i]; if(!r.vivo && now > r.muere){ try { r.bus.disconnect(); } catch(e){} REPS.splice(i, 1); } }
+      for(let i = REPS.length - 1; i >= 0; i--){ const r = REPS[i];
+        if(!r.vivo && now > r.muere){ for(const g of r.oscs) if(g.fin > now){ g.fin = now; try { g.o.stop(); } catch(e){} } try { r.bus.disconnect(); } catch(e){} REPS.splice(i, 1); }
+        else if(r.oscs.length > 300) r.oscs = r.oscs.filter(g => g.fin > now); }
       for(let i = VIVAS.length - 1; i >= 0; i--){ const v = VIVAS[i]; if(now > v.fin){ try { v.g.disconnect(); v.p.disconnect(); if(v.e) v.e.disconnect(); } catch(e){} VIVAS.splice(i, 1); } }
       if(OSC_M.length > 60) for(let i = OSC_M.length - 1; i >= 0; i--) if(OSC_M[i].fin < now) OSC_M.splice(i, 1);
     } catch(e){ err(e); }
@@ -2116,6 +2119,7 @@ function hacerSprite(hoja, opc){
   return m;
 }
 /* luces que se prenden y se apagan sin cambiar la cantidad (cambiar la cantidad recompila todos los materiales) */
+const LUZ_HEROE = new THREE.PointLight(0xffe0c0, 0.9, 4.5, 1.2); esc.add(LUZ_HEROE);
 const LUCES_FLASH = [0, 1, 2, 3].map(() => { const l = new THREE.PointLight(0xffc070, 0, 9, 1.4); l.userData.t = 0; esc.add(l); return l; });
 function flash(x, y, z, col, fuerza, dura, alcance){
   let l = LUCES_FLASH.find(q => q.userData.t <= 0) || LUCES_FLASH.reduce((a, b) => a.userData.t < b.userData.t ? a : b);
@@ -2219,7 +2223,7 @@ function sistemaParticulas(n, aditivo){
   return {pts, pos, col, tam, g, vivas, n, sig:0,
     tirar(o){ const i = this.sig; this.sig = (this.sig + 1) % n; const p = this.vivas[i];
       Object.assign(p, {x:o.x, y:o.y, z:o.z || 0, vx:o.vx || 0, vy:o.vy || 0, vz:o.vz || 0, g:o.g === undefined ? 18 : o.g, roce:o.roce || 0, v:o.vida || 1, vida:o.vida || 1,
-        r:o.r, gg:o.gg, b:o.b, t:o.tam || 1, pega:o.pega, apaga:o.apaga !== false, piso:o.piso}); },
+        r:o.r, gg:o.gg, b:o.b, t:o.tam || 1, pega:o.pega, apaga:o.apaga !== false, piso:o.piso, quieta:false}); },
     paso(dt){ for(let i = 0; i < n; i++){ const p = this.vivas[i];
       if(p.v <= 0){ this.tam[i] = 0; continue; }
       p.v -= dt;
@@ -2251,7 +2255,7 @@ const CAPITULOS = {
   fabrica:{cielo:['#1a0c08', '#6a2a14', '#e8904a'], niebla:'#3a1e14', dens:0.03, amb:['#ffb070', '#2a1410', 1.1], luna:{col:'#ffb070', f:3.0, pos:[40, 26, -70]},
     rayos:'#ffc080', fuerzaRayos:0.7, lluvia:false, suelo:'chapa', pared:'hormigon', tablon:'rejilla', lift:'#100402', gain:'#fff0e0', satur:1.08},
   torre:{cielo:['#020208', '#0c0a24', '#4a1a4a'], niebla:'#120a22', dens:0.018, amb:['#6a4aaa', '#0a0612', 1.1], luna:{col:'#d08aff', f:2.3, pos:[20, 44, -110]},
-    rayos:'#e0a0ff', fuerzaRayos:0.9, lluvia:true, suelo:'marmol', pared:'hormigon', tablon:'rejilla', lift:'#06020e', gain:'#f4e8ff', satur:1.1}
+    rayos:'#e0a0ff', fuerzaRayos:0.9, lluvia:true, suelo:'marmol', pared:'marmol', tablon:'rejilla', lift:'#06020e', gain:'#f4e8ff', satur:1.1}
 };
 const LUZ = {hemi:new THREE.HemisphereLight(0xffffff, 0x000000, 0.5), sol:new THREE.DirectionalLight(0xffffff, 1)};
 LUZ.sol.castShadow = true; LUZ.sol.shadow.mapSize.set(1024, 1024); LUZ.sol.shadow.bias = -0.0008; LUZ.sol.shadow.normalBias = 0.02;
@@ -2326,11 +2330,11 @@ function fondoPuerto(gr, largo){
   const [rc, rg] = lienzo(8, 64); for(let y = 0; y < 64; y++){ const k = y/64; rg.fillStyle = 'rgba(160,190,255,' + (k*0.9) + ')'; for(let x = 0; x < 8; x++) if(Math.random() < 0.55) rg.fillRect(x, y, 1, 1); }
   const refl = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 140), new THREE.MeshBasicMaterial({map:texPixel(rc), transparent:true, blending:THREE.AdditiveBlending, depthWrite:false, fog:false,
     color:new THREE.Color(1.4, 1.5, 2.2)}));
-  refl.rotation.x = -Math.PI/2; refl.position.set(largo*0.3 - 40, -1.15, -90); gr.add(refl); gr.userData.refl = refl;
+  /* el reflejo de la luna en el mar se leía como una mancha entre los contenedores: afuera */
   /* contenedores apilados, grúas con balizas, el barco y la ciudad */
   const r = mulberry(11);
   for(let i = 0; i < 26; i++){ const x = -10 + i*(largo + 20)/26 + r()*3, z = -9 - r()*14, pisos = 1 + Math.floor(r()*3);
-    for(let p = 0; p < pisos; p++){ const m = new THREE.Mesh(new THREE.BoxBufferGeometry(6, 2.6, 2.4), matBaldosa('contenedor', {semilla:i*3 + p, relieve:2}));
+    for(let p = 0; p < pisos; p++){ const m = new THREE.Mesh(new THREE.BoxBufferGeometry(6, 2.6, 2.4), matBaldosa('contenedor', {semilla:i*3 + p, relieve:2, rough:1}));
       m.position.set(x, -0.2 + p*2.6 + 1.3, z); m.receiveShadow = m.castShadow = true; gr.add(m); } }
   const matG = new THREE.MeshStandardMaterial({color:new THREE.Color('#3e3a56').convertSRGBToLinear(), roughness:0.8});
   for(let i = 0; i < 4; i++){ const x = i*largo/3.2 + 8, z = -34 - i*6, g2 = new THREE.Group();
@@ -2370,6 +2374,12 @@ function fondoFabrica(gr, largo){
 }
 function fondoTorre(gr, largo){
   const r = mulberry(31);
+  /* adentro de la torre: un muro cortina de vidrio con parantes, la ciudad se ve apagada del otro lado */
+  if(!NIVEL.def.jefe){ const [c, g] = lienzo(32, 32); g.fillStyle = 'rgba(40,24,70,0.42)'; g.fillRect(0, 0, 32, 32); g.fillStyle = 'rgba(120,90,180,0.10)'; g.fillRect(2, 2, 12, 28);
+    g.fillStyle = '#14101e'; g.fillRect(0, 0, 32, 2); g.fillRect(0, 0, 2, 32); g.fillRect(15, 0, 2, 32); g.fillStyle = '#2a2240'; g.fillRect(0, 2, 32, 1);
+    const t = texPixel(c, true); t.repeat.set((largo + 20)/4, NIVEL.alto/4);
+    const vid = new THREE.Mesh(new THREE.PlaneBufferGeometry(largo + 20, NIVEL.alto), new THREE.MeshBasicMaterial({map:t, transparent:true, depthWrite:false}));
+    vid.position.set(largo/2, NIVEL.alto/2, -3.3); gr.add(vid); }
   for(let i = 0; i < 26; i++) edificio(gr, -40 + i*((largo + 80)/26) + r()*4, -40 - r()*60, 6 + r()*9, 30 + r()*70, '#0a0816', r() < .5 ? '#ff5ad8' : '#5ad8ff', 0.3, i + 50);
   for(let i = 0; i < 14; i++) edificio(gr, -40 + i*((largo + 80)/14), -150 - r()*30, 12 + r()*12, 60 + r()*80, '#07060e', '#ffcf7a', 0.2, i + 90);
   for(let i = 0; i < 8; i++){ const n = neon(['MATE', 'TÉ', 'BAR', 'HOTEL', 'EARL GREY', 'CLUB', '24H', 'SAKE'][i], ['#ff4ad8', '#4ad8ff', '#ffd84a', '#4aff8a'][i % 4], i*largo/7 + r()*4, 12 + r()*14, -20 - r()*16, 3.5);
@@ -2431,7 +2441,7 @@ function armarNivel(def){
       const n = neon(txt, col, x, y + 0.3, -2.55, 1); gr.add(n); NIVEL.neones.push(n); NIVEL.lamparas.push({x, y:y + 0.3, z:-1.8, col, f:1.8, neon:n}); NIVEL.mapa[f][c] = '.'; }
   }
   /* la lluvia: segmentos de un píxel que caen dentro de una caja que sigue a la cámara */
-  if(C.lluvia){ const n = AJ.calidad === 'baja' ? 160 : 420, pos = new Float32Array(n*6), g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  if(C.lluvia && !(def.cap === 'torre' && !def.jefe)){ const n = AJ.calidad === 'baja' ? 160 : 420, pos = new Float32Array(n*6), g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({color:new THREE.Color(0.55, 0.62, 0.95), transparent:true, opacity:0.32, fog:false}));
     l.frustumCulled = false; gr.add(l); NIVEL.lluvia = {l, pos, n, gotas:[...Array(n)].map(() => ({x:rv(-18, 18), y:rv(-10, 14), z:rv(-6, 4)}))}; } else NIVEL.lluvia = null;
   return gr;
@@ -2448,7 +2458,7 @@ function pasoMundo(dt, t){
   if(NIVEL.vapores && PART.solidas) for(const v of NIVEL.vapores) if(Math.abs(v.x - cx) < 20 && Math.random() < dt*40)
     PART.solidas.tirar(Object.assign({x:v.x + rv(-0.4, 0.4), y:v.y, z:rv(-0.6, 0.6), vx:rv(-0.4, 0.4), vy:rv(7, 11), g:-1, roce:1.4, vida:rv(0.5, 0.9), tam:rv(2, 4), apaga:true}, rgb('#c8c4d0', 0.9)));
   if(NIVEL.lluvia){ const L = NIVEL.lluvia, v = 26*dt;
-    L.gotas.forEach((d, i) => { d.y -= v; d.x -= v*0.18; if(d.y < -10){ d.y += 24; d.x = rv(-18, 18); if(Math.random() < 0.25) salpicar(cx + d.x, cy); }
+    L.gotas.forEach((d, i) => { d.y -= v; d.x -= v*0.18; if(d.y < -10){ d.y += 24; d.x = rv(-18, 18); if(Math.random() < 0.07) salpicar(cx + d.x, cy); }
       const X = cx + d.x, Y = cy + d.y; L.pos.set([X, Y, d.z, X + 0.07, Y + 0.38, d.z], i*6); });
     L.l.geometry.attributes.position.needsUpdate = true; }
   const G = NIVEL.grupo.userData;
@@ -2458,7 +2468,7 @@ function pasoMundo(dt, t){
   LUZ.sol.position.set(cx + NIVEL.cap.luna.pos[0]*0.5, cy + 40, 30); LUZ.sol.target.position.set(cx, cy, 0);
 }
 function salpicar(x, y){ let yy = Math.floor(y + 8); while(yy > y - 10 && !solidoEn(x, yy - 0.5)) yy--; if(!solidoEn(x, yy - 0.5)) return;
-  PART.solidas && PART.solidas.tirar(Object.assign({x, y:yy + 0.02, z:rv(-1, 1), vx:rv(-1, 1), vy:rv(1.5, 3), g:20, vida:0.25, tam:1}, rgb('#8a9ad8', 1.2))); }
+  PART.solidas && PART.solidas.tirar(Object.assign({x, y:yy + 0.02, z:rv(-1, 1), vx:rv(-1, 1), vy:rv(1.5, 3), g:20, vida:0.18, tam:1}, rgb('#6a78b0', 0.9))); }
 
 /* ================================================================ la jugabilidad
    Como en Ripe for Revenge: no se camina. Se ARRASTRA para planear el salto (o el deslizamiento si es
@@ -2493,6 +2503,10 @@ function crearHeroe(x, y){
   HE.malla = hacerSprite(HOJAS.heroe, {pie:1}); esc.add(HE.malla);
   HE.brazos = [hacerBrazo(HOJAS.brazoH2), hacerBrazo(HOJAS.brazoH)]; esc.add(...HE.brazos);
   HE.bufanda = crearBufanda(); esc.add(HE.bufanda.malla);
+  /* la estela de la cámara lenta: copias del sprite que se apagan */
+  if(HE.fantasmas) esc.remove(...HE.fantasmas);
+  HE.fantasmas = [0, 1, 2, 3].map(i => { const m = new THREE.Mesh(HE.malla.geometry, new THREE.MeshBasicMaterial({map:HE.malla.material.map, transparent:true, opacity:0, depthWrite:false, alphaTest:0.05, blending:THREE.AdditiveBlending, fog:false, color:i % 2 ? new THREE.Color(2.6, 0.5, 0.8) : new THREE.Color(0.5, 1.8, 2.6)})); m.renderOrder = 3; m.visible = false; esc.add(m); return m; });
+  HE.rastro = []; HE.rastroT = 0;
 }
 function hacerBrazo(hoja){
   const m = hacerSprite(hoja); m.geometry.dispose();
@@ -2793,7 +2807,7 @@ function acomodarHumano(m, brazos, o, hoja, anim, estado, dir, objetivos){
   m.cuadro(cuadro);
   m.position.set(o.x, o.y, 0); m.scale.x = dir;
   m.rotation.z = estado === 'aire' && !o.muerto ? -(o.giro || 0) : 0;
-  if(m.rotation.z){ m.position.y += (hoja.fh/TX)*0.45*(1 - Math.cos(m.rotation.z)); }
+  if(m.rotation.z){ const r = m.rotation.z, hc = (hoja.fh/2 - 1)/TX; m.position.x += Math.sin(r)*hc; m.position.y += hc - Math.cos(r)*hc; }   /* gira sobre el centro, no sobre los pies */
   const hom = hoja.hombros[cuadro], s = 1/TX;
   const hx = o.x + (hom.x - hoja.fw/2)*s*dir, hy = o.y + (hoja.fh - hom.y)*s - 1/TX;
   brazos.forEach((b, i) => {
@@ -2816,6 +2830,11 @@ function dibujarEntidades(dt){
     HE.aterriza = Math.max(0, (HE.aterriza || 0) - dt);
     HE.retro = HE.retro.map(r => Math.max(0, r - dt*8));
     const hom = HOJAS.heroe.hombros[HE.malla.userData.cuadro];
+    HE.rastroT += dt;
+    if(J.ts < 0.6 && HE.est === 'aire' && !HE.muerto){ if(HE.rastroT > 0.06){ HE.rastroT = 0; HE.rastro.unshift({x:HE.malla.position.x, y:HE.malla.position.y, r:HE.malla.rotation.z, s:HE.malla.scale.x}); if(HE.rastro.length > 4) HE.rastro.pop(); } }
+    else if(HE.rastroT > 0.05){ HE.rastroT = 0; HE.rastro.pop(); }
+    HE.fantasmas.forEach((f, i) => { const q = HE.rastro[i]; f.visible = !!q; if(!q) return; f.position.set(q.x, q.y, -0.05 - i*0.01); f.rotation.z = q.r; f.scale.x = q.s; f.material.opacity = 0.5*(1 - i/4); });
+    LUZ_HEROE.position.set(HE.x + HE.dir*0.4, HE.y + 1.4, 1.6); LUZ_HEROE.intensity = HE.muerto ? 0 : 0.9;
     pasoBufanda(dt, {x:HE.x + (hom.x - HOJAS.heroe.fw/2 - 1)/TX*HE.dir, y:HE.y + (HOJAS.heroe.fh - hom.y + 3)/TX});
   }
   for(const e of ENEM){ acomodarHumano(e.malla, [e.brazo], e, HOJAS[e.tipo], e.anim, e.muerto ? 'muerto' : Math.abs(e.vx) > 0.3 ? 'camina' : 'suelo', e.dir, e.est === 'alerta' ? [HE.muerto ? null : {x:HE.x, y:HE.y, alto:1.7}] : null);
@@ -3485,6 +3504,7 @@ function lazo(ts){
   if(J.fundir !== undefined){ const obj = J.fundirA || 0; P_FIN.u.fundido.value += (obj - P_FIN.u.fundido.value)*(1 - Math.exp(-dtR*4)); }
   pasoMundo(dtR*(J.pausa ? 0 : J.ts), J.tr);
   if(J.cine) pasoCine(dtR);
+  if((J.modo !== 'juego' || J.cine) && !J.pausa){ PART.solidas.paso(dtR); PART.brillos.paso(dtR); pasoFlashes(dtR); }
   if(J.modo === 'menu'){ CAMARA.obj.x = 15 + Math.sin(J.tr*0.06)*5; CAMARA.obj.y = 8.2 + Math.sin(J.tr*0.09)*0.6; HE.est = 'suelo'; HE.vx = 0; }
   moverCamara(dtR*J.ts, dtR);
   dibujarEntidades(J.pausa ? 0 : dtR*J.ts);
@@ -3508,6 +3528,11 @@ function dibujarHUD(dtR){
   if(uiActiva()) dibujarMenu(g, dtR);
 }
 function dibujarJuegoHUD(g, dtR){
+  /* el cartel del nivel al entrar: una franja que cruza con el número y el nombre */
+  if(J.banner !== undefined && J.banner < 3 && J.nivel){ J.banner += dtR; const t = J.banner, k = t < 0.5 ? suave(t/0.5) : t > 2.4 ? 1 - suave((t - 2.4)/0.6) : 1;
+    const h = 26, y = H - h - 14, x = Math.round(lerp(-W, 0, k));
+    g.fillStyle = 'rgba(6,4,12,0.8)'; g.fillRect(x, y, W, h); g.fillStyle = '#b81c2c'; g.fillRect(x, y, W, 1); g.fillRect(x, y + h - 1, W, 1);
+    texto(g, J.nivel.id, x + W/2, y + 3, 'oro'); texto(g, tr(J.nivel.nombre), x + W/2, y + 13, 'blanco'); }
   /* la trayectoria del planeo */
   if(J.planeo){ const d = J.planeo, tr = trayectoria((d.x - d.x0)/TX, -(d.y - d.y0)/TX);
     const n = tr.pts.length;
@@ -3556,8 +3581,8 @@ function partir(txt, n){ const pal = txt.split(' '), l = ['']; for(const p of pa
 function pasoPistas(dtR){ const P2 = J.nivel.pistas || []; if(J.pista < P2.length && HE.x >= P2[J.pista].x){ MATEO.bocadillo = {txt:tr(P2[J.pista].txt), t:5.5, n:0}; SON.fx('mateo'); J.pista++; } }
 
 /* ================================================================ sondas del banco */
-window.__M = {J, HE, HOJAS, esc, PART, LUZ, POST, LUCES_NIVEL, LUCES_FLASH, NIVELref:() => NIVEL, MATEO:() => MATEO, get ENEM(){ return ENEM; }, get BALAS(){ return BALAS; }, get OBJ(){ return OBJ; }, NIVEL, CAMARA, medida:() => ({W, H, PX, DPR, SW, SH, GIRADO}),
-  nivel:i => cargarNivel(i || 0), jugar:(i, c) => empezarNivel(i || 0, !!c), get UI(){ return UI; }, cine:n => arrancarCine(n), get PROG(){ return PROG; }, planear:(dx, dy) => ejecutarPlaneo(dx, dy), trayectoria, blancoEn, disparar, aPantalla,
+window.__M = {J, HE, SON, HOJAS, cam, THREE, renderer, dibujarTodo, dibujarHUD, dibujarEntidades, pasoMundo, esc, PART, LUZ, POST, LUCES_NIVEL, LUCES_FLASH, NIVELref:() => NIVEL, MATEO:() => MATEO, get ENEM(){ return ENEM; }, get BALAS(){ return BALAS; }, get OBJ(){ return OBJ; }, NIVEL, CAMARA, medida:() => ({W, H, PX, DPR, SW, SH, GIRADO}),
+  nivel:i => cargarNivel(i || 0), jugar:(i, c) => empezarNivel(i || 0, !!c), get UI(){ return UI; }, cine:n => arrancarCine(n), saltarCine:() => saltearCine(), get PROG(){ return PROG; }, planear:(dx, dy) => ejecutarPlaneo(dx, dy), trayectoria, blancoEn, disparar, aPantalla,
   info:() => ({llamadas:renderer.info.render.calls, tris:renderer.info.render.triangles, prog:renderer.info.programs.length, geos:renderer.info.memory.geometries}),
   anda(seg){ const n = Math.round(seg*60); for(let i = 0; i < n; i++){ const d = 1/60; pasoHeroe(d); pasoEnemigos(d); pasoBalas(d); } },
   falta:() => [...TR_FALTA], alcance, idioma:l => ponerIdioma(l), resultado:() => { J.fin = {estrellas:2, t:0}; pantallaResultado(); }, muerte:() => pantallaMuerte(), pausar};
@@ -3995,9 +4020,10 @@ const PANTALLAS = {
       cap.niveles.forEach((i, j) => { const d = NIVELES[i], y = 42 + j*48, abierto = i <= PROG.abierto, q = PROG.niveles[d.id] || {};
         boton(g, 'n' + i, x, y, cw, 40, '', {apagado:!abierto, color:abierto ? '#241a36' : '#16101e', fn:() => empezarNivel(i, !PROG.vistos[CINE_ANTES[i]])});
         const dy = UI.presion === 'n' + i ? 1 : 0;
-        texto(g, d.id, x + 5, y + 4 + dy, abierto ? 'oro' : 'gris', {izq:true}); texto(g, tr(d.nombre), x + 24, y + 4 + dy, abierto ? 'blanco' : 'gris', {izq:true});
-        if(abierto){ for(let s = 0; s < 3; s++) estrella(g, x + 6 + s*10, y + 16 + dy, (q.estrellas || 0) > s); if(q.record) texto(g, String(q.record), x + cw - 5, y + 17 + dy, 'gris', {der:true}); }
-        else candado(g, x + cw/2 - 3, y + 17); }); });
+        texto(g, d.id, x + 5, y + 4 + dy, abierto ? 'oro' : 'gris', {izq:true});
+        if(abierto) for(let s = 0; s < 3; s++) estrella(g, x + cw - 34 + s*10, y + 4 + dy, (q.estrellas || 0) > s); else candado(g, x + cw - 14, y + 3);
+        partir(tr(d.nombre), Math.max(6, Math.floor((cw - 10)/6))).slice(0, 2).forEach((l, k) => texto(g, l, x + 5, y + 15 + k*9 + dy, abierto ? 'blanco' : 'gris', {izq:true}));
+        if(abierto && q.record) texto(g, String(q.record), x + cw - 5, y + 30 + dy, 'gris', {der:true}); }); });
     boton(g, 'volver', 12, H - 26, 80, 15, tr('VOLVER'), {fn:() => irA('principal')});
   },
   opciones(g){
@@ -4033,9 +4059,9 @@ const PANTALLAS = {
     g.fillStyle = 'rgba(6,4,12,' + Math.min(0.72, t*1.5) + ')'; g.fillRect(0, 0, W, H);
     const w = Math.min(300, W - 30), x = Math.round(W/2 - w/2);
     texto(g, tr('¡NIVEL COMPLETO!'), W/2, 10, 'oro', {esc:2});
-    texto(g, R.id + '  ' + tr(R.nombre), W/2, 30, 'gris');
+    texto(g, R.id + '  ' + tr(R.nombre), W/2, 33, 'gris');
     const filas = [[tr('BAJAS'), R.bajas + '/' + R.total], [tr('PRECISIÓN'), R.prec + '%'], [tr('TIEMPO'), R.tiempo], [tr('MUERTES'), String(R.caidas)], [tr('ESTILO'), R.estilo]];
-    filas.forEach((f, i) => { if(t < 0.4 + i*0.22) return; const y = 44 + i*12; texto(g, f[0], x + 10, y, 'gris', {izq:true}); texto(g, f[1], x + w - 10, y, 'blanco', {der:true}); });
+    filas.forEach((f, i) => { if(t < 0.4 + i*0.22) return; const y = 46 + i*12; texto(g, f[0], x + 10, y, 'gris', {izq:true}); texto(g, f[1], x + w - 10, y, 'blanco', {der:true}); });
     const tp = 0.4 + filas.length*0.22, k = lim((t - tp)/1.3, 0, 1), pts = Math.round(R.puntos*suave(k));
     if(t > tp){ texto(g, tr('PUNTAJE'), x + 10, 110, 'oro', {izq:true}); texto(g, String(pts), x + w - 10, 108, 'oro', {der:true, esc:2});
       if(k < 1 && Math.floor(t*20) !== Math.floor((t - 1/60)*20)) SON.fx('puntos'); }
@@ -4083,7 +4109,8 @@ function empezarNivel(i, conCine){
   J.pausa = false; cargarNivel(i); J.fundirA = 0; P_FIN.u.fundido.value = 1;
   SON.ambiente(NIVELES[i].cap);
   const cine = CINE_ANTES[i];
-  if(cine && (conCine || cine === 'jefe')){ PROG.vistos[cine] = 1; guardarProg(); arrancarCine(cine, () => { SON.musica(NIVELES[i].jefe ? 'jefe' : NIVELES[i].cap); }); }
+  J.banner = 0;
+  if(cine && (conCine || cine === 'jefe')){ PROG.vistos[cine] = 1; guardarProg(); arrancarCine(cine, () => { SON.musica(NIVELES[i].jefe ? 'jefe' : NIVELES[i].cap); J.banner = 0; }); }
 }
 function pantallaResultado(){
   const d = J.nivel, prev = PROG.niveles[d.id] || {};
