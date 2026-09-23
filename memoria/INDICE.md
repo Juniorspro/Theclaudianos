@@ -27,6 +27,7 @@
 | [juegos](juegos.md) | hagas **3D**: render, luz, niebla, vegetación, personaje, post-proceso |
 | [pixel2d](pixel2d.md) | hagas **2D pixel art**: escala, sprites, luz, mundo procedural, sonido |
 | [arrabal](arrabal.md) | toques `juegos-pc/Arrabal.html`, el juego de pelea con cartas (**apaisado** desde el 23/09: en vertical se gira solo) |
+| [cabezones](cabezones.md) | toques `juegos-pc/Cabezones.html`, el fútbol de cabezas (el último 2D: **el próximo lo tiene que superar**) |
 | [chicharra](chicharra.md) | toques `juegos-pc/Chicharra.html`, el juego de esta línea |
 | [repo](repo.md) | necesites saber qué hay dónde, cómo se prueba y cómo se entrega |
 | [diario](diario.md) | quieras saber qué pasó en las sesiones anteriores y qué quedó a medias |
@@ -34,14 +35,11 @@
 ## Qué hay en cada carpeta
 | carpeta | qué es | detalle en |
 |---|---|---|
-| `juegos-pc/` | los HTML: `Arrabal.html`, `Chicharra.html` (de acá) y `Bosque.html` (otra línea) | [chicharra](chicharra.md) | toques `juegos-pc/Chicharra.html`, el juego de esta línea |
-| [repo](repo.md) |
+| `juegos-pc/` | los HTML: `Arrabal.html`, `Cabezones.html`, `Chicharra.html` (de acá) y `Bosque.html` (otra línea) | [repo](repo.md) |
 | `.claude/skills/` | `graficos`, `assets-ia`, `banco` | [juegos](juegos.md), [rezona](rezona.md) |
 | `herramientas/rezona/` | `rz.py` (cliente stdio del MCP) y scripts de horneado | [rezona](rezona.md) |
-| `pruebas/arrabal/` | el banco de ARRABAL: combos, especiales, peleas del bot, táctil |
-| `pruebas/chicharra/` | el banco del juego: bot, capturas, toques por CDP |
-| `docs/` | `GUIA-JUEGOS.md` (la receta), `MANUAL_JUEGOS.md` y `TRASPASO_BOSQUE.md` (referencia) | [chicharra](chicharra.md) | toques `juegos-pc/Chicharra.html`, el juego de esta línea |
-| [repo](repo.md) |
-| `assets/` | texturas ya horneadas del Bosque (otra línea) | [chicharra](chicharra.md) | toques `juegos-pc/Chicharra.html`, el juego de esta línea |
-| [repo](repo.md) |
+| `herramientas/arrabal/`, `herramientas/cabezones/` | horneado de arte, música y efectos de cada juego | [arrabal](arrabal.md), [cabezones](cabezones.md) |
+| `pruebas/arrabal/`, `pruebas/cabezones/`, `pruebas/chicharra/` | los bancos de cada juego | la nota del juego |
+| `docs/` | `GUIA-JUEGOS.md` (la receta), `MANUAL_JUEGOS.md` y `TRASPASO_BOSQUE.md` (referencia) | [repo](repo.md) |
+| `assets/` | arte y sonido horneados: `arrabal/`, `cabezones/`, y texturas del Bosque (otra línea) | la nota del juego |
 | `memoria/` | esto | `MEMORIA.md` |

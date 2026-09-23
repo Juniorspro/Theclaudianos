@@ -1,6 +1,14 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — CABEZONES, fútbol de cabezas tipo Head Ball
+**Pedido textual:** «Ahora haceme un juego parecido a "Head Ball" y busca referencias como es como se
+juega controles moviles mejores gráficos 2D animaciones menús etc, etc. Mejora todo en un 100%».
+Qué se hizo: `juegos-pc/Cabezones.html`, 10 cabezones originales con 3 caras cada uno (Higgsfield),
+3 canchas, torneos con llave, cofres, vestuario con mejoras, música y efectos propios. Detalle y
+números del equilibrio en [cabezones](cabezones.md). ARRABAL sigue generando los videos de 24
+cuadros en segundo plano (101 de 144 al cerrar esta parte).
+
 ### 2026-09-23 — ARRABAL apaisado, con botones y animaciones de 24 cuadros
 **Pedido textual:** «Agrega que sea más con botones que una zona así, también mejora en un 100% la
 interfaz a algo más cómodo también haz que cada personaje o sea cada animación golpe 1 etc tenga 24
