@@ -19,6 +19,27 @@
   @media (min-aspect-ratio:1/1){#stage{width:100vw;height:100vh;transform:translate(-50%,-50%) rotate(0deg)}}
   #lienzo{position:fixed;inset:0;display:block;width:100%;height:100%}
   #ui{position:fixed;inset:0;pointer-events:none;z-index:5}
+  /* tutorial: tarjeta arriba al centro, avanza sola con lo que hace el jugador */
+  #tuto{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;transform:translateX(-50%);
+    width:min(44%,390px);z-index:12;pointer-events:auto;padding:10px 14px 10px;border-radius:14px;
+    color:#e8f2fa;background:linear-gradient(180deg,rgba(12,22,34,.78),rgba(8,12,20,.70));
+    border:1px solid rgba(120,220,255,.34);box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 20px rgba(80,200,255,.12);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;visibility:hidden;
+    transition:opacity .35s,transform .35s}
+  #tuto.ver{opacity:1;visibility:visible}
+  #tuto.listo{border-color:rgba(140,255,170,.7);box-shadow:0 0 26px rgba(120,255,160,.30)}
+  #tuto .paso{font-size:9px;letter-spacing:.22em;font-weight:800;color:#7fe0ff;display:flex;justify-content:space-between}
+  #tuto .paso i{font-style:normal;color:#9fb4c4;letter-spacing:.1em}
+  #tuto .tit{font-size:13px;font-weight:800;letter-spacing:.06em;margin:4px 0 3px}
+  #tuto .txt{font-size:11px;line-height:1.45;color:#c9d8e4}
+  #tuto .txt b{color:#ffd9a8}
+  #tuto .barra{height:3px;border-radius:2px;background:rgba(255,255,255,.12);margin:8px 0 6px;overflow:hidden}
+  #tuto .barra i{display:block;height:100%;width:0;background:linear-gradient(90deg,#57d8ff,#9dffb8);transition:width .4s}
+  #tuto .bot{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  #tuto .sig{padding:6px 14px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.14em;color:#08141e;
+    background:linear-gradient(180deg,#8ee9ff,#4cc6ee);display:none}
+  #tuto .sig.ver{display:inline-block}
+  #tuto .saltar{font-size:9px;letter-spacing:.12em;color:#7d92a3;text-decoration:underline;padding:6px 0}
   .chip{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);left:14px;
     padding:7px 13px;border-radius:999px;font-size:11px;letter-spacing:.16em;font-weight:700;
     color:#bfefff;background:rgba(10,16,26,.42);border:1px solid rgba(120,230,255,.28);
@@ -210,6 +231,8 @@
 <div id="galaxias"><div class="caja"><h3>CARTA DE NAVEGACIÓN</h3><div class="sub">elegí a dónde saltar</div><div id="listagal"></div><div class="cerrar" id="cerrargal">CERRAR</div></div></div>
 <div id="compu"><div class="caja"><h3>TERMINAL DE CARGA</h3><div class="sub" id="compusub">vender lo que trajiste</div><div id="listacompu"></div><div class="cerrar" id="cerrarcompu">CERRAR</div></div></div>
 <div id="album"><div class="caja"><h3>ÁLBUM DE ESPECIES</h3><div class="sub" id="albumsub">0 de 21</div><div id="listaalbum"></div><div class="cerrar" id="cerraralbum">CERRAR</div></div></div>
+<div id="tuto"><div class="paso"><span></span><i></i></div><div class="tit"></div><div class="txt"></div>
+  <div class="barra"><i></i></div><div class="bot"><b class="sig">EMPEZAR</b><span class="saltar">saltar tutorial</span></div></div>
 <div id="peligro"></div>
 <div id="fogonazo"></div>
 <div id="copia"><canvas id="papel"></canvas><small>TOCÁ PARA CERRAR</small></div>
@@ -4329,6 +4352,7 @@ function pintarPalanca(px, py, vis){
 addEventListener('pointerdown', e => {
   if(FOTO.abierta) return;                    /* con la copia abierta no se arma la palanca */
   if(PANEL.abierto || COMPU.abierto || ALBUM_ABIERTO.v) return;
+  if(e.target.closest && e.target.closest('#tuto')) return;
   if(e.target === dSalto || e.target === dVolar || e.target === dUsar || e.target === dPanelB ||
      e.target === dCompuB || e.target === dEspecies) return;
   const L = aLocal(e.clientX, e.clientY);
@@ -4415,6 +4439,7 @@ const ejeX = new THREE.Vector3(), ejeZ = new THREE.Vector3(), deseo = new THREE.
 
 function paso(dt){
   GENTE.pend += dt;
+  TUTO.paso();
   /* dirección pedida, relativa a la cámara */
   let ix = ent.x, iy = ent.y, mag = ent.mag;
   const tx = (teclas.KeyD||teclas.ArrowRight?1:0) - (teclas.KeyA||teclas.ArrowLeft?1:0);
@@ -4740,7 +4765,7 @@ function dibujar(dt){
   POST.mUmbral.uniforms.uUmbral.value = umbralVista;
   pasoMotas(dt, adentro);
   const dg = GENTE.pend; GENTE.pend = 0;
-  if(dg > 0){ DETALLES.paso(dg); pasoGente(dg); }
+  if(dg > 0){ DETALLES.paso(dg); pasoGente(dg); TUTO.cuadro(dg); }
   cam.updateMatrixWorld(); nieblaPorCuadro(); rend.info.reset(); POST.revelar(esc, cam, dt);
 }
 let medirPendiente = false;
@@ -5056,6 +5081,7 @@ function venderTodo(){
   const total = FOTO.rollo.reduce((a, f) => a + f.precio, 0);
   if(!total && !FOTO.rollo.length) return 0;
   PLATA.creditos += total; PLATA.ultimaVenta = total; PLATA.aviso = '';
+  if(total > 0) TUTO.evento('venta');
   SON.fx(total > 0 ? 'venta' : 'negado');
   FOTO.rollo.length = 0;
   pintarCompu(); pintarTerminal();
@@ -5122,11 +5148,146 @@ dCompu.addEventListener('pointerdown', e => {
 dCompuB.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); abrirCompu(); }, {passive:false});
 dCompuB.addEventListener('mousedown',  e => { e.preventDefault(); e.stopPropagation(); abrirCompu(); });
 
+
+/* ============================================================== tutorial
+   Arranca con el juego y acompaña hasta la primera venta: cada paso se cumple HACIENDO la cosa
+   (caminar, mirar, subir, tomar la cámara, despegar, salir, sacar fotos, volver, vender), no
+   tocando «siguiente». Un marcador en 3D dice adónde ir y se ve a través de las paredes. Si ya
+   se terminó una vez, no vuelve (queda anotado en el navegador). */
+const TUTO = (function(){
+  const d = document.getElementById('tuto'), dPaso = d.querySelector('.paso span'), dDist = d.querySelector('.paso i'),
+        dTit = d.querySelector('.tit'), dTxt = d.querySelector('.txt'), dBarra = d.querySelector('.barra i'),
+        dSig = d.querySelector('.sig'), dSaltar = d.querySelector('.saltar');
+  const clave = 'aliengrid.tutorial';
+  let hecho = false; try { hecho = localStorage.getItem(clave) === 'hecho'; } catch(e){}
+  const E = {i:0, t:0, anda:0, mira:0, ultPos:new THREE.Vector3(), ultYaw:0, ultPitch:0, listo:0, venta:false,
+             fotosAntes:0, activo:!hecho, eventos:{}};
+  const alien = () => { let m = null, dm = 1e9;
+    for(const b of BICHOS.vivos){ if(!b.userData || b.userData.capturado) continue;
+      const k = b.position.distanceTo(jug.pos); if(k < dm){ dm = k; m = b; } }
+    return m; };
+  const buenas = () => FOTO.rollo.filter(f => f.precio > 0).length;
+  /* cada paso: título, texto (puede depender del estado), si se cumple, y adónde apunta */
+  const PASOS = [
+    {tit:'BIENVENIDO A BASE ALFA', boton:'EMPEZAR',
+     txt:() => 'Sos el <b>fotógrafo</b> de esta nave. Salís al espacio, fotografiás lo que vive ahí afuera y ' +
+               '<b>vendés las fotos</b>. Con los créditos comprás mejores cámaras y motores para llegar a galaxias ' +
+               'cada vez más raras. Tu meta: <b>llenar el álbum de 21 especies</b>.'},
+    {tit:'CAMINAR', txt:() => 'Apoyá el pulgar en la <b>mitad izquierda</b> de la pantalla y arrastralo: es la palanca. ' +
+               'Más lejos del centro, más rápido. El botón <b>SALTO</b> salta.',
+     cumple:() => E.anda > 3},
+    {tit:'MIRAR', txt:() => 'Arrastrá el otro dedo en la <b>mitad derecha</b> para mirar alrededor.',
+     cumple:() => E.mira > 1.3},
+    {tit:'SUBÍ A LA NAVE', txt:() => 'La nave está enfrente. Subí por la <b>rampa de atrás</b>, siguiendo el marcador.',
+     cumple:() => !!enNave(jug.pos.x, jug.pos.y, jug.pos.z) || FOTO.tiene, meta:() => _v.set(0, N.y0 + 0.2, N.z0 + 0.6)},
+    {tit:'TOMÁ LA CÁMARA', txt:() => 'En la bodega hay una mesa con una cámara. Acercate y tocá <b>TOMAR CÁMARA</b>.',
+     cumple:() => FOTO.tiene, meta:() => _v.set(MESA.x, N.y0 + MESA.alto, MESA.z)},
+    {tit:'DESPEGÁ', txt:() => 'Con la cámara en la mano, tocá <b>DESPEGAR</b>. Tiene que estar adentro de la nave.',
+     cumple:() => VUELO.estado !== 'tierra', meta:() => enNave(jug.pos.x, jug.pos.y, jug.pos.z) ? null : _v.set(0, N.y0 + 0.2, N.z0 + 0.6)},
+    {tit:'SUBIENDO', txt:() => 'Agarrate. Se cierra la compuerta y el cielo se vuelve espacio.',
+     cumple:() => VUELO.estado === 'espacio'},
+    {tit:'SALÍ AL ESPACIO', txt:() => 'Andá a la <b>compuerta de popa</b>, la misma por donde entraste, y tocá <b>SALIR AL ESPACIO</b>. ' +
+               'Vas atado a una soga: no te perdés.',
+     cumple:() => EVA.activa || buenas() > 0, meta:() => EVA.activa ? null : _v.copy(ANCLA)},
+    {tit:'FLOTAR', txt:() => 'Acá no hay gravedad. La palanca te empuja hacia donde mirás y <b>SALTO</b> da envión para ' +
+               'arriba. La soga tira cuando se termina.',
+     cumple:() => !EVA.activa || jug.pos.distanceTo(ANCLA) > 4 || E.t > 8},
+    {tit:'TU PRIMERA FOTO', txt:() => !EVA.activa ? 'Volvé a salir por la compuerta de popa para buscar un alien.'
+               : E.velada ? 'Esa salió <b>velada</b>: no había nada en el cuadro. Poné al alien en el centro y tocá <b>FOTO</b>.'
+               : 'Buscá un alien (el marcador lo señala), ponelo en el <b>centro del visor</b> y tocá <b>FOTO</b>. ' +
+                 'Cuanto más grande sale en el cuadro, más paga.',
+     cumple:() => buenas() > 0,
+     meta:() => { if(!EVA.activa) return _v.copy(ANCLA); const a = alien(); return a ? _v.copy(a.position) : null; }},
+    {tit:'¡PRIMERA FOTO!', txt:() => 'El carrete tiene <b>' + camAct().carrete + ' fotos</b> y te quedan ' +
+               Math.max(0, camAct().carrete - FOTO.rollo.length) + '. Sacá más si querés (cada especie nueva entra al álbum) ' +
+               'y después volvé a la compuerta: tocá <b>ENTRAR</b>.',
+     cumple:() => !EVA.activa, meta:() => EVA.activa ? _v.copy(ANCLA) : null},
+    {tit:'VENDÉ LAS FOTOS', txt:() => E.venta ? '' : 'La <b>computadora</b> está en la bodega, a estribor, al lado de la escalera. ' +
+               'Acercate, tocá <b>COMPUTADORA</b> y después <b>VENDER TODO</b>. Paga según la rareza y el encuadre.',
+     cumple:() => E.venta, meta:() => _v.set(COMPU.x, N.y0 + 1.0, COMPU.z)},
+    {tit:'¡PRIMERA VENTA!', boton:'LISTO',
+     txt:() => 'Con los créditos, en la misma computadora: <b>cámaras</b> con más fotos y más alcance, <b>mejoras</b> para la ' +
+               'nave y el traje, y <b>motores de salto</b> que abren galaxias nuevas. La <b>carta de navegación</b> está en el ' +
+               'puente, arriba. El <b>ÁLBUM</b> guarda cada especie que fotografiaste. Buena caza.'}
+  ];
+  const _v = new THREE.Vector3();
+  /* el marcador: una flecha que baja y un aro, sin profundidad para verse a través del casco */
+  const matM = new THREE.MeshBasicMaterial({color:col(0x6ff0ff), transparent:true, opacity:0.9, depthTest:false, depthWrite:false, fog:false});
+  const marca = new THREE.Group();
+  const flecha = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.55, 4), matM); flecha.rotation.x = Math.PI; flecha.position.y = 1.9;
+  const aro = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.7, 32), matM); aro.rotation.x = -Math.PI/2; aro.position.y = 0.05;
+  marca.add(flecha); marca.add(aro); marca.renderOrder = 20; flecha.renderOrder = 20; aro.renderOrder = 20;
+  marca.visible = false; esc.add(marca);
+
+  function pintar(){
+    const P = PASOS[E.i];
+    dPaso.textContent = 'TUTORIAL · PASO ' + (E.i + 1) + ' DE ' + PASOS.length;
+    dTit.textContent = P.tit;
+    const html = P.txt(); if(dTxt.innerHTML !== html) dTxt.innerHTML = html;
+    dBarra.style.width = (100*E.i/(PASOS.length - 1)).toFixed(0) + '%';
+    dSig.textContent = P.boton || ''; dSig.classList.toggle('ver', !!P.boton);
+  }
+  function ir(i){
+    E.i = i; E.t = 0; E.listo = 0; d.classList.remove('listo');
+    if(E.i >= PASOS.length){ terminar(); return; }
+    pintar();
+  }
+  function terminar(){
+    E.activo = false; d.classList.remove('ver'); marca.visible = false;
+    try { localStorage.setItem(clave, 'hecho'); } catch(e){}
+  }
+  dSig.addEventListener('pointerdown', e => { e.stopPropagation(); if(PASOS[E.i] && PASOS[E.i].boton){ SON.fx('clic'); ir(E.i + 1); } });
+  dSaltar.addEventListener('pointerdown', e => { e.stopPropagation(); SON.fx('clic'); terminar(); });
+  if(E.activo){ d.classList.add('ver'); pintar(); if(dPista) dPista.style.display = 'none'; }
+  E.ultPos.copy(jug.pos);
+
+  /* lo que hizo el jugador, medido en cada paso de física (un salto de más de 1 m es un
+     teletransporte, no una caminata) */
+  function paso(){
+    if(!E.activo) return;
+    const dp = Math.hypot(jug.pos.x - E.ultPos.x, jug.pos.z - E.ultPos.z);
+    if(dp < 1) E.anda += dp;
+    E.ultPos.copy(jug.pos);
+    E.mira += Math.abs(ang(camYaw - E.ultYaw)) + Math.abs(camPitch - E.ultPitch);
+    E.ultYaw = camYaw; E.ultPitch = camPitch;
+  }
+  function cuadro(dt){
+    if(!E.activo || !dt) return;
+    E.t += dt;
+    if(FOTO.rollo.length > E.fotosAntes){ const f = FOTO.rollo[FOTO.rollo.length - 1]; E.velada = !(f.precio > 0); }
+    E.fotosAntes = FOTO.rollo.length;
+    const P = PASOS[E.i];
+    if(E.listo > 0){                                 /* verde un momento y al siguiente */
+      E.listo -= dt; if(E.listo <= 0) ir(E.i + 1);
+    } else if(P.cumple && P.cumple()){
+      E.listo = 0.9; d.classList.add('listo'); SON.fx('compra');
+    } else if(E.t % 0.5 < dt) pintar();              /* textos que dependen del estado */
+    /* marcador */
+    const m = P.meta ? P.meta() : null;
+    marca.visible = !!m && E.listo <= 0;
+    if(m){
+      marca.position.copy(m);
+      const k = cam.position.distanceTo(m);
+      marca.scale.setScalar(Math.max(0.7, Math.min(4, k*0.07)));
+      flecha.position.y = 1.9 + Math.sin(E.t*3.2)*0.18;
+      flecha.rotation.y += dt*1.8;
+      matM.opacity = 0.65 + 0.3*Math.sin(E.t*4.0);
+      const txt = k.toFixed(0) + ' m'; if(dDist.textContent !== txt) dDist.textContent = txt;
+    } else if(dDist.textContent) dDist.textContent = '';
+  }
+  function evento(n){ if(n === 'venta') E.venta = true; E.eventos[n] = (E.eventos[n] || 0) + 1; }
+  return {paso, cuadro, evento, E, PASOS, reiniciar(){ try { localStorage.removeItem(clave); } catch(e){}
+    E.activo = true; E.venta = false; E.anda = 0; E.mira = 0; d.classList.add('ver'); ir(0); },
+    estado(){ return {activo:E.activo, paso:E.i, titulo:PASOS[E.i] ? PASOS[E.i].tit : null, marca:marca.visible,
+      dist:dDist.textContent, texto:dTxt.textContent.slice(0, 90)}; }, saltar:terminar,
+    siguiente(){ if(PASOS[E.i] && PASOS[E.i].boton) ir(E.i + 1); }};
+})();
+
 /* ----------------------------------------------------------------- sondas */
 window.__A = {
-  CFG, jug, cam, esc, MAT, hueso, mezcla, rend, POST, SON, GENTE, DETALLES, MUROS,
+  CFG, jug, cam, esc, MAT, hueso, mezcla, rend, POST, SON, GENTE, DETALLES, MUROS, TUTO,
   simular(n, dt){ dt = dt || 1/60; for(let i = 0; i < n; i++) paso(dt);
-    const dg = GENTE.pend; GENTE.pend = 0; if(dg > 0){ DETALLES.paso(dg); pasoGente(dg); } return +GENTE.t.toFixed(2); },
+    const dg = GENTE.pend; GENTE.pend = 0; if(dg > 0){ DETALLES.paso(dg); pasoGente(dg); TUTO.cuadro(dg); } return +GENTE.t.toFixed(2); },
   gente(){ return GENTE.lista.map(n => ({nombre:n.def.nombre, pos:n.pos.toArray().map(v => +v.toFixed(2)), v:+n.v.toFixed(2),
     clip:n.actual, visible:n.g.visible, cabeza:+n.cabeza.toFixed(2), i:n.i, espera:+n.espera.toFixed(1)})); },
   est(){ const i = rend.info; return {llamadas:i.render.calls, triangulos:i.render.triangles,

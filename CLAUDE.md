@@ -833,3 +833,32 @@ Lo que costó una vuelta:
   con la diferencia de un solo lado, cada borde de un objeto inventaba oclusión en el fondo.
 
 Auditoría completa y 80 toques al azar sin errores.
+
+### 2026-09-23 (y) — tutorial hasta la primera venta
+**Pedido textual:** «Ahora agrega un tutorial cuando comience el juego donde se expliquen los
+controles básicos y el objetivo del juego, el tutorial debe acompañar al jugador durante sus
+primeras fotos y primeras ventas».
+
+Tarjeta arriba al centro con el número de paso, título, texto, barra de avance y «saltar
+tutorial». **Cada paso se cumple haciendo la cosa**, no tocando «siguiente» (sólo el primero y el
+último tienen botón): se pone verde, suena y pasa al que sigue. Un **marcador en 3D** (flecha que
+baja y aro en el piso, sin profundidad para verse a través del casco) señala adónde ir, con la
+distancia en metros en la tarjeta.
+
+Los 13 pasos: bienvenida con el objetivo (fotografiar, vender, mejorar, llenar el álbum de 21) ·
+caminar con la palanca (3 m) · mirar con el otro dedo · subir por la rampa · tomar la cámara de
+la mesa · despegar · subida · salir por la compuerta de popa · flotar · primera foto (el marcador
+va al alien más cercano; si la foto sale velada lo dice) · volver a entrar · vender en la
+computadora · qué se hace con los créditos (cámaras, mejoras, motores, carta de navegación y
+álbum). Terminado o salteado, queda anotado en el navegador y no vuelve.
+
+Medido en el banco, jugando cada paso como el jugador (el EMPEZAR y el LISTO tocados con el
+dedo): los 13 pasos en orden, el marcador prendido en rampa, mesa, compuerta, alien y
+computadora, el aviso de placa velada, y `aliengrid.tutorial = hecho` al final.
+
+Lo que costó una vuelta:
+- **Medir la caminata por cuadro no sirve cuando el cuadro dura mucho**: un salto de más de 2 m
+  entre cuadros se descartaba como teletransporte y el paso CAMINAR no se cumplía nunca. Se mide
+  en cada paso de física.
+
+Auditoría completa y 80 toques al azar sin errores.
