@@ -8,6 +8,15 @@ final del nivel, monedas y tienda. Inspirado en los arcade de naves tipo Galaxy 
 nada**: bichos, paleta, música y nombre propios. Pedido del 23/09/2026: «Recréame este juego… con
 muy buenas animaciones menús y soundtrack más efectos de sonido».
 
+## Dónde se juega (links comprobados el 23/09/2026)
+- **githack** (lo que pide el usuario para iOS): `https://raw.githack.com/Juniorspro/Theclaudianos/<commit>/juegos-pc/Chicharra.html`
+  — con el hash **completo** del commit. Comprobado: 200, `text/html`, 78.200 bytes, idéntico al
+  del repo. Cada versión nueva = link nuevo con su commit.
+- **Rezona**: `https://rezona.ai/game/pgcserver/play/oEZocHewgj` (proyecto `oEZocHewgj`, v1).
+  302 → 200, idéntico byte a byte. `upload_project` pide `project_id` como **string** (el
+  `public_id`), y la carpeta necesita `.rezona/`: se hace con `npx rezona@latest init` adentro.
+- Subir crea un link público: el modo automático lo frena hasta que el usuario lo aprueba.
+
 ## Cómo está armado
 - **No es pixel art**: se dibuja con gradientes y halos, y cada sprite se **hornea una vez** a un
   lienzo (`K=2`, se dibuja a la mitad). El horneado es lo que lo hace barato.

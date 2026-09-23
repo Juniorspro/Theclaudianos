@@ -11,6 +11,8 @@ Fuente: `docs/GUIA-JUEGOS.md § 1. Preparar Rezona` y `§ 4`. Ver también: [jue
 - **El contenedor es efímero**: cada sesión nueva puede necesitar login nuevo. Comprobar primero
   `ls ~/.rezona` y `${REZONA_PAT:+definida}` **antes** de pedirle otro código al usuario.
 - Créditos al 2026-09-16: ~478.700.
+- 23/09/2026: el PAT del 16/09 volvió `PAT_INACTIVE` aunque el archivo seguía: **que exista
+  `~/.rezona/credentials.json` no quiere decir que sirva**. Probar con una llamada antes de usarlo.
 
 ## Al generar (cada trampa cuesta créditos)
 - **El `output_path` que vale es el de la respuesta**: pedís `roca.png`, vuelve `roca-g1.png`.
