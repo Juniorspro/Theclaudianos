@@ -1170,3 +1170,24 @@ commit anterior en el mismo banco: ~1 ms más por cuadro (6-7 contra 4-6 ms), le
 
 Medido: 49 de 49 peleas de IA contra IA terminan sin errores ni NaN, todas las clases ganan alguna;
 toques, carrera y capturas sin errores; 4,9 ms por cuadro en vertical.
+
+### 2026-09-23 (ah) — A LOS SALTOS: cinco tiendas distintas
+**Pedido textual:** «Ahora haz que las tiendas no parezcan tan iguales entre sí, haz cada tuenda distinta, agrégale un distintivo».
+
+Las cinco pestañas del mercado eran el mismo panel marrón con otra lista. Ahora cada una es un local:
+
+| tienda | tendero | fachada | cartel y emblema | colores |
+|---|---|---|---|---|
+| LA FRAGUA DE BRONTES (armas) | herrero pelado con barba que martilla el yunque y saca chispas | ladrillo tiznado, fragua que late, bastidor con 7 armas y el trofeo cruzado de bipenne y rompecráneos | placa de hierro con remaches, yunque | brasa |
+| EL ESCUDERO DE OSTIA (escudos) | carpintero con hacha y parma | tablones, pared llena de escudos pintados en cinco colores, caballete con viruta | tabla de madera, áspis | madera y oro |
+| YELMOS DE LA VÍA APIA (cascos) | broncista con casco de penacho que lustra un casco liso | sillares de mármol con verdín, dos estantes de cascos sobre cabezas de madera | placa con pátina, casco de grifo | verdín |
+| CURTIDURÍA DE MARCIA (corazas) | curtidora con sica cortando cuero | revoque ocre, cueros estaqueados, maniquíes con cuero, escamas y lorica | tabla oscura, lorica | cuero rojo |
+| BAZAR DEL FENICIO (otros) | mercader de Tiro con manica violeta y oro | carpa a rayas, alfombra, ánforas, haz de jabalinas, red, grebas y monedas | estandarte con flecos, bolsa | púrpura de Tiro |
+
+- Todo lo que se exhibe es **la pieza del juego** (`dibujarArma`, `ESCUDO_SPR`, `CABEZAS`, `piezas`, `dibujarProy`), no un dibujo aparte.
+- Cada fila trae su **vista previa**; cascos y corazas se ven puestos en la cabeza y el torso del propio gladiador.
+- El tendero habla: una frase al entrar, otra al comprar y otra si no alcanza. Cada tienda suena distinto al entrar y al comprar.
+- Las pestañas llevan el color de su tienda y se prenden con su propio anillo.
+- La fachada se repinta a 10 cuadros por segundo y se corta sola cuando sale del DOM. Los horneados van en caché.
+
+Medido: las cinco abren sin errores, con su color de panel; la compra descuenta y el tendero agradece; sin plata no compra y el tendero lo dice; al volver no queda ninguna fachada viva. Carrera y toques sin errores.

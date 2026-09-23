@@ -41,6 +41,13 @@
   .texto{font-size:12px;line-height:1.5;color:#e8d8b8;max-width:380px;text-align:left;font-weight:700}
   .texto b{color:#ffd060}
   .fila2{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .panel.tienda{background:var(--f);box-shadow:inset -3px -3px 0 var(--s),inset 3px 3px 0 var(--l),0 0 0 3px #140c08}
+  .panel.tienda .fila{background:var(--fi);box-shadow:inset -2px -2px 0 var(--s),inset 2px 2px 0 var(--l)}
+  .panel.tienda .fila.sel{box-shadow:inset -2px -2px 0 var(--s),inset 2px 2px 0 var(--l),0 0 0 2px var(--sel)}
+  .panel.tienda .fila .precio{color:var(--pr)}
+  .panel.tienda .fila .info b,.panel.tienda .voz b{color:var(--b)}
+  .fachada{width:100%;height:auto;margin:0 0 6px}
+  .voz{font-size:11px;line-height:1.4;color:#e8d8b8;font-style:italic;padding:2px 2px 4px;min-height:30px}
   .aviso{font-size:11px;color:#ffb070;min-height:14px;text-align:center}
 </style>
 </head>
@@ -129,6 +136,7 @@ const GRAD = {
   verde:['#e8ffc8','#b8f080','#88dc48','#58c028','#3a9c18','#267410','#185008'],
   azul: ['#d8f0ff','#98d0ff','#60a8f8','#3880e8','#2060c0','#144498','#0c2c68'],
   gris: ['#d8d4cc','#bcb6ac','#a09a90','#88827a','#706a64','#5a5550','#44403c'],
+  violeta:['#f4e0ff','#e0b8ff','#c890f8','#a868e8','#8848c8','#6430a0','#401c70'],
   fuego:['#ffffc0','#ffee60','#ffc020','#ff8810','#f05808','#c83004','#881802']
 };
 const CACHE_TXT = new Map();
@@ -1689,25 +1697,299 @@ const TIENDA = {
     {k:'jab', n:'JABALINA', precio:60, info:'UNA MÁS PARA TIRAR (HASTA 3)', usa:d => d.jab >= 3, pon:d => { d.jab = Math.min(3, d.jab + 1); }, cuenta:d => d.jab},
     {k:'red', n:'RED', precio:80, info:'ENREDA AL RIVAL (HASTA 2)', usa:d => d.red >= 2, pon:d => { d.red = Math.min(2, d.red + 1); }, cuenta:d => d.red}]
 };
-function mercado(tab){
-  const C = J.carrera, d = C.def; J.modo = 'menu'; limpiar(true);
+/* cada tienda es otra: su tendero, su fachada con el muestrario de verdad, su cartel con su
+   emblema, sus colores y su voz. col = [fondo, fila, luz, sombra, anillo, precio, resaltado] */
+const TIENDAS = {
+  armas:  {n:'LA FRAGUA DE BRONTES', tab:'ARMAS', grad:'fuego', fx:'metal', quien:'BRONTES, HERRERO',
+           col:['#2a1208', '#3e1a0c', '#b04a1a', '#120604', '#ff8a2a', '#ffb040', '#ffc870'],
+           frases:['El hierro no perdona. Yo tampoco fío.', 'Templado en agua del Tíber. Casi siempre.', 'Afilado para el cuello de otro, no el tuyo.'],
+           gracias:'Que te dure más que al anterior.', pobre:'Volvé con plata, no con cuentos.'},
+  escudos:{n:'EL ESCUDERO DE OSTIA', tab:'ESCUDOS', grad:'oro', fx:'madera', quien:'DECIO, CARPINTERO',
+           col:['#2c1e10', '#43301a', '#b8864a', '#140c06', '#ffd060', '#ffd878', '#ffe6a8'],
+           frases:['Roble por dentro, bronce por fuera, vos por detrás.', 'Un buen escudo vale más que diez tajos.', 'Tocá la madera. Eso: para la suerte.'],
+           gracias:'Ponelo entre vos y el filo. Así de fácil.', pobre:'Con eso no te alcanza ni para la manija.'},
+  cascos: {n:'YELMOS DE LA VÍA APIA', tab:'CASCOS', grad:'verde', fx:'metal', quien:'TERTULIO, BRONCISTA',
+           col:['#10231e', '#1a352c', '#5aa888', '#06110e', '#8af0c0', '#9ce8b8', '#c8ffe0'],
+           frases:['Cabeza se tiene una sola. Cuidala.', 'Este lo usó un campeón. Lo que quedó de él, digo.', 'Si ves poco, ves lo justo.'],
+           gracias:'Te queda pintado. Bueno, fundido.', pobre:'Ni un clavo del penacho, con eso.'},
+  corazas:{n:'CURTIDURÍA DE MARCIA', tab:'CORAZAS', grad:'rojo', fx:'carne', quien:'MARCIA, CURTIDORA',
+           col:['#2a100c', '#401a14', '#b85a3a', '#120605', '#ff7a5a', '#ff9a70', '#ffc8a8'],
+           frases:['Cuero de buey, cosido doble. Aguanta más que vos.', 'La lorica pesa, pero la tumba pesa más.', 'Pecho desnudo queda lindo. Una vez.'],
+           gracias:'Cosida a medida. No la manches mucho.', pobre:'Así no, querido. Juntá y volvé.'},
+  otros:  {n:'BAZAR DEL FENICIO', tab:'OTROS', grad:'violeta', fx:'moneda', quien:'HANNÓN, MERCADER DE TIRO',
+           col:['#1e1028', '#2e1a3c', '#8a5ab8', '#0c0612', '#d0a0ff', '#e0b0ff', '#f0d8ff'],
+           frases:['De Tiro, de Cartago, de donde convenga.', 'Redes que pescan hombres. Garantía de por vida: la tuya.', 'Todo tiene precio, amigo. Lo mío, un poco más.'],
+           gracias:'¡Trato hecho! Que Melkart te acompañe.', pobre:'Regateo sí, milagros no.'}
+};
+const ORDEN_TIENDAS = ['armas', 'escudos', 'cascos', 'corazas', 'otros'];
+
+/* los emblemas del cartel: grillas propias o piezas del juego horneadas con el mismo sombreado */
+const EMBLEMA_GR = {
+  yunque:[".kkkkkkkkkkk","kmmmmmmmmmmk",".kkMmmmmmMMk","...kMmmMk...","...kMmmMk...","..kMMmmMMk..",".kkkkkkkkkk."],
+  bolsa: ["...k..k...","....kk....","...kook...","..krrrrk..",".krrrrrrk.","krrrooorrk","krrorrrork","krrrooorrk",".krrrrrrk.","..kkkkkk.."]
+};
+const _EMB = {}, _HD = new Map();
+const hd = (clave, grid, pal) => _HD.get(clave) || (_HD.set(clave, hornearHD(grid, pal)), _HD.get(clave));
+const PAL_TENDERO_CAB = Object.assign({}, PAL_BASE, {p:'#a8845c', P:'#7a5a38', e:'#3a2818', w:'#c8a878'});   /* cabezas de madera para exhibir */
+function emblema(k){
+  if(_EMB[k]) return _EMB[k];
+  let s;
+  if(k === 'armas') s = hornearHD(EMBLEMA_GR.yunque, PAL_BASE);
+  else if(k === 'escudos') s = hornearHD(ESCUDO_SPR.redondo, PAL_BASE);
+  else if(k === 'cascos') s = hornearHD(CABEZAS.tracio, PAL_TENDERO_CAB);
+  else if(k === 'corazas') s = hornearHD(TORSO.map((f, y) => y >= 1 && y <= 8 ? f.replace(/[pPQ]/g, (ch, x) => y % 2 ? 'm' : 'M') : f), PAL_BASE);
+  else s = hornearHD(EMBLEMA_GR.bolsa, Object.assign({}, PAL_BASE, {r:'#8a4ab8', R:'#4a2268'}));
+  return (_EMB[k] = s);
+}
+
+/* los tenderos son gladiadores retirados: mismo muñeco, otro oficio */
+const _TEN = {};
+function tenderoDe(k){
+  if(_TEN[k]) return _TEN[k];
+  const C = {
+    armas:  {clase:'fanatico', cabeza:'fan', piel:'#b87a4c', pelo:'#1c1410', q:['#6a4a2a', '#3a2414'], eq:{arma:'maza', escudo:'ninguno', casco:'ninguno', torso:'cuero'}},
+    escudos:{clase:'mirmillon', cabeza:'ret', piel:'#e8a878', pelo:'#8a5a2a', q:['#d8c8a0', '#6a5230'], eq:{arma:'hacha', escudo:'parma', casco:'ninguno', torso:'nada'}},
+    cascos: {clase:'hoplomaco', cabeza:'ret', piel:'#d09060', pelo:'#bcbcbc', q:['#2c7a5a', '#10402c'], eq:{arma:'gladio', escudo:'ninguno', casco:'hoplomaco', torso:'escamas'}},
+    corazas:{clase:'tracio', cabeza:'ret', piel:'#f0c098', pelo:'#4a2c16', q:['#b83a2a', '#5a1a14'], eq:{arma:'sica', escudo:'ninguno', casco:'ninguno', torso:'cuero'}},
+    otros:  {clase:'retiario', cabeza:'ret', piel:'#946244', pelo:'#1c1410', q:['#8a4ab8', '#f0c048'], eq:{arma:null, escudo:'ninguno', casco:'ninguno', torso:'nada'}}
+  }[k];
+  const d = crearDef(C.clase, 0, {nombre:TIENDAS[k].quien});
+  Object.assign(d, {cabeza:C.cabeza, piel:C.piel, pelo:C.pelo, q:C.q, jab:0, red:0});
+  Object.assign(d.eq, C.eq, {segunda:null, manica:k === 'otros', grebas:k === 'cascos'});
+  const l = nuevoLuchador(d, 0, -1, false); l.esc = 0.5;
+  return (_TEN[k] = l);
+}
+
+/* ---------- la fachada: 180 × 70 unidades, se repinta a 10 cuadros por segundo ---------- */
+const FW = 180, FH = 70;
+function hashT(i){ const s = Math.sin(i*127.1 + 311.7)*43758.5453; return s - Math.floor(s); }
+function cuadro(g, x, y, w, h, c){ g.fillStyle = c; g.fillRect(x, y, w, h); }
+function cartel(g, k, t){
+  const T = TIENDAS[k], txt = lienzoTexto(T.n, T.grad), tw = txt.width, e = emblema(k), ew = e.width/DET, eh = e.height/DET;
+  const w = tw + ew*2 + 14, x0 = Math.round((FW - w)/2), y0 = 2, h = Math.max(15, eh + 4), vaiven = Math.round(Math.sin(t*1.3)*0.5*DET)/DET;
+  const [fondo, , luz, som] = T.col;
+  for(const cx of [x0 + 8, x0 + w - 8]){ cuadro(g, cx, 0, 1, y0 + 1, '#5a5048'); }
+  g.save(); g.translate(vaiven, 0);
+  cuadro(g, x0 - 1, y0 - 1, w + 2, h + 2, K);
+  if(k === 'otros'){                                    /* estandarte de tela con flecos */
+    for(let x = 0; x < w; x += 2) cuadro(g, x0 + x, y0, 2, h, (x >> 1) % 2 ? '#6a3494' : '#7a40a8');
+    for(let x = 0; x < w; x += 3) cuadro(g, x0 + x, y0 + h + 1, 1, 2, '#f0c048');
+  } else if(k === 'escudos' || k === 'corazas'){        /* tabla de madera con vetas */
+    cuadro(g, x0, y0, w, h, k === 'escudos' ? '#8a5a2c' : '#6a3a1c');
+    for(let y = 3; y < h; y += 4) cuadro(g, x0 + 2, y0 + y, w - 4, 0.5, k === 'escudos' ? '#6a4020' : '#4e2812');
+  } else {                                              /* placa de metal con remaches */
+    cuadro(g, x0, y0, w, h, k === 'armas' ? '#3a3634' : '#3a6a54');
+    cuadro(g, x0, y0, w, 1, k === 'armas' ? '#6a6460' : '#6ab08c');
+    cuadro(g, x0, y0 + h - 1, w, 1, k === 'armas' ? '#1c1a18' : '#1a3a2c');
+    for(const rx of [x0 + 2, x0 + w - 3]) for(const ry of [y0 + 2, y0 + h - 3]) cuadro(g, rx, ry, 1, 1, '#d8c890');
+  }
+  cuadro(g, x0, y0, w, 0.5, luz); cuadro(g, x0, y0 + h - 0.5, w, 0.5, som);
+  g.drawImage(txt, x0 + ew + 7, y0 + Math.round((h - 13)/2), tw, txt.height);
+  g.drawImage(e, x0 + 3, y0 + Math.round((h - eh)/2), ew, eh);
+  g.save(); g.translate(x0 + w - 3, 0); g.scale(-1, 1); g.drawImage(e, 0, y0 + Math.round((h - eh)/2), ew, eh); g.restore();
+  g.restore();
+}
+function pared(g, k){
+  if(k === 'armas'){                                    /* ladrillo tiznado */
+    cuadro(g, 0, 0, FW, FH, '#2a120a');
+    for(let f = 0, y = 0; y < FH; f++, y += 4) for(let x = (f % 2) ? -5 : 0, i = 0; x < FW; x += 10, i++){
+      const h = hashT(f*31 + i), c = h < 0.15 ? '#3a1a10' : h < 0.7 ? '#4a2416' : '#56301c';
+      cuadro(g, x + 0.5, y + 0.5, 9, 3, c); cuadro(g, x + 0.5, y + 0.5, 9, 0.5, tono(c, 1.18)); }
+    for(let y = 0; y < 26; y++) cuadro(g, 0, y, FW, 1, 'rgba(10,4,2,' + (0.5 - y/52).toFixed(3) + ')');     /* hollín del techo */
+  } else if(k === 'escudos'){                           /* tablones */
+    cuadro(g, 0, 0, FW, FH, '#5a3a1e');
+    for(let y = 0, i = 0; y < FH; y += 6, i++){ const c = i % 2 ? '#6a4524' : '#624020';
+      cuadro(g, 0, y, FW, 5.5, c); cuadro(g, 0, y, FW, 0.5, tono(c, 1.2)); cuadro(g, 0, y + 5.5, FW, 0.5, '#2c1a0c');
+      for(let x = 0; x < FW; x += 23) cuadro(g, x + (i*7) % 23, y + 2 + (i % 2), 4, 0.5, tono(c, 0.8)); }
+  } else if(k === 'cascos'){                            /* sillares de mármol con verdín */
+    cuadro(g, 0, 0, FW, FH, '#8a8a80');
+    for(let f = 0, y = 0; y < FH; f++, y += 9) for(let x = (f % 2) ? -10 : 0, i = 0; x < FW; x += 20, i++){
+      const h = hashT(f*17 + i*3), c = h < 0.3 ? '#9c9a90' : h < 0.8 ? '#a8a69a' : '#b4b2a6';
+      cuadro(g, x + 0.5, y + 0.5, 19, 8, c); cuadro(g, x + 0.5, y + 0.5, 19, 0.5, '#c8c6ba');
+      if(h > 0.6) cuadro(g, x + 4 + h*8, y + 2, 0.5, 4, tono(c, 0.8)); }
+    for(let x = 0; x < FW; x += 1) if(hashT(x) > 0.55) cuadro(g, x, 0, 1, 2 + hashT(x + 9)*6, 'rgba(60,140,110,0.35)');
+  } else if(k === 'corazas'){                           /* revoque ocre descascarado */
+    cuadro(g, 0, 0, FW, FH, '#b07a44');
+    for(let i = 0; i < 60; i++){ const x = hashT(i)*FW, y = hashT(i + 99)*FH, w = 2 + hashT(i + 7)*7;
+      cuadro(g, Math.round(x), Math.round(y), Math.round(w), 1, i % 3 ? '#9c6a3a' : '#c48c54'); }
+    for(let i = 0; i < 4; i++){ const x = 10 + hashT(i + 40)*150, y = 20 + hashT(i + 50)*30;
+      cuadro(g, Math.round(x), Math.round(y), 6, 3, '#8a7a68'); cuadro(g, Math.round(x) + 1, Math.round(y) + 1, 4, 1, '#a09282'); }
+  } else {                                              /* carpa a rayas */
+    for(let x = 0; x < FW; x += 8){ cuadro(g, x, 0, 4, FH, '#4a2464'); cuadro(g, x + 4, 0, 4, FH, '#5c2e7a'); cuadro(g, x + 3.5, 0, 0.5, FH, '#2a1238'); }
+    for(let x = 0; x < FW; x += 8){ g.fillStyle = '#d8a830'; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 8, 0); g.lineTo(x + 4, 5); g.fill(); }
+  }
+}
+function piso(g, k){
+  const c = {armas:['#1c0e08', '#2a160c'], escudos:['#3a2410', '#4a3018'], cascos:['#5a5a50', '#6a6a60'], corazas:['#6a4424', '#7a5230'], otros:['#2a1a10', '#3a2416']}[k];
+  cuadro(g, 0, 62, FW, 8, c[0]); cuadro(g, 0, 62, FW, 1, c[1]);
+  if(k === 'otros') for(let x = 6; x < 110; x += 4){ cuadro(g, x, 63, 2, 2, (x/4) % 2 ? '#a83a2a' : '#d8a830'); }      /* alfombra */
+  if(k === 'cascos') for(let x = 0; x < FW; x += 12) cuadro(g, x, 62, 0.5, 8, '#4a4a42');
+}
+function muestrario(g, k, t){
+  if(k === 'armas'){
+    const lista = ['gladio', 'sica', 'spatha', 'maza', 'hacha', 'lanza', 'tridente'];
+    cuadro(g, 3, 40, 100, 2, '#5a3a1e'); cuadro(g, 3, 40, 100, 0.5, '#8a5a2c');
+    lista.forEach((a, i) => dibujarArma(g, {x:9 + i*14, y:59}, -Math.PI/2, 1, ARMAS[a]));
+    cuadro(g, 3, 58, 100, 4, '#4a2e16'); cuadro(g, 3, 58, 100, 1, '#7a4e26'); cuadro(g, 3, 40, 2, 22, '#3a2210'); cuadro(g, 101, 40, 2, 22, '#3a2210');
+    dibujarArma(g, {x:14, y:34}, -0.62, 1, ARMAS.bipenne); dibujarArma(g, {x:92, y:34}, -Math.PI + 0.62, 1, ARMAS.rompe);   /* trofeo cruzado */
+    /* la fragua, atrás del herrero, que respira */
+    const fl = 0.75 + 0.25*Math.sin(t*7) + 0.1*Math.sin(t*17.3);
+    cuadro(g, 150, 22, 30, 40, '#3a342e'); cuadro(g, 146, 18, 34, 5, '#4a443c'); cuadro(g, 146, 18, 34, 1, '#6a645a');
+    cuadro(g, 155, 38, 20, 16, K);
+    cuadro(g, 156, 40, 18, 14, fl > 0.85 ? '#ff9a2a' : '#e8701a'); cuadro(g, 158, 46, 14, 8, '#ffd050'); cuadro(g, 161, 50, 8, 4, '#fff0a0');
+    for(let r = 1; r <= 5; r++){ g.fillStyle = 'rgba(255,120,30,' + (0.06*fl).toFixed(3) + ')'; g.fillRect(155 - r*4, 36 - r*3, 20 + r*8, 22 + r*5); }
+  } else if(k === 'escudos'){
+    /* pared llena: escudos pintados de cada color, colgados de su clavo */
+    const PINT = [['#d03828', '#7a1a14'], ['#2a5ac0', '#142c68'], ['#3a8a4a', '#1a4a24'], ['#2a2420', '#0c0a08'], ['#e0b040', '#8a5a10']];
+    const cuelga = (s, x, y, i) => { const [r, R] = PINT[i % PINT.length], e = hd('e' + s + i % PINT.length, ESCUDO_SPR[s], Object.assign({}, PAL_BASE, {r, R})), w = e.width/DET;
+      cuadro(g, x - 0.5, y - 2, 1, 2.5, '#2c1a0c'); g.drawImage(e, Math.round(x - w/2), y, w, e.height/DET); };
+    [['scutum', 10], ['redondo', 25], ['parma', 38], ['scutum', 51], ['redondo', 66], ['parma', 79], ['scutum', 92]].forEach(([s, x], i) => cuelga(s, x, 20, i));
+    [['redondo', 12], ['parma', 26], ['redondo', 40]].forEach(([s, x], i) => cuelga(s, x, 44, i + 3));
+    /* caballete con un tablón a medio cepillar y viruta */
+    cuadro(g, 60, 52, 44, 3, '#b8864a'); cuadro(g, 60, 52, 44, 0.5, '#e0b070');
+    for(const x of [63, 98]){ trazo(g, {x, y:55}, {x:x - 3, y:62}, 2, '#5a3a1e'); trazo(g, {x, y:55}, {x:x + 3, y:62}, 2, '#5a3a1e'); }
+    for(let i = 0; i < 9; i++) cuadro(g, 64 + hashT(i)*40, 61 + hashT(i + 3)*1.5, 1.5, 0.5, '#e8c080');
+  } else if(k === 'cascos'){
+    const cabs = ['galea', 'hoplomaco', 'tracio', 'mirmillon', 'secutor'];
+    for(const y of [37, 58]){ cuadro(g, 4, y, 98, 2.5, '#5a3a1e'); cuadro(g, 4, y, 98, 0.5, '#8a5a2c'); cuadro(g, 10, y + 2.5, 1.5, 3, '#3a2410'); cuadro(g, 94, y + 2.5, 1.5, 3, '#3a2410'); }
+    cabs.forEach((c, i) => { const s = hd('c' + c, CABEZAS[c], PAL_TENDERO_CAB), w = s.width/DET, h = s.height/DET;
+      const x = i < 3 ? 20 + i*30 : 35 + (i - 3)*30, y = i < 3 ? 37 : 58, brillo = ((t*0.6 + i*0.37) % 3) < 0.12;
+      cuadro(g, x - 1.5, y - 2, 3, 2, '#3a2410');
+      g.drawImage(s, Math.round(x - w/2), y - 2 - h, w, h);
+      if(brillo) cuadro(g, Math.round(x - w/2) + 2, y - h + 1, 1, 1, '#ffffff'); });
+  } else if(k === 'corazas'){
+    /* cueros estaqueados en la pared */
+    for(const [x, y, c] of [[14, 20, '#8a5028'], [96, 22, '#6a3c1c']]){
+      g.fillStyle = K; g.beginPath(); for(let a = 0; a < 6.28; a += 0.5){ const r = 9 + hashT(a*10 + x)*3; g.lineTo(x + Math.cos(a)*r*1.2, y + 4 + Math.sin(a)*r*0.7); } g.fill();
+      g.fillStyle = c; g.beginPath(); for(let a = 0; a < 6.28; a += 0.5){ const r = 8 + hashT(a*10 + x)*3; g.lineTo(x + Math.cos(a)*r*1.2, y + 4 + Math.sin(a)*r*0.7); } g.fill();
+      for(const a of [0.4, 2.7, 3.6, 5.8]) cuadro(g, Math.round(x + Math.cos(a)*10), Math.round(y + 4 + Math.sin(a)*6), 1, 1, '#d8c890'); }
+    /* maniquíes: un palo con la coraza puesta */
+    ['cuero', 'escamas', 'lorica'].forEach((c, i) => { const x = 22 + i*30, d = tenderoDe('corazas').def;
+      const s = piezas(Object.assign({}, d, {piel:'#8a6a48', eq:Object.assign({}, d.eq, {torso:c})})).torso, w = s.width/DET, h = s.height/DET;
+      cuadro(g, x - 1, 44, 2, 18, '#4a2e16'); cuadro(g, x - 5, 60, 10, 2, '#3a2210');
+      g.drawImage(s, Math.round(x - w/2), 44 - h + 6, w, h); discoF(g, x, 44 - h + 5, 1.6, '#6a4a2a', true); });
+  } else {
+    /* ánforas, jabalinas en haz, la red enrollada, grebas y una manica colgada */
+    for(const [x, c] of [[12, '#b8643a'], [22, '#a85a32'], [96, '#c8744a']]){
+      discoF(g, x, 54, 4.2, K); discoF(g, x, 54, 3.6, c, true); cuadro(g, x - 1.5, 46, 3, 5, c); cuadro(g, x - 2.5, 45, 5, 1.5, tono(c, 0.8));
+      cuadro(g, x - 0.5, 58, 1, 4, tono(c, 0.7)); cuadro(g, x - 3, 52, 6, 0.5, '#e8d0a0'); }
+    const P = {proy:[0, 1, 2].map(i => ({tipo:'jabalina', x:38 + i*3, y:44, ang:-Math.PI/2 + 0.12*(i - 1), vivo:true, clavado:false}))};
+    dibujarProy(g, P, 0, 0);
+    trazo(g, {x:34, y:52}, {x:48, y:52}, 2, '#7a4e26');
+    for(let i = 0; i < 5; i++){ const y = 50 + i*2.6; trazo(g, {x:56, y}, {x:78, y:y + 1}, 1, i % 2 ? '#e4dab8' : '#b8ac88'); }
+    for(let i = 0; i < 6; i++) trazo(g, {x:58 + i*4, y:49}, {x:57 + i*4, y:62}, 1, '#c8bc98');
+    musculo(g, {x:84, y:44}, {x:84, y:52}, 4, 5, '#d8dce6'); musculo(g, {x:84, y:52}, {x:84, y:60}, 5, 3, '#d8dce6'); discoF(g, 84, 44, 1.1, '#f0c048', true);
+    musculo(g, {x:88, y:44}, {x:88, y:52}, 4, 5, '#b8bcc6'); musculo(g, {x:88, y:52}, {x:88, y:60}, 5, 3, '#b8bcc6');
+    trazoVar(g, {x:30, y:22}, {x:30, y:34}, 6, 5, K); trazoCuadros(g, {x:30, y:22}, {x:30, y:34}, 4, '#8a4ab8', '#f0c048'); cuadro(g, 29.5, 18, 1, 4, '#2a1238');
+    for(let i = 0; i < 7; i++){ const x = 110 + hashT(i)*6, y = 60 - i*0.8; discoF(g, x, y, 1.2, '#f0c048', true); }          /* monedas en el mostrador */
+  }
+}
+function mostrador(g, k, t){
+  if(k === 'armas'){                                    /* yunque sobre un tronco */
+    cuadro(g, 112, 52, 12, 10, '#5a3a1e'); cuadro(g, 112, 52, 12, 1, '#8a5a2c'); for(let y = 54; y < 62; y += 3) cuadro(g, 113, y, 10, 0.5, '#3a2410');
+    const e = emblema('armas'), w = e.width/DET, h = e.height/DET; g.drawImage(e, 118 - w/2, 52 - h, w, h);
+    const golpe = Math.sin(t*5.2), en = golpe > 0.93;
+    cuadro(g, 113, 52 - h - 1, 8, 1.5, en ? '#fff0a0' : '#ff8a2a');                                           /* el hierro al rojo */
+    if(en) for(let i = 0; i < 8; i++){ const a = -0.3 - hashT(i + Math.floor(t*10))*2.6, r = 2 + hashT(i*3 + Math.floor(t*10))*9;
+      cuadro(g, Math.round(116 + Math.cos(a)*r), Math.round(52 - h - 1 + Math.sin(a)*r), 1, 1, i % 2 ? '#ffe070' : '#ff9a2a'); }
+  } else if(k === 'escudos'){
+    cuadro(g, 108, 54, 72, 10, '#7a4e26'); cuadro(g, 108, 54, 72, 1, '#b07a44'); cuadro(g, 108, 63, 72, 1, '#3a2210');
+    for(let x = 112; x < 180; x += 16) cuadro(g, x, 55, 0.5, 8, '#5a3a1e');
+  } else if(k === 'cascos'){
+    cuadro(g, 108, 54, 72, 10, '#c8c6ba'); cuadro(g, 108, 54, 72, 1, '#e8e6da'); cuadro(g, 108, 63, 72, 1, '#6a6a60');
+    for(let x = 114; x < 180; x += 20){ cuadro(g, x, 56, 10, 6, '#b4b2a6'); cuadro(g, x, 56, 10, 0.5, '#8a8a80'); }
+    const s = hd('csecutor', CABEZAS.secutor, PAL_TENDERO_CAB), w = s.width/DET, h = s.height/DET;
+    g.drawImage(s, 162 - w/2, 54 - h, w, h);
+    const lustra = Math.sin(t*3); cuadro(g, 158 + lustra*3, 54 - h/2, 3, 2, '#e8e0c8');                         /* el trapo */
+  } else if(k === 'corazas'){
+    cuadro(g, 108, 54, 72, 10, '#6a3c1c'); cuadro(g, 108, 54, 72, 1, '#9a6434'); cuadro(g, 108, 63, 72, 1, '#2c160a');
+    cuadro(g, 150, 52, 18, 2.5, '#9a6434'); cuadro(g, 150, 52, 18, 0.5, '#c8905a');                                  /* cuero a medio cortar */
+    for(let x = 151; x < 167; x += 2) cuadro(g, x, 53.5, 1, 0.5, '#5c3a1c');
+  } else {
+    cuadro(g, 104, 56, 76, 8, '#3a2416'); for(let x = 104; x < 180; x += 6) cuadro(g, x, 56, 3, 8, (x/6) % 2 ? '#a83a2a' : '#8a2a1e');
+    cuadro(g, 104, 56, 76, 1, '#d8a830'); for(let x = 105; x < 180; x += 3) cuadro(g, x, 64, 1, 2, '#d8a830');
+    for(let i = 0; i < 7; i++) discoF(g, 118 + hashT(i)*8, 55 - i*0.9, 1.3, '#f0c048', true);
+  }
+}
+function pose(k, t, l){
+  if(k === 'armas'){ l.a = -1.2 - 1.1*Math.max(0, -Math.cos(t*5.2 + 0.25)); l.e = 0.5; }
+  else if(k === 'escudos'){ l.a = -1.9 + 0.12*Math.sin(t*1.7); l.e = 0.3; }
+  else if(k === 'cascos'){ l.a = -2.4 + 0.25*Math.sin(t*3); l.e = 0.9; }
+  else if(k === 'corazas'){ l.a = -1.5 + 0.35*Math.sin(t*2.4); l.e = 0.6; }
+  else if(k === 'otros'){ l.a = -1.0 - 0.5*Math.max(0, Math.sin(t*2)); l.e = 0.1; }
+}
+function pintarFachada(c, k, t){
+  const g = c.getContext('2d'); g.setTransform(DET, 0, 0, DET, 0, 0); g.imageSmoothingEnabled = false;
+  const l = tenderoDe(k);
+  pared(g, k); piso(g, k); muestrario(g, k, t);
+  const x = k === 'armas' ? 134 : 140;
+  pose(k, t, l);
+  l.x = x; l.fase = t*0.9;
+  g.save(); dibujarGlad(g, l, 0, 62, false); g.restore();
+  mostrador(g, k, t);                                   /* va delante del tendero: se le tapan las piernas */
+  cartel(g, k, t);
+  for(let y = 0; y < FH; y++) if(y < 3 || y > FH - 4) cuadro(g, 0, y, FW, 1, 'rgba(0,0,0,' + (y < 3 ? 0.3 - y*0.1 : (y - FH + 4)*0.1).toFixed(2) + ')');
+}
+let _fachada = null;
+function fachada(k){
+  const c = document.createElement('canvas'); c.width = FW*DET; c.height = FH*DET; c.className = 'px fachada';
+  const t0 = performance.now(); let ult = -1;
+  pintarFachada(c, k, 0);
+  _fachada = c;
+  const vuelta = () => { if(_fachada !== c || !c.isConnected && performance.now() - t0 > 500) return;
+    const t = (performance.now() - t0)/1000, q = Math.floor(t*10);
+    if(q !== ult){ ult = q; try { pintarFachada(c, k, q/10); } catch(e){ return; } }
+    requestAnimationFrame(vuelta); };
+  requestAnimationFrame(vuelta);
+  return c;
+}
+
+/* ---------- la vista previa de cada cosa, en la fila ---------- */
+function previa(tab, it, d){
+  const W = 30, H = 18, c = document.createElement('canvas'); c.width = W*DET; c.height = H*DET; c.className = 'px';
+  c.style.width = W*2 + 'px'; c.style.height = H*2 + 'px';
+  const g = c.getContext('2d'); g.setTransform(DET, 0, 0, DET, 0, 0); g.imageSmoothingEnabled = false;
+  const col = TIENDAS[tab].col; cuadro(g, 0, 0, W, H, col[3]); cuadro(g, 0.5, 0.5, W - 1, H - 1, tono(col[1], 0.8));
+  const centro = s => { const w = s.width/DET, h = s.height/DET, k = Math.min(1, (H - 2)/h); g.drawImage(s, Math.round((W - w*k)/2), Math.round((H - h*k)/2), w*k, h*k); };
+  const nada = () => { g.strokeStyle = '#8a8078'; g.lineWidth = 1; g.beginPath(); g.arc(W/2, H/2, 5, 0, 6.3); g.moveTo(W/2 - 3.5, H/2 + 3.5); g.lineTo(W/2 + 3.5, H/2 - 3.5); g.stroke(); };
+  if(tab === 'armas'){ const a = ARMAS[it.k]; dibujarArma(g, {x:3.5, y:H - 3.5}, -Math.atan2(H - 7, Math.max(12, a.largo)), 1, a); }
+  else if(tab === 'escudos'){ if(it.k === 'ninguno') nada(); else centro(hd('e' + it.k, ESCUDO_SPR[it.k], PAL_BASE)); }
+  else if(tab === 'cascos') centro(piezas(Object.assign({}, d, {eq:Object.assign({}, d.eq, {casco:it.k})})).cabeza);
+  else if(tab === 'corazas') centro(piezas(Object.assign({}, d, {eq:Object.assign({}, d.eq, {torso:it.k})})).torso);
+  else if(it.k === 'manica'){ trazoVar(g, {x:8, y:9}, {x:22, y:9}, 6, 5, K); trazoCuadros(g, {x:8, y:9}, {x:22, y:9}, 4, d.q[0], d.q[1]); discoF(g, 23.5, 9, 1.3, d.piel, true); }
+  else if(it.k === 'grebas'){ for(const x of [12, 18]){ musculo(g, {x, y:2}, {x, y:9}, 4, 5, '#d8dce6'); musculo(g, {x, y:9}, {x, y:16}, 5, 3, '#d8dce6'); discoF(g, x, 3, 1.1, '#f0c048', true); } }
+  else if(it.k === 'jab') dibujarProy(g, {proy:[{tipo:'jabalina', x:20, y:6, ang:-0.3, vivo:true, clavado:false}]}, 0, 0);
+  else dibujarProy(g, {proy:[{tipo:'red', x:15, y:9, giro:0.3, vivo:true}]}, 0, 0);
+  return c;
+}
+
+function mercado(tab, dicho){
+  const C = J.carrera, d = C.def, T = TIENDAS[tab]; J.modo = 'menu'; limpiar(true);
   const cab = el('div', 'fila2');
-  for(const [k, n] of [['armas', 'ARMAS'], ['escudos', 'ESCUDOS'], ['cascos', 'CASCOS'], ['corazas', 'CORAZAS'], ['otros', 'OTROS']])
-    cab.append(btn(n, () => mercado(k), tab === k ? 'oro chico' : 'gris chico'));
-  const p = el('div', 'panel'); const top = el('div', 'fila'); top.style.cursor = 'default';
+  for(const k of ORDEN_TIENDAS){ const S = TIENDAS[k], b = btn(S.tab, () => { mercado(k); SON.fx(S.fx); }, 'chico');
+    b.style.background = S.col[2]; b.style.opacity = k === tab ? '1' : '0.72';
+    b.style.boxShadow = 'inset -3px -3px 0 ' + S.col[3] + ',inset 3px 3px 0 ' + tono(S.col[2], 1.35) + ',0 0 0 3px #140c08,0 5px 0 3px #140c08' + (k === tab ? ',0 0 0 5px ' + S.col[4] : '');
+    cab.append(b); }
+  const p = el('div', 'panel tienda');
+  const v = ['--f', '--fi', '--l', '--s', '--sel', '--pr', '--b']; v.forEach((n, i) => p.style.setProperty(n, T.col[i]));
+  p.append(fachada(tab));
+  const voz = el('div', 'voz', '<b>' + T.quien + ':</b> «' + (dicho || T.frases[Math.floor(Math.random()*T.frases.length)]) + '»');
+  p.append(voz);
+  const top = el('div', 'fila'); top.style.cursor = 'default';
   top.append(retrato(d, 2), el('div', 'info', '<b>' + d.nombre + '</b><br><b>' + d.monedas + ' $</b><br>' + equipoTxt(d)));
   p.append(top);
-  const aviso = el('div', 'aviso');
   for(const it of TIENDA[tab]()){
     const usa = it.usa(d), puede = d.monedas >= it.precio;
     const f = el('div', 'fila' + (usa ? ' sel' : puede ? '' : ' no'));
+    f.append(previa(tab, it, d));
     f.append(el('div', 'info', '<b>' + it.n + '</b>' + (it.cuenta ? ' (' + it.cuenta(d) + ')' : '') + '<br>' + it.info));
     f.append(el('div', 'precio', usa ? 'EN USO' : it.precio ? it.precio + ' $' : 'GRATIS'));
-    f.addEventListener('click', () => { if(usa){ return; } if(!puede){ SON.fx('negado'); aviso.textContent = 'No te alcanza.'; return; }
-      d.monedas -= it.precio; it.pon(d); SON.fx('moneda'); guardar('saltos.carrera', C); mercado(tab); });
+    f.addEventListener('click', () => { if(usa){ return; }
+      if(!puede){ SON.fx('negado'); voz.innerHTML = '<b>' + T.quien + ':</b> «' + T.pobre + '»'; return; }
+      d.monedas -= it.precio; it.pon(d); SON.fx('moneda'); SON.fx(T.fx); guardar('saltos.carrera', C); mercado(tab, T.gracias); });
     p.append(f);
   }
-  dMenu.append(cab, p, aviso, btn('VOLVER', ludus, 'gris'));
+  dMenu.append(cab, p, btn('VOLVER', ludus, 'gris'));
 }
 
 /* ----- pelea rápida ----- */
