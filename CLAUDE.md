@@ -9,6 +9,7 @@ se prueba **en el celular, en vertical (412×892)**. EL TIPO se juega **acostado
 |---|---|
 | `juegos-pc/ElTipo.html` | **EL TIPO.** Beat'em up de plataformas al estilo Dan The Man: canvas 2D, un archivo, sin red, 5 niveles procedurales con jefe cada uno. |
 | `juegos-pc/AOscuras.html` | **A OSCURAS.** Táctico de arriba estilo Bullet Echo: linterna en cono, ecos de pasos y tiros, 5 misiones procedurales (equipo, robo en sigilo, dominio, batalla real, jefe). Canvas 2D en píxeles, un archivo, sin red. |
+| `juegos-pc/Andes.html` | **ANDES.** Descenso en tabla al estilo Alto's Adventure: un dedo (tocar salta, mantener gira), mortales, grinds, toldos, llamas, ancianos, avalancha, alas; 5 montañas procedurales con hora del día y clima. Canvas 2D vectorial, acostado, sin red. |
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. De otra línea de trabajo. |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -378,3 +379,35 @@ Con la key nueva `list_projects` anda, pero `submit_image_generation` en «perro
 - Medido, piloto sin invencibilidad: **4–5/15 → 8/15** (dos corridas); con invencibilidad 14/15. El piloto levanta
   hasta 6 estaciones por partida. El jefe sigue ganándole al piloto porque le tira de frente al escudo.
   CPU ×6: 60 cuadros por segundo en las tres misiones medidas.
+
+### 2026-09-23 (10) — ANDES, estilo Alto's Adventure
+**Pedido textual:** «GENERAME un juego HTML single, dónde el juego trate de una copia parecida a Alto's Adventure, investiga
+todo sobre ese juego y dame 5 niveles completos procedural y de mecánicas goty de verdad y usa lo anterior aprendido de menú y
+modelos procedurales y hazlo incluso mejor».
+
+`juegos-pc/Andes.html`, acostado con el giro sólo por CSS de EL TIPO (y pantalla completa + `orientation.lock` al primer toque).
+Estética vectorial (no pixel art, como el original): cielo que cambia con la hora a lo largo de la bajada (4 momentos por
+montaña que se funden), tres cordilleras por suma de senos, sol/luna, estrellas, fugaces, aurora, nieve, tormenta con rayos.
+
+- **Suelo** = perfil de alturas cada 1 m con huecos (`J.H`, `J.S`, `J.T` hielo); **plataformas de una mano** (cuerdas con
+  comba, techos, toldos que rebotan). Segmentos: lomas, rampa con labio, abismo (a veces con cuerda), escalón, precipicio,
+  cuerdas, rocas, pueblo, bosque, hielo, llamas, campamento de anciano, santuario (guarda progreso) y refugio (meta).
+- **Física**: sobre la nieve la velocidad sigue la pendiente; despega sola cuando el suelo cae más rápido que la balística.
+  Mantener en el aire = mortal; soltar frena el giro. Caída buena si la tabla queda a menos de 0,72 rad (1,0 en techos y cuerdas).
+- **Cadenas** estilo Alto: mortal, doble/triple, perfecto, rasante, grind, beso de cuerda, rebote, abismo, llama, roca rota;
+  con 3 seguidas, impulso que rompe rocas. La bufanda se carga con trucos → doble toque en el aire = alas.
+- Metas (3 por montaña) que se cumplen al pasar y quedan guardadas; taller con 4 riders y 4 mejoras.
+- **Portada viva**: el piloto automático baja una montaña al azar detrás del título.
+
+Trampas que costaron una vuelta (piloto automático, 3 semillas × 5):
+- Dos rocas a 14 m: el salto dura justo eso y caías encima de la segunda. 26–40 m y **salto guardado** (tocar antes de caer).
+- El anciano aceleraba hasta 25 m/s y alcanzaba a cualquiera: ahora va al 90 % de tu velocidad.
+- **Viento en contra en el aire** hacía imposibles los abismos: ×0,35.
+- **Después de las alas** caías en picada: gracia hasta tocar la nieve.
+- Rocas en la zona de aterrizaje de rampas y precipicios: nunca a menos de 55 m.
+- La calidad automática medía el JS del dibujo y nunca bajaba: el costo es pintar píxeles. Ahora mide el intervalo real
+  entre cuadros. Se sacaron tres franjas de niebla y la viñeta de pantalla entera.
+
+Medido: bot 15/15 y 13/15 (dos juegos de semillas); mortal doble en 12/15; toldos ≥4 en el pueblo; CPU ×6 45–51 cuadros por
+segundo con calidad automática (60 a CPU normal); toques reales por CDP: tocar salta, mantener gira, pausa.
+Sondas: `window.__N` — `iniciar(n,sem)`, `anda(n)`, `bot(v)`, `est()`, `dibujarYa()`.

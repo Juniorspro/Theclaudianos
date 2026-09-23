@@ -1,0 +1,1327 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1b2440">
+<title>ANDES</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#101828;touch-action:none;user-select:none;-webkit-user-select:none;
+  font-family:'Avenir Next','Century Gothic',Futura,'Montserrat','Segoe UI',Roboto,system-ui,sans-serif;font-weight:300;color:#fff}
+#pantalla{position:fixed;inset:0;overflow:hidden;background:#101828}
+/* el juego va acostado: con el visor parado, lo gira el CSS (nada de medidas por JS) */
+@media (orientation: portrait){
+  #pantalla{inset:auto;top:0;left:0;width:100vh;height:100vw;transform-origin:0 0;transform:translateX(100vw) rotate(90deg)}
+  @supports (width:100dvh){ #pantalla{width:100dvh;height:100dvw;transform:translateX(100dvw) rotate(90deg)} }
+}
+#lienzo{position:absolute;inset:0;width:100%;height:100%;display:block}
+#hud{position:absolute;inset:0;pointer-events:none;display:none}
+#hud.ver{display:block}
+#hudPuntos{position:absolute;top:10px;right:64px;font-size:22px;letter-spacing:3px;text-shadow:0 1px 6px rgba(0,0,0,.35);text-align:right}
+#hudPuntos small{display:block;font-size:11px;letter-spacing:4px;opacity:.8}
+#hudMonedas{position:absolute;top:12px;left:14px;font-size:15px;letter-spacing:2px;display:flex;align-items:center;gap:6px;text-shadow:0 1px 6px rgba(0,0,0,.35)}
+#hudMonedas i{display:inline-block;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6c0,#f2b632 55%,#b77a10);box-shadow:0 0 6px rgba(255,210,90,.7)}
+#hudBarra{position:absolute;left:50%;top:14px;width:32%;height:3px;transform:translateX(-50%);background:rgba(255,255,255,.22);border-radius:2px}
+#hudBarra b{display:block;height:100%;width:0;background:#fff;border-radius:2px;box-shadow:0 0 8px rgba(255,255,255,.8)}
+#hudBarra span{position:absolute;top:-3px;width:9px;height:9px;border-radius:50%;background:#ffd76a;transform:translateX(-50%);box-shadow:0 0 6px #ffd76a}
+#hudBufanda{position:absolute;left:14px;top:34px;width:90px;height:3px;background:rgba(255,255,255,.2);border-radius:2px}
+#hudBufanda b{display:block;height:100%;width:0;background:#ff6b57;border-radius:2px;box-shadow:0 0 8px #ff6b57}
+#hudPoderes{position:absolute;left:14px;top:44px;font-size:11px;letter-spacing:3px;line-height:1.7}
+#combo{position:absolute;left:0;right:0;top:24%;text-align:center;font-size:17px;letter-spacing:5px;text-shadow:0 2px 10px rgba(0,0,0,.4);opacity:0;transition:opacity .25s}
+#combo b{display:block;font-weight:400;font-size:30px;letter-spacing:6px}
+#aviso{position:absolute;left:0;right:0;top:44%;text-align:center;font-size:15px;letter-spacing:6px;opacity:0;transition:opacity .4s;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+#bPausa{position:absolute;top:8px;right:12px;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.08);
+  pointer-events:auto;display:flex;align-items:center;justify-content:center;gap:5px}
+#bPausa i{display:block;width:3px;height:14px;background:#fff;border-radius:1px}
+.capa{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:14px 20px;text-align:center;overflow-y:auto;touch-action:pan-y}
+.capa.ver{display:flex;animation:aparece .6s ease both}
+.capa.velo{background:linear-gradient(180deg,rgba(10,16,34,.35),rgba(10,16,34,.72))}
+@keyframes aparece{from{opacity:0}to{opacity:1}}
+@keyframes sube{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes brillo{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+@keyframes respira{0%,100%{opacity:.55}50%{opacity:1}}
+.titulo{font-size:min(15vw,17vh,118px);font-weight:200;letter-spacing:.42em;margin-right:-.42em;line-height:1;
+  background:linear-gradient(90deg,#fff 0%,#ffe6b8 25%,#fff 50%,#b8dcff 75%,#fff 100%);background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:brillo 7s linear infinite,sube 1.4s ease both;
+  filter:drop-shadow(0 4px 18px rgba(0,0,0,.25))}
+.sub{font-size:13px;letter-spacing:.6em;margin-right:-.6em;opacity:.85;animation:sube 1.4s .3s ease both}
+.botones{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+.boton{font:inherit;font-size:14px;letter-spacing:.3em;padding:12px 22px 12px calc(22px + .3em);min-width:150px;color:#fff;cursor:pointer;
+  border:1px solid rgba(255,255,255,.75);border-radius:40px;background:rgba(255,255,255,.08);backdrop-filter:blur(2px);
+  animation:sube .8s ease both;transition:background .2s}
+.boton:active{background:rgba(255,255,255,.3)}
+.boton.lleno{background:#fff;color:#1b2440;font-weight:500}
+.boton.chico{min-width:0;font-size:12px;padding:9px 14px 9px calc(14px + .3em)}
+.botones .boton:nth-child(2){animation-delay:.1s}.botones .boton:nth-child(3){animation-delay:.2s}.botones .boton:nth-child(4){animation-delay:.3s}
+.pulsa{animation:sube .8s ease both,respira 2.4s 1s ease-in-out infinite}
+h2{font-weight:200;font-size:30px;letter-spacing:.4em;margin:0 -.4em 4px 0}
+.fila{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:stretch;max-width:100%}
+.tarjeta{width:150px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.35);background:rgba(10,16,34,.4);cursor:pointer;
+  animation:sube .7s ease both;text-align:left;position:relative}
+.tarjeta canvas{display:block;width:150px;height:84px}
+.tarjeta .t{padding:8px 10px 10px;font-size:12px;letter-spacing:.2em}
+.tarjeta .t b{display:block;font-weight:400;font-size:13px;letter-spacing:.22em;margin-bottom:4px}
+.tarjeta .t small{display:block;opacity:.8;font-size:10px;letter-spacing:.12em;line-height:1.6}
+.tarjeta.cerrada{filter:grayscale(.8) brightness(.55)}
+.tarjeta.cerrada::after{content:'';position:absolute;inset:0}
+.tarjeta:nth-child(2){animation-delay:.07s}.tarjeta:nth-child(3){animation-delay:.14s}.tarjeta:nth-child(4){animation-delay:.21s}.tarjeta:nth-child(5){animation-delay:.28s}
+.metas{list-style:none;padding:0;margin:0;font-size:12px;letter-spacing:.14em;text-align:left;line-height:2}
+.metas li::before{content:'○';display:inline-block;width:20px;opacity:.7}
+.metas li.ok::before{content:'●';color:#ffd76a;opacity:1}
+.metas li.nueva{animation:sube .6s ease both}
+.panel{border:1px solid rgba(255,255,255,.35);border-radius:16px;background:rgba(10,16,34,.45);padding:12px 16px;max-width:560px;width:100%}
+.texto{font-size:12.5px;letter-spacing:.06em;line-height:1.7;text-align:left}
+.texto b{font-weight:500;color:#ffe6b8}
+.gran{font-size:44px;font-weight:200;letter-spacing:.2em;margin:0 -.2em 0 0}
+.chico{font-size:11px;letter-spacing:.3em;opacity:.85}
+.stat{display:grid;grid-template-columns:80px 1fr;gap:8px;align-items:center;font-size:10px;letter-spacing:.2em;margin:4px 0}
+.stat i{display:block;height:3px;background:rgba(255,255,255,.2);border-radius:2px}
+.stat i b{display:block;height:100%;background:#fff;border-radius:2px}
+.dos{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;width:100%;max-width:760px}
+.dos>div{flex:1 1 300px}
+.item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.12);font-size:12px;letter-spacing:.14em;text-align:left}
+.item small{display:block;opacity:.75;font-size:10px;letter-spacing:.08em}
+.puntos{display:flex;gap:4px}.puntos i{width:7px;height:7px;border-radius:50%;border:1px solid #fff}.puntos i.si{background:#fff}
+#monedero{position:absolute;top:12px;left:16px;font-size:14px;letter-spacing:.2em;display:flex;align-items:center;gap:7px}
+#monedero i{display:inline-block;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6c0,#f2b632 55%,#b77a10)}
+</style></head><body>
+<div id="pantalla">
+  <canvas id="lienzo"></canvas>
+  <div id="hud">
+    <div id="hudMonedas"><i></i><span id="hudMon">0</span></div>
+    <div id="hudBufanda"><b></b></div>
+    <div id="hudPoderes"></div>
+    <div id="hudBarra"><b></b></div>
+    <div id="hudPuntos"><span id="hudPts">0</span><small id="hudDist">0 M</small></div>
+    <div id="combo"></div>
+    <div id="aviso"></div>
+    <div id="bPausa"><i></i><i></i></div>
+  </div>
+
+  <div class="capa" id="capaTitulo">
+    <div id="monedero"><i></i><span id="monTit">0</span></div>
+    <div class="titulo">ANDES</div>
+    <div class="sub">EL DESCENSO</div>
+    <div class="botones">
+      <button class="boton lleno pulsa" id="btJugar">JUGAR</button>
+      <button class="boton" id="btTaller">TALLER</button>
+      <button class="boton" id="btComo">CÓMO SE JUEGA</button>
+      <button class="boton chico" id="btSonido">SONIDO SÍ</button>
+    </div>
+  </div>
+
+  <div class="capa velo" id="capaNiveles">
+    <h2>MONTAÑAS</h2>
+    <div class="fila" id="listaNiveles"></div>
+    <button class="boton" id="btNivVolver">VOLVER</button>
+  </div>
+
+  <div class="capa velo" id="capaTaller">
+    <h2>TALLER</h2>
+    <div class="dos">
+      <div class="panel"><div class="chico" style="margin-bottom:6px">RIDERS</div><div id="listaRiders"></div></div>
+      <div class="panel"><div class="chico" style="margin-bottom:6px">EQUIPO</div><div id="listaMejoras"></div></div>
+    </div>
+    <button class="boton" id="btTalVolver">VOLVER</button>
+  </div>
+
+  <div class="capa velo" id="capaComo">
+    <h2>CÓMO SE JUEGA</h2>
+    <div class="panel texto">
+      <p><b>Un solo dedo.</b> Tocá para <b>saltar</b>. Mantené apretado en el aire para hacer un <b>mortal hacia atrás</b>; soltá para dejar de girar. Caé con la tabla <b>paralela a la nieve</b> o te comés la montaña.</p>
+      <p><b>Cadenas:</b> mortales, <b>grinds</b> en las banderitas y techos, <b>rebotes</b> en los toldos, abismos y llamas atrapadas se encadenan. Con tres seguidos agarrás <b>impulso</b>: vas más rápido y <b>rompés las rocas</b>.</p>
+      <p><b>La bufanda</b> se carga con trucos. Llena, <b>doble toque en el aire</b> y abrís las <b>alas</b>: mantené para subir, soltá para planear.</p>
+      <p>Pasá <b>cerca del piso</b> en pleno mortal (rasante) o caé en los <b>últimos metros</b> de una cuerda y saltá enseguida: puntos extra.</p>
+      <p>Las <b>banderas de santuario</b> guardan el progreso. Cuidado con los <b>ancianos</b> que te persiguen, la <b>tormenta</b> y la <b>avalancha</b>.</p>
+      <p style="opacity:.7">PC: espacio o clic. P pausa.</p>
+    </div>
+    <button class="boton" id="btComoVolver">VOLVER</button>
+  </div>
+
+  <div class="capa velo" id="capaPausa">
+    <h2>PAUSA</h2>
+    <ul class="metas" id="pausaMetas"></ul>
+    <div class="botones">
+      <button class="boton lleno" id="btSeguir">SEGUIR</button>
+      <button class="boton" id="btReiniciar">REINICIAR</button>
+      <button class="boton" id="btSalir">SALIR</button>
+    </div>
+  </div>
+
+  <div class="capa velo" id="capaRes">
+    <div class="chico" id="resNivel">MONTAÑA</div>
+    <h2 id="resTitulo">LLEGASTE</h2>
+    <div class="gran" id="resPts">0</div>
+    <div class="chico" id="resDet"></div>
+    <ul class="metas" id="resMetas"></ul>
+    <div class="botones">
+      <button class="boton lleno" id="btResSig">SIGUIENTE</button>
+      <button class="boton" id="btResSantuario">DESDE EL SANTUARIO</button>
+      <button class="boton" id="btResOtra">DE NUEVO</button>
+      <button class="boton" id="btResMenu">MONTAÑAS</button>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+/* =====================================================================
+   ANDES — descenso en tabla al estilo Alto's Adventure. Un archivo, sin red.
+   Mundo en metros: el suelo es un perfil de alturas cada 1 m, con huecos.
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const lim=(v,a,b)=> v<a?a:(v>b?b:v), lerp=(a,b,t)=> a+(b-a)*t, TAU = Math.PI*2;
+const angDif=(a,b)=>{ let d=(b-a)%TAU; if(d>Math.PI) d-=TAU; if(d<-Math.PI) d+=TAU; return d; };
+const suave = t => t*t*(3-2*t);
+function mulberry(a){ return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function semilla32(s){ let h=1779033703^s.length; for(let i=0;i<s.length;i++){ h=Math.imul(h^s.charCodeAt(i),3432918353); h=h<<13|h>>>19; } return h>>>0; }
+let rnd = mulberry(1);
+const rf=(a,b)=> a+rnd()*(b-a), ri=(a,b)=> a+Math.floor(rnd()*(b-a+1));
+const vr=(a,b)=> a+Math.random()*(b-a);             /* azar visual: no toca la montaña */
+const DT = 1/60;
+const hex = h => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+const mezcla = (a,b,t)=>{ const A = hex(a), B = hex(b); return 'rgb('+Math.round(lerp(A[0],B[0],t))+','+Math.round(lerp(A[1],B[1],t))+','+Math.round(lerp(A[2],B[2],t))+')'; };
+const mezclaH = (a,b,t)=>{ const A = hex(a), B = hex(b); const c = [0,1,2].map(i=> Math.round(lerp(A[i],B[i],t)).toString(16).padStart(2,'0')); return '#'+c.join(''); };
+
+/* ---------- guardado ---------- */
+const CLAVE = 'andes.v1';
+function cargar(){
+  const b = {monedas:0, rider:'nahuel', riders:{nahuel:1}, mejoras:{casco:0, pluma:0, iman:0, alas:0}, metas:{}, record:{}, abierto:1, sonido:true};
+  try{ const o = JSON.parse(localStorage.getItem(CLAVE)); if(o) return Object.assign(b, o, {riders:Object.assign(b.riders, o.riders||{}), mejoras:Object.assign(b.mejoras, o.mejoras||{}), metas:Object.assign({}, o.metas||{}), record:Object.assign({}, o.record||{})}); }catch(e){}
+  return b;
+}
+function guardar(){ try{ localStorage.setItem(CLAVE, JSON.stringify(G)); }catch(e){} }
+const G = cargar();
+
+/* ---------- riders ---------- */
+const RIDERS = [
+  {id:'nahuel', nom:'NAHUEL', txt:'Parejo en todo.', precio:0, giro:7.4, salto:10.2, vel:1.00, casco:0, campera:'#d84a3a', bufanda:'#ff6b57', gorro:'#2d3a66', piel:'#e9b48c', pantalon:'#2a2f45', tabla:'#f4efe6'},
+  {id:'antu', nom:'ANTÚ', txt:'Gira más rápido: mortales dobles fáciles.', precio:900, giro:9.2, salto:10.2, vel:0.97, casco:0, campera:'#2f8fd6', bufanda:'#ffd24a', gorro:'#f2f2f2', piel:'#c98d64', pantalon:'#1d2438', tabla:'#ffd24a'},
+  {id:'paz', nom:'PAZ', txt:'La más rápida de la montaña.', precio:1700, giro:7.0, salto:9.8, vel:1.09, casco:0, campera:'#7a4ab8', bufanda:'#5ae0c0', gorro:'#ff8a5a', piel:'#f0c09a', pantalon:'#2a2440', tabla:'#5ae0c0'},
+  {id:'cholo', nom:'EL CHOLO', txt:'El abuelo: salta alto y aguanta un golpe más.', precio:2800, giro:6.4, salto:11.2, vel:0.98, casco:1, campera:'#6a7a3a', bufanda:'#f2f2f2', gorro:'#8a5a3a', piel:'#d8a07a', pantalon:'#3a2f25', tabla:'#c8a070', barba:true},
+];
+const RIDER = id => RIDERS.find(r=>r.id===id) || RIDERS[0];
+const MEJORAS = [
+  {id:'casco', nom:'CASCO', txt:'Te salva de un golpe por bajada.', precios:[500,1200,2400]},
+  {id:'pluma', nom:'PLUMA', txt:'La pluma dura más: flotás y siempre caés parado.', precios:[300,800,1600]},
+  {id:'iman', nom:'IMÁN', txt:'El imán de monedas dura más.', precios:[300,800,1600]},
+  {id:'alas', nom:'ALAS', txt:'Las alas duran más y la bufanda carga antes.', precios:[400,1000,2000]},
+];
+
+/* ---------- montañas (niveles) ----------
+   Cada una trae su hora del día (se va corriendo con la bajada), su clima y sus mecánicas. */
+const NIVELES = [
+  {id:'lenas', nom:'LAS LEÑAS', txt:'Amanecer en la pradera', largo:1600, tema:0, peso:{ondas:3, rampa:2, abismo:1.2, escalon:1, cuerdas:1.4, rocas:1.6},
+   metas:[['llegar','LLEGÁ AL REFUGIO'],['mortales:6','HACÉ 6 MORTALES'],['monedas:100','JUNTÁ 100 MONEDAS']]},
+  {id:'pueblo', nom:'EL PUEBLO', txt:'Techos y llamas al atardecer', largo:1900, tema:1, peso:{ondas:2.4, rampa:1.6, abismo:1.3, escalon:1, cuerdas:1.4, rocas:1.4, pueblo:2.2, llamas:1.6},
+   metas:[['llegar','LLEGÁ AL REFUGIO'],['llamas:3','ATRAPÁ 3 LLAMAS'],['rebotes:4','REBOTÁ EN 4 TOLDOS']]},
+  {id:'lengas', nom:'BOSQUE DE LENGAS', txt:'De noche, con ancianos atrás', largo:2200, tema:2, peso:{ondas:2.4, rampa:1.8, abismo:1.6, escalon:1.2, cuerdas:1.8, rocas:1.8, bosque:2, llamas:0.8, anciano:1, precipicio:0.9},
+   metas:[['llegar','LLEGÁ AL REFUGIO'],['grind:150','GRINDÁ 150 M'],['doble','CLAVÁ UN MORTAL DOBLE']]},
+  {id:'tormenta', nom:'LA TORMENTA', txt:'Viento, rayos y hielo', largo:2500, tema:3, peso:{ondas:2.4, rampa:1.8, abismo:1.8, escalon:1.3, cuerdas:1.4, rocas:1.8, hielo:1.6, pueblo:0.8, llamas:0.6, precipicio:0.8},
+   metas:[['llegar','LLEGÁ AL REFUGIO'],['alas:15','VOLÁ 15 S CON LAS ALAS'],['cadena:6','HACÉ UNA CADENA DE 6']]},
+  {id:'cumbre', nom:'EL ACONCAGUA', txt:'La avalancha no perdona', largo:2800, tema:4, peso:{ondas:2.2, rampa:2, abismo:2, escalon:1.4, cuerdas:1.6, rocas:2, hielo:0.8, bosque:0.8, llamas:0.6, precipicio:1.3}, avalancha:true,
+   metas:[['llegar','ESCAPALE A LA AVALANCHA'],['triple','CLAVÁ UN MORTAL TRIPLE'],['sincaer','LLEGÁ SIN CAERTE']]},
+];
+
+/* ---------- temas: cada uno con cuatro momentos del día que se funden ---------- */
+/* cielo arriba, cielo al horizonte, sol, montañas lejos/medio/cerca, nieve, sombra de nieve, niebla */
+const TEMAS = [
+  {nom:'amanecer', noche:[0,0,0,0], estrellas:[0.6,0.2,0,0], clima:'', momentos:[
+    {cA:'#28325e', cB:'#e98a7a', sol:'#ffd9a0', m:['#6a6c9a','#4f5282','#373c66'], n:'#f4ecf0', s:'#b8b4d8', astro:0.1},
+    {cA:'#4a6fb0', cB:'#ffc29a', sol:'#fff0c8', m:['#8a9cc8','#6a7eb0','#4c5f94'], n:'#fbf4f0', s:'#c0c6e4', astro:0.35},
+    {cA:'#5a92d8', cB:'#ffe2c4', sol:'#fffae8', m:['#9ab6dc','#7898c8','#5474aa'], n:'#ffffff', s:'#c8d4ee', astro:0.6},
+    {cA:'#4a8ae0', cB:'#d8ecff', sol:'#ffffff', m:['#a2bee0','#7ea0d0','#5a7cb4'], n:'#ffffff', s:'#c6d6f0', astro:0.8}]},
+  {nom:'atardecer', noche:[0,0,0,0.2], estrellas:[0,0,0.1,0.4], clima:'', momentos:[
+    {cA:'#4a86c8', cB:'#ffe0a8', sol:'#fff4d0', m:['#a0b0d0','#8090b8','#5e6e9c'], n:'#ffffff', s:'#ccd4ec', astro:0.7},
+    {cA:'#6a70b8', cB:'#ffb070', sol:'#ffd08a', m:['#b08aa8','#8a6c98','#5e4c7c'], n:'#fff2e8', s:'#d8b8cc', astro:0.4},
+    {cA:'#5a3f8a', cB:'#ff7a52', sol:'#ff9a5a', m:['#9a5a7a','#744868','#4c3452'], n:'#ffe0d0', s:'#c898b0', astro:0.18},
+    {cA:'#2a2452', cB:'#b84a5a', sol:'#ff6a4a', m:['#5a3a60','#44304e','#2e2238'], n:'#e8c8d0', s:'#9a7a98', astro:0.05}]},
+  {nom:'noche', noche:[0.8,1,1,0.9], estrellas:[0.8,1,1,0.8], clima:'nieve', momentos:[
+    {cA:'#1a1f44', cB:'#4a4a7a', sol:'#f4f0ff', m:['#3a3f6a','#2c3158','#1e2244'], n:'#cfd6f0', s:'#7a84b8', astro:0.8},
+    {cA:'#0e1230', cB:'#2e3462', sol:'#f4f0ff', m:['#2c3260','#20264e','#151a3a'], n:'#b8c2e8', s:'#6470a8', astro:0.9},
+    {cA:'#0b0f2a', cB:'#283060', sol:'#e8f0ff', m:['#283060','#1c2450','#12183a'], n:'#b0bce4', s:'#5c68a0', astro:0.7},
+    {cA:'#141a40', cB:'#3a3e70', sol:'#ffe8d0', m:['#343a68','#262c58','#1a1f44'], n:'#c4cae8', s:'#6c74a8', astro:0.4}]},
+  {nom:'tormenta', noche:[0.3,0.4,0.5,0.35], estrellas:[0,0,0,0], clima:'tormenta', momentos:[
+    {cA:'#4a5468', cB:'#8a94a4', sol:'#e8ecf0', m:['#6a7484','#566070','#40485a'], n:'#e8ecf2', s:'#a8b0c0', astro:0},
+    {cA:'#363e52', cB:'#6a7488', sol:'#d8dce4', m:['#566072','#444c60','#30384a'], n:'#dce2ea', s:'#9aa4b6', astro:0},
+    {cA:'#262c3e', cB:'#505a6e', sol:'#c8ccd8', m:['#444e62','#343c50','#22283a'], n:'#ccd4e0', s:'#8a94a8', astro:0},
+    {cA:'#3a4256', cB:'#78849a', sol:'#e0e4ec', m:['#5a6478','#485266','#343c50'], n:'#e0e6ee', s:'#a0aabc', astro:0}]},
+  {nom:'aurora', noche:[1,1,0.7,0.2], estrellas:[1,1,0.6,0.1], clima:'aurora', momentos:[
+    {cA:'#07102a', cB:'#1e3a58', sol:'#e8fff8', m:['#1e3050','#142440','#0c1830'], n:'#c0d8e8', s:'#5a7a98', astro:0.85},
+    {cA:'#08142e', cB:'#1a4a5a', sol:'#e8fff8', m:['#1c3450','#122840','#0a1a2e'], n:'#bcdce4', s:'#56809a', astro:0.9},
+    {cA:'#1a1e4a', cB:'#6a4a7a', sol:'#ffd8c8', m:['#3a3a68','#2c2c58','#1e1e44'], n:'#dcd4ec', s:'#8a84b0', astro:0.3},
+    {cA:'#3a62a8', cB:'#ffc4a0', sol:'#fff0d8', m:['#7a8cb8','#5c6ea0','#40508a'], n:'#fff6f2', s:'#bcc4e4', astro:0.1}]},
+];
+
+/* ====================== audio ====================== */
+let AC=null, amo, mus, efx, ruidoBuf=null, eco=null;
+const SND = {tabla:null, tablaG:null, tablaF:null, grind:null, grindG:null, viento:null, vientoG:null};
+function audioIni(){
+  if(AC){ if(AC.state==='suspended') AC.resume(); return; }
+  try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return; }
+  amo = AC.createGain(); amo.gain.value = G.sonido? 0.9 : 0; amo.connect(AC.destination);
+  /* eco suave para la música: la montaña responde */
+  eco = AC.createDelay(1.2); eco.delayTime.value = 0.42; const fb = AC.createGain(); fb.gain.value = 0.38; const ef = AC.createBiquadFilter(); ef.type='lowpass'; ef.frequency.value = 2200;
+  eco.connect(ef); ef.connect(fb); fb.connect(eco); const ecoS = AC.createGain(); ecoS.gain.value = 0.5; ef.connect(ecoS); ecoS.connect(amo);
+  mus = AC.createGain(); mus.gain.value = 0.3; mus.connect(amo); mus.connect(eco);
+  efx = AC.createGain(); efx.gain.value = 0.8; efx.connect(amo);
+  ruidoBuf = AC.createBuffer(1, AC.sampleRate*2, AC.sampleRate);
+  const d = ruidoBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  /* ruidos continuos: tabla en la nieve, grind, viento */
+  const lazo = (tipo, f, q)=>{ const s = AC.createBufferSource(); s.buffer = ruidoBuf; s.loop = true; const fl = AC.createBiquadFilter(); fl.type = tipo; fl.frequency.value = f; fl.Q.value = q; const g = AC.createGain(); g.gain.value = 0; s.connect(fl); fl.connect(g); g.connect(efx); s.start(); return [g, fl]; };
+  [SND.tablaG, SND.tablaF] = lazo('bandpass', 900, 0.7);
+  [SND.grindG] = lazo('bandpass', 3200, 8);
+  [SND.vientoG, SND.vientoF] = lazo('lowpass', 500, 0.5);
+}
+function tono(f, dur, tipo, vol, t, dest, f2, ataque){
+  if(!AC) return; t = t||AC.currentTime; const o = AC.createOscillator(), g = AC.createGain();
+  o.type = tipo||'sine'; o.frequency.setValueAtTime(f, t); if(f2) o.frequency.exponentialRampToValueAtTime(Math.max(20,f2), t+dur);
+  const a = ataque||0.005; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t+a); g.gain.exponentialRampToValueAtTime(0.0005, t+dur);
+  o.connect(g); g.connect(dest||efx); o.start(t); o.stop(t+dur+0.05);
+}
+function soplo(dur, vol, f0, f1, t, tipo, q){
+  if(!AC) return; t = t||AC.currentTime; const s = AC.createBufferSource(); s.buffer = ruidoBuf;
+  const fl = AC.createBiquadFilter(); fl.type = tipo||'bandpass'; fl.frequency.setValueAtTime(f0, t); if(f1) fl.frequency.exponentialRampToValueAtTime(f1, t+dur); fl.Q.value = q||1;
+  const g = AC.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0005, t+dur);
+  s.connect(fl); fl.connect(g); g.connect(efx); s.start(t, Math.random()); s.stop(t+dur+0.05);
+}
+const PENTA = [0,2,4,7,9,12,14,16,19,21,24];
+const midi = n => 440*Math.pow(2,(n-69)/12);
+function sfx(n, p){
+  if(!AC || !G.sonido) return; const t = AC.currentTime;
+  switch(n){
+    case 'salto': soplo(0.18, 0.25, 500, 1800, t); tono(160, 0.12, 'sine', 0.2, t, efx, 260); break;
+    case 'cae': soplo(0.2, 0.35, 1400, 300, t, 'lowpass'); tono(90, 0.15, 'sine', 0.25, t, efx, 60); break;
+    case 'perfecto': tono(midi(84), 0.5, 'sine', 0.12, t); tono(midi(91), 0.6, 'sine', 0.09, t+0.06); break;
+    case 'mortal': tono(midi(72 + PENTA[Math.min(8,(p||1)*2)]), 0.6, 'triangle', 0.12, t); break;
+    case 'moneda': tono(midi(79 + PENTA[(p||0)%8]), 0.35, 'sine', 0.1, t); tono(midi(91 + PENTA[(p||0)%8]), 0.2, 'sine', 0.04, t+0.01); break;
+    case 'grind': tono(midi(88), 0.3, 'triangle', 0.05, t); break;
+    case 'rebote': tono(180, 0.25, 'sine', 0.28, t, efx, 520); break;
+    case 'impulso': soplo(0.7, 0.35, 300, 4000, t); tono(midi(76), 0.8, 'sine', 0.1, t); tono(midi(83), 0.8, 'sine', 0.08, t+0.1); break;
+    case 'roca': soplo(0.3, 0.6, 1200, 200, t, 'lowpass'); tono(70, 0.2, 'square', 0.1, t, efx, 40); break;
+    case 'choque': soplo(0.9, 0.7, 2000, 150, t, 'lowpass'); tono(110, 0.5, 'sine', 0.35, t, efx, 45); break;
+    case 'llama': { const o = AC.createOscillator(), g = AC.createGain(), lf = AC.createOscillator(), lg = AC.createGain(); o.type='sawtooth'; o.frequency.value = 420; lf.frequency.value = 22; lg.gain.value = 40; lf.connect(lg); lg.connect(o.frequency);
+      g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.08,t+0.03); g.gain.exponentialRampToValueAtTime(0.0005,t+0.45); const f = AC.createBiquadFilter(); f.type='bandpass'; f.frequency.value=900; o.connect(f); f.connect(g); g.connect(efx); o.start(t); lf.start(t); o.stop(t+0.5); lf.stop(t+0.5); break; }
+    case 'poder': [0,4,7,12].forEach((k,i)=> tono(midi(76+k), 0.4, 'sine', 0.1, t+i*0.07)); break;
+    case 'santuario': [0,7,12,16].forEach((k,i)=> tono(midi(64+k), 1.2, 'sine', 0.08, t+i*0.12, efx, 0, 0.02)); break;
+    case 'alas': soplo(0.8, 0.4, 200, 2400, t); break;
+    case 'trueno': soplo(2.2, 0.7*(p||1), 400, 60, t, 'lowpass'); tono(45, 1.8, 'sine', 0.3*(p||1), t, efx, 30); break;
+    case 'anciano': tono(110, 1.2, 'sawtooth', 0.08, t, efx, 104, 0.2); tono(165, 1.2, 'sawtooth', 0.05, t, efx, 160, 0.2); break;
+    case 'avalancha': soplo(2.5, 0.5, 120, 300, t, 'lowpass'); break;
+    case 'casco': tono(600, 0.1, 'square', 0.1, t); tono(900, 0.3, 'triangle', 0.12, t+0.08); break;
+    case 'toque': tono(midi(81), 0.12, 'sine', 0.08, t); break;
+    case 'meta': [0,4,7,12,16,19].forEach((k,i)=> tono(midi(67+k), 1.4, 'sine', 0.09, t+i*0.11, efx, 0, 0.02)); break;
+  }
+}
+/* música: acordes lentos + arpegio pentatónico con eco, uno por montaña */
+const DEF_MUS = [
+  {bpm:72, raiz:62, acordes:[[0,4,7],[5,9,12],[-3,0,4],[7,11,14]], onda:'triangle'},
+  {bpm:78, raiz:60, acordes:[[0,4,9],[-4,0,3],[5,9,12],[2,5,9]], onda:'triangle'},
+  {bpm:64, raiz:57, acordes:[[0,3,7],[-4,0,3],[-2,2,5],[-5,-2,2]], onda:'sine'},
+  {bpm:84, raiz:55, acordes:[[0,3,7],[1,5,8],[-2,1,5],[0,3,7]], onda:'sawtooth'},
+  {bpm:70, raiz:59, acordes:[[0,4,7],[-3,0,4],[2,5,9],[-5,-1,2]], onda:'triangle'},
+  {bpm:60, raiz:64, acordes:[[0,4,7],[-3,0,4],[5,9,12],[-5,-1,2]], onda:'sine'},
+];
+const MUSICA = {def:null, t:0, i:0};
+function musicaPoner(i){ MUSICA.def = DEF_MUS[i]; }
+setInterval(()=>{
+  if(!AC || !MUSICA.def || !G.sonido) return;
+  if(J.modo==='pausa'){ MUSICA.t = AC.currentTime + 0.1; return; }
+  const d = MUSICA.def, paso = 60/d.bpm/2;
+  if(MUSICA.t < AC.currentTime - 0.3) MUSICA.t = AC.currentTime + 0.05;
+  while(MUSICA.t < AC.currentTime + 0.3){
+    const i = MUSICA.i, s = i%8, c = d.acordes[Math.floor(i/8)%4], t = MUSICA.t;
+    if(s===0) for(const k of c) tono(midi(d.raiz-12+k), paso*8.5, d.onda==='sawtooth'?'triangle':d.onda, 0.035, t, mus, 0, 0.6);
+    if(s===0) tono(midi(d.raiz-24+c[0]), paso*8, 'sine', 0.08, t, mus, 0, 0.3);
+    const r = Math.sin(i*1.7)*0.5+0.5;
+    if(s%2===0 || r>0.75){ const n = d.raiz + 12 + PENTA[(i*3 + Math.floor(i/8)) % 7]; if(r > 0.25) tono(midi(n), paso*3, 'sine', 0.035 + (J.combo||0)*0.004, t, mus, 0, 0.01); }
+    MUSICA.t += paso; MUSICA.i++;
+  }
+}, 50);
+
+/* ====================== estado ====================== */
+const J = {modo:'menu', t:0, ni:0, nv:null, tema:null, L:0, H:null, S:null, T:null,
+  plats:[], rocas:[], monedas:[], llamas:[], poderes:[], santuarios:[], casas:[], arboles:[], postes:[], campos:[], abismos:[], rampas:[],
+  p:null, cam:{x:0, y:0, z:15, sx:0}, parts:[], textos:[], cadena:null, combo:0, puntos:0, run:null, check:null, anciano:null, aval:null,
+  viento:{f:0, obj:0, t:3}, rayo:0, truenoT:-1, lento:0, fin:null, bot:false, demo:false, prog:0};
+const GRAV = 24;
+
+/* ====================== generador de la montaña ====================== */
+function generar(nv, sem){
+  rnd = mulberry(semilla32(sem+'#'+nv.id));
+  const L = nv.largo + 220; J.L = L;
+  const H = J.H = new Float32Array(L+4), S = J.S = new Uint8Array(L+4).fill(1), T = J.T = new Uint8Array(L+4);
+  J.plats = []; J.rocas = []; J.monedas = []; J.llamas = []; J.poderes = []; J.santuarios = []; J.casas = []; J.arboles = []; J.postes = []; J.campos = []; J.abismos = []; J.rampas = [];
+  let x = 0, y = 0, dyAnt = -0.18;
+  const pon = dy => { x++; y += dy; H[x] = y; dyAnt = dy; };
+  H[0] = 0;
+  const hEn = xx => { const i = Math.floor(xx), f = xx-i; return lerp(H[i], H[i+1], f); };
+  const monedaArco = (x0, y0, x1, y1, alto, n)=>{ for(let k=0;k<n;k++){ const t = n>1 ? k/(n-1) : 0.5; J.monedas.push({x:lerp(x0,x1,t), y:lerp(y0,y1,t) + Math.sin(t*Math.PI)*alto, tomada:false}); } };
+  const monedaLinea = (x0, x1, dy, paso)=>{ for(let xx=x0; xx<=x1; xx+=paso) J.monedas.push({x:xx, y:hEn(xx)+dy, tomada:false}); };
+  const ondas = (n, s0)=>{
+    s0 = s0===undefined ? -rf(0.2,0.36) : s0; const A = rf(0.08,0.2), l = rf(26,60), ph = rnd()*TAU;
+    for(let i=0;i<n;i++){ const obj = s0 + A*Math.sin(TAU*i/l + ph); pon(lerp(dyAnt, obj, Math.min(1, 0.12 + i/12))); }
+  };
+  const arbolitos = (x0, x1, dens)=>{ for(let xx=x0; xx<x1; xx+=rf(3,9)/dens){ J.arboles.push({x:xx, h:rf(3,7), frente:rnd()<0.18, tipo:0}); } };
+  const poder = xx=>{ const tipos = nv.tema>=3 ? ['iman','pluma','alas','alas'] : ['iman','pluma','iman','alas']; J.poderes.push({x:xx, y:hEn(xx)+2.4, tipo:tipos[Math.floor(rnd()*tipos.length)], tomado:false}); };
+  const cuerda = (xa, xb, ha, hb, comba, bandera)=>{
+    const p = {tipo:'cuerda', x0:xa, y0:hEn(xa)+ha, x1:xb, y1:hEn(xb)+hb, comba, bandera:bandera!==false, col:Math.floor(rnd()*4)};
+    J.plats.push(p); J.postes.push({x:xa, y:hEn(xa), h:ha}, {x:xb, y:hEn(xb), h:hb});
+    for(let xx=xa+2; xx<xb-1; xx+=2.2) J.monedas.push({x:xx, y:yPlat(p,xx)+0.9, tomada:false});
+    return p;
+  };
+  /* arranque: una bajada suave para agarrar ritmo */
+  ondas(60, -0.2);
+  let ultSant = x, ultPoder = x, ultAnciano = -999, ultSalto = -999;
+  const pesos = nv.peso;
+  const elegirSeg = ()=>{ let tot = 0; for(const k in pesos) tot += pesos[k]; let r = rnd()*tot; for(const k in pesos){ r -= pesos[k]; if(r<0) return k; } return 'ondas'; };
+  while(x < nv.largo - 40){
+    const d = x/nv.largo;
+    if(x - ultSant > 430 && x < nv.largo - 200){                 /* santuario: una bandera en un llano */
+      ondas(8); const x0 = x; for(let i=0;i<22;i++) pon(lerp(dyAnt, -0.07, Math.min(1,i/6)));
+      J.santuarios.push({x:x0+11, y:hEn(x0+11), pasado:false}); ultSant = x; ondas(10); continue; }
+    if(x - ultPoder > 300){ ondas(20); poder(x-8); ultPoder = x; continue; }
+    const tipo = elegirSeg();
+    switch(tipo){
+      case 'ondas': { const x0 = x; ondas(ri(40,90)); arbolitos(x0, x, 0.7); monedaLinea(x0+10, x0+10+ri(10,24), 0.9, 2.4); break; }
+      case 'rampa': {                                               /* rampa: sube, labio y caída: vuelo largo */
+        ondas(12); const x0 = x, n = ri(8,12), sub = rf(0.3, 0.5);
+        for(let i=0;i<n;i++) pon(lerp(dyAnt, sub, 0.35));
+        const labio = x; J.rampas.push({x:labio, y:hEn(labio)});
+        const caida = ri(4,7), paso = -rf(1.3, 2.0);
+        for(let i=0;i<caida;i++) pon(paso);
+        for(let i=0;i<14;i++) pon(lerp(-0.95, -0.36, i/14));
+        monedaArco(labio+2, hEn(labio)+2.5, labio+20, hEn(labio)+1, 2.5, 7);
+        ultSalto = x; ondas(18); break; }
+      case 'abismo': {
+        ondas(14); for(let i=0;i<7;i++) pon(lerp(dyAnt, 0.14, 0.4));
+        const x0 = x, y0 = y, ancho = ri(7, Math.round(9 + 3.5*d)), baja = rf(2.5, 6);
+        for(let i=0;i<ancho;i++){ pon(-baja/ancho); S[x] = 0; }
+        for(let i=0;i<16;i++) pon(lerp(-0.5, -0.32, i/16));
+        J.abismos.push({x0, x1:x0+ancho, y0});
+        if(rnd() < 0.45) cuerda(x0-3, x0+ancho+4, 2.1, 1.3, 0.7);
+        else monedaArco(x0+1, y0+1.5, x0+ancho+2, y0-baja+1, 3, 7);
+        ultSalto = x; ondas(12); break; }
+      case 'escalon': { ondas(16); const x0 = x, n = ri(3,6), paso = -rf(1.6,2.3);
+        for(let i=0;i<n;i++) pon(paso); for(let i=0;i<14;i++) pon(lerp(-0.7,-0.36,i/14));
+        J.rampas.push({x:x0, y:hEn(x0), escalon:true}); monedaArco(x0+1, hEn(x0)+1, x0+14, hEn(x0+14)+1, 1.5, 6); ultSalto = x; ondas(14); break; }
+      case 'cuerdas': { const x0 = x; ondas(ri(60,80)); let xa = x0 + ri(8,14);
+        for(let k=0;k<ri(1,2);k++){ const xb = xa + ri(14,26); if(xb > x-6) break; cuerda(xa, xb, rf(1.6,2.2), rf(1.2,2.0), rf(0.4,1.2)); xa = xb + ri(8,14); }
+        arbolitos(x0, x, 0.5); break; }
+      case 'rocas': { const x0 = x; ondas(ri(70,110)); let xr = Math.max(x0 + ri(12,18), ultSalto + 55);
+        for(let k=0;k<ri(1,3) && xr < x-8;k++){ const r = rf(0.5,0.9); J.rocas.push({x:xr, r, rota:false, t:rnd()<0.3? 'tronco' : 'roca'}); monedaArco(xr-5, hEn(xr-5)+1, xr+5, hEn(xr+5)+1, 2.2, 5); xr += ri(26,40); }
+        break; }
+      case 'pueblo': {                                              /* techos, toldos que rebotan y banderitas entre casas */
+        ondas(10); for(let i=0;i<9;i++) pon(lerp(dyAnt, 0.28, 0.35)); J.rampas.push({x:x, y:hEn(x)});
+        const x0 = x + 3; for(let i=0;i<ri(95,140);i++) pon(lerp(dyAnt, -0.13, 0.2));
+        let xc = x0 + 5, ant = null;
+        while(xc < x - 12){
+          const w = rf(6,9), h = rf(3.2,4.6), g = hEn(xc + w/2) - 0.3, aleta = rf(1.0,1.6);
+          const casa = {x0:xc, x1:xc+w, g, h, aleta, col:Math.floor(rnd()*4), ventanas:ri(1,3)};
+          J.casas.push(casa);
+          J.plats.push({tipo:'techo', pts:[[xc-0.5, g+h], [xc+w/2, g+h+aleta], [xc+w+0.5, g+h]], casa});
+          if(ant && rnd()<0.32){ const xa = ant.x1-0.2, xb = xc+0.2; if(xb - xa > 3) J.plats.push({tipo:'cuerda', x0:xa, y0:ant.g+ant.h+0.3, x1:xb, y1:g+h+0.3, comba:0.5, bandera:true, col:Math.floor(rnd()*4)}); }
+          else if(ant){ const xm = (ant.x1 + xc)/2, gm = hEn(xm); J.plats.push({tipo:'toldo', pts:[[xm-1.6, gm+2.2],[xm+1.6, gm+2.0]], col:Math.floor(rnd()*4)}); }
+          J.monedas.push({x:xc+w/2, y:g+h+aleta+1, tomada:false});
+          ant = casa; xc += w + rf(4,8);
+        }
+        if(pesos.llamas && rnd()<0.6) J.llamas.push({x:x0 + 20, y:0, v:0, estado:'pasta', fase:rnd()*6, vy:0, caida:0});
+        ultSalto = x; ondas(16); break; }
+      case 'bosque': { const x0 = x; ondas(ri(70,110)); arbolitos(x0, x, 1.8);
+        if(rnd()<0.6){ const xa = x0 + ri(12,20), xb = xa + ri(14,22); if(xb < x - 6) cuerda(xa, xb, rf(1.8,2.3), rf(1.4,2.0), rf(0.5,1.0)); }
+        const xr = Math.max(x0 + ri(40,60), ultSalto + 55); if(xr < x-8) J.rocas.push({x:xr, r:rf(0.5,0.8), rota:false, t:'tronco'});
+        break; }
+      case 'precipicio': {                                          /* caída enorme: tiempo para mortales dobles y triples */
+        ondas(16); for(let i=0;i<6;i++) pon(lerp(dyAnt, 0.2, 0.4)); const x0 = x;
+        const alto = rf(18, 24 + 10*d), n = ri(7, 10);
+        for(let i=0;i<n;i++) pon(-alto/n);
+        for(let i=0;i<22;i++) pon(lerp(-0.85, -0.38, i/22));
+        J.rampas.push({x:x0, y:hEn(x0), escalon:true}); monedaArco(x0+2, hEn(x0)+2, x0+22, hEn(x0+22)+2, 4, 8); ultSalto = x; ondas(16); break; }
+      case 'hielo': { const x0 = x; ondas(ri(50,80), -rf(0.26,0.34)); for(let i=x0;i<x;i++) T[i] = 1; monedaLinea(x0+8, x-8, 0.8, 3); break; }
+      case 'llamas': { const x0 = x; ondas(ri(60,80)); const n = ri(1,3); for(let k=0;k<n;k++) J.llamas.push({x:x0+22+k*rf(3,6), y:0, v:0, estado:'pasta', fase:rnd()*6, vy:0, caida:0}); arbolitos(x0, x, 0.5); break; }
+      case 'anciano': { if(x - ultAnciano < 500){ ondas(30); break; } const x0 = x; ondas(24); for(let i=0;i<14;i++) pon(lerp(dyAnt,-0.08,0.3));
+        J.campos.push({x:x0+30, y:hEn(x0+30), usado:false}); ultAnciano = x; ondas(30); break; }
+    }
+  }
+  /* la meta: el refugio, en un llano largo */
+  const xm = x + 20; ondas(20); while(x < L+2) pon(lerp(dyAnt, -0.06, 0.1));
+  J.meta = {x:xm, y:hEn(xm)};
+  /* decorado de fondo del pueblo y demás: todo cacheado por coordenada */
+  J.nMonedas = J.monedas.length;
+}
+function hSuelo(x){ const H = J.H, i = Math.floor(x); if(i < 0) return H[0]; if(i >= J.L) return H[J.L]; return lerp(H[i], H[i+1], x-i); }
+function pendiente(x){ const i = lim(Math.floor(x), 0, J.L-1); return J.H[i+1]-J.H[i]; }
+function solido(x){ const i = Math.floor(x); if(i < 0 || i >= J.L) return true; return J.S[i] && J.S[i+1]; }
+function hielo(x){ const i = Math.floor(x); return i >= 0 && i < J.L && J.T[i]===1; }
+function yPlat(p, x){
+  if(p.tipo==='cuerda'){ const t = (x-p.x0)/(p.x1-p.x0); return lerp(p.y0, p.y1, t) - p.comba*4*t*(1-t); }
+  const q = p.pts; for(let i=0;i<q.length-1;i++){ if(x <= q[i+1][0]) return lerp(q[i][1], q[i+1][1], (x-q[i][0])/(q[i+1][0]-q[i][0])); } return q[q.length-1][1];
+}
+function x0Plat(p){ return p.tipo==='cuerda' ? p.x0 : p.pts[0][0]; }
+function x1Plat(p){ return p.tipo==='cuerda' ? p.x1 : p.pts[p.pts.length-1][0]; }
+function pendPlat(p, x){ return (yPlat(p, Math.min(x1Plat(p), x+0.2)) - yPlat(p, Math.max(x0Plat(p), x-0.2)))/0.4; }
+
+/* ====================== el rider ====================== */
+function nuevoRider(x, v){
+  const y = hSuelo(x);
+  return {x, y, vx:v, vy:0, v, ang:Math.atan(pendiente(x)), angV:0, rot:0, estado:'suelo', plat:null, aireT:0, choqueT:0, sueloT:0,
+    boostT:0, bufanda:0, alasT:0, alasUsado:0, plumaT:0, imanT:0, casco:(G.mejoras.casco||0) + (RIDER(G.rider).casco||0), invT:0, rasante:false, deAbismo:null,
+    grindX:0, grindDesde:0, besoT:0, tumbo:0, cuerpo:[], fase:0};
+}
+const IN = {apretado:false, flanco:false, suelta:false, ultToque:-99, doble:false};
+function iniciarNivel(ni, sem, desdeSant){
+  const nv = NIVELES[ni]; J.ni = ni; J.nv = nv; J.tema = TEMAS[nv.tema]; J.semilla = sem || J.semilla || ('' + (Date.now()%1000000));
+  if(!desdeSant){ generar(nv, J.semilla); J.check = null; J.cayo = false; J.run = {mortales:0, monedas:0, llamas:0, rebotes:0, grind:0, doble:false, triple:false, alas:0, cadena:0, llegar:false, sincaer:true}; J.puntos = 0; J.monedasRun = 0; J.t = 0;
+    for(const m of J.monedas) m.tomada = false; }
+  const c = J.check;
+  const x0 = c ? c.x : 6;
+  J.p = nuevoRider(x0, c ? 12 : 10);
+  if(desdeSant){ J.run.sincaer = false; J.cayo = true; }
+  J.cadena = null; J.combo = 0; J.parts = []; J.textos = []; J.fin = null; J.lento = 0;
+  J.anciano = null; for(const cp of J.campos) if(cp.x > x0) cp.usado = false;
+  J.aval = nv.avalancha ? {x:x0 - 110, v:10} : null;
+  for(const l of J.llamas){ if(l.x > x0 && l.estado!=='atrapada'){ l.estado = 'pasta'; l.v = 0; } }
+  for(const r of J.rocas) if(r.x > x0) r.rota = false;
+  J.viento = {f:0, obj:0, t:4}; J.rayo = 0;
+  J.cam.x = J.p.x + 12; J.cam.y = J.p.y; J.cam.z = 15;
+  J.modo = J.demo ? 'menu' : 'juego';
+}
+function aviso(txt, col){ const a = $('aviso'); a.textContent = txt; a.style.color = col||'#fff'; a.style.opacity = 1; clearTimeout(aviso.t); aviso.t = setTimeout(()=> a.style.opacity = 0, 1800); }
+/* trucos y cadenas */
+function truco(nombre, pts){
+  const c = J.cadena || (J.cadena = {n:0, pts:0, nombres:[], t:0});
+  c.n++; c.pts += pts; c.nombres.push(nombre); c.t = 2.6;
+  const p = J.p;
+  p.bufanda = Math.min(1, p.bufanda + 0.13*(1 + (G.mejoras.alas||0)*0.25));
+  if(J.run) J.run.cadena = Math.max(J.run.cadena, c.n);
+  if(c.n >= 3){ if(p.boostT <= 0){ sfx('impulso'); } p.boostT = 3.2; }
+  mostrarCombo();
+  revisarMetas();
+}
+function mostrarCombo(){
+  const c = J.cadena, e = $('combo'); if(!c || J.demo){ e.style.opacity = 0; return; }
+  const mult = Math.min(6, 1 + 0.5*(c.n-1));
+  e.innerHTML = c.nombres.slice(-3).join(' · ') + '<b>' + Math.round(c.pts) + (c.n>1 ? ' ×'+mult.toFixed(1).replace('.0','') : '') + '</b>';
+  e.style.opacity = 1;
+}
+function cerrarCadena(perdida){
+  const c = J.cadena; if(!c) return;
+  if(!perdida) J.puntos += c.pts * Math.min(6, 1 + 0.5*(c.n-1));
+  J.cadena = null; $('combo').style.opacity = 0;
+}
+function textoMundo(txt, x, y, col){ J.textos.push({txt, x, y, t:1.1, col:col||'#fff'}); }
+function chocar(motivo){
+  const p = J.p; if(p.estado==='caido' || p.invT > 0) return;
+  if(p.casco > 0 && motivo!=='abismo' && motivo!=='avalancha' && motivo!=='anciano'){
+    p.casco--; sfx('casco'); aviso('¡EL CASCO TE SALVÓ!', '#ffe6b8'); p.invT = 1.2; cerrarCadena(true);
+    p.estado = 'suelo'; p.plat = null; p.y = hSuelo(p.x); p.ang = Math.atan(pendiente(p.x)); p.v = Math.max(9, p.v*0.6); p.angV = 0; return; }
+  p.estado = 'caido'; p.choqueT = 0; p.tumbo = 0; cerrarCadena(true); sfx('choque'); J.cam.sx = 1.2; J.cayo = true; if(J.run) J.run.sincaer = false;
+  for(let i=0;i<30;i++) J.parts.push({x:p.x, y:p.y+0.4, vx:vr(-4,8), vy:vr(1,7), t:vr(0.5,1.2), r:vr(0.08,0.2), col:'#ffffff', g:1});
+  J.motivo = motivo;
+  if(!J.demo) aviso({roca:'¡PIÑA CONTRA LA ROCA!', caida:'¡MALA CAÍDA!', abismo:'¡AL ABISMO!', anciano:'¡TE AGARRÓ EL ANCIANO!', avalancha:'¡TE TAPÓ LA AVALANCHA!', pared:'¡CONTRA LA PARED!'}[motivo] || '¡AY!', '#ffb0a0');
+}
+function aterrizar(theta, enPlat){
+  const p = J.p, dif = Math.abs(angDif(theta, p.ang)), tol = enPlat ? 1.0 : 0.72;
+  const flips = Math.floor((p.rot + 0.75)/TAU);
+  const segura = p.plumaT > 0 || p.alasT > 0 || p.gracia > 0;
+  if(dif > tol && !segura){ J.dbg = {dif:+dif.toFixed(2), th:+theta.toFixed(2), ang:+(p.ang%TAU).toFixed(2), rot:+p.rot.toFixed(2), aire:+p.aireT.toFixed(2), plat:!!enPlat, plan:J.botPlan}; chocar('caida'); return false; }
+  const vt = p.vx*Math.cos(theta) + p.vy*Math.sin(theta);
+  p.v = Math.max(8, vt*(dif > 0.36 ? 0.8 : 1));
+  p.ang = theta; p.angV = 0;
+  sfx('cae'); for(let i=0;i<Math.min(16, 4+Math.abs(p.vy)*1.2);i++) J.parts.push({x:p.x, y:p.y, vx:vr(-3,5)+p.v*0.3, vy:vr(1,4), t:vr(0.3,0.7), r:vr(0.05,0.14), col:'#ffffff', g:1});
+  if(flips > 0){
+    const nom = ['','MORTAL','MORTAL DOBLE','MORTAL TRIPLE','CUÁDRUPLE'][Math.min(4,flips)];
+    truco(nom, Math.round(300*Math.pow(flips,1.45))); sfx('mortal', flips);
+    if(J.run){ J.run.mortales += flips; if(flips>=2) J.run.doble = true; if(flips>=3) J.run.triple = true; }
+    if(flips >= 3){ J.lento = 24; }
+  }
+  if(p.rasante && flips > 0) truco('RASANTE', 250);
+  if(dif < 0.14 && (flips > 0 || p.aireT > 0.9)){ truco('PERFECTO', 150); sfx('perfecto'); }
+  if(p.deAbismo && p.x > p.deAbismo.x1){ truco('ABISMO', 200); }
+  p.deAbismo = null; p.rasante = false; p.rot = 0; p.aireT = 0; p.gracia = 0;
+  return true;
+}
+function saltar(extra){
+  const p = J.p, r = RIDER(G.rider), th = p.estado==='plat' ? Math.atan(pendPlat(p.plat, p.x)) : Math.atan(pendiente(p.x));
+  p.vx = p.v*Math.cos(th); p.vy = p.v*Math.sin(th) + (extra||r.salto);
+  if(p.estado==='plat' && p.plat.tipo==='cuerda'){ cerrarGrind(); if(p.besoT > 0) truco('BESO DE CUERDA', 250); }
+  p.estado = 'aire'; p.plat = null; p.rot = 0; p.aireT = 0; sfx('salto');
+  for(let i=0;i<6;i++) J.parts.push({x:p.x, y:p.y, vx:vr(-2,2), vy:vr(0,2), t:vr(0.3,0.6), r:vr(0.05,0.12), col:'#ffffff', g:1});
+}
+function cerrarGrind(){ const p = J.p, m = p.x - p.grindDesde; if(m > 1.5){ truco('GRIND '+Math.round(m)+' M', Math.round(15*m)); if(J.run) J.run.grind += m; } }
+function pasarRider(){
+  const p = J.p, r = RIDER(G.rider);
+  if(p.invT > 0) p.invT -= DT;
+  if(p.besoT > 0) p.besoT -= DT;
+  if(p.estado==='caido'){
+    p.choqueT += DT; p.tumbo += DT*(6 - p.choqueT*3);
+    const g = hSuelo(p.x);
+    p.vy -= GRAV*DT; p.x += p.v*DT*0.5; p.y += p.vy*DT; p.v *= 0.97;
+    if(solido(p.x) && p.y < g){ p.y = g; p.vy = Math.abs(p.vy)*0.3; }
+    if(p.choqueT > 1.4 && !J.fin) terminar(false);
+    return;
+  }
+  const velMax = 27*r.vel*(p.boostT>0 ? 1.22 : 1), velMin = 9*r.vel;
+  if(p.boostT > 0) p.boostT -= DT;
+  if(p.imanT > 0) p.imanT -= DT;
+  if(p.plumaT > 0) p.plumaT -= DT;
+  if(p.alasT > 0){ p.alasT -= DT; if(J.run) J.run.alas += DT; if(p.alasT <= 0){ p.gracia = 99; J.botPlan = null; if(!J.demo) aviso('SE CERRARON LAS ALAS'); } }
+  if(p.gracia > 0) p.gracia -= DT;
+  const viento = J.viento.f;
+  /* doble toque en el aire con la bufanda llena: alas */
+  if(IN.doble && p.estado==='aire' && p.bufanda >= 1 && p.alasT <= 0){ p.bufanda = 0; p.alasT = 5 + (G.mejoras.alas||0)*1.5; sfx('alas'); aviso('¡ALAS!', '#ffe6b8'); truco('ALAS', 100); }
+  if(p.estado==='suelo' || p.estado==='plat'){
+    const enP = p.estado==='plat', pl = p.plat;
+    const pend = enP ? pendPlat(pl, p.x) : pendiente(p.x), th = Math.atan(pend);
+    const hie = !enP && hielo(p.x);
+    let a = -GRAV*Math.sin(th)*0.6 - 0.035*p.v - (hie ? 0.006 : 0.013)*p.v*p.v + viento*0.25;
+    if(enP && pl.tipo==='cuerda') a *= 0.85;
+    if(hie) a += 1.2;
+    p.v = lim(p.v + a*DT, velMin, velMax + (hie? 3 : 0));
+    if(p.boostT > 0) p.v = Math.max(p.v, 17*r.vel);
+    if(IN.flanco || p.bufSalto > 0){ p.bufSalto = 0; saltar(); }
+    else {
+      const nx = p.x + p.v*Math.cos(th)*DT;
+      const yb = p.y + p.v*Math.sin(th)*DT - 0.5*GRAV*DT*DT;
+      if(enP){
+        if(nx > x1Plat(pl)){ if(pl.tipo==='cuerda') cerrarGrind(); p.vx = p.v*Math.cos(th); p.vy = p.v*Math.sin(th); p.estado = 'aire'; p.plat = null; p.x = nx; p.y = yb; }
+        else { p.x = nx; p.y = yPlat(pl, nx); p.ang = lerp(p.ang, th, 0.3);
+          if(pl.tipo==='cuerda'){ if(x1Plat(pl) - p.x < 2.5 && !p.besoMarcado){ p.besoT = 0.5; p.besoMarcado = true; }
+            if(J.t%3===0) J.parts.push({x:p.x, y:p.y, vx:vr(-3,0), vy:vr(0,3), t:0.35, r:0.06, col:'#ffe6a0', g:1, brilla:true}); } }
+      } else {
+        const hs = hSuelo(nx);
+        if(!solido(nx) || yb > hs + 0.03){ p.vx = p.v*Math.cos(th); p.vy = p.v*Math.sin(th); p.estado = 'aire'; p.x = nx; p.y = yb;
+          if(!solido(nx+1)) p.deAbismo = J.abismos.find(ab=> nx >= ab.x0-2 && nx <= ab.x1) || null; }
+        else { p.x = nx; p.y = hs; p.ang = lerp(p.ang, th, 0.35); }
+        p.sueloT += DT;
+      }
+    }
+    /* la cadena sólo se gasta pisando nieve */
+    if(J.cadena && p.estado==='suelo'){ J.cadena.t -= DT; if(J.cadena.t <= 0) cerrarCadena(false); }
+    p.fase += p.v*DT*0.3;
+    if(p.estado==='suelo' && J.t%2===0) J.parts.push({x:p.x-0.4, y:p.y+0.05, vx:-p.v*0.15+vr(-1,1), vy:vr(0.5,2.2)*(p.v/15), t:vr(0.25,0.5), r:vr(0.04,0.11), col: hie? '#dff4ff' : '#ffffff', g:0.6});
+  }
+  else if(p.estado==='aire'){
+    p.aireT += DT; if(J.run && !(p.gracia>0) && p.alasT<=0) J.run.aireMax = Math.max(J.run.aireMax||0, p.aireT);
+    if(p.bufSalto > 0) p.bufSalto -= DT;
+    if(IN.flanco && p.aireT > 0.15) p.bufSalto = 0.16;      /* tocar justo antes de caer: salta apenas pisa */
+    if(p.alasT > 0){
+      /* traje de alas: apretar sube, soltar planea */
+      const obj = IN.apretado ? 7 : -3.2;
+      p.vy += (obj - p.vy)*2.2*DT; p.vx = Math.max(p.vx, 17) + viento*0.2*DT;
+      p.ang = lerp(p.ang, Math.atan2(p.vy, p.vx), 0.12); p.angV = 0;
+    } else {
+      p.vy -= GRAV*DT*(p.plumaT>0 && IN.apretado ? 0.3 : 1);
+      if(p.plumaT>0 && IN.apretado) p.vy = Math.max(p.vy, -3);
+      p.vx += viento*0.35*DT; p.vx = Math.max(p.vx, 8);
+      if(IN.apretado && !(p.plumaT>0 && false)){ p.angV = lerp(p.angV, r.giro, 0.35); }
+      else { p.angV *= 0.7; p.ang += angDif(p.ang, Math.atan2(p.vy, p.vx)*0.6)*0.03; }
+      p.ang += p.angV*DT; p.rot += p.angV*DT;
+    }
+    const x0 = p.x, y0 = p.y;
+    p.x += p.vx*DT; p.y += p.vy*DT;
+    /* rasante: la cabeza pasa cerca del piso en pleno mortal */
+    if(p.angV > 3){ const hx = p.x - Math.sin(p.ang)*1.5, hy = p.y + Math.cos(p.ang)*1.5; if(solido(hx) && hy - hSuelo(hx) < 0.9 && hy > hSuelo(hx)) p.rasante = true; }
+    /* plataformas de una mano: se cae sobre ellas desde arriba */
+    let cayo = false;
+    if(p.vy <= 0){
+      for(const pl of J.plats){ const a = x0Plat(pl), b = x1Plat(pl); if(p.x < a || p.x > b) continue;
+        const yp = yPlat(pl, p.x), ypa = yPlat(pl, lim(x0, a, b));
+        if(y0 >= ypa - 0.05 && p.y <= yp){
+          p.y = yp;
+          if(pl.tipo==='toldo'){ p.vy = Math.max(11.5, -p.vy*0.85); sfx('rebote'); truco('REBOTE', 120); if(J.run) J.run.rebotes++; pl.boing = 1; cayo = true; break; }
+          if(aterrizar(Math.atan(pendPlat(pl, p.x)), true)){ p.estado = 'plat'; p.plat = pl; p.besoMarcado = false;
+            if(pl.tipo==='cuerda'){ p.grindDesde = p.x; sfx('grind'); } else { truco('TECHO', 80); } }
+          cayo = true; break; }
+      }
+    }
+    if(!cayo && p.estado==='aire'){
+      if(solido(p.x)){
+        const g = hSuelo(p.x);
+        if(p.y <= g){
+          if(y0 < hSuelo(x0) - 0.8 && !solido(x0)){ chocar('pared'); }
+          else { p.y = g; if(aterrizar(Math.atan(pendiente(p.x)), false)) p.estado = 'suelo'; p.sueloT = 0; }
+        }
+      } else if(p.y < hSuelo(p.x) - 22){ chocar('abismo'); }
+    }
+  }
+  if(p.estado==='plat' && p.plat && p.plat.tipo==='cuerda' && J.t%10===0) sfx('grind');
+  /* rocas */
+  for(const rc of J.rocas){ if(rc.rota || Math.abs(rc.x - p.x) > 2) continue;
+    const g = hSuelo(rc.x);
+    if(Math.abs(rc.x - p.x) < rc.r*0.85 + 0.25 && p.y < g + rc.r*1.05){
+      if(p.boostT > 0 || p.invT > 0){ rc.rota = true; sfx('roca'); truco('ROCA ROTA', 100); J.cam.sx = 0.5;
+        for(let i=0;i<14;i++) J.parts.push({x:rc.x, y:g+rc.r*0.6, vx:vr(-3,8), vy:vr(2,8), t:vr(0.5,1), r:vr(0.1,0.25), col: rc.t==='tronco'? '#6a4a30' : '#6a6a7a', g:1}); }
+      else { J.dbg = {est:p.estado, dx:+(rc.x-p.x).toFixed(2), alt:+(p.y-g).toFixed(2), r:+rc.r.toFixed(2), suelo:+p.sueloT.toFixed(2), v:+p.v.toFixed(1), aire:+p.aireT.toFixed(2)}; chocar('roca'); } } }
+  /* monedas */
+  for(const m of J.monedas){ if(m.tomada || m.x < p.x - 3 || m.x > p.x + 12) continue;
+    if(p.imanT > 0 && Math.hypot(m.x-p.x, m.y-p.y) < 10){ m.x += (p.x - m.x)*0.25; m.y += (p.y + 0.9 - m.y)*0.25; }
+    if(Math.hypot(m.x - p.x, m.y - (p.y + 0.9)) < 1.25){ m.tomada = true; J.monedasRun++; if(J.run) J.run.monedas++; J.racha = (J.t - (J.ultMon||-99) < 30) ? (J.racha||0)+1 : 0; J.ultMon = J.t; sfx('moneda', J.racha); J.puntos += 10; } }
+  /* poderes */
+  for(const w of J.poderes){ if(w.tomado || Math.abs(w.x - p.x) > 1.6 || Math.abs(w.y - (p.y+0.9)) > 1.6) continue;
+    w.tomado = true; sfx('poder');
+    if(w.tipo==='iman'){ p.imanT = 10 + (G.mejoras.iman||0)*4; aviso('IMÁN'); }
+    else if(w.tipo==='pluma'){ p.plumaT = 8 + (G.mejoras.pluma||0)*3; aviso('PLUMA · MANTENÉ PARA FLOTAR'); }
+    else { p.bufanda = 1; aviso('BUFANDA LLENA · DOBLE TOQUE EN EL AIRE'); } }
+  /* llamas */
+  for(const l of J.llamas){
+    if(l.estado==='atrapada'){ l.vy -= GRAV*0.5*DT; l.x += 7*DT; l.caida += l.vy*DT; continue; }
+    const g = hSuelo(l.x);
+    if(l.estado==='pasta' && p.x > l.x - 42) { l.estado = 'corre'; l.v = rf(7.5, 10); }
+    if(l.estado==='corre'){ const nx = l.x + l.v*DT; if(solido(nx+1.5)) l.x = nx; else l.v = 0; l.fase += l.v*DT*0.7; }
+    l.y = hSuelo(l.x);
+    if(Math.abs(l.x - p.x) < 1.4 && Math.abs(l.y + 0.9 - (p.y + 0.8)) < 1.6 && p.estado!=='caido'){
+      l.estado = 'atrapada'; l.vy = 9; l.caida = 0; sfx('llama'); truco('LLAMA', 250); if(J.run) J.run.llamas++; }
+  }
+  /* santuarios */
+  for(const s of J.santuarios) if(!s.pasado && p.x > s.x){ s.pasado = true; J.check = {x:s.x}; if(!J.demo){ sfx('santuario'); aviso('SANTUARIO · PROGRESO GUARDADO', '#ffe6b8'); } }
+  /* anciano que persigue */
+  for(const c of J.campos) if(!c.usado && p.x > c.x + 4){ c.usado = true; J.anciano = {x:c.x - 6, v:12, t:0, y:hSuelo(c.x), vy:0, salto:0}; sfx('anciano'); if(!J.demo) aviso('¡UN ANCIANO TE PERSIGUE!', '#ffb0a0'); }
+  const an = J.anciano;
+  if(an){ an.t += DT; an.v = lerp(an.v, Math.max(12, Math.min(22, p.v*0.9)), 0.03);      /* un poco más lento que vos: te agarra si te frenás */
+    an.x += an.v*DT; const g = hSuelo(an.x);
+    if(!solido(an.x) || an.y > g + 0.05){ an.vy -= GRAV*DT; an.y += an.vy*DT; if(solido(an.x) && an.y < g){ an.y = g; an.vy = 0; } if(an.y < g - 6){ an.y = g; an.vy = 0; } }
+    else { an.y = g; if(!solido(an.x + an.v*0.4)){ an.vy = 10; an.y += 0.1; } }
+    for(const rc of J.rocas) if(!rc.rota && rc.x - an.x > 0 && rc.x - an.x < an.v*0.2 && an.vy === 0){ an.vy = 9; an.y += 0.1; }
+    if(an.x > p.x - 0.6 && p.estado!=='caido' && p.y - hSuelo(p.x) < 2.2) chocar('anciano');
+    if(an.t > 32 || p.x - an.x > 120){ if(!J.demo) aviso('EL ANCIANO SE CANSÓ', '#ffe6b8'); J.anciano = null; }
+  }
+  /* avalancha */
+  const av = J.aval;
+  if(av){ const prog = p.x/J.nv.largo; av.v = lerp(11, 17, prog); av.x += av.v*DT;
+    if(av.x < p.x - 90) av.x = p.x - 90;
+    if(av.x > p.x - 0.5 && p.estado!=='caido') chocar('avalancha');
+    if(J.t%120===0) sfx('avalancha'); }
+  /* la meta */
+  if(!J.fin && J.meta && p.x > J.meta.x){ if(J.run) J.run.llegar = true; revisarMetas(); terminar(true); }
+}
+function pasarMundo(){
+  J.t++;
+  /* viento de la tormenta: ráfagas de frente y de espalda */
+  const tm = J.tema;
+  if(tm.clima==='tormenta'){ const v = J.viento; v.t -= DT; if(v.t<=0){ v.obj = v.obj ? 0 : (rnd()<0.75 ? -rf(5,9) : rf(3,6)); v.t = v.obj ? rf(1.8,3.2) : rf(4,9); if(v.obj && !J.demo) aviso(v.obj<0 ? 'VIENTO EN CONTRA' : 'VIENTO A FAVOR'); }
+    v.f += (v.obj - v.f)*0.05;
+    if(Math.random() < 0.003){ J.rayo = 1; J.truenoT = J.t + Math.round(vr(20,70)); }
+    if(J.t === J.truenoT) sfx('trueno', vr(0.6,1)); }
+  if(J.rayo > 0) J.rayo *= 0.9;
+  if(J.bot) IN.apretado = false;
+  if(J.bot) pensarBot();
+  if(J.p) pasarRider();
+  IN.flanco = false; IN.doble = false;
+  for(let i=J.parts.length-1;i>=0;i--){ const q = J.parts[i]; q.t -= DT; q.vy -= GRAV*(q.g||0)*DT*0.4; q.x += q.vx*DT; q.y += q.vy*DT; if(q.t<=0) J.parts.splice(i,1); }
+  if(J.parts.length > 300) J.parts.splice(0, J.parts.length-300);
+  for(let i=J.textos.length-1;i>=0;i--){ const t = J.textos[i]; t.t -= DT; t.y += DT; if(t.t<=0) J.textos.splice(i,1); }
+  for(const pl of J.plats) if(pl.boing) pl.boing *= 0.88;
+  if(J.fin){ J.fin.t -= DT; if(J.fin.t <= 0 && !J.fin.hecho){ J.fin.hecho = true; if(J.demo) iniciarDemo(); else mostrarResultado(); } }
+  pasarCamara();
+  audioContinuo();
+}
+function terminar(llego){
+  if(J.fin) return;
+  cerrarCadena(false);
+  J.fin = {llego, t: llego ? 2.4 : 0.4, hecho:false};
+  if(llego && !J.demo){ sfx('meta'); aviso('¡LLEGASTE AL REFUGIO!', '#ffe6b8'); }
+}
+
+/* ====================== piloto (portada y banco) ====================== */
+function vueloPrevisto(p){
+  /* simula la caída balística: cuánto tiempo queda en el aire y con qué pendiente cae */
+  let x = p.x, y = p.y, vx = p.vx, vy = p.vy, t = 0;
+  for(let k=0;k<240;k++){ vy -= GRAV*DT; x += vx*DT; y += vy*DT; t += DT;
+    for(const pl of J.plats){ if(pl.tipo==='toldo') continue; if(x >= x0Plat(pl) && x <= x1Plat(pl) && vy < 0 && Math.abs(y - yPlat(pl,x)) < 0.4) return {t, th:Math.atan(pendPlat(pl,x))}; }
+    if(solido(x) && y <= hSuelo(x)) return {t, th:Math.atan(pendiente(x))};
+    if(y < hSuelo(x) - 25) return {t, th:0}; }
+  return {t, th:0};
+}
+function pensarBot(){
+  const p = J.p; if(!p || p.estado==='caido') return;
+  const r = RIDER(G.rider);
+  if(p.estado==='suelo' || p.estado==='plat'){
+    let salta = false;
+    for(const rc of J.rocas){ const d = rc.x - p.x; if(rc.rota || p.boostT > d/Math.max(8,p.v) + 0.25) continue; if(d > 0 && d < p.v*0.3 + 1.2) salta = true; }
+    for(let d=0.3; d < p.v*0.1 + 0.8; d+=0.3) if(!solido(p.x+d)) salta = true;
+    if(J.anciano && p.x - J.anciano.x < 4) salta = true;
+    for(const rp of J.rampas){ const d = rp.x - p.x; if(d > 0 && d < p.v*0.06 + 0.4) salta = true; }      /* saltar en el labio: más aire */
+    if(p.estado==='plat' && x1Plat(p.plat) - p.x < 1.4 && p.plat.tipo==='cuerda') salta = true;
+    for(const pl of J.plats){ if(pl.tipo==='toldo') continue; const d = x0Plat(pl) - p.x; if(d > p.v*0.28 && d < p.v*0.36 && yPlat(pl, x0Plat(pl)) - p.y < 2.4) salta = true; }
+    if(salta && p.sueloT > 0.02) IN.flanco = true;
+    J.botPlan = null;
+  } else if(p.estado==='aire'){
+    if(p.alasT > 0){ IN.apretado = p.y - hSuelo(p.x) < 5; return; }
+    if(p.bufanda >= 1 && p.aireT > 0.2 && p.aireT < 0.25) IN.doble = true;
+    if(!J.botPlan){ const v = vueloPrevisto(p); const n = p.aireT > 1.5 ? 0 : Math.max(0, Math.floor((v.t - 0.34)*r.giro/TAU)); J.botPlan = {n, th:v.th, a0:p.ang}; }
+    const pl = J.botPlan; const objetivo = pl.th + TAU*pl.n;
+    const giro = p.ang + p.rot*0 ; const hecho = p.rot + (p.ang - p.rot - pl.a0);
+    if(pl.n > 0 && (p.ang - pl.a0) + (pl.a0 - pl.th) < TAU*pl.n - 0.3) IN.apretado = true;
+  }
+}
+
+/* ====================== lienzo ====================== */
+const cv = $('lienzo'), cx = cv.getContext('2d', {alpha:false});
+let ANCHO = 892, ALTO = 412, R = 1, CALIDAD = 1;
+function medir(){
+  const w = cv.clientWidth, h = cv.clientHeight; if(!w || !h) return;
+  ANCHO = w; ALTO = h;
+  /* el lienzo no va a la resolución del aparato: tope 1,5 y calidad que baja sola si cuesta */
+  R = Math.min(window.devicePixelRatio||1, 1.5)*CALIDAD;
+  cv.width = Math.round(w*R); cv.height = Math.round(h*R);
+  CACHE.cielo = {}; CACHE.vineta = null;
+}
+window.addEventListener('resize', medir);
+if(window.ResizeObserver) new ResizeObserver(medir).observe(cv);
+const CACHE = {cielo:{}, vineta:null, brillo:{}};
+const Z = ()=> J.cam.z;
+const SX = x => (x - J.cam.x)*J.cam.z + ANCHO*0.5;
+const SY = y => ALTO*0.52 - (y - J.cam.y)*J.cam.z;
+
+function pasarCamara(){
+  const p = J.p, c = J.cam; if(!p) return;
+  const alt = Math.max(0, p.y - hSuelo(p.x));
+  const zObj = lim(15.5 - Math.max(0, alt-3)*0.45 - Math.max(0, p.v-17)*0.18, 8, 15.5) * (ALTO/412);
+  c.z += (zObj - c.z)*0.035;
+  const tx = p.x + (ANCHO*0.19)/c.z;
+  const ty = lerp(p.y, hSuelo(p.x + 22), 0.4) + alt*0.25 - 1.5;
+  c.x += (tx - c.x)*0.14; c.y += (ty - c.y)*0.07;
+  c.sx *= 0.86;
+}
+/* ---------- colores del momento (se funden a lo largo de la bajada) ---------- */
+function momento(){
+  const tm = J.tema, prog = J.meta ? lim(J.p.x/J.meta.x, 0, 0.999) : 0, mf = prog*3, i = Math.floor(mf), f = mf - i;
+  const a = tm.momentos[i], b = tm.momentos[Math.min(3,i+1)];
+  return {i, f, prog, cA:mezclaH(a.cA,b.cA,f), cB:mezclaH(a.cB,b.cB,f), sol:mezclaH(a.sol,b.sol,f), m:[0,1,2].map(k=> mezclaH(a.m[k],b.m[k],f)),
+    n:mezclaH(a.n,b.n,f), s:mezclaH(a.s,b.s,f), astro:lerp(a.astro,b.astro,f), noche:lerp(tm.noche[i], tm.noche[Math.min(3,i+1)], f), estrellas:lerp(tm.estrellas[i], tm.estrellas[Math.min(3,i+1)], f)};
+}
+function cielo(cA, cB){
+  const k = cA+cB; let c = CACHE.cielo[k]; if(c) return c;
+  if(Object.keys(CACHE.cielo).length > 40) CACHE.cielo = {};
+  c = document.createElement('canvas'); c.width = 4; c.height = 128; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0,0,0,128); gr.addColorStop(0, cA); gr.addColorStop(0.72, cB); gr.addColorStop(1, cB);
+  g.fillStyle = gr; g.fillRect(0,0,4,128); CACHE.cielo[k] = c; return c;
+}
+function brillo(col, r){                                  /* halo radial cacheado, para sol, luna, fogatas, ventanas */
+  const k = col+'|'+r; let c = CACHE.brillo[k]; if(c) return c;
+  c = document.createElement('canvas'); c.width = c.height = r*2; const g = c.getContext('2d'); const rgb = hex(col);
+  const gr = g.createRadialGradient(r,r,0,r,r,r); gr.addColorStop(0,'rgba('+rgb+',0.9)'); gr.addColorStop(0.25,'rgba('+rgb+',0.35)'); gr.addColorStop(1,'rgba('+rgb+',0)');
+  g.fillStyle = gr; g.fillRect(0,0,r*2,r*2); CACHE.brillo[k] = c; return c;
+}
+/* estrellas fijas y capas de cordillera: sumas de senos con semilla */
+const ESTRELLAS = Array.from({length:120}, (_,i)=>({x:Math.random(), y:Math.random()*0.55, r:Math.random()<0.1? 1.6 : 0.9, f:Math.random()*6}));
+const CAPAS = [{p:0.05, base:0.50, amp:0.20, k:[0.0031,0.0087,0.019], w:[1,0.45,0.2], ph:[1.3,4.1,2.2]},
+               {p:0.12, base:0.60, amp:0.15, k:[0.0052,0.013,0.029], w:[1,0.5,0.22], ph:[0.4,2.6,5.3]},
+               {p:0.26, base:0.70, amp:0.12, k:[0.0078,0.021,0.047], w:[1,0.4,0.18], ph:[3.3,1.1,0.2]}];
+function altCapa(c, u){ let s = 0; for(let i=0;i<3;i++){ const v = Math.sin(u*c.k[i] + c.ph[i]); s += c.w[i]*(i===0 ? v : 1 - Math.abs(v)*2); } return s; }
+const COPOS = Array.from({length:110}, ()=>({x:Math.random(), y:Math.random(), z:0.3+Math.random()*0.9, r:Math.random()}));
+
+function dibujar(){
+  const t0 = performance.now();
+  if(!J.p){ return; }
+  cx.setTransform(R,0,0,R,0,0); cx.globalAlpha = 1; cx.globalCompositeOperation = 'source-over';
+  const mo = momento(), c = J.cam, W = ANCHO, Hh = ALTO;
+  const sh = c.sx > 0.05 ? vr(-c.sx, c.sx)*c.z*0.3 : 0;
+  /* cielo */
+  cx.drawImage(cielo(mo.cA, mo.cB), 0, 0, W, Hh*0.9); cx.fillStyle = mo.cB; cx.fillRect(0, Hh*0.89, W, Hh*0.12);
+  /* estrellas */
+  if(mo.estrellas > 0.02){ cx.fillStyle = '#ffffff';
+    for(const s of ESTRELLAS){ cx.globalAlpha = mo.estrellas*(0.55 + 0.45*Math.sin(J.t*0.05 + s.f)); cx.fillRect((s.x*W - c.x*0.4) % W + (s.x*W - c.x*0.4 < 0 ? W : 0), s.y*Hh, s.r, s.r); }
+    cx.globalAlpha = 1;
+    if(J.t % 600 === 77) J.fugaz = {x:vr(0.2,0.9)*W, y:vr(0.05,0.3)*Hh, t:1};
+    if(J.fugaz && J.fugaz.t > 0){ const f = J.fugaz; f.t -= 0.03; cx.strokeStyle = 'rgba(255,255,255,'+(f.t*mo.estrellas)+')'; cx.lineWidth = 1.2; cx.beginPath(); cx.moveTo(f.x, f.y); cx.lineTo(f.x-50*f.t, f.y+20*f.t); cx.stroke(); f.x += 6; f.y += 2.4; } }
+  /* aurora */
+  if(J.tema.clima==='aurora' && mo.noche > 0.3) dibAurora(mo.noche);
+  /* sol o luna: sube o baja con la hora */
+  { const ax = W*(0.72 - mo.prog*0.25), ay = Hh*(0.62 - mo.astro*0.46), luna = mo.noche > 0.5;
+    const b = brillo(mo.sol, 90); cx.globalCompositeOperation = 'lighter'; cx.globalAlpha = 0.8; cx.drawImage(b, ax-90, ay-90); cx.globalAlpha = 1; cx.globalCompositeOperation = 'source-over';
+    cx.fillStyle = mo.sol; cx.beginPath(); cx.arc(ax, ay, luna ? 13 : 18, 0, TAU); cx.fill();
+    if(luna){ cx.fillStyle = mo.cA; cx.globalAlpha = 0.85; cx.beginPath(); cx.arc(ax+6, ay-4, 12, 0, TAU); cx.fill(); cx.globalAlpha = 1; } }
+  /* cordilleras en tres capas, con perspectiva de aire */
+  CAPAS.forEach((cp, k)=>{
+    cx.fillStyle = mo.m[k]; cx.beginPath(); cx.moveTo(0, Hh);
+    const desY = (c.y*c.z)*cp.p*0.35;
+    for(let x=0; x<=W+10; x+=10){ const u = x + c.x*c.z*cp.p; cx.lineTo(x, Hh*cp.base - altCapa(cp,u)*Hh*cp.amp + desY); }
+    cx.lineTo(W, Hh); cx.closePath(); cx.fill();
+    if(k===0){ cx.strokeStyle = 'rgba(255,255,255,'+(0.18 + 0.2*(1-mo.noche))+')'; cx.lineWidth = 1.2; cx.beginPath();
+      for(let x=0; x<=W+10; x+=10){ const u = x + c.x*c.z*cp.p; const y = Hh*cp.base - altCapa(cp,u)*Hh*cp.amp + desY; if(x) cx.lineTo(x,y); else cx.moveTo(x,y); } cx.stroke(); }
+  });
+  cx.save(); cx.translate(sh, sh*0.5);
+  const x0 = c.x - W*0.5/c.z - 4, x1 = c.x + W*0.5/c.z + 4;
+  /* árboles de fondo y casas: van antes de la nieve, que les tapa la base */
+  for(const a of J.arboles) if(!a.frente && a.x > x0 - 5 && a.x < x1 + 5) dibArbol(a, mo);
+  for(const k of J.casas) if(k.x1 > x0 && k.x0 < x1) dibCasa(k, mo);
+  for(const cp of J.campos) if(cp.x > x0 - 6 && cp.x < x1 + 6) dibCampo(cp, mo);
+  for(const s of J.santuarios) if(s.x > x0 - 8 && s.x < x1 + 8) dibSantuario(s, mo);
+  if(J.meta && J.meta.x > x0 - 20 && J.meta.x < x1 + 20) dibRefugio(mo);
+  dibTerreno(x0, x1, mo);
+  for(const q of J.postes) if(q.x > x0-2 && q.x < x1+2) dibPoste(q, mo);
+  for(const pl of J.plats) if(x1Plat(pl) > x0 && x0Plat(pl) < x1) dibPlat(pl, mo);
+  for(const rc of J.rocas) if(!rc.rota && rc.x > x0 - 3 && rc.x < x1 + 3) dibRoca(rc, mo);
+  dibMonedas(x0, x1);
+  for(const w of J.poderes) if(!w.tomado && w.x > x0 - 2 && w.x < x1 + 2) dibPoder(w);
+  for(const l of J.llamas) if(l.x > x0 - 4 && l.x < x1 + 4) dibLlama(l, mo);
+  if(J.anciano) dibAnciano(J.anciano, mo);
+  dibRider(J.p, mo);
+  for(const q of J.parts){ const X = SX(q.x), Y = SY(q.y); if(X < -10 || X > W+10) continue;
+    cx.globalAlpha = lim(q.t*2, 0, 1); cx.fillStyle = q.col; const rr = Math.max(1, q.r*c.z); cx.fillRect(X-rr/2, Y-rr/2, rr, rr); }
+  cx.globalAlpha = 1;
+  for(const a of J.arboles) if(a.frente && a.x > x0 - 5 && a.x < x1 + 5) dibArbol(a, mo, true);
+  if(J.aval) dibAvalancha(J.aval, mo);
+  for(const t of J.textos){ cx.globalAlpha = lim(t.t*1.5, 0, 1); cx.fillStyle = t.col; cx.font = '300 13px '+FUENTE; cx.textAlign = 'center'; cx.fillText(t.txt, SX(t.x), SY(t.y)); }
+  cx.globalAlpha = 1;
+  cx.restore();
+  /* clima */
+  dibClima(mo);
+  if(J.rayo > 0.02){ cx.fillStyle = 'rgba(235,240,255,'+(J.rayo*0.7)+')'; cx.fillRect(0,0,W,Hh); }
+
+}
+const FUENTE = "'Avenir Next','Century Gothic',Futura,Montserrat,'Segoe UI',Roboto,sans-serif";
+function dibTerreno(x0, x1, mo){
+  const H = J.H, S = J.S, W = ANCHO, Hh = ALTO, z = J.cam.z;
+  const a = Math.max(0, Math.floor(x0)), b = Math.min(J.L, Math.ceil(x1)), paso = z > 10 ? 1 : 2;
+  const gr = cx.createLinearGradient(0, SY(hSuelo(J.cam.x)) - 20, 0, Hh);
+  gr.addColorStop(0, mo.n); gr.addColorStop(0.35, mezcla(mo.n, mo.s, 0.5)); gr.addColorStop(1, mo.s);
+  cx.fillStyle = gr; cx.beginPath();
+  let en = false, ux = 0;
+  const bordes = [];
+  for(let x=a; x<=b; x+=paso){
+    const sol = S[x];
+    if(sol){ const X = SX(x), Y = SY(H[x]); if(!en){ cx.moveTo(X, Hh+10); cx.lineTo(X, Y); en = true; bordes.push(X); } else cx.lineTo(X, Y); ux = X; }
+    else if(en){ cx.lineTo(ux, Hh+10); en = false; bordes.push(ux); }
+  }
+  if(en) cx.lineTo(ux, Hh+10);
+  cx.fill();
+  /* paredes de los abismos: una franja oscura */
+  cx.fillStyle = mezcla(mo.s, '#1a2040', 0.35);
+  for(let i=1;i<bordes.length;i+=2){ const X = bordes[i]; cx.fillRect(X-3, SY(hSuelo((X - ANCHO*0.5)/z + J.cam.x)), 3, Hh); }
+  for(let i=2;i<bordes.length;i+=2){ const X = bordes[i]; cx.fillRect(X, SY(hSuelo((X - ANCHO*0.5)/z + J.cam.x)), 3, Hh); }
+  /* filo de nieve brillante y hielo */
+  cx.lineWidth = 2; cx.strokeStyle = 'rgba(255,255,255,0.85)'; cx.beginPath(); en = false;
+  for(let x=a; x<=b; x+=paso){ if(S[x]){ const X = SX(x), Y = SY(H[x]); if(!en){ cx.moveTo(X,Y); en = true; } else cx.lineTo(X,Y); } else en = false; }
+  cx.stroke();
+  cx.lineWidth = 3; cx.strokeStyle = 'rgba(170,230,255,0.9)'; cx.beginPath(); en = false;
+  for(let x=a; x<=b; x++){ if(J.T[x]===1 && S[x]){ const X = SX(x), Y = SY(H[x]); if(!en){ cx.moveTo(X,Y); en = true; } else cx.lineTo(X,Y); } else en = false; }
+  cx.stroke();
+}
+function dibArbol(a, mo, frente){
+  const z = J.cam.z, g = hSuelo(a.x), X = SX(a.x), Y = SY(g), h = a.h*z*(frente? 1.5 : 1), w = h*0.36;
+  cx.fillStyle = frente ? mezcla(mo.m[2], '#050810', 0.6) : mezcla(mo.m[2], mo.s, 0.25);
+  if(a.tipo===0){ cx.beginPath(); cx.moveTo(X, Y - h); cx.lineTo(X + w*0.55, Y - h*0.45); cx.lineTo(X + w*0.3, Y - h*0.45); cx.lineTo(X + w, Y - h*0.05); cx.lineTo(X - w, Y - h*0.05); cx.lineTo(X - w*0.3, Y - h*0.45); cx.lineTo(X - w*0.55, Y - h*0.45); cx.closePath(); cx.fill();
+    cx.fillRect(X - w*0.08, Y - h*0.06, w*0.16, h*0.14);
+    if(!frente){ cx.fillStyle = 'rgba(255,255,255,0.55)'; cx.beginPath(); cx.moveTo(X, Y-h); cx.lineTo(X + w*0.22, Y - h*0.78); cx.lineTo(X - w*0.22, Y - h*0.78); cx.closePath(); cx.fill(); } }
+  else { cx.fillRect(X - w*0.06, Y - h*0.9, w*0.12, h*0.9); cx.beginPath(); cx.arc(X, Y - h*0.8, w*0.5, 0, TAU); cx.fill(); }
+}
+function dibCasa(k, mo){
+  const z = J.cam.z, X0 = SX(k.x0), X1 = SX(k.x1), Yb = SY(k.g - 3), Yt = SY(k.g + k.h), Ya = SY(k.g + k.h + k.aleta), Xm = (X0+X1)/2;
+  const pared = ['#8a5a4a','#6a7a8a','#9a7a5a','#7a6a8a'][k.col];
+  cx.fillStyle = mezcla(pared, mo.s, 0.3 + mo.noche*0.3); cx.fillRect(X0, Yt, X1-X0, Yb-Yt);
+  cx.fillStyle = mezcla('#3a2a2a', mo.s, 0.2); cx.beginPath(); cx.moveTo(X0 - 0.5*z, Yt); cx.lineTo(Xm, Ya); cx.lineTo(X1 + 0.5*z, Yt); cx.closePath(); cx.fill();
+  cx.fillStyle = mo.n; cx.beginPath(); cx.moveTo(X0 - 0.5*z, Yt); cx.lineTo(Xm, Ya); cx.lineTo(X1 + 0.5*z, Yt); cx.lineTo(X1 + 0.5*z, Yt - 0.25*z); cx.lineTo(Xm, Ya - 0.3*z); cx.lineTo(X0 - 0.5*z, Yt - 0.25*z); cx.closePath(); cx.fill();
+  for(let i=0;i<k.ventanas;i++){ const wx = X0 + (X1-X0)*(i+1)/(k.ventanas+1) - 0.4*z, wy = Yt + 0.9*z;
+    const luz = mo.noche > 0.25; cx.fillStyle = luz ? '#ffd88a' : mezcla('#2a3048', mo.s, 0.3); cx.fillRect(wx, wy, 0.8*z, 0.9*z);
+    if(luz){ const b = brillo('#ffc870', 30); cx.globalCompositeOperation = 'lighter'; cx.globalAlpha = 0.5*mo.noche; cx.drawImage(b, wx+0.4*z-30, wy+0.45*z-30); cx.globalAlpha = 1; cx.globalCompositeOperation = 'source-over'; } }
+  /* chimenea con humo */
+  cx.fillStyle = mezcla('#3a2a2a', mo.s, 0.2); cx.fillRect(X1 - 1.6*z, Ya + (Yt-Ya)*0.35 - 0.8*z, 0.5*z, 0.9*z);
+}
+function dibCampo(cp, mo){
+  const z = J.cam.z, X = SX(cp.x), Y = SY(cp.y);
+  cx.fillStyle = mezcla('#8a6a4a', mo.s, 0.35); cx.beginPath(); cx.moveTo(X - 1.6*z, Y); cx.lineTo(X, Y - 2.2*z); cx.lineTo(X + 1.6*z, Y); cx.closePath(); cx.fill();
+  cx.fillStyle = '#1a1a24'; cx.beginPath(); cx.moveTo(X - 0.3*z, Y); cx.lineTo(X, Y - 1*z); cx.lineTo(X + 0.3*z, Y); cx.closePath(); cx.fill();
+  const fx = X + 2.6*z, b = brillo('#ff9a4a', 40); cx.globalCompositeOperation = 'lighter'; cx.globalAlpha = 0.6 + 0.2*Math.sin(J.t*0.3); cx.drawImage(b, fx-40, Y-0.4*z-40); cx.globalAlpha = 1; cx.globalCompositeOperation = 'source-over';
+  cx.fillStyle = '#ffb45a'; cx.beginPath(); cx.moveTo(fx - 0.3*z, Y); cx.quadraticCurveTo(fx, Y - (0.9 + 0.2*Math.sin(J.t*0.4))*z, fx + 0.3*z, Y); cx.fill();
+  if(!cp.usado){ dibFigura(cp.x - 1.8, cp.y, 0, mo, 'anciano', 0, true); }
+}
+function dibSantuario(s, mo){
+  const z = J.cam.z, X = SX(s.x), Y = SY(s.y);
+  cx.strokeStyle = mezcla('#4a3a3a', mo.s, 0.3); cx.lineWidth = Math.max(1, 0.12*z);
+  cx.beginPath(); cx.moveTo(X - 3*z, Y); cx.lineTo(X - 3*z, Y - 4*z); cx.moveTo(X + 3*z, Y); cx.lineTo(X + 3*z, Y - 3.6*z); cx.stroke();
+  /* banderas de oración: cinco colores */
+  const cols = ['#3a6ad8','#f2f2f2','#d84a3a','#3aa860','#f2c230'];
+  cx.lineWidth = 1; cx.strokeStyle = 'rgba(255,255,255,0.6)'; cx.beginPath(); cx.moveTo(X - 3*z, Y - 4*z); cx.quadraticCurveTo(X, Y - 3*z, X + 3*z, Y - 3.6*z); cx.stroke();
+  for(let i=0;i<9;i++){ const t = (i+0.5)/9, px = X - 3*z + 6*z*t, py = Y - 4*z + (0.8*z)*(4*t*(1-t))*1.1 + 0.4*z*t;
+    cx.fillStyle = cols[i%5]; const ond = Math.sin(J.t*0.12 + i)*0.12*z; cx.fillRect(px - 0.25*z, py, 0.5*z, 0.6*z + ond); }
+  if(s.pasado){ const b = brillo('#ffe6b8', 50); cx.globalCompositeOperation = 'lighter'; cx.globalAlpha = 0.25; cx.drawImage(b, X-50, Y-3*z-50); cx.globalAlpha = 1; cx.globalCompositeOperation = 'source-over'; }
+}
+function dibRefugio(mo){
+  const z = J.cam.z, m = J.meta, X = SX(m.x + 8), Y = SY(hSuelo(m.x + 8));
+  cx.fillStyle = mezcla('#6a4a3a', mo.s, 0.25); cx.fillRect(X - 4*z, Y - 4*z, 8*z, 4.5*z);
+  cx.fillStyle = mo.n; cx.beginPath(); cx.moveTo(X - 5*z, Y - 4*z); cx.lineTo(X, Y - 7*z); cx.lineTo(X + 5*z, Y - 4*z); cx.closePath(); cx.fill();
+  cx.fillStyle = '#ffd88a'; cx.fillRect(X - 1*z, Y - 2.4*z, 2*z, 2.4*z);
+  const b = brillo('#ffc870', 70); cx.globalCompositeOperation = 'lighter'; cx.globalAlpha = 0.7; cx.drawImage(b, X-70, Y-1.2*z-70); cx.globalAlpha = 1; cx.globalCompositeOperation = 'source-over';
+  /* arco de llegada */
+  const Xa = SX(m.x), Ya = SY(hSuelo(m.x));
+  cx.strokeStyle = 'rgba(255,255,255,0.8)'; cx.lineWidth = Math.max(1, 0.15*z); cx.beginPath(); cx.moveTo(Xa, Ya); cx.lineTo(Xa, Ya - 5*z); cx.lineTo(Xa + 0.5*z, Ya - 5*z); cx.stroke();
+  cx.fillStyle = '#ffd76a'; cx.beginPath(); cx.moveTo(Xa, Ya - 5*z); cx.lineTo(Xa + 2*z + Math.sin(J.t*0.1)*0.3*z, Ya - 4.5*z); cx.lineTo(Xa, Ya - 4*z); cx.closePath(); cx.fill();
+}
+function dibPoste(q, mo){ const z = J.cam.z, X = SX(q.x), Y = SY(q.y); cx.strokeStyle = mezcla('#3a2e2a', mo.s, 0.25); cx.lineWidth = Math.max(1.5, 0.16*z); cx.beginPath(); cx.moveTo(X, Y + 0.3*z); cx.lineTo(X, Y - q.h*z - 0.3*z); cx.stroke(); }
+const COL_BAND = [['#d84a3a','#f2c230','#3a6ad8'],['#3aa860','#f2f2f2','#d84a3a'],['#f2c230','#7a4ab8','#3aa8d8'],['#ff8a5a','#5ae0c0','#f2f2f2']];
+function dibPlat(pl, mo){
+  const z = J.cam.z;
+  if(pl.tipo==='cuerda'){
+    cx.strokeStyle = 'rgba(255,255,255,0.75)'; cx.lineWidth = 1.2; cx.beginPath();
+    for(let i=0;i<=20;i++){ const x = lerp(pl.x0, pl.x1, i/20), X = SX(x), Y = SY(yPlat(pl,x)); if(i) cx.lineTo(X,Y); else cx.moveTo(X,Y); } cx.stroke();
+    if(pl.bandera){ const n = Math.max(4, Math.round((pl.x1-pl.x0)/1.2)), cols = COL_BAND[pl.col];
+      for(let i=1;i<n;i++){ const x = lerp(pl.x0, pl.x1, i/n), X = SX(x), Y = SY(yPlat(pl,x)), s = 0.45*z, o = Math.sin(J.t*0.15 + i)*0.08*z;
+        cx.fillStyle = cols[i%3]; cx.beginPath(); cx.moveTo(X - s*0.5, Y); cx.lineTo(X + s*0.5, Y); cx.lineTo(X + o, Y + s); cx.closePath(); cx.fill(); } }
+  } else if(pl.tipo==='toldo'){
+    const [a,b] = pl.pts, cols = COL_BAND[pl.col], hund = (pl.boing||0)*0.4*z;
+    cx.strokeStyle = mezcla('#3a2e2a', mo.s, 0.25); cx.lineWidth = Math.max(1.2, 0.12*z);
+    cx.beginPath(); cx.moveTo(SX(a[0]), SY(a[1])); cx.lineTo(SX(a[0]), SY(hSuelo(a[0]))); cx.moveTo(SX(b[0]), SY(b[1])); cx.lineTo(SX(b[0]), SY(hSuelo(b[0]))); cx.stroke();
+    for(let i=0;i<4;i++){ cx.fillStyle = cols[i%3]; const t0 = i/4, t1 = (i+1)/4;
+      cx.beginPath(); cx.moveTo(SX(lerp(a[0],b[0],t0)), SY(lerp(a[1],b[1],t0)) + hund*Math.sin(t0*Math.PI)); cx.lineTo(SX(lerp(a[0],b[0],t1)), SY(lerp(a[1],b[1],t1)) + hund*Math.sin(t1*Math.PI));
+      cx.lineTo(SX(lerp(a[0],b[0],t1)), SY(lerp(a[1],b[1],t1)) + 0.4*z + hund*Math.sin(t1*Math.PI)); cx.lineTo(SX(lerp(a[0],b[0],t0)), SY(lerp(a[1],b[1],t0)) + 0.4*z + hund*Math.sin(t0*Math.PI)); cx.closePath(); cx.fill(); }
+  }
+}
+function dibRoca(rc, mo){
+  const z = J.cam.z, g = hSuelo(rc.x), X = SX(rc.x), Y = SY(g), r = rc.r*z;
+  if(rc.t==='tronco'){ cx.fillStyle = mezcla('#5a3e2a', mo.s, 0.3); cx.beginPath(); cx.ellipse(X, Y - r*0.55, r*1.2, r*0.6, 0, 0, TAU); cx.fill(); cx.fillStyle = mezcla('#a07a54', mo.s, 0.3); cx.beginPath(); cx.ellipse(X + r*1.05, Y - r*0.55, r*0.25, r*0.55, 0, 0, TAU); cx.fill(); cx.fillStyle = mo.n; cx.fillRect(X - r*1.1, Y - r*1.2, r*2, r*0.22); return; }
+  cx.fillStyle = mezcla('#4a4e5e', mo.s, 0.35);
+  cx.beginPath(); cx.moveTo(X - r*1.2, Y + 2); cx.lineTo(X - r*0.9, Y - r*0.9); cx.lineTo(X - r*0.1, Y - r*1.4); cx.lineTo(X + r*0.8, Y - r*1.0); cx.lineTo(X + r*1.2, Y + 2); cx.closePath(); cx.fill();
+  cx.fillStyle = mo.n; cx.beginPath(); cx.moveTo(X - r*0.9, Y - r*0.9); cx.lineTo(X - r*0.1, Y - r*1.4); cx.lineTo(X + r*0.8, Y - r*1.0); cx.lineTo(X + r*0.2, Y - r*1.05); cx.lineTo(X - r*0.4, Y - r*0.85); cx.closePath(); cx.fill();
+}
+function dibMonedas(x0, x1){
+  const z = J.cam.z, esc = Math.abs(Math.cos(J.t*0.08));
+  for(const m of J.monedas){ if(m.tomada || m.x < x0 || m.x > x1) continue; const X = SX(m.x), Y = SY(m.y), r = 0.3*z;
+    cx.fillStyle = '#b77a10'; cx.beginPath(); cx.ellipse(X, Y, Math.max(1, r*esc), r, 0, 0, TAU); cx.fill();
+    cx.fillStyle = '#f2b632'; cx.beginPath(); cx.ellipse(X, Y, Math.max(0.6, r*0.78*esc), r*0.78, 0, 0, TAU); cx.fill();
+    cx.fillStyle = '#fff6c0'; cx.fillRect(X - r*0.3*esc, Y - r*0.5, Math.max(1, r*0.25*esc), r*0.5); }
+}
+function dibPoder(w){
+  const z = J.cam.z, X = SX(w.x), Y = SY(w.y + Math.sin(J.t*0.07)*0.2), col = {iman:'#ff6b57', pluma:'#b8e8ff', alas:'#ffe6b8'}[w.tipo];
+  const b = brillo(col, 40); cx.globalCompositeOperation = 'lighter'; cx.drawImage(b, X-40, Y-40); cx.globalCompositeOperation = 'source-over';
+  cx.strokeStyle = '#fff'; cx.lineWidth = 1.5; cx.beginPath(); cx.arc(X, Y, 0.55*z, 0, TAU); cx.stroke();
+  cx.fillStyle = '#fff'; cx.strokeStyle = '#fff'; cx.lineWidth = Math.max(1.5, 0.12*z); const s = 0.3*z;
+  if(w.tipo==='iman'){ cx.beginPath(); cx.arc(X, Y - s*0.1, s*0.7, Math.PI, 0, true); cx.stroke(); }
+  else if(w.tipo==='pluma'){ cx.beginPath(); cx.moveTo(X - s, Y + s); cx.quadraticCurveTo(X - s*0.2, Y - s*1.2, X + s, Y - s); cx.quadraticCurveTo(X, Y, X - s, Y + s); cx.fill(); }
+  else { cx.beginPath(); cx.moveTo(X, Y); cx.lineTo(X - s*1.2, Y - s*0.6); cx.lineTo(X - s*0.8, Y + s*0.3); cx.closePath(); cx.moveTo(X, Y); cx.lineTo(X + s*1.2, Y - s*0.6); cx.lineTo(X + s*0.8, Y + s*0.3); cx.closePath(); cx.fill(); }
+}
+function dibLlama(l, mo){
+  const z = J.cam.z, X = SX(l.x), Y = SY(l.y + (l.caida||0)), s = z;
+  cx.save(); cx.translate(X, Y); if(l.estado==='atrapada') cx.rotate(-l.caida*0.3);
+  const cuerpo = mezcla('#efe2c8', mo.s, 0.25), osc = mezcla('#bfa888', mo.s, 0.3);
+  cx.strokeStyle = osc; cx.lineWidth = Math.max(1.2, 0.13*s);
+  const f = l.fase*1.6; cx.beginPath();
+  for(const [lx, of] of [[-0.35,0],[0.35,Math.PI],[-0.25,Math.PI*0.5],[0.45,Math.PI*1.5]]){ const pa = Math.sin(f + of)*0.25*(l.v>0?1:0.1); cx.moveTo(lx*s, -0.75*s); cx.lineTo((lx + pa)*s, 0); }
+  cx.stroke();
+  cx.fillStyle = cuerpo; cx.beginPath(); cx.ellipse(0, -0.9*s, 0.62*s, 0.3*s, 0, 0, TAU); cx.fill();
+  cx.beginPath(); cx.moveTo(0.42*s, -1.0*s); cx.lineTo(0.62*s, -1.75*s); cx.lineTo(0.78*s, -1.75*s); cx.lineTo(0.62*s, -0.95*s); cx.closePath(); cx.fill();
+  cx.beginPath(); cx.ellipse(0.78*s, -1.8*s, 0.2*s, 0.12*s, 0, 0, TAU); cx.fill();
+  cx.fillStyle = osc; cx.fillRect(0.62*s, -2.02*s, 0.06*s, 0.16*s); cx.fillRect(0.72*s, -2.04*s, 0.06*s, 0.16*s);
+  cx.fillStyle = '#d84a3a'; cx.fillRect(-0.2*s, -1.22*s, 0.5*s, 0.1*s);
+  cx.restore();
+}
+function dibAnciano(an, mo){ dibFigura(an.x, an.y, Math.atan(pendiente(an.x)), mo, 'anciano', J.t*0.2, false); }
+/* figura por piezas: el mismo esqueleto para el rider y el anciano */
+function dibFigura(x, y, ang, mo, tipo, fase, sentado){
+  const z = J.cam.z, X = SX(x), Y = SY(y);
+  cx.save(); cx.translate(X, Y); cx.rotate(-ang);
+  const s = z;
+  const tela = mezcla('#6a6a78', mo.s, 0.2), piel = '#d8b090';
+  if(sentado){ cx.fillStyle = tela; cx.beginPath(); cx.ellipse(0, -0.5*s, 0.5*s, 0.55*s, 0, 0, TAU); cx.fill(); cx.fillStyle = piel; cx.beginPath(); cx.arc(0, -1.2*s, 0.2*s, 0, TAU); cx.fill(); cx.fillStyle = '#f2f2f2'; cx.beginPath(); cx.ellipse(0.1*s, -1.05*s, 0.14*s, 0.22*s, 0, 0, TAU); cx.fill(); cx.restore(); return; }
+  cx.fillStyle = '#c8a070'; cx.fillRect(-0.9*s, -0.1*s, 1.8*s, 0.12*s);
+  cx.strokeStyle = tela; cx.lineWidth = Math.max(2, 0.22*s); cx.lineCap = 'round';
+  cx.beginPath(); cx.moveTo(-0.3*s, -0.1*s); cx.lineTo(-0.05*s, -0.8*s); cx.lineTo(0.3*s, -0.1*s); cx.stroke();
+  cx.fillStyle = tela; cx.beginPath(); cx.moveTo(-0.35*s, -0.6*s); cx.lineTo(0.35*s, -0.6*s); cx.lineTo(0.2*s, -1.45*s); cx.lineTo(-0.15*s, -1.45*s); cx.closePath(); cx.fill();
+  cx.strokeStyle = '#6a4a2a'; cx.lineWidth = Math.max(1, 0.08*s); cx.beginPath(); cx.moveTo(0.3*s, -1.2*s); cx.lineTo(0.9*s, -0.1*s + Math.sin(fase)*0.1*s); cx.stroke();
+  cx.fillStyle = piel; cx.beginPath(); cx.arc(0.05*s, -1.65*s, 0.19*s, 0, TAU); cx.fill();
+  cx.fillStyle = '#f2f2f2'; cx.beginPath(); cx.moveTo(-0.05*s, -1.6*s); cx.quadraticCurveTo(0.35*s, -1.1*s + Math.sin(fase*2)*0.05*s, 0.2*s, -1.55*s); cx.closePath(); cx.fill();
+  cx.fillStyle = '#e8e8e8'; cx.beginPath(); cx.arc(0.02*s, -1.76*s, 0.16*s, Math.PI, 0); cx.fill();
+  cx.restore();
+}
+/* el rider: piezas que siguen a la pose, y la bufanda con física de cadena */
+const BUF = {pts:null};
+function poseRider(p){
+  /* devuelve cadera, hombro, cabeza, manos y rodillas en metros, con x hacia adelante e y hacia arriba */
+  const st = p.estado, t = J.t*DT;
+  if(p.alasT > 0) return {cad:[-0.1,0.55], hom:[0.55,0.8], cab:[0.85,0.9], m1:[-0.2,1.5], m2:[0.2,1.5], r1:[-0.3,0.3], r2:[0.2,0.35], alas:true};
+  if(st==='caido') return {cad:[0,0.4], hom:[0.2,0.9], cab:[0.3,1.2], m1:[-0.4,0.8], m2:[0.6,1.1], r1:[-0.4,0.2], r2:[0.4,0.2]};
+  if(st==='aire'){
+    const tuck = Math.min(1, Math.abs(p.angV)/5);
+    return {cad:[0,lerp(0.85,0.55,tuck)], hom:[lerp(0.15,0.25,tuck), lerp(1.45,0.95,tuck)], cab:[lerp(0.22,0.4,tuck), lerp(1.72,1.2,tuck)],
+      m1:[lerp(-0.45,0.35,tuck), lerp(1.3,0.45,tuck)], m2:[lerp(0.6,0.45,tuck), lerp(1.35,0.5,tuck)], r1:[lerp(-0.2,0.05,tuck), lerp(0.45,0.7,tuck)], r2:[lerp(0.28,0.4,tuck), lerp(0.45,0.7,tuck)]};
+  }
+  if(st==='plat' && p.plat && p.plat.tipo==='cuerda') return {cad:[0,0.8], hom:[0.08,1.4], cab:[0.14,1.68], m1:[-0.75,1.35], m2:[0.8,1.4], r1:[-0.28,0.4], r2:[0.3,0.4]};
+  const b = Math.sin(p.fase)*0.04, ag = p.v > 20 ? 0.12 : 0;
+  return {cad:[-0.02,0.72 - ag + b], hom:[0.18+ag,1.32 - ag*1.5 + b], cab:[0.26+ag*1.3,1.6 - ag*1.6 + b], m1:[-0.45,1.0 + Math.sin(p.fase*0.5)*0.08], m2:[0.55,1.05], r1:[-0.16,0.42], r2:[0.36,0.42]};
+}
+function dibRider(p, mo){
+  const rd = RIDER(G.rider), z = J.cam.z, X = SX(p.x), Y = SY(p.y), ang = p.estado==='caido' ? p.tumbo : p.ang;
+  const ps = poseRider(p);
+  /* bufanda: cadena de puntos que cuelga del cuello y se va para atrás */
+  const cA = Math.cos(ang), sA = Math.sin(ang);
+  const cuelloW = {x:p.x + ps.hom[0]*cA - ps.hom[1]*sA, y:p.y + ps.hom[0]*sA + ps.hom[1]*cA};
+  if(!BUF.pts || Math.hypot(BUF.pts[0].x - cuelloW.x, BUF.pts[0].y - cuelloW.y) > 5){ BUF.pts = Array.from({length:9}, (_,i)=>({x:cuelloW.x - i*0.25, y:cuelloW.y, px:cuelloW.x - i*0.25, py:cuelloW.y})); }
+  const B = BUF.pts; B[0].x = cuelloW.x; B[0].y = cuelloW.y;
+  for(let i=1;i<B.length;i++){ const q = B[i]; const vx = (q.x - q.px)*0.9, vy = (q.y - q.py)*0.9; q.px = q.x; q.py = q.y; q.x += vx - 0.004; q.y += vy - 0.0025 + Math.sin(J.t*0.3 + i)*0.004; }
+  for(let k=0;k<3;k++) for(let i=1;i<B.length;i++){ const a = B[i-1], q = B[i], dx = q.x-a.x, dy = q.y-a.y, d = Math.hypot(dx,dy)||1, e = (d - 0.26)/d; q.x -= dx*e; q.y -= dy*e; }
+  const brilla = p.boostT > 0;
+  if(brilla){ cx.globalCompositeOperation = 'lighter'; cx.strokeStyle = 'rgba(255,190,120,0.35)'; cx.lineWidth = 0.5*z; cx.lineCap = 'round'; cx.beginPath(); B.forEach((q,i)=> i? cx.lineTo(SX(q.x),SY(q.y)) : cx.moveTo(SX(q.x),SY(q.y))); cx.stroke(); cx.globalCompositeOperation = 'source-over';
+    if(J.t%2===0) J.parts.push({x:B[8].x, y:B[8].y, vx:vr(-1,0), vy:vr(-0.5,0.5), t:0.6, r:0.12, col:'#ffd0a0', g:0, brilla:true}); }
+  cx.strokeStyle = rd.bufanda; cx.lineCap = 'round';
+  for(let i=1;i<B.length;i++){ cx.lineWidth = Math.max(1, (0.2 - i*0.014)*z); cx.beginPath(); cx.moveTo(SX(B[i-1].x), SY(B[i-1].y)); cx.lineTo(SX(B[i].x), SY(B[i].y)); cx.stroke(); }
+  cx.save(); cx.translate(X, Y); cx.rotate(-ang);
+  const P = q => [q[0]*z, -q[1]*z];
+  if(p.invT > 0 && (J.t>>2)%2) cx.globalAlpha = 0.5;
+  /* tabla */
+  cx.fillStyle = rd.tabla; cx.beginPath(); cx.moveTo(-0.85*z, -0.02*z); cx.quadraticCurveTo(-1.02*z, -0.02*z, -0.98*z, -0.16*z); cx.lineTo(0.98*z, -0.16*z); cx.quadraticCurveTo(1.05*z, -0.02*z, 0.85*z, -0.02*z); cx.closePath(); cx.fill();
+  cx.fillStyle = 'rgba(0,0,0,0.25)'; cx.fillRect(-0.8*z, -0.05*z, 1.6*z, 0.03*z);
+  /* piernas */
+  cx.strokeStyle = rd.pantalon; cx.lineWidth = Math.max(2, 0.2*z);
+  const cad = P(ps.cad), r1 = P(ps.r1), r2 = P(ps.r2);
+  cx.beginPath(); cx.moveTo(-0.3*z, -0.14*z); cx.lineTo(r1[0], r1[1]); cx.lineTo(cad[0], cad[1]); cx.moveTo(0.35*z, -0.14*z); cx.lineTo(r2[0], r2[1]); cx.lineTo(cad[0], cad[1]); cx.stroke();
+  /* torso */
+  const hom = P(ps.hom), cab = P(ps.cab);
+  cx.strokeStyle = rd.campera; cx.lineWidth = Math.max(3, 0.36*z); cx.beginPath(); cx.moveTo(cad[0], cad[1]); cx.lineTo(hom[0], hom[1]); cx.stroke();
+  /* brazos */
+  const m1 = P(ps.m1), m2 = P(ps.m2);
+  cx.lineWidth = Math.max(1.6, 0.15*z); cx.beginPath(); cx.moveTo(hom[0], hom[1]); cx.lineTo(m1[0], m1[1]); cx.moveTo(hom[0], hom[1]); cx.lineTo(m2[0], m2[1]); cx.stroke();
+  if(ps.alas){ cx.fillStyle = 'rgba(255,230,184,0.85)'; cx.beginPath(); cx.moveTo(hom[0], hom[1]); cx.lineTo(m1[0], m1[1]); cx.lineTo(cad[0], cad[1]); cx.lineTo(m2[0], m2[1]); cx.closePath(); cx.fill(); }
+  cx.fillStyle = rd.piel; cx.beginPath(); cx.arc(m1[0], m1[1], 0.07*z, 0, TAU); cx.arc(m2[0], m2[1], 0.07*z, 0, TAU); cx.fill();
+  /* cabeza con gorro de pompón */
+  cx.fillStyle = rd.piel; cx.beginPath(); cx.arc(cab[0], cab[1], 0.17*z, 0, TAU); cx.fill();
+  if(rd.barba){ cx.fillStyle = '#f2f2f2'; cx.beginPath(); cx.ellipse(cab[0] + 0.08*z, cab[1] + 0.12*z, 0.1*z, 0.14*z, 0, 0, TAU); cx.fill(); }
+  cx.fillStyle = rd.gorro; cx.beginPath(); cx.arc(cab[0], cab[1] - 0.02*z, 0.18*z, Math.PI*1.02, Math.PI*1.98); cx.fill();
+  cx.beginPath(); cx.arc(cab[0] - 0.05*z, cab[1] - 0.22*z, 0.07*z, 0, TAU); cx.fill();
+  cx.restore(); cx.globalAlpha = 1;
+  if(p.plumaT > 0){ const b = brillo('#b8e8ff', 36); cx.globalCompositeOperation = 'lighter'; cx.globalAlpha = 0.5; cx.drawImage(b, X-36, Y-0.9*z-36); cx.globalAlpha = 1; cx.globalCompositeOperation = 'source-over'; }
+}
+function dibAvalancha(av, mo){
+  const X = SX(av.x), d = Math.round(J.p.x - av.x);
+  if(!J.demo && X < 30){ const cerca = d < 25; cx.fillStyle = cerca && (J.t>>3)%2 ? '#ffb0a0' : 'rgba(255,255,255,0.9)'; cx.font = '300 12px '+FUENTE; cx.textAlign = 'left'; cx.fillText('◀ AVALANCHA  '+d+' M', 12, ALTO - 14);
+    cx.fillStyle = 'rgba(255,255,255,'+lim(0.5 - d/120, 0.05, 0.45)+')'; cx.fillRect(0, 0, 14, ALTO); }
+  if(X < -150) return;
+  const H0 = ALTO;
+  cx.fillStyle = mezcla(mo.n, '#ffffff', 0.5);
+  for(let i=0;i<9;i++){ const yy = H0*(i/8), r = 60 + Math.sin(J.t*0.1 + i*1.7)*16 + (i%3)*14, xx = X - 40 + Math.sin(J.t*0.13 + i)*18;
+    cx.beginPath(); cx.arc(xx, yy, r, 0, TAU); cx.fill(); }
+  cx.fillRect(0, 0, Math.max(0, X - 40), H0);
+  cx.fillStyle = 'rgba(255,255,255,0.35)'; for(let i=0;i<14;i++){ const xx = X + vr(-20, 50), yy = vr(0, H0); cx.fillRect(xx, yy, 3, 3); }
+}
+function dibAurora(n){
+  const W = ANCHO, Hh = ALTO;
+  cx.globalCompositeOperation = 'lighter';
+  for(let k=0;k<3;k++){
+    const col = ['rgba(90,255,180,','rgba(120,200,255,','rgba(200,120,255,'][k];
+    cx.beginPath();
+    const base = Hh*(0.12 + k*0.07);
+    for(let x=0;x<=W;x+=20){ const y = base + Math.sin(x*0.006 + J.t*0.01 + k)*Hh*0.05 + Math.sin(x*0.017 + J.t*0.023)*Hh*0.02; if(x) cx.lineTo(x,y); else cx.moveTo(x,y); }
+    for(let x=W;x>=0;x-=20){ const y = base + Hh*0.16 + Math.sin(x*0.005 + J.t*0.012 + k*2)*Hh*0.04; cx.lineTo(x,y); }
+    cx.closePath(); cx.fillStyle = col + (0.07*n*(0.7 + 0.3*Math.sin(J.t*0.02 + k)))+')'; cx.fill();
+  }
+  cx.globalCompositeOperation = 'source-over';
+}
+function dibClima(mo){
+  const tm = J.tema; if(!tm.clima || tm.clima==='') return;
+  const W = ANCHO, Hh = ALTO, n = tm.clima==='tormenta' ? 110 : (tm.clima==='nieve' ? 70 : 40), vv = J.viento.f;
+  cx.fillStyle = 'rgba(255,255,255,0.8)';
+  const vx = (J.p ? J.p.vx||J.p.v : 10);
+  for(let i=0;i<n;i++){ const f = COPOS[i];
+    f.x -= (vx*0.0009 - vv*0.002)*f.z + (tm.clima==='tormenta'? 0.004 : 0.0006)*f.z; f.y += 0.0025*f.z*(tm.clima==='tormenta'? 2.2 : 1) + Math.sin(J.t*0.02 + f.r*6)*0.0004;
+    if(f.x < 0) f.x += 1; if(f.x > 1) f.x -= 1; if(f.y > 1) f.y -= 1;
+    const r = f.z*2; if(tm.clima==='tormenta'){ cx.globalAlpha = 0.5*f.z; cx.fillRect(f.x*W, f.y*Hh, r*2.5, r*0.7); } else { cx.globalAlpha = 0.8*f.z; cx.fillRect(f.x*W, f.y*Hh, r, r); } }
+  cx.globalAlpha = 1;
+  if(tm.clima==='tormenta'){ cx.fillStyle = 'rgba(200,210,230,0.12)'; cx.fillRect(0,0,W,Hh); }
+}
+/* calidad que se adapta: si dibujar cuesta mucho, baja la resolución del lienzo */
+/* se mide el tiempo real entre cuadros (el costo de pintar píxeles no aparece en el tiempo del JS) */
+const COSTO = {n:0, s:0, ult:0};
+function medirCosto(ts){ if(COSTO.ult){ const d = ts - COSTO.ult; if(d < 100){ COSTO.s += d; COSTO.n++; } } COSTO.ult = ts;
+  if(COSTO.n >= 90){ const m = COSTO.s/COSTO.n; COSTO.s = 0; COSTO.n = 0;
+    if(m > 21 && CALIDAD > 0.5){ CALIDAD = Math.max(0.5, CALIDAD - 0.15); medir(); }
+    else if(m < 17.5 && CALIDAD < 1){ CALIDAD = Math.min(1, CALIDAD + 0.05); medir(); } } }
+
+/* ====================== audio continuo: tabla, grind, viento ====================== */
+function audioContinuo(){
+  if(!AC || !SND.tablaG) return; const p = J.p, t = AC.currentTime;
+  const juega = (J.modo==='juego' || J.modo==='menu') && p;
+  const vol = !juega || J.modo==='menu' ? 0 : 1;
+  const enNieve = p && p.estado==='suelo', enCuerda = p && p.estado==='plat' && p.plat && p.plat.tipo==='cuerda';
+  SND.tablaG.gain.setTargetAtTime(vol*(enNieve ? 0.05 + p.v*0.006 : 0), t, 0.05);
+  SND.tablaF.frequency.setTargetAtTime(500 + (p? p.v*40 : 0) + (p && hielo(p.x) ? 1500 : 0), t, 0.1);
+  SND.grindG.gain.setTargetAtTime(vol*(enCuerda ? 0.08 : 0), t, 0.03);
+  SND.vientoG.gain.setTargetAtTime(vol*(0.02 + (p? p.v*0.002 : 0) + Math.abs(J.viento.f)*0.012 + (p && p.estado==='aire' ? 0.03 : 0)), t, 0.2);
+}
+
+/* ====================== HUD ====================== */
+let hudT = 0;
+function hud(){
+  if(J.modo!=='juego' || !J.p) return;
+  if(++hudT % 3) return;
+  const p = J.p;
+  $('hudPts').textContent = Math.round(J.puntos + p.x*2).toLocaleString('es-AR');
+  $('hudDist').textContent = Math.round(p.x)+' M';
+  $('hudMon').textContent = J.monedasRun;
+  $('hudBarra').firstElementChild.style.width = (lim(p.x/J.meta.x,0,1)*100)+'%';
+  $('hudBufanda').firstElementChild.style.width = (p.bufanda*100)+'%';
+  $('hudBufanda').firstElementChild.style.animation = p.bufanda>=1 ? 'respira 1s infinite' : '';
+  const po = []; if(p.imanT>0) po.push('IMÁN '+Math.ceil(p.imanT)); if(p.plumaT>0) po.push('PLUMA '+Math.ceil(p.plumaT)); if(p.alasT>0) po.push('ALAS '+Math.ceil(p.alasT)); if(p.casco>0) po.push('CASCO ×'+p.casco);
+  if(p.bufanda>=1 && p.alasT<=0) po.push('DOBLE TOQUE: ALAS');
+  if(J.anciano) po.push('ANCIANO A '+Math.max(0, Math.round(p.x - J.anciano.x))+' M');
+  $('hudPoderes').innerHTML = po.join('<br>');
+}
+function marcasSantuario(){
+  const b = $('hudBarra'); b.querySelectorAll('span').forEach(s=>s.remove());
+  for(const s of J.santuarios){ const e = document.createElement('span'); e.style.left = (s.x/J.meta.x*100)+'%'; b.appendChild(e); }
+}
+/* metas: se cumplen apenas pasa, aunque después te caigas */
+function claveMeta(i){ return J.nv.id+':'+i; }
+function metaCumple(m){
+  const r = J.run; if(!r) return false; const [k, v] = m.split(':'); const n = +v;
+  switch(k){ case 'llegar': return r.llegar; case 'mortales': return r.mortales >= n; case 'monedas': return r.monedas >= n; case 'llamas': return r.llamas >= n;
+    case 'rebotes': return r.rebotes >= n; case 'grind': return r.grind >= n; case 'doble': return r.doble; case 'triple': return r.triple; case 'alas': return r.alas >= n;
+    case 'cadena': return r.cadena >= n; case 'sincaer': return r.llegar && r.sincaer; }
+  return false;
+}
+function revisarMetas(){
+  if(J.demo || !J.nv) return;
+  J.nv.metas.forEach(([m, txt], i)=>{ const k = claveMeta(i); if(!G.metas[k] && metaCumple(m)){ G.metas[k] = true; J.nuevas = (J.nuevas||[]).concat(i); guardar(); if(m!=='llegar' && m!=='sincaer'){ aviso('META: '+txt, '#ffd76a'); sfx('perfecto'); } } });
+}
+function metasHtml(ni, nuevas){
+  return NIVELES[ni].metas.map(([m,txt],i)=> '<li class="'+(G.metas[NIVELES[ni].id+':'+i]?'ok':'')+((nuevas||[]).includes(i)?' nueva':'')+'">'+txt+'</li>').join('');
+}
+
+/* ====================== entrada: un dedo ====================== */
+const pantalla = $('pantalla');
+function apretar(){ audioIni(); if(J.modo!=='juego') return; IN.apretado = true; IN.flanco = true; const t = performance.now(); if(t - IN.ultToque < 300) IN.doble = true; IN.ultToque = t; }
+function soltar(){ IN.apretado = false; }
+pantalla.addEventListener('touchstart', ev=>{ audioIni(); if(J.modo!=='juego') return; if(ev.target.closest('#bPausa')) return; ev.preventDefault(); apretar(); }, {passive:false});
+pantalla.addEventListener('touchend', ev=>{ if(!ev.touches.length) soltar(); pantallaHorizontal(); });
+pantalla.addEventListener('touchcancel', ()=> soltar());
+cv.addEventListener('mousedown', ()=> apretar()); window.addEventListener('mouseup', ()=> soltar());
+window.addEventListener('keydown', ev=>{ if(ev.repeat) return; const k = ev.key.toLowerCase();
+  if(k===' '||k==='arrowup'||k==='w'){ ev.preventDefault(); apretar(); } else if(k==='p'||k==='escape'){ J.modo==='juego' ? pausar() : (J.modo==='pausa' && seguir()); } });
+window.addEventListener('keyup', ev=>{ const k = ev.key.toLowerCase(); if(k===' '||k==='arrowup'||k==='w') soltar(); });
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden && J.modo==='juego') pausar(); });
+/* pantalla completa y horizontal de verdad en el primer toque (Android); si no se puede, queda el giro por CSS */
+let bloqueoFallo = false;
+async function pantallaHorizontal(){
+  if(bloqueoFallo || !document.fullscreenEnabled || !(screen.orientation && screen.orientation.lock) || document.fullscreenElement) return;
+  let entre = false;
+  try{ await document.documentElement.requestFullscreen({navigationUI:'hide'}); entre = true; await screen.orientation.lock('landscape'); }
+  catch(e){ bloqueoFallo = true; if(entre && document.fullscreenElement){ try{ await document.exitFullscreen(); }catch(_){} } }
+}
+document.addEventListener('fullscreenchange', ()=> setTimeout(medir, 60));
+
+/* ====================== menús ====================== */
+const CAPAS_UI = ['capaTitulo','capaNiveles','capaTaller','capaComo','capaPausa','capaRes'];
+function mostrar(id){ for(const c of CAPAS_UI) $(c).classList.toggle('ver', c===id); $('hud').classList.toggle('ver', !id && J.modo==='juego'); }
+function boton(id, fn){ const b = $(id); const f = ev=>{ ev.preventDefault(); ev.stopPropagation(); audioIni(); sfx('toque'); fn(); pantallaHorizontal(); };
+  b.addEventListener('touchend', f, {passive:false}); b.addEventListener('click', ev=>{ if(!('ontouchstart' in window)) f(ev); }); }
+function monedero(){ $('monTit').textContent = G.monedas.toLocaleString('es-AR'); }
+/* miniatura pintada de cada montaña: cielo, cordillera y ladera del momento del medio */
+function miniatura(ni){
+  const nv = NIVELES[ni], tm = TEMAS[nv.tema], m = tm.momentos[1], c = document.createElement('canvas'); c.width = 300; c.height = 168; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0,0,0,168); gr.addColorStop(0,m.cA); gr.addColorStop(0.75,m.cB); g.fillStyle = gr; g.fillRect(0,0,300,168);
+  if(tm.estrellas[1] > 0.3){ g.fillStyle = '#fff'; for(let i=0;i<40;i++) g.fillRect((i*73)%300, (i*37)%80, 1, 1); }
+  if(tm.clima==='aurora'){ g.globalCompositeOperation = 'lighter'; g.fillStyle = 'rgba(90,255,180,0.18)'; g.beginPath(); g.moveTo(0,30); for(let x=0;x<=300;x+=20) g.lineTo(x, 30 + Math.sin(x*0.03)*12); g.lineTo(300,70); g.lineTo(0,70); g.fill(); g.globalCompositeOperation = 'source-over'; }
+  g.fillStyle = m.sol; g.beginPath(); g.arc(210, 60, 12, 0, TAU); g.fill();
+  CAPAS.forEach((cp,k)=>{ g.fillStyle = m.m[k]; g.beginPath(); g.moveTo(0,168); for(let x=0;x<=300;x+=6) g.lineTo(x, 168*cp.base - altCapa(cp, x*3 + ni*400)*168*cp.amp); g.lineTo(300,168); g.fill(); });
+  g.fillStyle = m.n; g.beginPath(); g.moveTo(0, 110); for(let x=0;x<=300;x+=10) g.lineTo(x, 110 + x*0.18 + Math.sin(x*0.04)*4); g.lineTo(300,168); g.lineTo(0,168); g.fill();
+  g.fillStyle = RIDERS[0].bufanda; g.fillRect(118, 124, 6, 2); g.fillStyle = '#2a2f45'; g.fillRect(122, 118, 3, 9); g.fillStyle = '#f4efe6'; g.fillRect(116, 128, 14, 2);
+  if(tm.clima==='tormenta' || tm.clima==='nieve'){ g.fillStyle = 'rgba(255,255,255,0.7)'; for(let i=0;i<60;i++) g.fillRect((i*97)%300, (i*53)%168, 2, tm.clima==='tormenta'? 1 : 2); }
+  return c;
+}
+const MINIS = {};
+function armarNiveles(){
+  const L = $('listaNiveles'); L.innerHTML = '';
+  NIVELES.forEach((nv,i)=>{
+    const abierto = i < G.abierto, d = document.createElement('div'); d.className = 'tarjeta' + (abierto? '' : ' cerrada');
+    const mini = MINIS[i] || (MINIS[i] = miniatura(i)); const c = document.createElement('canvas'); c.width = 300; c.height = 168; c.getContext('2d').drawImage(mini,0,0); d.appendChild(c);
+    const ok = nv.metas.filter((_,k)=> G.metas[nv.id+':'+k]).length;
+    const t = document.createElement('div'); t.className = 't'; t.innerHTML = '<b>'+(i+1)+' · '+nv.nom+'</b><small>'+nv.txt.toUpperCase()+'</small><small>'+'●'.repeat(ok)+'○'.repeat(3-ok)+(G.record[nv.id]? ' · '+G.record[nv.id].toLocaleString('es-AR') : '')+(abierto? '' : ' · CERRADA')+'</small>';
+    d.appendChild(t);
+    const ir = ev=>{ ev.preventDefault(); audioIni(); if(!abierto){ sfx('choque'); return; } sfx('toque'); J.demo = false; J.bot = !!J.botBanco; iniciarNivel(i); pantallaHorizontal(); arrancarJuego(); };
+    d.addEventListener('touchstart', ev=>{ d._y = ev.touches[0].clientY; d._x = ev.touches[0].clientX; }, {passive:true});
+    d.addEventListener('touchend', ev=>{ const tt = ev.changedTouches[0]; if(Math.abs(tt.clientY-(d._y||0)) < 12 && Math.abs(tt.clientX-(d._x||0)) < 12) ir(ev); });
+    d.addEventListener('click', ev=>{ if(!('ontouchstart' in window)) ir(ev); });
+    L.appendChild(d);
+  });
+}
+function arrancarJuego(){ mostrar(null); marcasSantuario(); musicaPoner(J.nv.tema); aviso(J.nv.nom, '#fff'); J.nuevas = []; }
+function armarTaller(){
+  const lr = $('listaRiders'); lr.innerHTML = '';
+  for(const r of RIDERS){ const tiene = G.riders[r.id], es = G.rider===r.id, d = document.createElement('div'); d.className = 'item';
+    d.innerHTML = '<div><span style="color:'+r.bufanda+'">●</span> '+r.nom+'<small>'+r.txt+'</small></div>';
+    const b = document.createElement('button'); b.className = 'boton chico' + (es? ' lleno' : ''); b.textContent = es ? 'ELEGIDO' : (tiene ? 'ELEGIR' : r.precio.toLocaleString('es-AR'));
+    b.addEventListener('click', ()=>{ if(es) return; if(tiene){ G.rider = r.id; } else if(G.monedas >= r.precio){ G.monedas -= r.precio; G.riders[r.id] = 1; G.rider = r.id; sfx('poder'); } else { sfx('choque'); return; } guardar(); armarTaller(); });
+    d.appendChild(b); lr.appendChild(d); }
+  const lm = $('listaMejoras'); lm.innerHTML = '';
+  for(const m of MEJORAS){ const n = G.mejoras[m.id]||0, d = document.createElement('div'); d.className = 'item';
+    d.innerHTML = '<div>'+m.nom+'<small>'+m.txt+'</small><div class="puntos">'+[0,1,2].map(k=>'<i class="'+(k<n?'si':'')+'"></i>').join('')+'</div></div>';
+    const b = document.createElement('button'); b.className = 'boton chico'; b.textContent = n>=3 ? 'MÁXIMO' : m.precios[n].toLocaleString('es-AR');
+    b.addEventListener('click', ()=>{ if(n>=3) return; if(G.monedas >= m.precios[n]){ G.monedas -= m.precios[n]; G.mejoras[m.id] = n+1; guardar(); sfx('poder'); armarTaller(); } else sfx('choque'); });
+    d.appendChild(b); lm.appendChild(d); }
+  const h = $('capaTaller').querySelector('h2'); h.textContent = 'TALLER · '+G.monedas.toLocaleString('es-AR');
+}
+function pausar(){ if(J.modo!=='juego') return; J.modo = 'pausa'; IN.apretado = false; $('pausaMetas').innerHTML = metasHtml(J.ni); mostrar('capaPausa'); }
+function seguir(){ J.modo = 'juego'; mostrar(null); }
+function mostrarResultado(){
+  const llego = J.fin.llego, nv = J.nv, p = J.p;
+  const pts = Math.round(J.puntos + p.x*2);
+  const nuevoRec = pts > (G.record[nv.id]||0); if(nuevoRec) G.record[nv.id] = pts;
+  G.monedas += J.monedasRun; J.monedasRun = 0;
+  if(llego) G.abierto = Math.max(G.abierto, Math.min(NIVELES.length, J.ni+2));
+  guardar();
+  J.modo = 'res';
+  $('resNivel').textContent = (J.ni+1)+' · '+nv.nom;
+  $('resTitulo').textContent = llego ? 'LLEGASTE' : 'TE CAÍSTE';
+  $('resDet').textContent = Math.round(p.x)+' M · '+J.run.mortales+' MORTALES · '+Math.round(J.run.grind)+' M DE GRIND' + (nuevoRec? ' · RÉCORD' : '');
+  $('resMetas').innerHTML = metasHtml(J.ni, J.nuevas);
+  $('btResSig').style.display = llego && J.ni+1 < NIVELES.length ? '' : 'none';
+  $('btResSantuario').style.display = !llego && J.check ? '' : 'none';
+  mostrar('capaRes');
+  /* los puntos suben de a poco */
+  const el = $('resPts'), t0 = performance.now(); (function sube(){ const f = Math.min(1, (performance.now()-t0)/1200); el.textContent = Math.round(pts*suave(f)).toLocaleString('es-AR'); if(f<1) requestAnimationFrame(sube); })();
+}
+function iniciarDemo(){
+  J.demo = true; J.bot = true;
+  const ni = Math.floor(Math.random()*NIVELES.length);
+  iniciarNivel(ni, ''+(Math.random()*1e6|0));
+  J.modo = 'menu';
+}
+function aMenu(){ iniciarDemo(); monedero(); mostrar('capaTitulo'); musicaPoner(5); }
+boton('btJugar', ()=>{ armarNiveles(); mostrar('capaNiveles'); });
+boton('btTaller', ()=>{ armarTaller(); mostrar('capaTaller'); });
+boton('btComo', ()=> mostrar('capaComo'));
+boton('btComoVolver', ()=> mostrar('capaTitulo'));
+boton('btNivVolver', ()=>{ monedero(); mostrar('capaTitulo'); });
+boton('btTalVolver', ()=>{ monedero(); mostrar('capaTitulo'); });
+boton('btSonido', ()=>{ G.sonido = !G.sonido; guardar(); if(amo) amo.gain.value = G.sonido? 0.9 : 0; $('btSonido').textContent = 'SONIDO '+(G.sonido?'SÍ':'NO'); });
+boton('bPausa', pausar);
+boton('btSeguir', seguir);
+boton('btReiniciar', ()=>{ J.demo = false; J.bot = !!J.botBanco; iniciarNivel(J.ni); arrancarJuego(); });
+boton('btSalir', aMenu);
+boton('btResSig', ()=>{ J.demo = false; J.bot = !!J.botBanco; iniciarNivel(J.ni+1); arrancarJuego(); });
+boton('btResSantuario', ()=>{ J.demo = false; J.bot = !!J.botBanco; iniciarNivel(J.ni, J.semilla, true); arrancarJuego(); });
+boton('btResOtra', ()=>{ J.demo = false; J.bot = !!J.botBanco; iniciarNivel(J.ni); arrancarJuego(); });
+boton('btResMenu', ()=>{ iniciarDemo(); armarNiveles(); mostrar('capaNiveles'); musicaPoner(5); });
+
+/* ====================== bucle ====================== */
+const CUADRO = 1000/60;
+let acum = 0, ultimo = 0;
+function pasar(){
+  if(J.modo==='pausa' || J.modo==='res') return;
+  if(J.lento > 0){ J.lento--; if(J.lento%2) return; }
+  pasarMundo();
+}
+function bucle(ts){
+  requestAnimationFrame(bucle);
+  if(!ultimo) ultimo = ts;
+  const dt = Math.min(100, ts-ultimo); ultimo = ts; acum += dt;
+  let pasos = 0;
+  while(acum >= CUADRO && pasos < 4){ acum -= CUADRO; pasos++; pasar(); }
+  if(!pasos) return;                       /* pantalla de 120 Hz: no se redibuja un cuadro igual */
+  if(J.t % 30 === 0 && (cv.width !== Math.round(cv.clientWidth*R))) medir();
+  dibujar(); hud(); if(J.modo==='juego' || J.modo==='menu') medirCosto(ts);
+}
+
+/* ====================== sondas para el banco ====================== */
+window.__N = {
+  J, G, NIVELES, iniciar(ni, sem){ J.demo = false; J.bot = true; iniciarNivel(ni, sem||'BANCO'); arrancarJuego(); },
+  anda(n){ for(let i=0;i<n;i++){ if(J.modo!=='juego' && J.modo!=='menu') break; pasarMundo(); } },
+  bot(v){ J.bot = v; J.botBanco = v; },
+  est(){ const p = J.p; return {modo:J.modo, x:p? Math.round(p.x):0, estado:p? p.estado:'', v:p? +p.v.toFixed(1):0, puntos:Math.round(J.puntos), fin:J.fin, run:J.run, motivo:J.motivo, meta:J.meta? Math.round(J.meta.x):0, calidad:CALIDAD}; },
+  dibujarYa(){ dibujar(); }, medir, mostrar, aMenu, armarNiveles, armarTaller, listo:true,
+};
+
+/* ====================== arranque ====================== */
+medir();
+aMenu();
+requestAnimationFrame(bucle);
+</script>
+</body></html>
