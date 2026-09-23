@@ -1295,3 +1295,33 @@ Lo que costó una vuelta:
 - **La sonda de gestos tocaba en (300, 720) fijo**: en la pantalla girada eso queda fuera del pad y
   daba todo nulo, aunque el juego andaba. Las sondas tocan en coordenadas del escenario pasadas a la
   pantalla.
+
+### 2026-09-23 (ak) — acostado no queda nada vacío
+**Pedido textual:** «Oye pero ahora quedaron vacías varias partes de la pantalla, arregla eso».
+
+Acostado, la arena de 184 ocupa 184 de 293 unidades: a cada costado quedaban ~55 de **relleno liso**
+(beige arriba del piso y oscuro abajo). En vertical nunca se había visto porque la cámara no sale de
+la arena. Además, los menús de arriba iban en una columna de 380 en el medio de 892, con los
+costados sin usar y los botones abajo de todo, afuera de la pantalla.
+
+- **Los costados del coliseo** se hornean una vez por lado (`costado()`):
+  - sillares con luz arriba a la izquierda, cornisa y zócalo;
+  - una puerta en arco con dovelas y reja. La de la izquierda está a medio subir, con luz cálida al
+    fondo del túnel; la de la derecha, cerrada;
+  - dos estandartes y dos antorchas con la llama viva;
+  - afuera, empedrado; abajo, el sótano de piedra que se oscurece;
+  - la sombra que el muro de la arena le tira al costado.
+- **Menús en dos columnas** acostado: el panel a la izquierda y los botones a la derecha. Un
+  `MutationObserver` junta en `.col` todo lo que no es el panel, así no hubo que tocar cada pantalla.
+- **Los cuerpos no atraviesan el muro.** Un muerto tirado contra la pared asomaba la cabeza del otro
+  lado, encima del costado: el tope era sólo para los pies. Tirado, ahora cuentan la cabeza, la
+  cadera y la punta del arma.
+
+Medido:
+- Peleando pegados a la pared, los muertos con la cabeza del otro lado del muro bajaron de
+  **52 de 99** (hasta 35 unidades) a **0 de 100**.
+- En las ocho pantallas de menú todos los botones entran en la pantalla sin bajar (ludus 5 de 5,
+  mercado 6 de 6, pelea rápida 8 de 8), y un botón de la columna tocado de verdad abre su pantalla.
+- Toques girados, gestos, 49 de 49 peleas, cortes, carrera, tiendas, la sonda de arreglos y un fuzz
+  de 500 acciones, sin errores.
+- 4,1 ms por cuadro.
