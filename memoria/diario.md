@@ -1,6 +1,11 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — ARRABAL: efectos de sonido de los golpes
+**Pedido textual:** «Ponle efectos de sonido a los golpes».
+Qué se hizo: impactos grabados por capas (efectos.py), con variantes y capa de arma; el sintetizador
+queda de respaldo. Detalle en [arrabal](arrabal.md) § Efectos de sonido de los golpes.
+
 ### 2026-09-23 — ARRABAL: movimiento, golpes, banda sonora y menú
 **Pedido textual:** «Mejora los movimientos y los efectos de los golpes y movimientos y agrégale
 banda sonora y mejora el menú principal».

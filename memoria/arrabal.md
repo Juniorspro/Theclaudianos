@@ -27,6 +27,19 @@ Pedido: «Haz el estilo más Arcade el segundo juego». Se sumó, sin tocar la h
   tubo + viñeta + un barrido claro que baja (se apaga en ajustes: «EFECTO DE TUBO»).
 - La historia usa el mismo motor con `modo='historia'` (equipos y relevos, sin rondas).
 
+## Efectos de sonido de los golpes (23/09/2026)
+Pedido: «Ponle efectos de sonido a los golpes». Antes eran un tono + un soplo sintetizados al vuelo.
+- `herramientas/arrabal/efectos.py` (usa las funciones de `componer.py`): 44 efectos, 20 nombres,
+  en **un solo** `sfx.mp3` (96 kbps, 237 kB) + `sfx.json` (en `ARCHIVOS.sfxMapa`: `[inicio,largo]`
+  por variante, `_largo` total). Impacto por capas: cuerpo (seno que cae), chasquido, cachetazo y
+  crujido en los pesados. También patada, madera, metal, garra, bloqueo, silbidos, crítico, K.O.,
+  caída, fuego, electro, agua, viento, cadena, dash.
+- `Sonido.fx(n,vol)` prueba primero `Sonido.muestra()` (variante al azar distinta de la última,
+  tono ±6 %, `GANANCIA_SFX`, retardo del MP3 de 1105 muestras si el navegador no lo recortó) y si
+  no hay grabado cae al sintetizador. `sonarGolpe()` (a6) arma las capas: patada si el golpe es de
+  pierna, arma según `CAPA_ARMA[estilo]`, crítico encima y peso grave en `parada>=10`.
+- Prueba: `pruebas/arrabal/efectos.mjs` cuenta qué efecto suena en cada golpe.
+
 ## Movimiento, golpes, banda sonora y menú (23/09/2026)
 Pedido: «Mejora los movimientos y los efectos de los golpes y movimientos y agrégale banda sonora y
 mejora el menú principal».
