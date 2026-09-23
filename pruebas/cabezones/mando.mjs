@@ -4,6 +4,7 @@ const nav=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/
 let mal=0;
 for(const vp of [{width:412,height:892},{width:892,height:412}]){
   const ctx=await nav.newContext({viewport:vp,deviceScaleFactor:2,hasTouch:true,isMobile:true});
+await ctx.addInitScript(()=>{try{localStorage.setItem('cabezones.idioma','es');}catch(e){}});   // sin la pantalla de idioma del primer inicio
   const pg=await ctx.newPage();const err=[];pg.on('pageerror',e=>err.push(e.message));
   await pg.goto('file:///home/user/Theclaudianos/juegos-pc/Cabezones.html');
   await pg.waitForFunction("window.__H&&__H.listo");

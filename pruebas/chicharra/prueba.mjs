@@ -4,6 +4,7 @@ const EXE='/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const nav=await chromium.launch({executablePath:EXE,args:['--use-gl=angle','--use-angle=swiftshader',
   '--enable-unsafe-swiftshader','--ignore-gpu-blocklist','--no-sandbox','--disable-dev-shm-usage']});
 const ctx=await nav.newContext({viewport:{width:412,height:892},deviceScaleFactor:2,hasTouch:true,isMobile:true});
+await ctx.addInitScript(()=>{try{localStorage.setItem('chicharra.idioma','es');}catch(e){}});   // sin la pantalla de idioma del primer inicio
 const pg=await ctx.newPage();
 const errores=[];
 pg.on('console',m=>{if(m.type()==='error')errores.push(m.text().slice(0,200));});

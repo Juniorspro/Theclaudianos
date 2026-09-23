@@ -27,7 +27,11 @@ Pedido: «Haz el estilo más Arcade el segundo juego». Se sumó, sin tocar la h
   tubo + viñeta + un barrido claro que baja (se apaga en ajustes: «EFECTO DE TUBO»).
 - La historia usa el mismo motor con `modo='historia'` (equipos y relevos, sin rondas).
 
-## Todas las animaciones con 24 cuadros reales (23/09/2026)
+## Todas las animaciones con 24 cuadros reales
+**Terminado el 23/09**: 141 de 144 videos (xiao volando, buzo bloqueo y chispa fuerte los frenó el filtro de
+contenido aun con el texto alternativo: esas tres usan el títere de antes). Los 12 horneados en AVIF
+(~2 MB c/u); el HTML quedó en **46,6 MB** (no se puede adjuntar: pasar el link de githack).
+ (23/09/2026)
 Pedido: «Genera en cada personaje en todas sus animaciones 24 fotogramas reales».
 - 20 animaciones por luchador (240 videos): a las 8 se suman fuerte, especial2, super, salto,
   aereo, barrida, alzada, bloqueo, dash, atras, levanta, volando. `levanta` arranca de la pose de

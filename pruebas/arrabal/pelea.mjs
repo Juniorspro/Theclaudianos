@@ -1,6 +1,7 @@
 import { chromium } from 'playwright-core';
 const nav=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox','--disable-dev-shm-usage']});
 const ctx=await nav.newContext({viewport:{width:412,height:892},deviceScaleFactor:2,hasTouch:true,isMobile:true});
+await ctx.addInitScript(()=>{try{localStorage.setItem('arrabal.idioma','es');}catch(e){}});   // sin la pantalla de idioma del primer inicio
 const pg=await ctx.newPage();
 const err=[];pg.on('pageerror',e=>err.push('PAGEERROR '+e.message));
 await pg.goto('file:///home/user/Theclaudianos/juegos-pc/Arrabal.html');

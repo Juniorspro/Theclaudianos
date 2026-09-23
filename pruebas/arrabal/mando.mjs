@@ -3,6 +3,7 @@ import { chromium } from 'playwright-core';
 const [W,H]=(process.argv[2]||'412x892').split('x').map(Number);
 const nav=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox','--disable-dev-shm-usage']});
 const ctx=await nav.newContext({viewport:{width:W,height:H},deviceScaleFactor:2,hasTouch:true,isMobile:true});
+await ctx.addInitScript(()=>{try{localStorage.setItem('arrabal.idioma','es');}catch(e){}});   // sin la pantalla de idioma del primer inicio
 const pg=await ctx.newPage();const err=[];pg.on('pageerror',e=>err.push(e.message));
 const cdp=await ctx.newCDPSession(pg);
 const T=async(type,pts)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:pts.map((p,i)=>({x:p.x,y:p.y,id:p.id??i}))});

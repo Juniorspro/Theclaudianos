@@ -1,6 +1,14 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — Selector de idiomas en todos los juegos + ARRABAL con los 12 animados
+**Pedido textual:** «A todos los juegos agrégale selección de idiomas en la pantalla principal al inicio».
+Qué se hizo: módulo común `herramientas/comun/idioma.js` (es/en/pt/fr, pantalla al primer inicio,
+globo en la pantalla principal, traducción al dibujar) en ARRABAL, CABEZONES y CHICHARRA, con su
+diccionario cada uno. Ver [idiomas](idiomas.md). Los bancos ahora arrancan con el idioma guardado
+(si no, el primer toque real lo toma la pantalla de idioma). ARRABAL rearmado con las animaciones
+de 24 cuadros de los 12 luchadores.
+
 ### 2026-09-23 — CABEZONES 2: botones y efectos de Rezona, relator, dos piernas
 **Pedido textual:** «Genera mejores botones y animaciones etc con Rezona también dos piernas y eso
 mejor música recuerda que Rezona crea música y voces etc guardalo en memoria».

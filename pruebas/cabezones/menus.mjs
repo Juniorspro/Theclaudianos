@@ -3,6 +3,7 @@ import { chromium } from 'playwright-core';
 const vert=process.argv[2]==='vertical';
 const nav=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
 const ctx=await nav.newContext({viewport:vert?{width:412,height:892}:{width:892,height:412},deviceScaleFactor:2,hasTouch:true,isMobile:true});
+await ctx.addInitScript(()=>{try{localStorage.setItem('cabezones.idioma','es');}catch(e){}});   // sin la pantalla de idioma del primer inicio
 const pg=await ctx.newPage();
 const err=[];pg.on('pageerror',e=>err.push('PAGEERROR '+e.message));pg.on('console',m=>{if(m.type()==='error')err.push(m.text().slice(0,160));});
 pg.on('request',r=>{const u=r.url();if(!u.startsWith('file:')&&!u.startsWith('data:'))err.push('RED '+u);});
