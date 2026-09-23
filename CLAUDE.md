@@ -1444,3 +1444,20 @@ Lo que costó una vuelta cada uno:
 Medido: los 8 niveles con puerta se terminan (`alcance`), ningún enemigo queda fuera de vista; el jefe muere pasando por las tres
 fases en 40 s de simulación; `TR_FALTA` vacío en inglés y portugués; fuzz de 500 acciones sin errores ni NaN; audio sin efectos
 faltantes. Lógica 0,1 ms por cuadro, 56 a 72 llamadas de dibujo.
+
+### 2026-09-23 (an) — MATE AMARGO: primera pasada de errores
+**Pedido textual:** «Ahora quiero que arregles los posibles errores del juego, cada pequeño error arreglalo».
+
+Se lanzaron cuatro revisiones del código en paralelo (render/mundo, jugabilidad/jefe, entrada/menús/cinemáticas y audio). El usuario
+las frenó antes de que devolvieran nada, así que esta vuelta quedó con lo que se encontró midiendo:
+- **Fuga de memoria entre niveles.** Cada vuelta por los 9 niveles dejaba 235 geometrías y 381 texturas vivas de más: los sprites,
+  sus texturas clonadas, los materiales propios del nivel y el clon de la cinta nunca se tiraban. Va `tirarMalla()`, que respeta
+  lo cacheado (`userData.cache` en materiales, `_cache` en texturas: en r128 la textura no trae `userData`). Medido: 62 geometrías y
+  98 texturas, fijas en cuatro vueltas seguidas.
+- **Temporizadores de otro nivel.** La muerte, el resultado, las explosiones en cadena, la segunda tetera y la cinemática final iban
+  con `setTimeout` y podían disparar en el nivel siguiente o en el menú. Ahora van con `luego()`: corre con el juego, se frena en
+  pausa y descarta lo que es de otra carga de nivel (`J.gen`).
+- **El final dejaba al jugador en la azotea vacía** al terminar los créditos. Ahora cierra con la pantalla de resultado del 3-3.
+
+Medido además: girar el celular en caliente en pleno nivel acomoda el lienzo y el HUD sin errores; fuzz y auditoría de idiomas limpios.
+Quedan sin revisar a fondo el audio y la entrada; es lo primero de la próxima pasada si se pide.
