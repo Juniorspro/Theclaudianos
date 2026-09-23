@@ -9,7 +9,7 @@ se prueba **en el celular, en vertical (412×892)**.
 |---|---|
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. |
 | `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil, **escenario girado 90°** (se juega apaisado): base militar de arranque, nave de dos cubiertas que se recorre por dentro, seis galaxias que se ganan, caminata espacial con soga, fotos que se venden y álbum de 21 especies. |
-| `juegos-pc/Saltos.html` | **A LOS SALTOS.** Gladiadores 2D pixel art con física de saltos (a la Gladihoppers): 7 clases, cortes y sangre, carrera con edad, fama, mercado y estatuas. Canvas 2D, sin red, vertical. |
+| `juegos-pc/Saltos.html` | **A LOS SALTOS.** Gladiadores 2D pixel art con física de saltos (a la Gladihoppers): 7 clases, cortes y sangre, carrera con edad, fama, mercado y estatuas. Canvas 2D, sin red, **escenario girado 90°** (se juega apaisado). |
 | `docs/GUIA_JUEGOS_2D_PIXEL.md` | Receta para juegos 2D pixel art (escala entera, piezas, banco). La usa `Saltos.html`. |
 | `herramientas/glb/` | `juntar_anim.py` (varios GLB del mismo rig → uno con todos los clips) y `hornear.py` (achicar texturas y recompactar para meterlo en un HTML). |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
@@ -1260,3 +1260,38 @@ Medido:
 - Toques, gestos, carrera y las cinco tiendas sin errores. La sonda de cada arreglo dio lo esperado.
 - Dos fuzz de 600 acciones (toques, dedos sostenidos, dos dedos, cancelaciones, rotaciones y pestaña escondida) con cero errores y ningún estado imposible.
 - 3,5 ms por cuadro en vertical.
+
+### 2026-09-23 (aj) — A LOS SALTOS se juega apaisado
+**Pedido textual:** «gira el juego 90°».
+
+Mismo patrón que Alien y el Bosque. El lienzo y los menús viven adentro de un `#stage` que se gira
+90° cuando la pantalla está vertical; con la pantalla ya acostada no se gira.
+- `girar()` mide con `visualViewport` y escribe a mano el ancho, el alto y el giro. Escucha
+  `resize`, `orientationchange` y el `resize` del `visualViewport`.
+- Cada toque y cada clic del lienzo pasan por `aStage()`: girado 90° a la derecha, `(x, y) → (y, W − x)`.
+  Los menús son DOM y el navegador ya resuelve el giro solo.
+
+**Lo que había que acomodar para jugar acostado** (el modo apaisado ya existía, pero mal):
+- **La arena quedaba chiquita en el medio.** Con el tope de 200 unidades de alto, 892×412 daba 586 de
+  ancho para una arena de 184: se veía el triple de arena y los gladiadores a la mitad de tamaño.
+  Acostado alcanzan 130 de alto: ahora da 293 × 136 con 8 píxeles reales por unidad, igual que parado,
+  y la arena llena el ancho.
+- **Botonera propia para acostado**: más apretada y a los costados de la arena, donde sólo pisa las
+  paredes. En gestos, el pad es toda la mitad derecha debajo del HUD.
+- En la portada el título va a la izquierda y el menú a la derecha. «LISTOS», «¡VICTORIA!» y los
+  consejos del tutorial no se salen por arriba.
+
+Medido a 412×892 girado:
+- Escenario 892×412 (`matrix(0, 1, -1, 0, 412, 0)`), 293 × 136 unidades.
+- Cada botón tocado en la pantalla girada hace lo suyo: ▶ salta de 52 a 94, ◀ de 94 a 27, los
+  cuatro ataques, guardia, postura, dos dedos a la vez (salto cargando y tajo) y pausa.
+- Un botón del menú tocado de verdad abre su pantalla. Los cinco gestos andan en la pantalla girada.
+- Acostando el celular en caliente el escenario queda sin girar, y al pararlo vuelve a girar.
+- 49 de 49 peleas, carrera, tiendas, la sonda de la pasada anterior y un fuzz de 500 acciones, sin
+  errores.
+- 1,9 ms por cuadro.
+
+Lo que costó una vuelta:
+- **La sonda de gestos tocaba en (300, 720) fijo**: en la pantalla girada eso queda fuera del pad y
+  daba todo nulo, aunque el juego andaba. Las sondas tocan en coordenadas del escenario pasadas a la
+  pantalla.
