@@ -7,7 +7,7 @@ Uso: python3 componer.py [tema ...]
 """
 import os, sys, json
 import numpy as np
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'arrabal'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'comun'))
 import componer as B
 from componer import (SR, tt, pasa, serrucho, envolvente, hz, bombo, caja, platillo, crash, timbal, bajo,
                       bandoneon, piano, cuerdas, coro, golpe_orquesta, subida, melodia, acorde, Tema, mp3)

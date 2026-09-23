@@ -11,3 +11,7 @@ autocontenido** en `juegos-pc/`, three.js desde CDN, se prueba **en el celular, 
 
 Las reglas fijas del usuario están en `memoria/INDICE.md § Reglas que no se discuten`: leelas
 antes de tocar nada.
+
+## ⛔ Carpeta sellada: `arrabal/`
+No leer, buscar, listar ni tocar nada dentro de `arrabal/` salvo `arrabal/SELLADO.md`. Se abre sólo
+si el usuario da el código del sello y su SHA-256 coincide con el de `arrabal/SELLADO.md`.

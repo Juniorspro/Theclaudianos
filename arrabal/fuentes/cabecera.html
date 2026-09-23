@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ARRABAL — puños de fileteado</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  html,body{width:100%;height:100%;background:#0e0818;overflow:hidden;touch-action:none;overscroll-behavior:none}
+  #envase{position:fixed;inset:0;overflow:hidden;background:#0e0818}
+  #lienzo{position:absolute;left:0;top:0;transform-origin:0 0;display:block;touch-action:none}
+  #cargando{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#d8b25a;font:bold 14px Georgia,serif;letter-spacing:4px;background:#0e0818;z-index:9}
+</style>
+</head>
+<body>
+<div id="envase"><canvas id="lienzo"></canvas></div>
+<div id="cargando">CARGANDO EL ARRABAL…</div>
+<script>
+'use strict';
+(function(){
+/* ===========================================================================
+   ARRABAL — puños de fileteado
+   Juego de pelea con cartas coleccionables, para el celular apaisado.
+   Seis luchadores originales de un Buenos Aires de los años 30, peleas de
+   equipos de tres, gestos táctiles, especiales, súper con cinemática, árbol
+   de habilidades, cofre de cartas y una campaña de tres barrios.
+   Un solo HTML y sin red: los personajes en la pelea se animan con código
+   (títeres con esqueleto); retratos y escenarios son ilustraciones de Rezona Lab.
+   ========================================================================= */

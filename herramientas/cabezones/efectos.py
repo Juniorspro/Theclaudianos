@@ -7,7 +7,7 @@ Uso: python3 efectos.py
 """
 import os, sys, json
 import numpy as np
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'arrabal'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'comun'))
 import componer as B
 import efectos as E
 from efectos import SR, tt, pasa, ruido, cae_tono, rafaga, mezcla, listo, pina, silbido
