@@ -936,3 +936,68 @@ Medido: auditoría completa en inglés (calidad alta), portugués (baja) y caste
 terminal, álbum, HUD y los 13 pasos del tutorial en inglés. Tutorial entero en portugués hasta
 «hecho». Fuzz en inglés y calidad baja sin errores. Con la misma resolución, baja da 4,0 cuadros
 contra 2,3 de media en el banco (sin GPU), y 136 llamadas contra 164 de alta.
+
+### 2026-09-23 (ab) — pasada de errores: 22 fallos reales
+**Pedido textual:** «Ahora quiero que arregles TODOS los posibles fallos o errores existentes dentro del
+juego, confío en ti».
+
+Tres revisiones del código por partes (render/nave/base/fotos, bichos/EVA/gente, entrada/HUD/
+tienda/tutorial/menú) y sondas en el banco para los casos raros. Cada hallazgo se verificó contra
+el código antes de tocarlo, y cada arreglo se midió.
+
+**Fotos**
+- **La copia sacaba sólo la franja del medio** (37% del ancho en apaisado) pero el bicho contaba,
+  cobraba y entraba al álbum en toda la pantalla: fotos pagas donde no salía nada. La copia ahora es
+  apaisada hasta 3:2, **sólo cuenta y paga lo que entra en el recorte**, el encuadre se mide contra
+  el recorte y el visor dibuja justo eso. Medido: bicho en x 0,85 y 0,75 → placa velada; 0,5 y 0 → cobra.
+- **Se fotografiaba a través del casco**: desde la bodega mirando a la pared contaba el bicho de
+  afuera. Adentro de la nave sólo cuenta lo que se ve por el ventanal o por la compuerta abierta.
+- **El fogonazo no se veía nunca**: el 0,92 y el apagado caían en el mismo cálculo de estilo. Ahora
+  0,92 → 0,68 → 0 en 600 ms.
+- El pie de la copia decía «RAREZA 1» con la terminal en 0,0, y «ESPECIE N°» era el contador de
+  fotos: ahora la misma rareza y el número del álbum.
+- Carrete lleno de placas veladas: la terminal decía «NADA QUE VENDER» apagado y era la única
+  salida. Dice **DESCARTAR CARRETE**, la pantalla «[ CARRETE VELADO ]» y el tutorial lo explica.
+
+**Toques y botones**
+- **Deslizar la terminal o la carta compraba, vendía o saltaba de galaxia** (las filas respondían al
+  apoyar el dedo). Ahora se eligen al soltar sin haber arrastrado. Medido: arrastrar sobre LUCES no
+  compra, tocar sí.
+- La carta se cerraba con cualquier toque adentro: ahora sólo tocando afuera.
+- **Toque fantasma**: cerrar la copia tocando encima de FOTO sacaba otra foto por el mousedown de
+  compatibilidad. Se descarta el mousedown cerca de un toque. Medido: una foto, no dos.
+- SUBIR quedaba apretado si el sistema cancelaba el toque; el mouse soltado afuera también.
+- El chip invisible del álbum se abría tocando la esquina antes de la primera foto.
+- Con un panel o la copia abiertos se seguía caminando con el teclado, y la repetición de la tecla
+  hacía doble salto sola.
+- El aviso «Vendé el carrete…» tapaba los créditos para siempre.
+- **El audio no arrancaba con el primer toque en el celular**: apoyar el dedo no cuenta como gesto,
+  soltarlo sí.
+
+**Vuelo, luz y bichos**
+- **La compuerta se abría de golpe en el espacio al empezar a aterrizar** y volvía a cerrarse (dos
+  golpes de más): iba atada a `e.t`, que se reinicia. Ahora va a su meta a su ritmo. Igual las toberas.
+- **Tirón al despegar y al llegar a EL VACÍO**: esconder `mundo` sacaba tres luces de la cuenta, y
+  los colosos traían la suya; cambiar cuántas luces hay recompila todos los materiales. Ahora las de
+  la base van en la escena y se apagan, y los colosos usan dos focos fijos que se prenden.
+  Medido: 15 luces y 26 programas en tierra y en el espacio.
+- El foco de un coloso llegaba a 600 m y alumbraba la nave por dentro (las puntuales no hacen
+  sombra): ahora alcanza su propio cuerpo.
+- Aterrizar con un coloso cerca dejaba el velo rojo, el temblor y el aviso para siempre en tierra.
+- El cuerpo quedaba inclinado 10° después de la primera caminata (y con él la cámara de la mano).
+- Los bichos que se metían en la nave se probaban por la base del cuerpo y salían siempre hacia −z,
+  cruzando la nave: ahora por el centro, con su radio, y por el lado más corto.
+
+**Construcción y repuestos**
+- Las barreras del portón estaban dibujadas al revés (el brazo bajo en medio del paso y el alto
+  sobre el poste).
+- La chapa oscura de la nave se volvía gris clara al llegar la textura del casco.
+- Si el GLB no llegara, el cuerpo de repuesto se dibujaba delante de la cámara.
+
+Lo que costó una vuelta:
+- **Otro TDZ, el cuarto**: `LUCES_BASE` se usaba en la base antes de declararse y la página moría
+  en blanco. Subió arriba con `MENU`. Regla: toda tabla que llene la construcción va arriba de todo.
+
+Medido: auditoría completa 14/14 en castellano, `TR_FALTA` vacío, fuzz en inglés y calidad media
+sin errores, tutorial entero hasta «hecho», cinco ciclos seguidos de despegar-salir-fotos-vender-
+aterrizar con geometrías, texturas, nodos y memoria estables (82 / 38 / 437 / 23 MB).
