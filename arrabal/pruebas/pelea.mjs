@@ -1,12 +1,14 @@
 import { chromium } from 'playwright-core';
+import { usarCDN } from './cdn.mjs';
 const nav=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox','--disable-dev-shm-usage']});
 const ctx=await nav.newContext({viewport:{width:412,height:892},deviceScaleFactor:2,hasTouch:true,isMobile:true});
+await usarCDN(ctx);
 await ctx.addInitScript(()=>{try{localStorage.setItem('arrabal.idioma','es');}catch(e){}});   // sin la pantalla de idioma del primer inicio
 const pg=await ctx.newPage();
 const err=[];pg.on('pageerror',e=>err.push('PAGEERROR '+e.message));
 await pg.goto('file:///home/user/Theclaudianos/arrabal/index.html');
 await pg.waitForFunction("window.__A&&__A.listo");
-await pg.waitForFunction("__A.imgs().filter(n=>n.indexOf('sprites-')===0).length>=12",{timeout:20000}).catch(()=>{});
+await pg.waitForFunction("__A.imgs().filter(n=>n.indexOf('sprites-')===0).length>=12",{timeout:60000}).catch(()=>{});
 console.log('SPRITES cargados:',await pg.evaluate("__A.imgs().filter(n=>n.indexOf('sprites-')===0).length"),'de 12');
 const cap=async n=>{await pg.evaluate("__A.dibujarYa()");await pg.screenshot({path:'ar-'+n+'.png'});};
 // la cadena de cuatro con el rival quieto, cada luchador

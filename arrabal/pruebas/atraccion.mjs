@@ -1,6 +1,7 @@
 import { chromium } from 'playwright-core';
+import { usarCDN } from './cdn.mjs';
 const nav=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox']});
-const pg=await (await nav.newContext({viewport:{width:412,height:892},deviceScaleFactor:2,hasTouch:true,isMobile:true})).newPage();
+const ctx0=await nav.newContext({viewport:{width:412,height:892},deviceScaleFactor:2,hasTouch:true,isMobile:true});await usarCDN(ctx0);const pg=await ctx0.newPage();
 const err=[];pg.on('pageerror',e=>err.push(e.message));
 await pg.goto('file:///home/user/Theclaudianos/arrabal/index.html');
 await pg.waitForFunction("window.__A&&__A.listo");await pg.waitForFunction("__A.imgs().length>=10");

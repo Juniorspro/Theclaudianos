@@ -20,3 +20,7 @@ Sondas: `window.__A` (`ir`, `pelea`, `saltarIntro`, `quieto`, `bot`, `orden`, `g
 Trampas del banco: la pelea avanza en **tiempo de juego**, no en cuadros (los golpes congelan y el
 K.O. va en cámara lenta: 9.000 cuadros no son 150 s). Y después del último toque de una cadena hay
 que esperar ~30 cuadros: el cuarto golpe entra tarde.
+
+
+Desde el 23/09 el juego baja los assets de jsDelivr: cada banco llama a `usarCDN(ctx)` de `cdn.mjs`
+(copiarlo junto a los `.mjs`). Arman el HTML con `herramientas/armar.py <sha>`.

@@ -181,6 +181,7 @@ function arrancar(){
     if(!mudo){try{mudo=new Audio(SILENCIO);mudo.loop=true;mudo.volume=0.01;var pr=mudo.play();if(pr&&pr.catch)pr.catch(function(){mudo=null;});}catch(e){mudo=null;}}
   };
   ['touchstart','touchend','mousedown','keydown'].forEach(function(ev){addEventListener(ev,prender,{passive:true});});
+  if(window.Idioma)Idioma.alTocar.push(prender);
   addEventListener('touchstart',prender,{once:true});addEventListener('mousedown',prender,{once:true});addEventListener('keydown',prender,{once:true});
   document.addEventListener('visibilitychange',function(){
     if(document.hidden){if(J.estado==='pelea')irA('pausa');if(Sonido.ac&&Sonido.ac.suspend)Sonido.ac.suspend();}

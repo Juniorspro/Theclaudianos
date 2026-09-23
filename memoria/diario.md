@@ -1,6 +1,14 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — ARRABAL a su carpeta sellada, con assets por streaming
+**Pedido textual:** «Mete lo de arrabal adentro de un repositorio adentro de este y sellalo para que
+otras sesiones no lo lean tipo pone no leer y un código que vos recuerdes y que ahí estén todos los
+assets y se haga streaming por JS delivery».
+Qué se hizo: todo ARRABAL en `arrabal/` (sellada: `arrabal/SELLADO.md` + regla en `CLAUDE.md`; el
+código lo tiene el usuario, en el repo sólo su SHA-256). El HTML pasó de 46 MB a 479 kB: los assets
+se bajan de jsDelivr fijados a un commit. El sintetizador base se copió a `herramientas/comun/`.
+
 ### 2026-09-23 — Selector de idiomas en todos los juegos + ARRABAL con los 12 animados
 **Pedido textual:** «A todos los juegos agrégale selección de idiomas en la pantalla principal al inicio».
 Qué se hizo: módulo común `herramientas/comun/idioma.js` (es/en/pt/fr, pantalla al primer inicio,

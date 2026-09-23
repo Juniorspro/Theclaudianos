@@ -1,10 +1,12 @@
 import { chromium } from 'playwright-core';
+import { usarCDN } from './cdn.mjs';
 const nav=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox','--disable-dev-shm-usage']});
 const ctx=await nav.newContext({viewport:{width:412,height:892},deviceScaleFactor:2,hasTouch:true,isMobile:true});
+await usarCDN(ctx);
 await ctx.addInitScript(()=>{try{localStorage.setItem('arrabal.idioma','es');}catch(e){}});   // sin la pantalla de idioma del primer inicio
 const pg=await ctx.newPage();
 const err=[];pg.on('pageerror',e=>err.push('PAGEERROR '+e.message));pg.on('console',m=>{if(m.type()==='error')err.push(m.text().slice(0,160));});
-pg.on('request',r=>{const u=r.url();if(!u.startsWith('file:')&&!u.startsWith('data:'))err.push('RED '+u);});
+pg.on('request',r=>{const u=r.url();if(!u.startsWith('file:')&&!u.startsWith('data:')&&!u.startsWith('https://cdn.jsdelivr.net/'))err.push('RED '+u);});
 await pg.goto('file:///home/user/Theclaudianos/arrabal/index.html');
 await pg.waitForFunction("window.__A&&__A.listo");await pg.waitForFunction("__A.imgs().length>=10");
 const cap=async n=>{await pg.evaluate("__A.dibujarYa()");await pg.screenshot({path:'ac-'+n+'.png'});};

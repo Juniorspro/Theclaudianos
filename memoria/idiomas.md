@@ -13,6 +13,8 @@ inicio». Juegos de esta línea: ARRABAL, CABEZONES, CHICHARRA (el Bosque es de 
 - Lo que se dibuja **letra por letra** o se **parte en renglones** hay que traducirlo antes con
   `Idioma.T(txt)` y dibujar los pedazos con `Idioma.pausa++`/`--` (si no, se traducen los pedazos).
 - Toma los toques en fase de captura: mientras la pantalla está abierta, el juego no recibe nada.
+  Por eso el juego registra su desbloqueo de audio en `Idioma.alTocar.push(prender)`: si no, el
+  primer toque (el de elegir idioma) no prende el sonido en iOS.
 - Enganches en cada juego (4 líneas): `Idioma.iniciar(clave, aMundo, acento)` al arrancar,
   `Idioma.dibujar(g,ANCHO,ALTO,t)` al final del cuadro, `Idioma.botonAqui(x,y)` en la pantalla
   principal, y `T()` en los textos partidos.

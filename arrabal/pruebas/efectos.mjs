@@ -1,11 +1,12 @@
 import { chromium } from 'playwright-core';
+import { usarCDN } from './cdn.mjs';
 const nav=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox','--autoplay-policy=no-user-gesture-required']});
-const pg=await nav.newPage();
+const ctx0=await nav.newContext();await usarCDN(ctx0);const pg=await ctx0.newPage();
 const err=[];pg.on('pageerror',e=>err.push(e.message));
 await pg.goto('file:///home/user/Theclaudianos/arrabal/index.html');
 await pg.waitForFunction("window.__A&&__A.listo");
 await pg.mouse.click(200,400);
-await pg.waitForFunction("__A.Sonido.sfx",{timeout:15000});
+await pg.waitForFunction("__A.Sonido.sfx",null,{timeout:90000});
 const r=await pg.evaluate(()=>{
   const S=__A.Sonido, M=window.ARCHIVOS.sfxMapa, cuenta={}, fallo={};
   const orig=S.muestra.bind(S);

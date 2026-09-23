@@ -13,7 +13,7 @@ var LISTA=[['es','ESPAÑOL','¡Hola! Elegí tu idioma'],['en','ENGLISH','Hi! Cho
 var DIC=window.IDIOMA_DIC||{};
 var I={
   actual:'es', abierto:false, primera:false, t:0, clave:'', boton:null, pausa:0, cache:{}, vistos:null,
-  aMundo:null, rects:[], cuadro:0, tragando:false, alCambiar:null, acento:'255,210,58',
+  aMundo:null, rects:[], cuadro:0, alTocar:[], tragando:false, alCambiar:null, acento:'255,210,58',
   T:function(s){
     if(typeof s!=='string'||!s)return s;
     if(this.vistos&&!this.pausa)this.vistos[s]=1;
@@ -42,6 +42,8 @@ var I={
     var punto=function(e){var t=e.changedTouches?e.changedTouches[0]:e;return S.aMundo(t.clientX,t.clientY);};
     var abajo=function(e){
       var p=punto(e);
+      /* el toque que se traga igual cuenta para el juego como "hubo un gesto" (desbloquea el audio) */
+      if(S.abierto||S.boton)S.alTocar.forEach(function(f){try{f();}catch(x){}});
       if(S.abierto){S.tragando=true;S.tocar(p.x,p.y);}
       else if(S.boton&&S.boton.c>=S.cuadro-2&&(p.x-S.boton.x)*(p.x-S.boton.x)+(p.y-S.boton.y)*(p.y-S.boton.y)<(S.boton.r+10)*(S.boton.r+10)){S.tragando=true;S.abrir();}
       else return;

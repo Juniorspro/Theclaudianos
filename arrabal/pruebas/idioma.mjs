@@ -1,8 +1,10 @@
 // Pantalla de idioma al primer inicio, globo en la portada y el menú, y capturas en cada idioma.
 import { chromium } from 'playwright-core';
+import { usarCDN } from './cdn.mjs';
 const nav=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox']});
 const vert=process.argv[2]==='vertical';
 const ctx=await nav.newContext({viewport:vert?{width:412,height:892}:{width:892,height:412},deviceScaleFactor:1,hasTouch:true,isMobile:true,locale:'es-AR'});
+await usarCDN(ctx);
 const pg=await ctx.newPage();
 await ctx.addInitScript(()=>{});const err=[];pg.on('pageerror',e=>err.push(e.message));
 await pg.goto('file:///home/user/Theclaudianos/arrabal/index.html');

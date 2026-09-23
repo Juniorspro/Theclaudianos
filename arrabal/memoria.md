@@ -190,3 +190,9 @@ assets y se haga streaming por JS delivery».
   jsDelivr no podría servir los assets).
 - El sintetizador base (`componer.py`, `efectos.py`) se copió a `herramientas/comun/` para que
   CABEZONES no tenga que leer esta carpeta.
+- **Cuadros con recuadro** (el fuego del video oscureció el fondo verde): kanji especial, chispa
+  especial y especial2, y sueltos. Borrar ese fondo por inundación se come al personaje (probado).
+  `herramientas/tapar_cajas.py` los reemplaza en `anim.json` por el cuadro limpio más cercano.
+- Banco: `pruebas/cdn.mjs` baja jsDelivr con curl y se lo da a la página (el Chromium del contenedor
+  no confía en el certificado del proxy; **no** desactivar TLS). Los `waitForFunction` de audio
+  esperan hasta 90 s: por streaming tarda lo que tarde la red.
