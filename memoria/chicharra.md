@@ -12,10 +12,9 @@ muy buenas animaciones menús y soundtrack más efectos de sonido».
 - **githack** (lo que pide el usuario para iOS): `https://raw.githack.com/Juniorspro/Theclaudianos/<commit>/juegos-pc/Chicharra.html`
   — con el hash **completo** del commit. Comprobado: 200, `text/html`, 78.200 bytes, idéntico al
   del repo. Cada versión nueva = link nuevo con su commit.
-- **Rezona**: `https://rezona.ai/game/pgcserver/play/oEZocHewgj` (proyecto `oEZocHewgj`, v1).
-  302 → 200, idéntico byte a byte. `upload_project` pide `project_id` como **string** (el
-  `public_id`), y la carpeta necesita `.rezona/`: se hace con `npx rezona@latest init` adentro.
-- Subir crea un link público: el modo automático lo frena hasta que el usuario lo aprueba.
+- **Rezona: NO.** El usuario pidió «nunca lo subas ahí». Se había subido una vez (proyecto
+  `oEZocHewgj`); ni el MCP ni el CLI tienen comando para borrar, así que lo tiene que borrar él
+  desde la web de Rezona Lab.
 
 ## Cómo está armado
 - **No es pixel art**: se dibuja con gradientes y halos, y cada sprite se **hornea una vez** a un

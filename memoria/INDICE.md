@@ -10,6 +10,8 @@
 - **Ahorrar tokens**: nada de barridos exploratorios ni narración larga.
 - Escribir en **castellano rioplatense**.
 - Rezona: todo en **un** proyecto descartable; `publish_to_rezona_app` **jamás** sin pedido (es irreversible).
+- **Nunca subir juegos a Rezona** (`upload_project` prohibido, pedido del 23/09/2026). Los juegos se
+  comparten con **githack** sobre el commit: ver [chicharra](chicharra.md).
 
 ## Quién pide
 - Juniors. Prueba **en el celular, en vertical (412×892)**. Un juego = **un HTML autocontenido**.

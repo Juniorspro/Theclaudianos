@@ -28,4 +28,5 @@ Fuente: `docs/GUIA-JUEGOS.md § 1. Preparar Rezona` y `§ 4`. Ver también: [jue
   ~2.500 (repetido) o ~20.000 (único y cercano). → `docs/GUIA-JUEGOS.md § 4.1`
 - Rig: `source_task_id` es el `gtask-…` del modelo propio; **comprobar los clips que llegaron**, no
   los que se pidieron (ya volvieron tres iguales). → `§ 4.3`
-- Al subir: los assets van en `dist/datos/`, **no** en `dist/assets/` — Rezona saltea `assets/` sin avisar.
+- **Subir juegos a Rezona está prohibido** (23/09/2026). Rezona se usa, si acaso, para generar assets.
+- No existe comando para borrar un proyecto subido: ni en el MCP ni en el CLI (`init`, `login`, `status`, `mcp`).
