@@ -362,3 +362,19 @@ La key guardada daba `PAT_INACTIVE` (revocada). Login nuevo con `npx rezona@late
 plano con `nohup timeout 1500` (con `timeout 25` el proceso muere antes de que el usuario apruebe y el código queda inservible).
 Con la key nueva `list_projects` anda, pero `submit_image_generation` en «perro-prueba» vuelve dos veces con
 `CREDIT_RESERVE_FAILED`: el cobro del backend de juegos sigue caído, igual que el 22.
+
+### 2026-09-23 (9) — A OSCURAS: botiquines y habilidades en el mapa
+**Pedido textual:** «te matan muy rápido, agrega botiquines y habilidades en el mapa».
+
+- **Estaciones** (`J.estaciones`) repartidas por los cuartos (9 a 24 por mapa, una garantizada al lado de la base):
+  botiquín (a veces grande, 60 % de la vida), chaleco, energía (habilidad lista), **burbuja** (absorbe 70 de daño),
+  **turbo** (+45 % de velocidad 8 s) y **radar** (pulso que muestra enemigos). Vuelven a salir a los 18 s (vida y
+  chaleco) o 28 s (el resto). Se dibujan **encima de la oscuridad**, con aro y cuenta regresiva: se ven desde lejos.
+- La IA baja de vida va a la estación más cercana (y el enemigo también la usa).
+- **Sólo con los objetos no alcanzaba**: el piloto moría en el primer tiroteo antes de llegar a uno (5/15 → 4/15).
+  Además: el jugador recibe 25 % menos, la vida vuelve sola tras 6 s sin recibir, el blindaje tras 3,5 s, daño
+  enemigo `SK.dmg` 0,42→0,66, arco rojo que marca de dónde vienen los tiros, y El Mole tarda 1,15 s en arrancar la
+  ametralladora (suena) y pega 5 en vez de 6.
+- Medido, piloto sin invencibilidad: **4–5/15 → 8/15** (dos corridas); con invencibilidad 14/15. El piloto levanta
+  hasta 6 estaciones por partida. El jefe sigue ganándole al piloto porque le tira de frente al escudo.
+  CPU ×6: 60 cuadros por segundo en las tres misiones medidas.
