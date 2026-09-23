@@ -1,5 +1,5 @@
 # ARRABAL — juego de pelea con cartas
-Archivo: `juegos-pc/Arrabal.html` (un solo HTML, ~1,35 MB con el arte adentro, sin red).
+Archivo: `juegos-pc/Arrabal.html` (un solo HTML, ~1,8 MB con el arte adentro, sin red).
 Arte: `assets/arrabal/` + `herramientas/arrabal/`. Banco: `pruebas/arrabal/`. Ver también:
 [pixel2d](pixel2d.md), [chicharra](chicharra.md) (el motor que se reusó), [rezona](rezona.md).
 
@@ -26,6 +26,23 @@ Pedido: «Haz el estilo más Arcade el segundo juego». Se sumó, sin tocar la h
   («RONDA 1», «¡PELEEN!», «RONDA FINAL»), anuncios de combo en 5/10/15/20 golpes, y `capaCRT()`: líneas de
   tubo + viñeta + un barrido claro que baja (se apaga en ajustes: «EFECTO DE TUBO»).
 - La historia usa el mismo motor con `modo='historia'` (equipos y relevos, sin rondas).
+
+## Los seis de la segunda tanda (23/09/2026)
+Pedido: una hoja de sprites de Street Fighter con «Agrega esos modelos de personajes». **No se
+copian personajes con dueño** (ni parecidos): se hicieron seis originales de arquetipos parecidos
+y se le explicó al usuario. Plantel de 12, grilla de selección 4 × 3.
+- DON KANJI (maestro de karate, `punos`), XIAO FENG (bastón largo, `baston`), EL BUZO TÁCTICO
+  (comando anfibio, `arpon`), EL LOBIZÓN (hombre lobo del folclore, `garras`, cabeza propia
+  `cabezaLobo()` en vez de cara + peinado), EL TORO DE MATADEROS (luchador enmascarado, `lucha`),
+  VALE (colegiala con palo de hockey, `palo`). Cartas `ka/xi/bu/lo/to/va 1-3`.
+- Especiales y súper de cada uno: `ESPECIALES`/`SUPERS` en a6; proyectiles nuevos: palma, arpón (tira
+  del rival como el anzuelo), mina (trampa que cae donde está el rival si está entre 60 y 300; si no,
+  a 200), aullido, bocha, torpedo, lluvia de bochas. Retratos de Rezona (fondo transparente).
+- Números: la mina fija a 120 no tocaba a nadie (0 de daño); el torpedo a 420 pasaba de largo
+  (2 de 6 golpes) → 280; la lluvia de bochas abierta a 30 pegaba 2 de 10 → 9.
+- Para agregar un luchador hay que tocar: LUCH/ORDEN_LUCH/CARTAS (a4), trajes en a5, CADENAS,
+  ALCANCE_ARMA, ESPECIALES, SUPERS y proyectiles (a6), dibujo del proyectil (a8), CASA y
+  CARTA_ARCADE (a12), `RETRATOS` en `hornear.py`.
 
 ## Cómo está armado
 - **En la pelea los personajes son títeres por código**: esqueleto con ángulos (`esqueleto()`),

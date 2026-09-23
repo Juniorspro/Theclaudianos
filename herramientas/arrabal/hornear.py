@@ -6,7 +6,8 @@ import os, sys
 from PIL import Image
 CRUDO = sys.argv[1]
 SALIDA = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'arrabal')
-RETRATOS = ['morocha', 'bandoneon', 'chispa', 'mate', 'parca', 'colectivo']
+RETRATOS = ['morocha', 'bandoneon', 'chispa', 'mate', 'parca', 'colectivo',
+            'kanji', 'xiao', 'buzo', 'lobizon', 'toro', 'vale']
 os.makedirs(SALIDA, exist_ok=True)
 total = 0
 def guardar(im, n, q):

@@ -24,7 +24,7 @@ const air=await pg.evaluate(()=>{__A.borrar();__A.darTodo();__A.Prog.equipo=['mo
 console.log('AÉREO',JSON.stringify(air));
 await cap('11-aereo');
 // especiales de los seis y súper
-for(const id of ['mo1','ba1','ch1','ma1','pa1','co1']){
+for(const id of ['mo1','ba1','ch1','ma1','pa1','co1','ka1','xi1','bu1','lo1','to1','va1']){
   const r=await pg.evaluate((id)=>{__A.borrar();__A.darTodo();__A.Prog.equipo=[id];__A.pelea(1);__A.saltarIntro();__A.quieto(true);__A.anda(10);
     const v0=__A.mundo().e.vida;__A.orden('esp0');__A.anda(70);const v1=__A.mundo().e.vida;__A.anda(60);
     __A.orden('esp1');__A.anda(80);const v2=__A.mundo().e.vida;__A.anda(60);

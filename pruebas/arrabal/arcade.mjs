@@ -15,6 +15,9 @@ await pg.touchscreen.tap(206,600);await pg.evaluate("__A.anda(60)");
 console.log('TOQUE →',await pg.evaluate("__A.estado()"));await cap('02-menu');
 await pg.evaluate("__A.dibujarYa()");const b=await pg.evaluate("__A.donde('arcade')");await pg.touchscreen.tap(b.x,b.y);await pg.evaluate("__A.anda(40)");
 console.log('ARCADE →',await pg.evaluate("__A.estado()"));await cap('03-selec');
+// la grilla es de 12 (4 × 3): un toque en la celda 10 marca al Toro
+{const c=await pg.evaluate("__A.donde('sel:10')");await pg.touchscreen.tap(c.x,c.y);await pg.evaluate("__A.anda(10)");
+ console.log("TOQUE EN LA CELDA 10 → sel",await pg.evaluate("__A.J.sel"));await cap('03b-selec-toro');}
 // la cuenta regresiva elige sola
 await pg.evaluate("__A.anda(1260)");
 console.log('TIEMPO DE ELECCIÓN AGOTADO →',await pg.evaluate("__A.estado()"),JSON.stringify(await pg.evaluate("__A.arc()")));

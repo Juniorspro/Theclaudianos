@@ -35,10 +35,10 @@ await pg.evaluate("__A.anda(60);__A.dibujarYa()");
 const p=await pg.evaluate("__A.donde('pausa')");
 await pg.touchscreen.tap(p.x,p.y);await pg.evaluate("__A.anda(3)");
 console.log('PAUSA →',await pg.evaluate("__A.estado()"));
-// 6) menú: tocar PELEAR en la portada lleva al mapa
-await pg.evaluate("__A.ir('portada');__A.anda(100);__A.dibujarYa()");
+// 6) menú: tocar HISTORIA lleva al mapa (la portada ahora es la atracción)
+await pg.evaluate("__A.ir('menu');__A.anda(100);__A.dibujarYa()");
 const q=await pg.evaluate("__A.donde('mapa')");await pg.touchscreen.tap(q.x,q.y);await pg.evaluate("__A.anda(3)");
-console.log('PORTADA → PELEAR →',await pg.evaluate("__A.estado()"));
+console.log('MENÚ → HISTORIA →',await pg.evaluate("__A.estado()"));
 // capturas del súper
 await pg.evaluate("__A.borrar();__A.darTodo();__A.Prog.equipo=['ch3'];__A.pelea(4);__A.saltarIntro();__A.quieto(true);__A.anda(20);__A.medidor(3);__A.orden('super');__A.anda(35);__A.dibujarYa()");
 await pg.screenshot({path:'ar-12-super-cine.png'});

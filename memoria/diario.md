@@ -1,6 +1,13 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — ARRABAL, seis luchadores más
+**Pedido textual:** «Agrega esos modelos de personajes» (con una hoja de sprites de Street Fighter).
+Qué se hizo: seis luchadores **originales** de arquetipos parecidos (no se copian personajes con
+dueño), plantel de 12 y grilla 4 × 3. Detalle en [arrabal](arrabal.md) § Los seis de la segunda tanda.
+Trampa del día: un parche largo en Python se cortó a la mitad por un ancla vieja; lo anterior quedó
+aplicado y lo demás no. Revisar qué entró antes de volver a correrlo.
+
 ### 2026-09-23 — ARRABAL, modo arcade
 **Pedido textual:** «Haz el estilo más Arcade el segundo juego».
 Qué se hizo: atracción con demo, modo arcade completo (selección, VS, rondas, puntaje, continuar,
