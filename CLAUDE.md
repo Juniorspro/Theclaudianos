@@ -10,7 +10,7 @@ se prueba **en el celular, en vertical (412×892)**.
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. |
 | `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil, **escenario girado 90°** (se juega apaisado): base militar de arranque, nave de dos cubiertas que se recorre por dentro, seis galaxias que se ganan, caminata espacial con soga, fotos que se venden y álbum de 21 especies. |
 | `juegos-pc/Saltos.html` | **A LOS SALTOS.** Gladiadores 2D pixel art con física de saltos (a la Gladihoppers): 7 clases, cortes y sangre, carrera con edad, fama, mercado y estatuas. Canvas 2D, sin red, **escenario girado 90°** (se juega apaisado), castellano, inglés y portugués. |
-| `juegos-pc/Mate.html` | **MATE AMARGO.** Pixel art 2.5D a lo *My Friend Pedro: Ripe for Revenge*: personajes 2D en planos, mundo 3D iluminado con rayos de dios, 9 niveles en 3 capítulos, jefe, cinemáticas, menús, música sintetizada, ES/EN/PT. Dos palancas (o arrastre, en OPCIONES). Se juega apaisado. |
+| `juegos-pc/Mate.html` | **MATE AMARGO.** Pixel art 2.5D a lo *My Friend Pedro: Ripe for Revenge*: personajes 2D en planos, mundo 3D iluminado con rayos de dios, 9 niveles en 3 capítulos, jefe, cinemáticas, menús, música sintetizada, ES/EN/PT. Dos palancas fijas: la izquierda apunta el salto, la derecha tira (o arrastre, en OPCIONES). Se juega apaisado. |
 | `herramientas/mate/` | Fuentes de `Mate.html` por partes (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`). **Se edita la fuente, no el HTML.** |
 | `.claude/skills/juego-25d` | Receta del 2.5D pixel art: render, sprites, niveles verificados, cinemáticas, menús, idiomas. |
 | `docs/GUIA_JUEGOS_2D_PIXEL.md` | Receta para juegos 2D pixel art (escala entera, piezas, banco). La usa `Saltos.html`. |
@@ -1494,3 +1494,20 @@ seguir es un toque. Al elegir se traduce todo y pasa al título. Sigue estando t
 
 Medido con un toque de verdad en PORTUGUÊS: pasa al título con «UMA VINGANÇA COM ERVA», queda guardado, y al recargar la
 pantalla de idioma vuelve con portugués marcado. Fuzz y auditoría de idiomas sin errores.
+
+### 2026-09-23 (aq) — la palanca izquierda apunta el salto, y las dos quedan fijas
+**Pedido textual:** «Por cierto el joystick era para apuntar a dónde saltar no moverte libremente y que sea joystick fijo y bien ubicao».
+
+La vuelta (ao) había entendido mal: la izquierda movía al personaje libremente. Se sacó todo eso (caminar, coyote, salto guardado,
+bajar del tablón y su sonda) y la física volvió a ser la del arrastre:
+- **Izquierda, fija abajo a la izquierda**: apunta el salto con dirección y fuerza. Mientras se sostiene, la trayectoria punteada y
+  la cámara lenta del planeo (0,12); al soltar, salta hacia ahí (17 m/s con la palanca al tope). Bien de costado, desliza. En la
+  pared, apunta el salto desde la pared. Con el personaje en el aire el aro se apaga un poco: todavía no se puede saltar.
+- **Derecha, fija abajo a la derecha**: apunta y tira sola, con la mira que se engancha (igual que antes).
+- Las dos tienen fondo oscuro, aro y botón que sigue al dedo; la izquierda con una flecha, la derecha con una mira. Se agarran
+  tocando cerca de su lugar, y tocar un enemigo lejos de las palancas le sigue tirando.
+- El cartel del nivel subió arriba y la primera pista de Mateo espera a que se vaya: tapaban la trayectoria al arrancar.
+
+Medido con dedos de verdad: palanca izquierda arriba-derecha al 75% → planea (0,12) y al soltar sale a 9,5 / 9,4 m/s; de
+costado → desliza a 14,5; la derecha engancha y baja al matón. Los 8 niveles con puerta se terminan, el jefe muere en sus tres
+fases, `TR_FALTA` vacío en inglés y portugués, fuzz de 250 acciones sin errores.

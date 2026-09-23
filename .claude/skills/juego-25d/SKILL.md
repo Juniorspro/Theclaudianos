@@ -38,17 +38,17 @@ y el banco está en `herramientas/mate/banco/`. **Se edita la fuente, nunca el H
 - Estela de cámara lenta: copias aditivas del sprite. **`alphaTest` corta la opacidad**: con opacidad
   0,5 y `alphaTest 0,5` no se ve nada.
 
-## Controles: dos palancas (y el arrastre como opción)
-- Cada mitad de la pantalla es una palanca que **nace donde se apoya el dedo** y cuya base sigue al dedo
-  si se va lejos. Izquierda: caminar, arriba salta (soltar antes = salto corto, con tiempo de coyote y
-  salto guardado), abajo corriendo desliza, abajo quieto sobre un tablón baja. Derecha: apunta y tira
-  sola; la mira se engancha al blanco de **menor ángulo** que la bala pueda alcanzar (el cajón tapa la
-  bala aunque no la vista). Un toque corto sobre un enemigo le tira. En el aire apuntando, cámara lenta.
-- **El salto va antes que el «soltarse de la pared»**: la diagonal arriba-y-afuera de un jugador de
-  verdad soltaba la pared y el salto de pared no salía nunca. Lo encontró `alcancePal`.
-- Agarrarse a la pared sólo empujando hacia ella; sin eso, con palancas uno se pega a todo.
-- `alcancePal()` simula las palancas (caminar, saltos de tres alturas con cinco direcciones, deslizar,
-  bajar del tablón, saltos de pared) y `alcance()` el arrastre: los dos modos se verifican.
+## Controles: dos palancas fijas (y el arrastre como opción)
+- **No se camina**: la palanca izquierda, fija en el rincón de abajo, **apunta el salto** (dirección y fuerza)
+  con la misma física del arrastre; mientras se sostiene hay trayectoria y cámara lenta de planeo, al
+  soltar salta, y bien de costado desliza. La derecha, fija en el otro rincón, apunta y tira sola; la
+  mira se engancha al blanco de **menor ángulo** que la bala pueda alcanzar (el cajón tapa la bala aunque
+  no la vista). Tocar un enemigo lejos de las palancas también le tira.
+- Una primera versión movía al personaje libremente con la izquierda: **no era lo pedido**. Preguntarse
+  qué hace la palanca en el juego de referencia antes de inventarle un uso.
+- Las palancas se agarran cerca de su lugar (2,3 radios), así el resto de la pantalla queda para tocar.
+- Si una física nueva cambia cómo se salta, `alcance()` se corre de nuevo: con el movimiento libre, el
+  salto de pared soltaba la pared antes de saltar y tres niveles se volvieron imposibles.
 
 ## Niveles
 - Mapas de texto armados con piezas en Python (`niveles.py`: `suelo`, `r`, `tablon`, `p`), en metros y

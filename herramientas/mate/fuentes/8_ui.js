@@ -51,8 +51,9 @@ stage.addEventListener('pointerdown', ev => {
   if(uiActiva()){ uiDown(x, y); DEDOS.set(ev.pointerId, {tipo:'ui'}); return; }
   if(J.modo !== 'juego') return;
   if(Math.abs(x - W/2) < 14 && y < 20){ pausar(); return; }
-  if(PAL()){ const tipo = x < W/2 ? 'mov' : 'palo';                   /* cada mitad, su palanca: nace donde se apoya el dedo */
-    if(![...DEDOS.values()].some(d => d.tipo === tipo)) DEDOS.set(ev.pointerId, {tipo, x0:x, y0:y, x, y, t:0, lejos:false, b:tipo === 'palo' && !J.fin ? blancoEn(x, y) : null});
+  if(PAL()){ const tiene = t => [...DEDOS.values()].some(d => d.tipo === t);        /* las palancas están fijas: se agarran cerca de su lugar */
+    for(const k of ['mov', 'palo']){ const c = centroPalo(k); if(!tiene(k) && Math.hypot(x - c.x, y - c.y) < R_PALO*2.3){ DEDOS.set(ev.pointerId, {tipo:k, x, y, t:0}); return; } }
+    const b = blancoEn(x, y); if(b && !J.fin){ disparar(b); DEDOS.set(ev.pointerId, {tipo:'tiro', b, t:0}); }      /* tocar un enemigo sigue sirviendo */
     return; }
   const b = blancoEn(x, y);
   if(b && !J.fin){ disparar(b); DEDOS.set(ev.pointerId, {tipo:'tiro', b, t:0}); return; }
@@ -63,25 +64,27 @@ function soltarDedo(ev, cancela){
   SON.arrancar();
   const d = DEDOS.get(ev.pointerId); if(!d) return; DEDOS.delete(ev.pointerId);
   if(d.tipo === 'ui'){ if(!cancela){ const [x, y] = aPx(ev); uiUp(x, y); } else UI.presion = null; return; }
-  if(d.tipo === 'mov'){ CTRL.mx = CTRL.my = 0; return; }
-  if(d.tipo === 'palo'){ CTRL.apunta = false; if(!cancela && !d.lejos && d.t < 0.25 && d.b && J.modo === 'juego' && !J.pausa) disparar(d.b); return; }   /* un toque corto sobre un enemigo le tira */
+  if(d.tipo === 'mov'){ const P2 = J.planeo; J.planeo = null; CTRL.sx = CTRL.sy = 0;           /* soltar la izquierda: salta hacia donde apuntaba */
+    if(!cancela && P2 && P2.palo && J.modo === 'juego' && !J.pausa && puedePlanear()) ejecutarPlaneo(P2.dx, P2.dy); return; }
+  if(d.tipo === 'palo'){ CTRL.apunta = false; return; }
   if(d.tipo === 'plan'){ J.planeo = null; if(!cancela && puedePlanear()) ejecutarPlaneo((d.x - d.x0)/TX, -(d.y - d.y0)/TX); }
 }
 addEventListener('pointerup', ev => soltarDedo(ev, false)); addEventListener('pointercancel', ev => soltarDedo(ev, true));
-addEventListener('blur', () => { DEDOS.clear(); J.planeo = null; CTRL.mx = CTRL.my = 0; CTRL.apunta = false; });
+addEventListener('blur', () => { DEDOS.clear(); J.planeo = null; CTRL.sx = CTRL.sy = 0; CTRL.apunta = false; });
 addEventListener('keydown', ev => { if(ev.code === 'Escape' && J.modo === 'juego') pausar(); });
 document.addEventListener('visibilitychange', () => { if(document.hidden && J.modo === 'juego' && !J.pausa) pausar(); });
-const R_PALO = 22;
-/* las palancas: la base sigue al dedo si se va lejos, así nunca se queda sin recorrido */
+const R_PALO = 25, V_PALO = 17;
+function centroPalo(k){ const m = R_PALO + 12; return k === 'mov' ? {x:m + 4, y:H - m} : {x:W - m - 4, y:H - m}; }
+/* las palancas: la izquierda arma el salto (con su trayectoria y la cámara lenta del planeo), la derecha apunta */
 function pasoPalancas(dtR){
   let mov = false, palo = false;
   for(const d of DEDOS.values()){ if(d.tipo !== 'mov' && d.tipo !== 'palo') continue; d.t += dtR;
-    let dx = d.x - d.x0, dy = d.y - d.y0; const n = Math.hypot(dx, dy);
-    if(n > R_PALO){ d.x0 += dx*(1 - R_PALO/n); d.y0 += dy*(1 - R_PALO/n); dx = d.x - d.x0; dy = d.y - d.y0; }
-    if(n > R_PALO*0.3) d.lejos = true;
-    if(d.tipo === 'mov'){ mov = true; CTRL.mx = dx/R_PALO; CTRL.my = dy/R_PALO; }
-    else { palo = true; const act = Math.hypot(dx, dy) > R_PALO*0.28; CTRL.apunta = act; if(act){ CTRL.ax = dx; CTRL.ay = dy; } } }
-  if(!mov){ CTRL.mx = CTRL.my = 0; } if(!palo) CTRL.apunta = false;
+    const c = centroPalo(d.tipo); let dx = (d.x - c.x)/R_PALO, dy = (d.y - c.y)/R_PALO; const n = Math.hypot(dx, dy); if(n > 1){ dx /= n; dy /= n; }
+    if(d.tipo === 'mov'){ mov = true; CTRL.sx = dx; CTRL.sy = dy;
+      if(puedePlanear() && Math.hypot(dx, dy) > 0.22){ if(!J.planeo) SON.fx('planeo'); J.planeo = {palo:true, dx:-dx*V_PALO/4.2, dy:dy*V_PALO/4.2}; }
+      else if(J.planeo && J.planeo.palo) J.planeo = null; }
+    else { palo = true; const act = Math.hypot(dx, dy) > 0.25; CTRL.apunta = act; if(act){ CTRL.ax = dx; CTRL.ay = dy; } } }
+  if(!mov){ CTRL.sx = CTRL.sy = 0; if(J.planeo && J.planeo.palo) J.planeo = null; } if(!palo) CTRL.apunta = false;
 }
 function pasoDedos(dtR){ for(const d of DEDOS.values()) if(d.tipo === 'tiro'){ d.t += dtR; const o = d.b.cosa; if(d.t > 0.16 && !o.muerto && o.vivo !== false && !(o.tetera && o.vida <= 0)){ d.t = 0; disparar(d.b); } } }
 
@@ -148,11 +151,11 @@ function dibujarHUD(dtR){
 function dibujarJuegoHUD(g, dtR){
   /* el cartel del nivel al entrar: una franja que cruza con el número y el nombre */
   if(J.banner !== undefined && J.banner < 3 && J.nivel){ J.banner += dtR; const t = J.banner, k = t < 0.5 ? suave(t/0.5) : t > 2.4 ? 1 - suave((t - 2.4)/0.6) : 1;
-    const h = 26, y = Math.round(H*0.42), x = Math.round(lerp(-W, 0, k));
+    const h = 26, y = Math.round(H*0.14), x = Math.round(lerp(-W, 0, k));
     g.fillStyle = 'rgba(6,4,12,0.8)'; g.fillRect(x, y, W, h); g.fillStyle = '#b81c2c'; g.fillRect(x, y, W, 1); g.fillRect(x, y + h - 1, W, 1);
     texto(g, J.nivel.id, x + W/2, y + 3, 'oro'); texto(g, tr(J.nivel.nombre), x + W/2, y + 13, 'blanco'); }
   /* la trayectoria del planeo */
-  if(J.planeo){ const d = J.planeo, tr = trayectoria((d.x - d.x0)/TX, -(d.y - d.y0)/TX);
+  if(J.planeo){ const d = J.planeo, tr = d.palo ? trayectoria(d.dx, d.dy) : trayectoria((d.x - d.x0)/TX, -(d.y - d.y0)/TX);
     const n = tr.pts.length;
     tr.pts.forEach((p, i) => { const q = aPantalla(p.x, p.y), X = Math.round(q.x), Y = Math.round(q.y);
       if(p.fin){ anillo(g, q.x, q.y, 4, 1, '#0a0610'); anillo(g, q.x, q.y, 3, 1, '#ffffff'); return; }
@@ -160,17 +163,20 @@ function dibujarJuegoHUD(g, dtR){
       g.fillStyle = 'rgba(10,6,16,' + a*0.8 + ')'; g.fillRect(X, Y + 1, s2 + 1, s2);
       g.fillStyle = 'rgba(255,255,255,' + a + ')'; g.fillRect(X, Y, s2, s2); });
     /* la cuerda: del apoyo al dedo */
-    const L = Math.hypot(d.x - d.x0, d.y - d.y0);
+    if(!d.palo){ const L = Math.hypot(d.x - d.x0, d.y - d.y0);
     for(let i = 0; i < L; i += 3){ const X = Math.round(d.x0 + (d.x - d.x0)*i/L), Y = Math.round(d.y0 + (d.y - d.y0)*i/L); g.fillStyle = 'rgba(255,220,120,0.55)'; g.fillRect(X, Y, 1, 1); }
-    anillo(g, d.x0, d.y0, 3, 1, 'rgba(255,255,255,0.6)'); g.fillStyle = '#ffd86a'; g.fillRect(Math.round(d.x) - 1, Math.round(d.y) - 1, 2, 2); }
-  /* las palancas: base y botón donde está el dedo; quietas, apenas una marca en cada rincón */
+    anillo(g, d.x0, d.y0, 3, 1, 'rgba(255,255,255,0.6)'); g.fillStyle = '#ffd86a'; g.fillRect(Math.round(d.x) - 1, Math.round(d.y) - 1, 2, 2); } }
+  /* las palancas fijas en los rincones: base con el fondo oscuro, botón que sigue al dedo dentro del aro */
   if(PAL() && !J.fin){ const act = {}; for(const d of DEDOS.values()) if(d.tipo === 'mov' || d.tipo === 'palo') act[d.tipo] = d;
-    [['mov', 34, H - 34], ['palo', W - 34, H - 34]].forEach(([k, bx, by]) => { const d = act[k], x0 = d ? d.x0 : bx, y0 = d ? d.y0 : by;
-      g.globalAlpha = d ? 0.55 : 0.22; anillo(g, x0, y0, R_PALO, 1, k === 'palo' ? '#ffd86a' : '#efe6d2');
-      const kx = d ? lim(d.x, x0 - R_PALO, x0 + R_PALO) : x0, ky = d ? lim(d.y, y0 - R_PALO, y0 + R_PALO) : y0;
-      g.fillStyle = k === 'palo' ? '#ffd86a' : '#efe6d2'; g.globalAlpha = d ? 0.8 : 0.3; for(let yy = -4; yy <= 4; yy++){ const w2 = Math.round(Math.sqrt(16 - yy*yy)); g.fillRect(Math.round(kx) - w2, Math.round(ky) + yy, w2*2 + 1, 1); }
-      if(!d){ g.fillStyle = K; if(k === 'palo'){ g.fillRect(Math.round(kx) - 2, Math.round(ky), 5, 1); g.fillRect(Math.round(kx), Math.round(ky) - 2, 1, 5); } else { g.fillRect(Math.round(kx) - 2, Math.round(ky), 5, 1); } }
-      g.globalAlpha = 1; });
+    for(const k of ['mov', 'palo']){ const d = act[k], c = centroPalo(k), col = k === 'palo' ? '#ffd86a' : '#8ad8ff', listo = k === 'palo' || puedePlanear();
+      g.globalAlpha = d ? 0.5 : 0.3; g.fillStyle = '#0a0610'; for(let yy = -R_PALO; yy <= R_PALO; yy++){ const w2 = Math.round(Math.sqrt(R_PALO*R_PALO - yy*yy)); g.fillRect(Math.round(c.x) - w2, Math.round(c.y) + yy, w2*2 + 1, 1); }
+      g.globalAlpha = d ? 0.9 : listo ? 0.55 : 0.25; anillo(g, c.x, c.y, R_PALO, 1, col);
+      let dx = d ? d.x - c.x : 0, dy = d ? d.y - c.y : 0; const n = Math.hypot(dx, dy); if(n > R_PALO){ dx *= R_PALO/n; dy *= R_PALO/n; }
+      const kx = Math.round(c.x + dx), ky = Math.round(c.y + dy), rk = 9;
+      g.globalAlpha = d ? 0.95 : listo ? 0.6 : 0.3; g.fillStyle = col; for(let yy = -rk; yy <= rk; yy++){ const w2 = Math.round(Math.sqrt(rk*rk - yy*yy)); g.fillRect(kx - w2, ky + yy, w2*2 + 1, 1); }
+      g.fillStyle = K; if(k === 'palo'){ g.fillRect(kx - 4, ky, 9, 1); g.fillRect(kx, ky - 4, 1, 9); g.fillRect(kx - 1, ky - 1, 3, 3); g.fillStyle = col; g.fillRect(kx, ky, 1, 1); }
+      else { for(let i = 0; i < 4; i++){ g.fillRect(kx - i, ky - 3 + i, 1, 1); g.fillRect(kx + i, ky - 3 + i, 1, 1); } g.fillRect(kx, ky - 3, 1, 8); }       /* una flecha para arriba: saltar */
+      g.globalAlpha = 1; }
     /* la mira: corchetes sobre el blanco enganchado */
     if(CTRL.apunta && CTRL.blanco){ const c = CTRL.blanco.cosa, p = aPantalla(c.x, c.y + (c.alto ? c.alto*(CTRL.blanco.cabeza ? 0.9 : 0.6) : 0)), x = Math.round(p.x), y = Math.round(p.y), r = 5 + Math.round(Math.sin(J.tr*14));
       g.fillStyle = CTRL.blanco.cabeza ? '#ff5a5a' : '#ffd86a'; for(const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]){ g.fillRect(x + sx*r - (sx > 0 ? 2 : 0), y + sy*r, 3, 1); g.fillRect(x + sx*r, y + sy*r - (sy > 0 ? 2 : 0), 1, 3); } } }
@@ -209,52 +215,21 @@ function dibujarBocadillo(g, o, alto, col, dtR){
 function partir(txt, n){ const pal = txt.split(' '), l = ['']; for(const p of pal){ if((l[l.length - 1] + ' ' + p).trim().length > n) l.push(p); else l[l.length - 1] = (l[l.length - 1] + ' ' + p).trim(); } return l; }
 /* con palancas, las pistas del arrastre se cuentan de otra manera */
 const PISTA_PAL = {
-  'Arrastrá para atrás y soltá: así se salta.':'Palanca izquierda para moverte. Empujala para arriba y saltás.',
-  'En el aire el tiempo se frena. ¡Tocalos para tirarles!':'Palanca derecha para apuntar y tirar. En el aire, el tiempo se frena.',
-  'Arrastrá de costado para deslizarte por abajo.':'Corré y tirá la palanca para abajo: te deslizás por debajo.',
-  'Saltá contra la pared para agarrarte y de ahí saltá otra vez.':'Saltá contra la pared empujando hacia ella, y después para arriba.'};
-function pasoPistas(dtR){ const P2 = J.nivel.pistas || []; if(J.pista < P2.length && HE.x >= P2[J.pista].x){ MATEO.bocadillo = {txt:tr(PAL() && PISTA_PAL[P2[J.pista].txt] || P2[J.pista].txt), t:5.5, n:0}; SON.fx('mateo'); J.pista++; } }
+  'Arrastrá para atrás y soltá: así se salta.':'Palanca izquierda: apuntá hacia dónde saltar y soltá.',
+  'En el aire el tiempo se frena. ¡Tocalos para tirarles!':'Palanca derecha: apuntá y tira sola. En el aire, el tiempo se frena.',
+  'Arrastrá de costado para deslizarte por abajo.':'Palanca izquierda bien de costado: te deslizás por abajo.',
+  'Saltá contra la pared para agarrarte y de ahí saltá otra vez.':'Saltá contra la pared: te agarrás, y de ahí apuntás el próximo salto.'};
+function pasoPistas(dtR){ const P2 = J.nivel.pistas || []; if(J.banner !== undefined && J.banner < 3) return; if(J.pista < P2.length && HE.x >= P2[J.pista].x){ MATEO.bocadillo = {txt:tr(PAL() && PISTA_PAL[P2[J.pista].txt] || P2[J.pista].txt), t:5.5, n:0}; SON.fx('mateo'); J.pista++; } }
 
 /* ================================================================ sondas del banco */
 window.__M = {J, HE, SON, HOJAS, cam, THREE, renderer, dibujarTodo, dibujarHUD, dibujarEntidades, pasoMundo, esc, PART, LUZ, POST, LUCES_NIVEL, LUCES_FLASH, NIVELref:() => NIVEL, MATEO:() => MATEO, get ENEM(){ return ENEM; }, get BALAS(){ return BALAS; }, get OBJ(){ return OBJ; }, NIVEL, CAMARA, medida:() => ({W, H, PX, DPR, SW, SH, GIRADO}),
   nivel:i => cargarNivel(i || 0), jugar:(i, c) => empezarNivel(i || 0, !!c), get UI(){ return UI; }, cine:n => arrancarCine(n), saltarCine:() => saltearCine(), get PROG(){ return PROG; }, planear:(dx, dy) => ejecutarPlaneo(dx, dy), trayectoria, blancoEn, disparar, aPantalla,
   info:() => ({llamadas:renderer.info.render.calls, tris:renderer.info.render.triangles, prog:renderer.info.programs.length, geos:renderer.info.memory.geometries}),
   anda(seg){ const n = Math.round(seg*60); for(let i = 0; i < n; i++){ const d = 1/60; pasoHeroe(d); pasoEnemigos(d); pasoBalas(d); } },
-  falta:() => [...TR_FALTA], alcance, alcancePal, CTRL, get DEDOS(){ return DEDOS; }, idioma:l => ponerIdioma(l), resultado:() => { J.fin = {estrellas:2, t:0}; pantallaResultado(); }, muerte:() => pantallaMuerte(), pausar};
-/* la misma sonda con las palancas: caminar, saltar (corto, medio, largo) hacia cada lado, deslizar, bajar del tablón y saltar de pared */
-function alcancePal(maxNodos){
-  const guard = ENEM, snap = {...HE}; ENEM = []; J.sim = true; J.simPal = true; const vistos = new Map(), cola = [], pisados = new Set(); let fin = false, pasos = 0;
-  const clave = (x, y, e, l) => e + (Math.round(x*2)/2) + ',' + (Math.round(y*4)/4) + ',' + (l || 0);
-  const meter = (x, y, e, l) => { const k = clave(x, y, e, l); if(vistos.has(k)) return; vistos.set(k, 1); cola.push({x, y, e, l}); if(e === 'suelo') pisados.add(Math.floor(x) + ',' + Math.round(y)); };
-  meter(snap.x, snap.y, 'suelo');
-  const planes = [];
-  for(const mx of [-1, 1]) planes.push({pie:mx});
-  for(const h of [0.07, 0.2, 0.6]) for(const mx of [-1, -0.5, 0, 0.5, 1]) for(const hasta of [9, 0.3]) planes.push({salto:h, mx, hasta});
-  for(const mx of [-1, 1]) planes.push({desliza:mx});
-  planes.push({baja:true});
-  while(cola.length && vistos.size < (maxNodos || 5000)){ const n = cola.shift();
-    for(const P of planes){
-      if(n.e === 'pared' && !P.salto) continue;
-      Object.assign(HE, {x:n.x, y:n.y, vx:0, vy:0, est:n.e, paredLado:n.l || 0, pared:n.e === 'pared' ? 2 : 0, invul:0, muerto:0, vida:3, giro:0, desliza:0, bufSalto:0, coyote:0, bajando:0, saltoAlto:false});
-      CTRL.arribaAntes = false; J.simHerido = 0; J.simFin = 0; let pisoT = 0;
-      for(let i = 0; i < 300; i++){ const t = i/60; let mx = 0, my = 0;
-        if(P.pie){ mx = t < 0.25 ? P.pie : 0; }
-        else if(P.salto){ my = t < P.salto ? -1 : 0; mx = t < P.hasta ? (n.e === 'pared' ? (P.mx === 0 ? 0 : -(n.l)*Math.abs(P.mx)) : P.mx) : 0; if(HE.est === 'suelo' && t > 0.1) mx = 0; }
-        else if(P.desliza){ mx = t < 0.3 ? P.desliza : 0; my = t > 0.22 && t < 0.3 ? 1 : 0; }
-        else if(P.baja){ my = t < 0.1 ? 1 : 0; }
-        CTRL.mx = mx; CTRL.my = my; pasoHeroe(1/60); pasos++;
-        if(J.simFin){ fin = true; break; } if(J.simHerido || HE.y < -3) break;
-        if(HE.est === 'pared' && i > 3){ meter(HE.x, HE.y, 'pared', HE.paredLado); break; }
-        if(HE.est === 'suelo' && i > 4 && Math.abs(HE.vx) < 0.25 && !mx){ if(++pisoT > 2){ meter(HE.x, HE.y, 'suelo'); break; } } else pisoT = 0; } } }
-  ENEM = guard; J.sim = false; J.simPal = undefined; CTRL.mx = CTRL.my = 0; Object.assign(HE, snap);
-  const nodos = [...vistos.keys()].map(k => { const [a, b] = k.replace(/^[a-z]+/, '').split(','); return {x:+a, y:+b}; });
-  const sueltos = ENEM.filter(e => !nodos.some(n => Math.hypot(n.x - e.x, n.y - e.y) < 20 && veLinea(n.x, n.y + 1.2, e.x, e.y + e.alto*0.6))).map(e => e.tipo + '@' + e.x + ',' + e.y);
-  const filas = NIVEL.mapa.map((f, i) => f.map((c, x) => pisados.has(x + ',' + (NIVEL.alto - 1 - i)) && c === '.' ? '*' : c).join(''));
-  return {fin, nodos:vistos.size, pasos, filas, sueltos};
-}
+  falta:() => [...TR_FALTA], alcance, CTRL, get DEDOS(){ return DEDOS; }, idioma:l => ponerIdioma(l), resultado:() => { J.fin = {estrellas:2, t:0}; pantallaResultado(); }, muerte:() => pantallaMuerte(), pausar};
 /* sonda: todos los saltos posibles desde cada lugar pisable; dice si se llega a la puerta */
 function alcance(maxNodos){
-  const guard = ENEM, snap = {...HE}; ENEM = []; J.sim = true; J.simPal = false; const vistos = new Map(), cola = [], pisados = new Set(); let fin = false, pasos = 0;
+  const guard = ENEM, snap = {...HE}; ENEM = []; J.sim = true; const vistos = new Map(), cola = [], pisados = new Set(); let fin = false, pasos = 0;
   const clave = (x, y, e, l) => e + (Math.round(x*2)/2) + ',' + (Math.round(y*4)/4) + ',' + (l || 0);
   const meter = (x, y, e, l) => { const k = clave(x, y, e, l); if(vistos.has(k)) return; vistos.set(k, 1); cola.push({x, y, e, l}); if(e === 'suelo') pisados.add(Math.floor(x) + ',' + Math.round(y)); };
   meter(snap.x, snap.y, 'suelo');
@@ -269,7 +244,7 @@ function alcance(maxNodos){
         if(J.simFin){ fin = true; break; } if(J.simHerido || HE.y < -3) break;
         if(HE.est === 'pared' && i > 2){ meter(HE.x, HE.y, 'pared', HE.paredLado); break; }
         if(HE.est === 'suelo' && Math.abs(HE.vx) < 0.2){ meter(HE.x, HE.y, 'suelo'); break; } } } }
-  ENEM = guard; J.sim = false; J.simPal = undefined; Object.assign(HE, snap);
+  ENEM = guard; J.sim = false; Object.assign(HE, snap);
   const nodos = cola.concat([...vistos.keys()].map(k => { const [a, b] = k.replace(/^[a-z]+/, '').split(','); return {x:+a, y:+b}; }));
   const sueltos = ENEM.filter(e => !nodos.some(n => Math.hypot(n.x - e.x, n.y - e.y) < 20 && veLinea(n.x, n.y + 1.2, e.x, e.y + e.alto*0.6))).map(e => e.tipo + '@' + e.x + ',' + e.y);
   const filas = NIVEL.mapa.map((f, i) => f.map((c, x) => pisados.has(x + ',' + (NIVEL.alto - 1 - i)) && c === '.' ? '*' : c).join(''));

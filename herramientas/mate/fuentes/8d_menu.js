@@ -133,7 +133,7 @@ const PANTALLAS = {
       [tr('CALIDAD'), tr(AJ.calidad.toUpperCase()), d => { AJ.calidad = cal[(cal.indexOf(AJ.calidad) - d + 3) % 3]; aplicarCalidad(); }],
       [tr('MÚSICA'), AJ.musica, d => { AJ.musica = lim(Math.round(AJ.musica*10 + d)/10, 0, 1); SON.volumen(); }],
       [tr('EFECTOS'), AJ.efectos, d => { AJ.efectos = lim(Math.round(AJ.efectos*10 + d)/10, 0, 1); SON.volumen(); SON.fx('disparo'); }],
-      [tr('CONTROLES'), AJ.controles === 'arrastre' ? tr('ARRASTRE') : tr('PALANCAS'), () => { AJ.controles = AJ.controles === 'arrastre' ? 'palancas' : 'arrastre'; DEDOS.clear(); CTRL.mx = CTRL.my = 0; CTRL.apunta = false; J.planeo = null; }],
+      [tr('CONTROLES'), AJ.controles === 'arrastre' ? tr('ARRASTRE') : tr('PALANCAS'), () => { AJ.controles = AJ.controles === 'arrastre' ? 'palancas' : 'arrastre'; DEDOS.clear(); CTRL.sx = CTRL.sy = 0; CTRL.apunta = false; J.planeo = null; }],
       [tr('VIBRACIÓN'), AJ.vibrar ? tr('SÍ') : tr('NO'), () => { AJ.vibrar = !AJ.vibrar; vibrar(40); }]];
     filas.forEach((f, i) => { const y = 30 + i*Math.min(24, Math.floor((H - 70)/filas.length));
       texto(g, f[0], x, y + 4, 'gris', {izq:true});
@@ -224,7 +224,7 @@ function pantallaResultado(){
 }
 const TIPS_PAL = {'Tocá a un enemigo en el aire: todo va en cámara lenta.':'Apuntá en el aire con la palanca derecha: todo va en cámara lenta.',
   'Dos dedos, dos enemigos: cada brazo apunta por su lado.':'La mira se engancha sola al enemigo más cercano a donde apuntás.',
-  'Deslizarte te hace más chico: las balas pasan por arriba.':'Corré y bajá la palanca: deslizándote, las balas pasan por arriba.'};
+  'Deslizarte te hace más chico: las balas pasan por arriba.':'Palanca izquierda de costado: deslizándote, las balas pasan por arriba.'};
 function pantallaMuerte(){ J.modo = 'muerte'; UI.p = 'muerte'; UI.t = 0; UI.tip++; }
 /* reaparece en el último lugar seguro: lo que ya cayó queda caído */
 function revivir(){

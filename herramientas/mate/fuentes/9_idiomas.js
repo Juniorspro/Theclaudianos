@@ -761,26 +761,6 @@ const FRASES = [
 "SAKE"
 ],
 [
-"Palanca izquierda para moverte. Empujala para arriba y saltás.",
-"Left stick to move. Push it up to jump.",
-"Alavanca esquerda para andar. Empurre para cima e você pula."
-],
-[
-"Palanca derecha para apuntar y tirar. En el aire, el tiempo se frena.",
-"Right stick to aim and shoot. In the air, time slows down.",
-"Alavanca direita para mirar e atirar. No ar, o tempo desacelera."
-],
-[
-"Corré y tirá la palanca para abajo: te deslizás por debajo.",
-"Run and pull the stick down: you slide underneath.",
-"Corra e puxe a alavanca para baixo: você desliza por baixo."
-],
-[
-"Saltá contra la pared empujando hacia ella, y después para arriba.",
-"Jump into a wall pushing toward it, then push up.",
-"Pule contra a parede empurrando para ela, e depois para cima."
-],
-[
 "Apuntá en el aire con la palanca derecha: todo va en cámara lenta.",
 "Aim with the right stick while airborne: everything goes slow-mo.",
 "Mire com a alavanca direita no ar: tudo fica em câmera lenta."
@@ -789,11 +769,6 @@ const FRASES = [
 "La mira se engancha sola al enemigo más cercano a donde apuntás.",
 "The reticle locks onto the enemy closest to where you aim.",
 "A mira trava sozinha no inimigo mais próximo de onde você mira."
-],
-[
-"Corré y bajá la palanca: deslizándote, las balas pasan por arriba.",
-"Run and pull the stick down: while sliding, bullets fly overhead.",
-"Corra e puxe a alavanca: deslizando, as balas passam por cima."
 ],
 [
 "CONTROLES",
@@ -809,5 +784,30 @@ const FRASES = [
 "ARRASTRE",
 "DRAG",
 "ARRASTAR"
+],
+[
+"Palanca izquierda: apuntá hacia dónde saltar y soltá.",
+"Left stick: aim where to jump and let go.",
+"Alavanca esquerda: mire para onde pular e solte."
+],
+[
+"Palanca derecha: apuntá y tira sola. En el aire, el tiempo se frena.",
+"Right stick: aim and it fires on its own. In the air, time slows down.",
+"Alavanca direita: mire e ela atira sozinha. No ar, o tempo desacelera."
+],
+[
+"Palanca izquierda bien de costado: te deslizás por abajo.",
+"Left stick fully sideways: you slide underneath.",
+"Alavanca esquerda bem de lado: você desliza por baixo."
+],
+[
+"Saltá contra la pared: te agarrás, y de ahí apuntás el próximo salto.",
+"Jump into a wall: you grab it, then aim your next jump from there.",
+"Pule contra a parede: você se agarra e dali mira o próximo pulo."
+],
+[
+"Palanca izquierda de costado: deslizándote, las balas pasan por arriba.",
+"Left stick sideways: while sliding, bullets fly overhead.",
+"Alavanca esquerda de lado: deslizando, as balas passam por cima."
 ]
 ];
