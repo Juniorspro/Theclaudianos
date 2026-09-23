@@ -1,0 +1,14 @@
+const {chromium}=require('/tmp/ui/node_modules/playwright');
+(async()=>{const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']});
+ const p=await b.newPage({viewport:{width:412,height:892},hasTouch:true,isMobile:true,deviceScaleFactor:2.625,locale:'es-AR'});
+ const errs=[]; p.on('pageerror',e=>errs.push('PAGE '+e.message+' '+(e.stack||'').split('\n')[1]));
+ const cdp=await p.context().newCDPSession(p);
+ await p.goto('file:///tmp/ui/mate_b.html'); await p.waitForTimeout(1800);
+ await p.screenshot({path:'/tmp/ui/mate/i1.png'});
+ const m=await p.evaluate(()=>__M.medida()); const pg=(x,y)=>{ const sx=x*m.SW/m.W, sy=y*m.SH/m.H; return {x:412-sy,y:sx}; };
+ const tap=async(x,y)=>{ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...pg(x,y),id:1}]}); await p.waitForTimeout(80); await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]}); };
+ const b2=await p.evaluate(()=>{ const q=__M.UI.botones.find(z=>z.id==='id_pt'); return {x:q.x+q.w/2,y:q.y+q.h/2}; });
+ await tap(b2.x,b2.y); await p.waitForTimeout(700); await p.screenshot({path:'/tmp/ui/mate/i2.png'});
+ console.log(JSON.stringify(await p.evaluate(()=>({ui:__M.UI.p, idioma:document.documentElement.lang, guardado:localStorage.getItem('mate.ajustes')}))));
+ await p.reload(); await p.waitForTimeout(1800); console.log(JSON.stringify(await p.evaluate(()=>({ui:__M.UI.p, idioma:document.documentElement.lang}))));
+ console.log(errs); await b.close(); })();

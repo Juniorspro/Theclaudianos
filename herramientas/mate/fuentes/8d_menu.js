@@ -74,7 +74,23 @@ function logo(g, cx, y, esc){
 }
 
 /* ---------- las pantallas ---------- */
+/* banderitas de 18×12 para elegir el idioma */
+function bandera(g, k, x, y){
+  g.fillStyle = K; g.fillRect(x - 1, y - 1, 20, 14);
+  if(k === 'es'){ rect(g, x, y, 18, 4, '#74acdf'); rect(g, x, y + 4, 18, 4, '#f4f4f4'); rect(g, x, y + 8, 18, 4, '#74acdf'); rect(g, x + 8, y + 5, 2, 2, '#f6b40e'); px(g, x + 7, y + 6, '#f6b40e'); px(g, x + 10, y + 5, '#f6b40e'); px(g, x + 9, y + 4, '#f6b40e'); px(g, x + 8, y + 7, '#f6b40e'); }
+  else if(k === 'en'){ rect(g, x, y, 18, 12, '#1e3a8a'); for(let i = 0; i < 18; i++){ const j = Math.round(i*11/17); px(g, x + i, y + j, '#f4f4f4'); px(g, x + i, y + 11 - j, '#f4f4f4'); px(g, x + i, y + Math.min(11, j + 1), '#c8102e'); }
+    rect(g, x + 7, y, 4, 12, '#f4f4f4'); rect(g, x, y + 4, 18, 4, '#f4f4f4'); rect(g, x + 8, y, 2, 12, '#c8102e'); rect(g, x, y + 5, 18, 2, '#c8102e'); }
+  else { rect(g, x, y, 18, 12, '#009b3a'); for(let j = 0; j < 12; j++){ const w2 = Math.round(8*(1 - Math.abs(j - 5.5)/6)); rect(g, x + 9 - w2, y + j, w2*2, 1, '#fedf00'); } disco(g, x + 9, y + 6, 3, '#002776'); rect(g, x + 7, y + 6, 5, 1, '#f4f4f4'); }
+}
 const PANTALLAS = {
+  idioma(g){
+    g.fillStyle = 'rgba(6,4,12,0.55)'; g.fillRect(0, 0, W, H);
+    texto(g, 'IDIOMA · LANGUAGE · IDIOMA', W/2, Math.round(H*0.12), 'oro');
+    const op = [['es', 'ESPAÑOL'], ['en', 'ENGLISH'], ['pt', 'PORTUGUÊS']], w = Math.min(170, W - 60), x = Math.round(W/2 - w/2);
+    op.forEach(([k, nom], i) => { const y = Math.round(H*0.28) + i*Math.round(H*0.2), sel = IDIOMA === k;
+      boton(g, 'id_' + k, x, y, w, 26, '', {principal:sel, foco:sel, fn:() => { ponerIdioma(k); _LOGO = null; SON.fx('titulo'); irA('titulo'); }});
+      const dy = UI.presion === 'id_' + k ? 1 : 0; bandera(g, k, x + 10, y + 7 + dy); texto(g, nom, x + w/2 + 12, y + 9 + dy, sel ? 'oro' : 'blanco'); });
+  },
   titulo(g){
     const esc = H > 300 ? 2 : 1, L = logo(g, W/2, Math.round(H*0.14), esc*2 > 2 ? esc : 2);
     texto(g, tr('UNA VENGANZA CON YERBA'), W/2, L.y + L.h + 10, 'gris');
@@ -176,6 +192,7 @@ function dibujarMenu(g, dtR){
 function uiBoton(x, y){ return UI.botones.find(b => x >= b.x - 3 && x <= b.x + b.w + 3 && y >= b.y - 3 && y <= b.y + b.h + 4); }
 function uiDown(x, y){
   if(UI.p === 'titulo' && J.modo === 'menu'){ irA('principal'); SON.fx('titulo'); return; }
+  /* en la pantalla de idioma se elige con los botones */
   const b = uiBoton(x, y); UI.presion = b && !b.apagado ? b.id : null; if(UI.presion) SON.fx('clic');
 }
 function uiUp(x, y){

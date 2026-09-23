@@ -1484,3 +1484,13 @@ Lo que costó una vuelta:
 Medido con dos dedos de verdad: la palanca a la derecha camina a 6,4; arriba salta a 7,7; la derecha apuntando engancha al matón y
 lo baja; saltando y apuntando la cámara lenta llega a 0,3. Los 8 niveles con puerta se terminan con las dos palancas y con el
 arrastre; el jefe muere en las tres fases; `TR_FALTA` vacío; fuzz de 300 acciones sin errores.
+
+### 2026-09-23 (ap) — MATE AMARGO: elegir idioma al arrancar
+**Pedido textual:** «Métele selección de idiomas al inicio».
+
+Antes del título sale **IDIOMA · LANGUAGE · IDIOMA** con tres botones grandes y su banderita en pixel art (Argentina, Reino Unido
+y Brasil): ESPAÑOL, ENGLISH y PORTUGUÊS. El idioma que ya estaba elegido (o el del celular la primera vez) viene marcado, así
+seguir es un toque. Al elegir se traduce todo y pasa al título. Sigue estando también en OPCIONES.
+
+Medido con un toque de verdad en PORTUGUÊS: pasa al título con «UMA VINGANÇA COM ERVA», queda guardado, y al recargar la
+pantalla de idioma vuelve con portugués marcado. Fuzz y auditoría de idiomas sin errores.
