@@ -17,7 +17,7 @@ for n in sorted(os.listdir(ASSETS)):
     if ext not in TIPOS:
         continue
     if ext == '.json':                   # datos (cuadros de los sprites, mapa de efectos): van como objeto
-        archivos[{'sfx': 'sfxMapa'}.get(base, base)] = json.load(open(os.path.join(ASSETS, n)))
+        archivos[{'sfx': 'sfxMapa', 'voces': 'vocesMapa'}.get(base, base)] = json.load(open(os.path.join(ASSETS, n)))
         continue
     datos = open(os.path.join(ASSETS, n), 'rb').read()
     archivos[base] = 'data:%s;base64,%s' % (TIPOS[ext], base64.b64encode(datos).decode())

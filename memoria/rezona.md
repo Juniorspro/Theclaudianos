@@ -14,6 +14,16 @@ Fuente: `docs/GUIA-JUEGOS.md § 1. Preparar Rezona` y `§ 4`. Ver también: [jue
 - 23/09/2026: el PAT del 16/09 volvió `PAT_INACTIVE` aunque el archivo seguía: **que exista
   `~/.rezona/credentials.json` no quiere decir que sirva**. Probar con una llamada antes de usarlo.
 
+## Rezona hace MÚSICA y VOCES (recordatorio del usuario, 23/09/2026)
+- `submit_audio_generation` con `kind: music` (temas de hasta 30 s: con 60 da `VALIDATION_ERROR`),
+  `kind: speech` (voces: relator, personajes, locutor; `voice_id` opcional) y `kind: sound` (efectos).
+  **Siempre probar primero con Rezona** la música, las voces y los efectos de un juego; el
+  sintetizador en Python es el plan B, no la primera opción.
+- Proyecto de la línea: `RTkRyBVlHX` (el `c12555…` es otra cosa: da `PROJECT_NOT_FOUND`).
+- 23/09 a la noche: música y voz volvieron a dar `NOIZ_FAILED` (reintentable). Voces de reemplazo:
+  Higgsfield `generate_audio` con `seed_audio` + `voice_type:'preset'` (`list_voices`); Higgsfield
+  **no** hace música ni efectos sueltos.
+
 ## Al generar (cada trampa cuesta créditos)
 - **El `output_path` que vale es el de la respuesta**: pedís `roca.png`, vuelve `roca-g1.png`.
 - `size` respeta la proporción, **no** el número. Lados múltiplos de 16, ≥655.360 px, lado largo ≤3840.

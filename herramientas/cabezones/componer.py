@@ -213,17 +213,66 @@ def tema_hinchada():
     return T
 
 
+# ---------------- la mezcla nueva: estéreo, sala ancha y toque humano ----------------
+_poner = Tema.poner
+def poner_humano(self, pista, y, paso, vol=1.0):
+    """nadie toca clavado a la grilla: ±5 ms y ±8 % de fuerza (la batería un poco menos)"""
+    j = rng.normal(0, 0.18 if pista == 'bateria' else 0.3)
+    _poner(self, pista, y, max(0, paso + j * 0.016 / self.s16), vol * rng.uniform(0.92, 1.06))
+Tema.poner = poner_humano
+
+def mezclar_estereo(T):
+    from scipy import signal as sg
+    P = T.pistas
+    n = len(P['seco'])
+    env = sg.lfilter([1 - 0.9993], [1, -0.9993], np.abs(P['bateria']))
+    duck = 1 - np.clip(env / (env.max() + 1e-9) * 1.6, 0, 0.45)
+    def ir(sem):
+        r = np.random.default_rng(sem)
+        t_ = np.arange(int(1.6 * SR)) / SR
+        x = pasa(r.uniform(-1, 1, len(t_)) * np.exp(-t_ / 0.38), 'bajo', 6000)
+        return x / np.sqrt(np.sum(x ** 2))
+    envio = P['sala'] + P['colchon'] * duck * 0.8 + P['bateria'] * 0.1
+    salaL = sg.fftconvolve(envio, ir(1))[:n] * 0.55
+    salaR = sg.fftconvolve(envio, ir(2))[:n] * 0.55
+    # la melodía (sala) un poco a la izquierda, el colchón abierto con un retardo corto (Haas)
+    d = int(0.011 * SR)
+    col = P['colchon'] * duck
+    colR = np.concatenate([np.zeros(d), col[:-d]])
+    centro = P['seco'] + P['bajo'] * duck + P['bateria']
+    L = centro + P['sala'] * 1.08 + col + salaL
+    R = centro + P['sala'] * 0.92 + colR + salaR
+    y = np.stack([L, R], 1)
+    Lg = int(round(T.largo * SR))
+    cola = y[Lg:]
+    y = y[:Lg].copy()
+    y[:len(cola)] += cola[:Lg]
+    y = np.stack([pasa(y[:, 0], 'alto', 32), pasa(y[:, 1], 'alto', 32)], 1)
+    y /= np.sqrt(np.mean(y ** 2)) / 0.16
+    y = np.tanh(y * 1.1) / np.tanh(1.1)
+    return y * 0.93
+
+def mp3_estereo(y, ruta):
+    enc = B.lameenc.Encoder()
+    enc.set_bit_rate(112)
+    enc.set_in_sample_rate(SR)
+    enc.set_channels(2)
+    enc.set_quality(2)
+    pcm = (np.clip(y, -1, 1) * 32767).astype('<i2').tobytes()
+    open(ruta, 'wb').write(enc.encode(pcm) + enc.flush())
+
+
 TEMAS = {'menu': tema_menu, 'partido': tema_partido, 'final': tema_final, 'hinchada': tema_hinchada}
 
 if __name__ == '__main__':
     rmeta = os.path.join(SALIDA, 'musica.json')
     meta = json.load(open(rmeta)) if os.path.exists(rmeta) else {}
     for n in (sys.argv[1:] or list(TEMAS)):
-        y = TEMAS[n]().mezclar()
+        y = mezclar_estereo(TEMAS[n]())
         if n == 'hinchada':
             y *= 0.8
         ruta = os.path.join(SALIDA, 'musica-%s.mp3' % n)
-        mp3(y, ruta)
+        mp3_estereo(y, ruta)
         meta[n] = round(len(y) / SR, 5)
         print('%-9s %5.1f s  pico %5.1f dB  %6.1f kB' % (n, len(y) / SR, 20 * np.log10(np.max(np.abs(y)) + 1e-9), os.path.getsize(ruta) / 1024))
     json.dump(meta, open(rmeta, 'w'))

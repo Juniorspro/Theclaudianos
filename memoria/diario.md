@@ -1,6 +1,15 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — CABEZONES 2: botones y efectos de Rezona, relator, dos piernas
+**Pedido textual:** «Genera mejores botones y animaciones etc con Rezona también dos piernas y eso
+mejor música recuerda que Rezona crea música y voces etc guardalo en memoria».
+Qué se hizo: 36 piezas de arte de Rezona (mando, placas, logo, trofeos, cofres, botines, 5 hojas de
+efectos de 16 cuadros), relator con 18 frases (Higgsfield: la voz de Rezona estaba caída), dos
+piernas animadas, música estéreo. Anotado en [rezona](rezona.md) § Rezona hace MÚSICA y VOCES y en
+[cabezones](cabezones.md) § Segunda vuelta. **Quedó a medias:** la música de Rezona dio
+`NOIZ_FAILED` toda la tarde; `pedir_audio.py` la sigue pidiendo.
+
 ### 2026-09-23 — CABEZONES, fútbol de cabezas tipo Head Ball
 **Pedido textual:** «Ahora haceme un juego parecido a "Head Ball" y busca referencias como es como se
 juega controles moviles mejores gráficos 2D animaciones menús etc, etc. Mejora todo en un 100%».

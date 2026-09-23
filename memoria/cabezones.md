@@ -20,6 +20,30 @@ No se copian jugadores reales: diez cabezones originales de barrio.
   personaje (normal, gol, bronca: la segunda y tercera con `medias` role `image_references` = el
   job de la normal); canchas `nano_banana` 16:9 2k.
 
+## Segunda vuelta (23/09): Rezona para botones y efectos, relator, dos piernas
+Pedido: «Genera mejores botones y animaciones etc con Rezona también dos piernas y eso mejor música
+recuerda que Rezona crea música y voces etc guardalo en memoria».
+- **Arte de interfaz de Rezona** (`herramientas/cabezones/pedir_arte.py` + `hornear_ui.py`): botones
+  redondos del mando (◀ ▶ salto patada poder pausa), placas de botón en blanco que el juego estira en
+  tres partes (`placa()` en la UI: las puntas no se deforman), logo CABEZONES (salió bien escrito),
+  trofeos, cofre cerrado y abierto, moneda, gema, un botín por personaje.
+  - Trampas: los botines salieron con **rayas o curvas de marcas conocidas** y dos trofeos con pelota
+    de rugby: se pidieron de nuevo con «original unbranded, no logos, no stripes» y «round soccer ball».
+  - Pedir de a 6 en vuelo: el tope de 12 lo comparte con otros scripts, y
+    `GENERATION_RATE_LIMITED` / `TOO_MANY_IN_FLIGHT` no cuentan como intento.
+- **Efectos animados**: hojas 4x4 de 16 cuadros (explosión, fuego, polvo, impacto, rayo) con una sola
+  imagen. Salen coherentes. A veces `transparent` no se aplica y vienen **sobre magenta con reja
+  negra**: `hornear_ui.py` saca el magenta con despill y recorta 3 % de cada celda.
+- **Relator**: Rezona voz dio `NOIZ_FAILED`; las 18 frases salieron de Higgsfield `seed_audio`
+  (voz preset «Andre»), horneadas en `voces.mp3` + `voces.json` (`hornear_voces.py`, variantes gol0…
+  gol2). `Sonido.voz()` habla de a una frase, la de gol pisa, y baja la música mientras habla.
+- **Dos piernas**: `PIERNA=30` (de la cabeza al piso, antes 14 y quedaban tapadas por el cuello del
+  dibujo). Paso de carrera alternado, rodillas arriba en el aire, la de adelante barre al patear,
+  la de atrás en sombra (botín oscurecido **en un lienzo aparte**: `source-atop` sobre el lienzo
+  principal oscurece un cuadrado de todo lo que haya abajo).
+- **Música**: Rezona siguió dando `NOIZ_FAILED` toda la tarde (el script `pedir_audio.py` reintenta
+  cada 2 min). Mientras, la sintetizada pasó a estéreo (sala ancha, retardo Haas, toque humano ±5 ms).
+
 ## Cómo se arma
 - Fuentes JS en el scratchpad de la sesión (`cab/c0…c9`), orden: base, entrada, sonido, datos,
   partido, ui, vista, mando, menús, bucle. Si se pierden, se sacan del HTML (es JS plano).
