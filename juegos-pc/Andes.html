@@ -209,15 +209,15 @@ const MEJORAS = [
 /* ---------- montañas (niveles) ----------
    Cada una trae su hora del día (se va corriendo con la bajada), su clima y sus mecánicas. */
 const NIVELES = [
-  {id:'lenas', nom:'LAS LEÑAS', txt:'Amanecer en la pradera', largo:1600, tema:0, peso:{ondas:3, rampa:2, abismo:1.2, escalon:1, cuerdas:1.4, rocas:1.6},
+  {id:'lenas', nom:'LAS LEÑAS', txt:'Amanecer en la pradera', largo:2100, tema:0, peso:{ondas:3, rampa:2, abismo:1.2, escalon:1, cuerdas:1.4, rocas:1.6},
    metas:[['llegar','LLEGÁ AL REFUGIO'],['mortales:6','HACÉ 6 MORTALES'],['monedas:100','JUNTÁ 100 MONEDAS']]},
-  {id:'pueblo', nom:'EL PUEBLO', txt:'Techos y llamas al atardecer', largo:1900, tema:1, peso:{ondas:2.4, rampa:1.6, abismo:1.3, escalon:1, cuerdas:1.4, rocas:1.4, pueblo:2.2, llamas:1.6},
+  {id:'pueblo', nom:'EL PUEBLO', txt:'Techos y llamas al atardecer', largo:2500, tema:1, peso:{ondas:2.4, rampa:1.6, abismo:1.3, escalon:1, cuerdas:1.4, rocas:1.4, pueblo:2.2, llamas:1.6},
    metas:[['llegar','LLEGÁ AL REFUGIO'],['llamas:3','ATRAPÁ 3 LLAMAS'],['rebotes:4','REBOTÁ EN 4 TOLDOS']]},
-  {id:'lengas', nom:'BOSQUE DE LENGAS', txt:'De noche, con ancianos atrás', largo:2200, tema:2, peso:{ondas:2.4, rampa:1.8, abismo:1.6, escalon:1.2, cuerdas:1.8, rocas:1.8, bosque:2, llamas:0.8, anciano:1, precipicio:0.9},
+  {id:'lengas', nom:'BOSQUE DE LENGAS', txt:'De noche, con ancianos atrás', largo:2900, tema:2, peso:{ondas:2.4, rampa:1.8, abismo:1.6, escalon:1.2, cuerdas:1.8, rocas:1.8, bosque:2, llamas:0.8, anciano:1, precipicio:0.9},
    metas:[['llegar','LLEGÁ AL REFUGIO'],['grind:150','GRINDÁ 150 M'],['doble','CLAVÁ UN MORTAL DOBLE']]},
-  {id:'tormenta', nom:'LA TORMENTA', txt:'Viento, rayos y hielo', largo:2500, tema:3, peso:{ondas:2.4, rampa:1.8, abismo:1.8, escalon:1.3, cuerdas:1.4, rocas:1.8, hielo:1.6, pueblo:0.8, llamas:0.6, precipicio:0.8},
+  {id:'tormenta', nom:'LA TORMENTA', txt:'Viento, rayos y hielo', largo:3300, tema:3, peso:{ondas:2.4, rampa:1.8, abismo:1.8, escalon:1.3, cuerdas:1.4, rocas:1.8, hielo:1.6, pueblo:0.8, llamas:0.6, precipicio:0.8},
    metas:[['llegar','LLEGÁ AL REFUGIO'],['alas:15','VOLÁ 15 S CON LAS ALAS'],['cadena:6','HACÉ UNA CADENA DE 6']]},
-  {id:'cumbre', nom:'EL ACONCAGUA', txt:'La avalancha no perdona', largo:2800, tema:4, peso:{ondas:2.2, rampa:2, abismo:2, escalon:1.4, cuerdas:1.6, rocas:2, hielo:0.8, bosque:0.8, llamas:0.6, precipicio:1.3}, avalancha:true,
+  {id:'cumbre', nom:'EL ACONCAGUA', txt:'La avalancha no perdona', largo:3700, tema:4, peso:{ondas:2.2, rampa:2, abismo:2, escalon:1.4, cuerdas:1.6, rocas:2, hielo:0.8, bosque:0.8, llamas:0.6, precipicio:1.3}, avalancha:true,
    metas:[['llegar','ESCAPALE A LA AVALANCHA'],['triple','CLAVÁ UN MORTAL TRIPLE'],['sincaer','LLEGÁ SIN CAERTE']]},
 ];
 
@@ -407,7 +407,8 @@ function generar(nv, sem){
         for(let k=0;k<ri(1,2);k++){ const xb = xa + ri(14,26); if(xb > x-6) break; cuerda(xa, xb, rf(1.6,2.2), rf(1.2,2.0), rf(0.4,1.2)); xa = xb + ri(8,14); }
         arbolitos(x0, x, 0.5); break; }
       case 'rocas': { const x0 = x; ondas(ri(70,110)); let xr = Math.max(x0 + ri(12,18), ultSalto + 55);
-        for(let k=0;k<ri(1,3) && xr < x-8;k++){ const r = rf(0.5,0.9); J.rocas.push({x:xr, r, rota:false, t:rnd()<0.3? 'tronco' : 'roca'}); monedaArco(xr-5, hEn(xr-5)+1, xr+5, hEn(xr+5)+1, 2.2, 5); xr += ri(26,40); }
+        const subeAntes = xx => (hEn(xx+2) - hEn(xx-12))/14 - (hEn(xx-12) - hEn(xx-26))/14;     /* > 0: la loma sube hacia la roca */
+        for(let k=0;k<ri(1,3) && xr < x-8;k++){ let tope = 0; while(subeAntes(xr) > 0.03 && xr < x-8 && tope++ < 8) xr += 4; if(xr >= x-8) break; const r = rf(0.5,0.9); J.rocas.push({x:xr, r, rota:false, t:rnd()<0.3? 'tronco' : 'roca'}); monedaArco(xr-5, hEn(xr-5)+1, xr+5, hEn(xr+5)+1, 2.2, 5); xr += ri(26,40); }
         break; }
       case 'pueblo': {                                              /* techos, toldos que rebotan y banderitas entre casas */
         ondas(10); for(let i=0;i<9;i++) pon(lerp(dyAnt, 0.28, 0.35)); J.rampas.push({x:x, y:hEn(x)});
@@ -473,11 +474,11 @@ function iniciarNivel(ni, sem, desdeSant){
     for(const m of J.monedas) m.tomada = false; }
   const c = J.check;
   const x0 = c ? c.x : 6;
-  J.p = nuevoRider(x0, c ? 12 : 10);
+  J.p = nuevoRider(x0, c ? 17 : 15);
   if(desdeSant){ J.run.sincaer = false; J.cayo = true; }
   J.cadena = null; J.combo = 0; J.parts = []; J.textos = []; J.fin = null; J.lento = 0;
   J.anciano = null; for(const cp of J.campos) if(cp.x > x0) cp.usado = false;
-  J.aval = nv.avalancha ? {x:x0 - 110, v:10} : null;
+  J.aval = nv.avalancha ? {x:x0 - 140, v:14} : null;
   for(const l of J.llamas){ if(l.x > x0 && l.estado!=='atrapada'){ l.estado = 'pasta'; l.v = 0; } }
   for(const r of J.rocas) if(r.x > x0) r.rota = false;
   J.viento = {f:0, obj:0, t:4}; J.rayo = 0;
@@ -512,7 +513,7 @@ function chocar(motivo){
   const p = J.p; if(p.estado==='caido' || p.invT > 0) return;
   if(p.casco > 0 && motivo!=='abismo' && motivo!=='avalancha' && motivo!=='anciano'){
     p.casco--; sfx('casco'); aviso('¡EL CASCO TE SALVÓ!', '#ffe6b8'); p.invT = 1.2; cerrarCadena(true);
-    p.estado = 'suelo'; p.plat = null; p.y = hSuelo(p.x); p.ang = Math.atan(pendiente(p.x)); p.v = Math.max(9, p.v*0.6); p.angV = 0; return; }
+    p.estado = 'suelo'; p.plat = null; p.y = hSuelo(p.x); p.ang = Math.atan(pendiente(p.x)); p.v = Math.max(14, p.v*0.7); p.angV = 0; return; }
   p.estado = 'caido'; p.choqueT = 0; p.tumbo = 0; cerrarCadena(true); sfx('choque'); J.cam.sx = 1.2; J.cayo = true; if(J.run) J.run.sincaer = false;
   for(let i=0;i<30;i++) J.parts.push({x:p.x, y:p.y+0.4, vx:vr(-4,8), vy:vr(1,7), t:vr(0.5,1.2), r:vr(0.08,0.2), col:'#ffffff', g:1});
   J.motivo = motivo;
@@ -524,7 +525,7 @@ function aterrizar(theta, enPlat){
   const segura = p.plumaT > 0 || p.alasT > 0 || p.gracia > 0;
   if(dif > tol && !segura){ J.dbg = {dif:+dif.toFixed(2), th:+theta.toFixed(2), ang:+(p.ang%TAU).toFixed(2), rot:+p.rot.toFixed(2), aire:+p.aireT.toFixed(2), plat:!!enPlat, plan:J.botPlan}; chocar('caida'); return false; }
   const vt = p.vx*Math.cos(theta) + p.vy*Math.sin(theta);
-  p.v = Math.max(8, vt*(dif > 0.36 ? 0.8 : 1));
+  p.v = Math.max(13, vt*(dif > 0.36 ? 0.85 : 1));
   p.ang = theta; p.angV = 0;
   sfx('cae'); for(let i=0;i<Math.min(16, 4+Math.abs(p.vy)*1.2);i++) J.parts.push({x:p.x, y:p.y, vx:vr(-3,5)+p.v*0.3, vy:vr(1,4), t:vr(0.3,0.7), r:vr(0.05,0.14), col:'#ffffff', g:1});
   if(flips > 0){
@@ -541,7 +542,7 @@ function aterrizar(theta, enPlat){
 }
 function saltar(extra){
   const p = J.p, r = RIDER(G.rider), th = p.estado==='plat' ? Math.atan(pendPlat(p.plat, p.x)) : Math.atan(pendiente(p.x));
-  p.vx = p.v*Math.cos(th); p.vy = p.v*Math.sin(th) + (extra||r.salto);
+  p.vx = p.v*Math.cos(th); p.vy = p.v*Math.sin(th) + (extra||r.salto*(1 + Math.max(0, p.v-18)*0.014));    /* más rápido, salto un poco más alto */
   if(p.estado==='plat' && p.plat.tipo==='cuerda'){ cerrarGrind(); if(p.besoT > 0) truco('BESO DE CUERDA', 250); }
   p.estado = 'aire'; p.plat = null; p.rot = 0; p.aireT = 0; sfx('salto');
   for(let i=0;i<6;i++) J.parts.push({x:p.x, y:p.y, vx:vr(-2,2), vy:vr(0,2), t:vr(0.3,0.6), r:vr(0.05,0.12), col:'#ffffff', g:1});
@@ -559,7 +560,7 @@ function pasarRider(){
     if(p.choqueT > 1.4 && !J.fin) terminar(false);
     return;
   }
-  const velMax = 27*r.vel*(p.boostT>0 ? 1.22 : 1), velMin = 9*r.vel;
+  const velMax = 36*r.vel*(p.boostT>0 ? 1.2 : 1), velMin = 13*r.vel;
   if(p.boostT > 0) p.boostT -= DT;
   if(p.imanT > 0) p.imanT -= DT;
   if(p.plumaT > 0) p.plumaT -= DT;
@@ -572,11 +573,11 @@ function pasarRider(){
     const enP = p.estado==='plat', pl = p.plat;
     const pend = enP ? pendPlat(pl, p.x) : pendiente(p.x), th = Math.atan(pend);
     const hie = !enP && hielo(p.x);
-    let a = -GRAV*Math.sin(th)*0.6 - 0.035*p.v - (hie ? 0.006 : 0.013)*p.v*p.v + viento*0.25;
+    let a = -GRAV*Math.sin(th)*0.85 - 0.02*p.v - (hie ? 0.004 : 0.0072)*p.v*p.v + viento*0.25;
     if(enP && pl.tipo==='cuerda') a *= 0.85;
     if(hie) a += 1.2;
     p.v = lim(p.v + a*DT, velMin, velMax + (hie? 3 : 0));
-    if(p.boostT > 0) p.v = Math.max(p.v, 17*r.vel);
+    if(p.boostT > 0) p.v = Math.max(p.v, 25*r.vel);
     if(IN.flanco || p.bufSalto > 0){ p.bufSalto = 0; saltar(); }
     else {
       const nx = p.x + p.v*Math.cos(th)*DT;
@@ -596,7 +597,7 @@ function pasarRider(){
     }
     /* la cadena sólo se gasta pisando nieve */
     if(J.cadena && p.estado==='suelo'){ J.cadena.t -= DT; if(J.cadena.t <= 0) cerrarCadena(false); }
-    p.fase += p.v*DT*0.3;
+    p.fase += p.v*DT*0.3; if(J.run){ J.run.vS = (J.run.vS||0) + p.v; J.run.vN = (J.run.vN||0) + 1; J.run.vMax = Math.max(J.run.vMax||0, p.v); }
     if(p.estado==='suelo' && J.t%2===0) J.parts.push({x:p.x-0.4, y:p.y+0.05, vx:-p.v*0.15+vr(-1,1), vy:vr(0.5,2.2)*(p.v/15), t:vr(0.25,0.5), r:vr(0.04,0.11), col: hie? '#dff4ff' : '#ffffff', g:0.6});
   }
   else if(p.estado==='aire'){
@@ -665,7 +666,7 @@ function pasarRider(){
   for(const l of J.llamas){
     if(l.estado==='atrapada'){ l.vy -= GRAV*0.5*DT; l.x += 7*DT; l.caida += l.vy*DT; continue; }
     const g = hSuelo(l.x);
-    if(l.estado==='pasta' && p.x > l.x - 42) { l.estado = 'corre'; l.v = rf(7.5, 10); }
+    if(l.estado==='pasta' && p.x > l.x - 55) { l.estado = 'corre'; l.v = rf(10, 14); }
     if(l.estado==='corre'){ const nx = l.x + l.v*DT; if(solido(nx+1.5)) l.x = nx; else l.v = 0; l.fase += l.v*DT*0.7; }
     l.y = hSuelo(l.x);
     if(Math.abs(l.x - p.x) < 1.4 && Math.abs(l.y + 0.9 - (p.y + 0.8)) < 1.6 && p.estado!=='caido'){
@@ -674,9 +675,9 @@ function pasarRider(){
   /* santuarios */
   for(const s of J.santuarios) if(!s.pasado && p.x > s.x){ s.pasado = true; J.check = {x:s.x}; if(!J.demo){ sfx('santuario'); aviso('SANTUARIO · PROGRESO GUARDADO', '#ffe6b8'); } }
   /* anciano que persigue */
-  for(const c of J.campos) if(!c.usado && p.x > c.x + 4){ c.usado = true; J.anciano = {x:c.x - 6, v:12, t:0, y:hSuelo(c.x), vy:0, salto:0}; sfx('anciano'); if(!J.demo) aviso('¡UN ANCIANO TE PERSIGUE!', '#ffb0a0'); }
+  for(const c of J.campos) if(!c.usado && p.x > c.x + 4){ c.usado = true; J.anciano = {x:c.x - 6, v:16, t:0, y:hSuelo(c.x), vy:0, salto:0}; sfx('anciano'); if(!J.demo) aviso('¡UN ANCIANO TE PERSIGUE!', '#ffb0a0'); }
   const an = J.anciano;
-  if(an){ an.t += DT; an.v = lerp(an.v, Math.max(12, Math.min(22, p.v*0.9)), 0.03);      /* un poco más lento que vos: te agarra si te frenás */
+  if(an){ an.t += DT; an.v = lerp(an.v, Math.max(15, Math.min(30, p.v*0.9)), 0.03);      /* un poco más lento que vos: te agarra si te frenás */
     an.x += an.v*DT; const g = hSuelo(an.x);
     if(!solido(an.x) || an.y > g + 0.05){ an.vy -= GRAV*DT; an.y += an.vy*DT; if(solido(an.x) && an.y < g){ an.y = g; an.vy = 0; } if(an.y < g - 6){ an.y = g; an.vy = 0; } }
     else { an.y = g; if(!solido(an.x + an.v*0.4)){ an.vy = 10; an.y += 0.1; } }
@@ -686,8 +687,8 @@ function pasarRider(){
   }
   /* avalancha */
   const av = J.aval;
-  if(av){ const prog = p.x/J.nv.largo; av.v = lerp(11, 17, prog); av.x += av.v*DT;
-    if(av.x < p.x - 90) av.x = p.x - 90;
+  if(av){ const prog = p.x/J.nv.largo; av.v = lerp(15, 23.5, prog); av.x += av.v*DT;
+    if(av.x < p.x - 110) av.x = p.x - 110;
     if(av.x > p.x - 0.5 && p.estado!=='caido') chocar('avalancha');
     if(J.t%120===0) sfx('avalancha'); }
   /* la meta */
@@ -775,9 +776,9 @@ const SY = y => ALTO*0.52 - (y - J.cam.y)*J.cam.z;
 function pasarCamara(){
   const p = J.p, c = J.cam; if(!p) return;
   const alt = Math.max(0, p.y - hSuelo(p.x));
-  const zObj = lim(15.5 - Math.max(0, alt-3)*0.45 - Math.max(0, p.v-17)*0.18, 8, 15.5) * (ALTO/412);
+  const zObj = lim(15 - Math.max(0, alt-3)*0.45 - Math.max(0, p.v-18)*0.22, 7.5, 15) * (ALTO/412);
   c.z += (zObj - c.z)*0.035;
-  const tx = p.x + (ANCHO*0.19)/c.z;
+  const tx = p.x + (ANCHO*(0.19 + lim((p.v-18)/60, 0, 0.08)))/c.z;
   const ty = lerp(p.y, hSuelo(p.x + 22), 0.4) + alt*0.25 - 1.5;
   c.x += (tx - c.x)*0.14; c.y += (ty - c.y)*0.07;
   c.sx *= 0.86;
@@ -867,6 +868,8 @@ function dibujar(){
   cx.restore();
   /* clima */
   dibClima(mo);
+  if(J.p.v > 24 && J.p.estado!=='caido'){ const f = lim((J.p.v-24)/12, 0, 1); cx.fillStyle = 'rgba(255,255,255,'+(0.25*f)+')';
+    for(let i=0;i<14;i++){ const y = (i*67 + J.t*5.3)%ALTO, x = (i*211 - J.t*J.p.v*1.2)%ANCHO; cx.fillRect((x+ANCHO)%ANCHO, y, 40 + 60*f, 1); } }
   if(J.rayo > 0.02){ cx.fillStyle = 'rgba(235,240,255,'+(J.rayo*0.7)+')'; cx.fillRect(0,0,W,Hh); }
 
 }

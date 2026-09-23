@@ -411,3 +411,14 @@ Trampas que costaron una vuelta (piloto automático, 3 semillas × 5):
 Medido: bot 15/15 y 13/15 (dos juegos de semillas); mortal doble en 12/15; toldos ≥4 en el pueblo; CPU ×6 45–51 cuadros por
 segundo con calidad automática (60 a CPU normal); toques reales por CDP: tocar salta, mantener gira, pausa.
 Sondas: `window.__N` — `iniciar(n,sem)`, `anda(n)`, `bot(v)`, `est()`, `dibujarYa()`.
+
+### 2026-09-23 (11) — ANDES más rápido
+**Pedido textual:** «le falta más velocidad a la tabla».
+
+- Pendiente ×0,85 (antes 0,6), rozamiento 0,02·v + 0,0072·v² (antes 0,035 y 0,013), mínima 13 m/s, máxima 36 (impulso ×1,2,
+  piso de 25 con impulso), arranque a 15. Medido con el piloto: **promedio 17,5 → 27 m/s**, pico 33 → 43.
+- Montañas un 30 % más largas (2100–3700 m) para que la bajada no dure la mitad. Ancianos (hasta 30 m/s), avalancha
+  (15 → 23,5) y llamas acompañan. Cámara más lejos y más adelantada con la velocidad; rayas de velocidad desde 24 m/s.
+- **Trampa:** a 30 m/s el salto cubre tanta montaña que si la loma sube hacia la roca pasás 0,5 m por encima del piso
+  (se esperaban 2). El salto crece con la velocidad (+1,4 % por m/s sobre 18) y las rocas no van donde la loma empieza a subir.
+- Piloto: 13/15 y 14/15 (dos juegos de semillas); CPU ×6 con calidad automática 48–52 cuadros por segundo.
