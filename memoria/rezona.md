@@ -45,3 +45,6 @@ Fuente: `docs/GUIA-JUEGOS.md § 1. Preparar Rezona` y `§ 4`. Ver también: [jue
   mirando a la DERECHA» sale **coherente** entre poses y entre hojas. Dos hojas por personaje = 12
   cuadros. Salen con basura a veces: grilla dibujada, texto con el nombre de la pose, sombra de piso.
   Horneado: `herramientas/arrabal/hornear_sprites.py` (ver [arrabal](arrabal.md) § Sprites pintados).
+- Audio **otra vez caído** el 23/09 a la tarde: 12 pedidos de música (30 s) → `failed`, «生成服务暂时不可用».
+  Salida usada: componer la música en Python (`herramientas/arrabal/componer.py`). La música de
+  Higgsfield (`sonilo_music`) es sólo para su propio armado de juegos: no se usa suelta.

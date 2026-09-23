@@ -1,5 +1,5 @@
 # ARRABAL — juego de pelea con cartas
-Archivo: `juegos-pc/Arrabal.html` (un solo HTML, ~5,9 MB con el arte adentro, sin red).
+Archivo: `juegos-pc/Arrabal.html` (un solo HTML, ~8,6 MB con el arte y la música adentro, sin red).
 Arte: `assets/arrabal/` + `herramientas/arrabal/`. Banco: `pruebas/arrabal/`. Ver también:
 [pixel2d](pixel2d.md), [chicharra](chicharra.md) (el motor que se reusó), [rezona](rezona.md).
 
@@ -26,6 +26,31 @@ Pedido: «Haz el estilo más Arcade el segundo juego». Se sumó, sin tocar la h
   («RONDA 1», «¡PELEEN!», «RONDA FINAL»), anuncios de combo en 5/10/15/20 golpes, y `capaCRT()`: líneas de
   tubo + viñeta + un barrido claro que baja (se apaga en ajustes: «EFECTO DE TUBO»).
 - La historia usa el mismo motor con `modo='historia'` (equipos y relevos, sin rondas).
+
+## Movimiento, golpes, banda sonora y menú (23/09/2026)
+Pedido: «Mejora los movimientos y los efectos de los golpes y movimientos y agrégale banda sonora y
+mejora el menú principal».
+- **18 cuadros** por luchador: hoja c = `paso1 paso2 prepGolpe prepPatada levanta volando`
+  (caminar en ciclo de 4, preparaciones en `jabPrep/patPrep/fuertePrep`, levantarse, salir volando).
+  Hojas con 7 figuras (kanji, buzo): `SALTEAR` en `hornear_sprites.py`. Recorte ahora por
+  **cuerpos en orden de lectura** + lo chico al cuerpo más cercano de su fila.
+- `dibujarSprite()`: tirón hacia adelante al entrar un cuadro de golpe, aplastar al caer, estirar al
+  saltar, inclinarse al recibir, girar volando, fundido corto con el cuadro anterior, estela de
+  siluetas de color en dash/especial/súper, destello blanco del golpeado (`F.tBlanco`), temblor
+  del golpeado durante el congelado, sombra que se achica con la altura. Silueta = lienzo de
+  trabajo con `source-in` (no se cachean atlas blancos: memoria).
+- FX nuevos (a7): `onda` (aro), `tajo` (medialuna en armas y especiales), `acercar` (zoom de
+  cámara en `parada>=10` o crítico, en `dibujarPelea`), `velocidad` (líneas de historieta, súper).
+- **Banda sonora compuesta y sintetizada en Python** (`herramientas/arrabal/componer.py`): la música
+  de Rezona falló dos veces el mismo día. Seis temas (menú, conventillo, milonga, riachuelo, jefe,
+  relicario), MP3 mono 64 kbps a 32 kHz, 1,8 MB en total, nivel por RMS (−14 dB). El bucle pliega
+  la cola de la reverb sobre el principio. `musica.json` guarda el largo exacto: **Chrome no recorta
+  el retardo del MP3** (medido por correlación: 1105 muestras a 32 kHz = 576 + 529) → `loopStart`
+  y `loopEnd` en `ponerPista`. Prueba: `pruebas/arrabal/musica.mjs`.
+- Menú: pareja de luchadores que cambia cada 5 s (entran corriendo, VS, cruzan golpe y bloqueo con
+  chispa y sonido), reflectores, humo, logo con halo y brillo, ARCADE que late, marquesina con
+  récord y consejos. `cuadroSuelto()` dibuja un cuadro fuera de la pelea.
+- Peso: sprites 3,3 MB (guardia a 250 px, WebP 78) + música 1,8 MB → HTML ~8,6 MB.
 
 ## Sprites pintados (23/09/2026)
 Pedido: «personajes de pelea 2D con anatomía humana realista… NO quiero personajes tipo palito…

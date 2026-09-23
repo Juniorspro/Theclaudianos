@@ -1,6 +1,14 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-23 — ARRABAL: movimiento, golpes, banda sonora y menú
+**Pedido textual:** «Mejora los movimientos y los efectos de los golpes y movimientos y agrégale
+banda sonora y mejora el menú principal».
+Qué se hizo: 6 cuadros más por luchador (caminar, preparaciones, levantarse, volar), animación con
+estirar/aplastar, estelas y destellos; ondas, tajos, zoom y líneas de velocidad en los golpes;
+banda sonora propia compuesta en Python (Rezona sin audio); menú nuevo con luchadores en escena.
+Detalle en [arrabal](arrabal.md) § Movimiento, golpes, banda sonora y menú.
+
 ### 2026-09-23 — ARRABAL con sprites pintados
 **Pedido textual:** «Quiero personajes de pelea 2D con anatomía humana realista y proporciones
 normales… NO quiero personajes tipo palito… con los modelos que te mandé».
