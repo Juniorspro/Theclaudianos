@@ -145,6 +145,14 @@
     box-shadow:0 8px 24px rgba(0,0,0,.4),0 0 22px rgba(255,140,50,.20)}
   #volar.ver{opacity:1;visibility:visible}
   #volar.on{transform:scale(.93);background:linear-gradient(180deg,rgba(255,190,110,.5),rgba(50,26,10,.6))}
+  #bajar{position:absolute;right:136px;bottom:calc(env(safe-area-inset-bottom,0px) + 40px);
+    width:72px;height:72px;border-radius:50%;pointer-events:auto;display:grid;place-items:center;
+    font-size:10px;font-weight:800;letter-spacing:.12em;color:#d8f6ff;opacity:0;visibility:hidden;
+    background:radial-gradient(circle at 42% 34%,rgba(120,230,255,.20),rgba(10,18,30,.46) 68%);
+    border:1.5px solid rgba(140,235,255,.36);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    transition:opacity .25s,transform .09s}
+  #bajar.ver{opacity:1;visibility:visible}
+  #bajar.on{transform:scale(.92);background:radial-gradient(circle at 42% 34%,rgba(120,230,255,.42),rgba(10,18,30,.5) 68%)}
   #salto{position:absolute;right:26px;bottom:calc(env(safe-area-inset-bottom,0px) + 44px);
     width:96px;height:96px;border-radius:50%;pointer-events:auto;display:grid;place-items:center;
     font-size:11px;font-weight:800;letter-spacing:.14em;color:#d8f6ff;
@@ -225,6 +233,7 @@
   <div id="usar">TOMAR CÁMARA</div>
   <div id="volar">DESPEGAR</div>
   <div id="visor"><i></i><i></i><i></i><i></i><b>REC</b></div>
+  <div id="bajar">BAJAR</div>
   <div id="salto">SALTO</div>
   <div id="casco"><div class="ref"></div><div class="vin"></div></div>
 </div>
@@ -3605,7 +3614,41 @@ function viajarA(i){
 }
 
 /* ------------------------------------------------------------ caminata espacial */
-const EVA = { activa:false, largo:16, t:0 };
+const EVA = { activa:false, largo:16, t:0, libre:new THREE.Vector3(0, 2.3, 10) };
+/* EL CASCO ES SÓLIDO AFUERA: los muros son verticales y tienen alto, así que flotando por arriba
+   del lomo o por debajo de la panza no había nada que frenara y se entraba a la nave. Cajas con
+   la forma real del casco (medidas de construirNave), y el cuerpo como caja de 0,84 × 1,7 m que
+   sale por el lado de menor penetración. La boca de popa queda como está: se entra con ENTRAR. */
+const CASCO_EVA = [
+  [-7.7, 7.7, 1.0, 5.6, 12.0, 42.0],                       /* panza */
+  [-6.5, 6.5, 5.4, 9.4, 15.0, 39.0],                       /* lomo */
+  [-5.2, 5.2, 1.9, 5.3, 39.0, 43.0], [-3.0, 3.0, 2.5, 4.9, 41.9, 44.9],   /* proa */
+  [-7.2, -3.2, 1.3, 5.3, 10.5, 12.7], [3.2, 7.2, 1.3, 5.3, 10.5, 12.7],  /* popa afinada */
+  [-6.1, -3.5, 1.7, 4.9, 9.3, 11.1], [3.5, 6.1, 1.7, 4.9, 9.3, 11.1],
+  [-13.6, -6.0, 4.2, 5.2, 19.3, 28.5], [6.0, 13.6, 4.2, 5.2, 19.3, 28.5],  /* alas */
+  [-11.9, -7.7, 1.8, 6.0, 14.4, 22.2], [7.7, 11.9, 1.8, 6.0, 14.4, 22.2],  /* motores */
+  [-6.7, -6.1, 6.6, 10.6, 17.1, 21.7], [6.1, 6.7, 6.6, 10.6, 17.1, 21.7],  /* aletas */
+  [-5.8, -5.0, 0.0, 2.1, 15.9, 18.1], [5.0, 5.8, 0.0, 2.1, 15.9, 18.1],    /* patas */
+  [-5.8, -5.0, 0.0, 2.1, 34.9, 37.1], [5.0, 5.8, 0.0, 2.1, 34.9, 37.1]
+];
+function chocarCasco(){
+  const p = jug.pos, v = jug.vel, R = RADIO_CUERPO, A = ALTO_CUERPO;
+  for(let pasada = 0; pasada < 2; pasada++) for(const [x0, x1, y0, y1, z0, z1] of CASCO_EVA){
+    if(p.x + R <= x0 || p.x - R >= x1 || p.y + A <= y0 || p.y >= y1 || p.z + R <= z0 || p.z - R >= z1) continue;
+    const pen = [p.x + R - x0, x1 - (p.x - R), p.y + A - y0, y1 - p.y, p.z + R - z0, z1 - (p.z - R)];
+    let k = 0; for(let i = 1; i < 6; i++) if(pen[i] < pen[k]) k = i;
+    if(k === 0){ p.x = x0 - R; if(v.x > 0) v.x = 0; } else if(k === 1){ p.x = x1 + R; if(v.x < 0) v.x = 0; }
+    else if(k === 2){ p.y = y0 - A; if(v.y > 0) v.y = 0; } else if(k === 3){ p.y = y1; if(v.y < 0) v.y = 0; }
+    else if(k === 4){ p.z = z0 - R; if(v.z > 0) v.z = 0; } else { p.z = z1 + R; if(v.z < 0) v.z = 0; }
+  }
+  /* respaldo: la soga tira en línea recta a la compuerta y puede meterte hondo en el casco, y ahí
+     la panza y el lomo se pasan al jugador de uno a otro sin sacarlo nunca. Si sigue adentro,
+     vuelve a la última posición libre: la soga queda tensa contra el casco */
+  const e = 0.02;
+  const adentro = CASCO_EVA.some(([x0, x1, y0, y1, z0, z1]) => p.x + R > x0 + e && p.x - R < x1 - e &&
+    p.y + A > y0 + e && p.y < y1 - e && p.z + R > z0 + e && p.z - R < z1 - e);
+  if(adentro){ p.copy(EVA.libre); v.set(0, 0, 0); } else EVA.libre.copy(p);
+}
 /* los bultos de la nave para que la cámara de afuera no se meta adentro: el fuselaje y las
    alas van por separado, si no la caja tapa el punto por donde se sale */
 const BULTOS = [
@@ -3634,6 +3677,7 @@ function salirAlEspacio(){
   EVA.activa = true; EVA.t = 0;
   SON.fx('esclusa');
   jug.pos.set(ANCLA.x, ANCLA.y + 0.3, ANCLA.z - 2.4);
+  EVA.libre.copy(jug.pos);
   jug.vel.set(0, 0.4, -2.2);
   jug.enSuelo = false;
   soga.visible = true;
@@ -3663,8 +3707,14 @@ function pasoEva(dt, ix, iy, mag, salto){
     jug.vel.x += (derX*ix + _dirEva.x*(-iy))*emp*dt;
     jug.vel.z += (derZ*ix + _dirEva.z*(-iy))*emp*dt;
   }
-  if(salto) jug.vel.y += 6.2*dt*60*0.016;
-  SON.chorro = Math.min(1, (mag > 0.05 ? mag : 0) + (salto ? 1 : 0));
+  /* SUBIR y BAJAR: el toque da un envión y sostenido sigue empujando. Antes el botón hacía el
+     salto de tierra (9,2 m/s de golpe) y sólo servía dos veces por salida */
+  const kE = CFG.empuje/7.0;
+  if(salto) jug.vel.y += 3.2*kE;
+  if(ent.bajaToque){ jug.vel.y -= 3.2*kE; ent.bajaToque = false; }
+  const sost = (ent.subeHold || teclas.Space ? 1 : 0) - (ent.bajaHold || teclas.KeyC ? 1 : 0);
+  jug.vel.y = clamp(jug.vel.y + sost*5.0*kE*dt, -7*kE, 7*kE);
+  SON.chorro = Math.min(1, (mag > 0.05 ? mag : 0) + (sost !== 0 || salto ? 1 : 0));
   jug.vel.multiplyScalar(1 - Math.min(dt*0.85, 0.5));      /* el traje frena de a poco */
   jug.pos.addScaledVector(jug.vel, dt);
 
@@ -3679,6 +3729,7 @@ function pasoEva(dt, ix, iy, mag, salto){
     if(hacia > 0.6) SON.fx('soga', {cada:0.7});
   }
   resolverMuros();
+  chocarCasco();
 
   /* el cuerpo mira hacia donde va, y flota */
   const v = Math.hypot(jug.vel.x, jug.vel.z);
@@ -4301,7 +4352,7 @@ function empujarDeGente(){
 }
 
 /* ---------------------------------------------------------------- entrada */
-const ent = {x:0, y:0, mag:0, salto:false, saltoLatch:false};
+const ent = {x:0, y:0, mag:0, salto:false, saltoLatch:false, subeHold:false, bajaHold:false, bajaToque:false};
 const teclas = {};
 addEventListener('keydown', e => { teclas[e.code] = true;
   if(e.code === 'Space'){ ent.salto = true; e.preventDefault(); } });
@@ -4353,7 +4404,7 @@ addEventListener('pointerdown', e => {
   if(FOTO.abierta) return;                    /* con la copia abierta no se arma la palanca */
   if(PANEL.abierto || COMPU.abierto || ALBUM_ABIERTO.v) return;
   if(e.target.closest && e.target.closest('#tuto')) return;
-  if(e.target === dSalto || e.target === dVolar || e.target === dUsar || e.target === dPanelB ||
+  if(e.target === dSalto || e.target === dBajar || e.target === dVolar || e.target === dUsar || e.target === dPanelB ||
      e.target === dCompuB || e.target === dEspecies) return;
   const L = aLocal(e.clientX, e.clientY);
   if(L.x < anchoStage()*0.52 && idPalanca === null){
@@ -4386,14 +4437,24 @@ function soltar(e){
 }
 addEventListener('pointerup', soltar, {passive:true});
 addEventListener('blur', () => {
+  ent.subeHold = ent.bajaHold = false;
   idPalanca = null; idMira = null; ent.x = ent.y = ent.mag = 0; pintarPalanca(oX, oY, false);
   for(const k in teclas) teclas[k] = false;
 });
 addEventListener('pointercancel', soltar, {passive:true});
 
 /* el botón responde a touchstart: en el celular el camino de click se saltea */
-function pulsar(e){ e.preventDefault(); ent.salto = true; dSalto.classList.add('on'); }
-function largar(){ dSalto.classList.remove('on'); }
+function pulsar(e){ e.preventDefault(); ent.salto = true; ent.subeHold = true; dSalto.classList.add('on'); }
+function largar(){ ent.subeHold = false; dSalto.classList.remove('on'); }
+/* afuera: bajar. Un toque es un envión, sostenido sigue empujando, igual que SUBIR */
+const dBajar = document.getElementById('bajar');
+function pulsarBajar(e){ e.preventDefault(); ent.bajaToque = true; ent.bajaHold = true; dBajar.classList.add('on'); }
+function largarBajar(){ ent.bajaHold = false; dBajar.classList.remove('on'); }
+dBajar.addEventListener('touchstart', pulsarBajar, {passive:false});
+dBajar.addEventListener('touchend', largarBajar, {passive:true});
+dBajar.addEventListener('touchcancel', largarBajar, {passive:true});
+dBajar.addEventListener('mousedown', pulsarBajar);
+dBajar.addEventListener('mouseup', largarBajar);
 function tocarVolar(e){
   e.preventDefault();
   dVolar.classList.add('on');
@@ -4463,6 +4524,8 @@ function paso(dt){
   jug.vel.z = acercar(jug.vel.z, vz, k);
 
   /* salto (flanco, no nivel) */
+  let envion = false;
+  if(ent.salto && !ent.saltoLatch && EVA.activa){ envion = true; ent.saltoLatch = true; }
   if(ent.salto && !ent.saltoLatch){
     if(jug.saltos < CFG.saltosMax){
       jug.vel.y = jug.saltos === 0 ? CFG.salto : CFG.saltoDoble;
@@ -4475,7 +4538,7 @@ function paso(dt){
   ent.salto = false;
 
   if(EVA.activa){
-    pasoEva(dt, ix, iy, mag, ent.salto || teclas.Space);
+    pasoEva(dt, ix, iy, mag, envion);
     ent.salto = false;
     jug.aire = 0;
     animar(dt);
@@ -4589,6 +4652,8 @@ function hud(){
 
   /* primera persona: el casco, la mano y la tarea */
   if(EVA.activa !== dCasco.classList.contains('ver')) dCasco.classList.toggle('ver', EVA.activa);
+  if(EVA.activa !== dBajar.classList.contains('ver')){ dBajar.classList.toggle('ver', EVA.activa);
+    dSalto.textContent = EVA.activa ? 'SUBIR' : 'SALTO'; if(!EVA.activa){ ent.bajaHold = false; ent.subeHold = false; } }
   linterna.intensity = EVA.activa ? 1.25 : 0;
   luzEsclusa.intensity = (EVA.activa ? 1.5 : 0);
   const verGal = VUELO.espacio > 0.5;
@@ -5189,8 +5254,8 @@ const TUTO = (function(){
     {tit:'SALÍ AL ESPACIO', txt:() => 'Andá a la <b>compuerta de popa</b>, la misma por donde entraste, y tocá <b>SALIR AL ESPACIO</b>. ' +
                'Vas atado a una soga: no te perdés.',
      cumple:() => EVA.activa || buenas() > 0, meta:() => EVA.activa ? null : _v.copy(ANCLA)},
-    {tit:'FLOTAR', txt:() => 'Acá no hay gravedad. La palanca te empuja hacia donde mirás y <b>SALTO</b> da envión para ' +
-               'arriba. La soga tira cuando se termina.',
+    {tit:'FLOTAR', txt:() => 'Acá no hay gravedad. La palanca te empuja hacia donde mirás, <b>SUBIR</b> y <b>BAJAR</b> ' +
+               'te llevan arriba y abajo (tocá para un envión, dejá apretado para seguir). La soga tira cuando se termina.',
      cumple:() => !EVA.activa || jug.pos.distanceTo(ANCLA) > 4 || E.t > 8},
     {tit:'TU PRIMERA FOTO', txt:() => !EVA.activa ? 'Volvé a salir por la compuerta de popa para buscar un alien.'
                : E.velada ? 'Esa salió <b>velada</b>: no había nada en el cuadro. Poné al alien en el centro y tocá <b>FOTO</b>.'

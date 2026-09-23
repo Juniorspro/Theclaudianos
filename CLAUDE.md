@@ -862,3 +862,33 @@ Lo que costó una vuelta:
   en cada paso de física.
 
 Auditoría completa y 80 toques al azar sin errores.
+
+### 2026-09-23 (z) — BAJAR en la caminata y el casco sólido
+**Pedido textual:** «Haz que cuando el jugador esté en el espacio exterior haya también un botón
+para bajar (La manera en la que está ahora está bien solo que falta un botón que haga que el
+jugador flote hacia abajo para no perderse) (También arregla el error de traspasar las paredes
+cuando el jugador esté flotando)».
+
+**Botón BAJAR** al lado del de salto, sólo en la caminata; ahí el salto pasa a llamarse **SUBIR**.
+Los dos igual: un toque da un envión de 3,2 m/s y sostenido sigue empujando a 5 m/s² (todo
+escala con los impulsores del traje). Medido con el dedo: BAJAR sostenido 1,5 s llega a −5,1 m/s
+y baja 9,6 m.
+
+Además, lo que había debajo: afuera **el botón de salto hacía el salto de tierra** (9,2 m/s de
+golpe) y, como el contador de saltos sólo se reinicia al pisar, **servía dos veces por salida**.
+Ahora cada toque da el mismo envión: cuatro toques seguidos, cuatro de 3,1 m/s.
+
+**Traspasar las paredes flotando:** los muros son verticales y tienen alto, así que por arriba
+del lomo o por debajo de la panza no había nada que frenara. Ahora el casco es **sólido en 3D**
+con 18 cajas medidas de `construirNave` (panza, lomo, proa, popa afinada, alas, motores, aletas y
+patas), y el cuerpo como caja de 0,84 × 1,7 m que sale por el lado de menor penetración. Medido
+empujando con la palanca: la panza frena en x −8,32, el motor en z 13,98, el ala en x −14,02 y
+bajando sobre el lomo se queda en y 9,4 — **cero cuadros adentro** en los siete tiros.
+
+Lo que costó una vuelta:
+- **La soga tira en línea recta a la compuerta** y puede meterte hondo en el casco; ahí la panza
+  y el lomo se pasaban al jugador de uno a otro sin sacarlo nunca (113 cuadros adentro en un
+  tiro). Si después de empujar sigue adentro, vuelve a la última posición libre y la soga queda
+  tensa contra el casco.
+
+Auditoría completa y 80 toques al azar sin errores.
