@@ -154,8 +154,14 @@ table.res td canvas.px{margin-left:auto}
 #niveles .n:nth-child(4){animation-delay:.15s}#niveles .n:nth-child(5){animation-delay:.2s}
 #niveles .n .rj{position:absolute;right:6px;bottom:6px;opacity:.95;height:auto;filter:none}
 #niveles .n .rg{margin-top:6px}
+#niveles .n{justify-content:flex-start;padding-top:6px}   /* centrado se salía por arriba y cortaba las tildes (FÁBRICA) */
+#niveles .n .rg{margin-top:-8px}                  /* el rango tiene tres filas vacías arriba: se mete en ese aire */
 #txProgreso{margin-top:12px;display:flex;justify-content:center}
 .aviso{display:flex;justify-content:center}
+/* selector de idioma: columna chica arriba a la izquierda de la portada, donde no hay nada */
+#idiomas{position:absolute;left:12px;top:12px;display:flex;flex-direction:column;align-items:stretch;gap:2px;z-index:2}
+#idiomas .boton{min-width:0;margin:4px;padding:6px 10px 8px;animation:none}
+.apaisado #idiomas .boton{min-width:0;margin:4px;padding:5px 9px 7px}
 </style>
 </head>
 <body>
@@ -179,6 +185,7 @@ table.res td canvas.px{margin-left:auto}
 
   <!-- ====== capas ====== -->
   <div class="capa ver" id="capaTitulo">
+    <div id="idiomas"><div class="boton gris" data-l="es">ESPAÑOL</div><div class="boton gris" data-l="en">ENGLISH</div><div class="boton gris" data-l="pt">PORTUGUÊS</div></div>
     <div class="hueco"></div>
     <div class="boton" id="btJugar">JUGAR</div>
     <div class="boton gris" id="btNiveles">NIVELES</div>
@@ -612,7 +619,7 @@ function chorro(x,y,n,col,fuerza,arriba){
 function polvo(x,y,n,col){
   for(let i=0;i<n;i++) particula(x+vrango(-5,5),y,vrango(-1,1),vrango(-1.4,-0.2),col||'#6b6f86',vint(14,26),vrango(1.5,3),0.08);
 }
-function texto(x,y,tx,col,tam){ J.textos.push({x,y,tx,col:col||'#fff',tam:tam||11,vida:46,vy:-1.1}); }
+function texto(x,y,tx,col,tam){ J.textos.push({x,y,tx:trad(tx),col:col||'#fff',tam:tam||11,vida:46,vy:-1.1}); }
 function onda(x,y,r,col,ancho){ J.ondas.push({x,y,r:4,rmax:r,col:col||'#fff',vida:18,w:ancho||3}); }
 function impacto(x,y,tam,col){ J.golpazos.push({x,y,tam,col:col||'#fff',vida:9,giro:Math.random()*6.28}); }
 function sacudir(f){ J.cam.sx = Math.max(J.cam.sx, f); }
@@ -3267,7 +3274,7 @@ function hud(){
   g.drawImage(icoBoton('moneda'), px2-anchoDig-19, 4, 16, 17);
   /* --- nivel y avance --- */
   const prog = lim(p.x/(J.mundo.ancho-60),0,1);
-  tx(g, 'N'+J.nivel, px2-anchoDig-17, 28, 1, GRAD.gris);
+  tx(g, (IDI==='en' ? 'L' : 'N')+J.nivel, px2-anchoDig-17, 28, 1, GRAD.gris);
   barraPx(g, px2-anchoDig+2, 28, anchoDig-4, 3, prog, '#5ac8ff', '#2a88c8', '#1c2033');
   /* --- combo --- */
   if(J.combo>1){
@@ -3427,9 +3434,8 @@ function terminarNivel(){
 const fila = (a,b)=> '<tr><td>'+a+'</td><td>'+b+'</td></tr>';
 function pantallaMuerte(){
   J.modo='muerte'; J.muertes++;
-  document.getElementById('txMuerte').textContent =
-    'Nivel '+J.nivel+' — '+J.mundo.nom+'. Llegaste al '+
-    Math.round(lim(J.jug.x/(J.mundo.ancho-60),0,1)*100)+'% y juntaste '+J.guita+' de guita.';
+  document.getElementById('txMuerte').textContent = frase('muerte', J.nivel, trad(J.mundo.nom),
+    Math.round(lim(J.jug.x/(J.mundo.ancho-60),0,1)*100), J.guita);
   capa('capaMuerte');
 }
 
@@ -3459,8 +3465,7 @@ const MEJORAS = [
 ];
 const costo = (m)=> Math.round(m.base * Math.pow(1.85, J.mejoras[m.k]));
 function pintarTienda(){
-  document.getElementById('subTienda').textContent = 'Guita: '+J.guita+
-    (J.nivel<5? '   ·   ahora viene: '+NIVELES[J.nivel].nom : '');
+  document.getElementById('subTienda').textContent = frase('tienda', J.guita, J.nivel<5 ? trad(NIVELES[J.nivel].nom) : '');
   const cont = document.getElementById('listaTienda'); cont.innerHTML='';
   for(const m of MEJORAS){
     const lv = J.mejoras[m.k], max = lv>=4, c = costo(m);
@@ -3468,6 +3473,7 @@ function pintarTienda(){
     d.className = 'tarjeta'+(max?' max':'')+(!max && J.guita<c?' caro':'');
     d.innerHTML = '<div class="ic"></div><div class="tx"><div class="tt">'+m.tt+' '+lv+'/4</div><div class="ds">'+m.ds+
       '</div></div><div class="pr">'+(max?'MÁX':'◉ '+c)+'</div>';
+    d.querySelector('.ds').textContent = trad(m.ds);
     d.querySelector('.ic').appendChild(iconoPx(ICONO_MEJORA[m.k][0], ICONO_MEJORA[m.k][1], 3));
     d.onclick = ()=>{
       if(max) return;
@@ -3481,6 +3487,132 @@ function pintarTienda(){
 }
 const ICONO_MEJORA = {vida:['corazon','#ff5a6a'], daño:['puno','#fbfba5'], dash:['rayo','#5ac8ff'],
   furia:['llama','#ff7a2f'], muni:['bala','#ffd24a'], robo:['cruz','#63d98a']};
+
+/* ---------- idiomas: castellano (base), inglés y portugués ----------
+   Todo se escribe en castellano y trad() lo traduce al mostrar: entero si está en el diccionario,
+   y si no por frases sueltas (palabras enteras), así andan los armados como 'OLEADA '+n. */
+const IDIOMAS = [['es','ESPAÑOL'], ['en','ENGLISH'], ['pt','PORTUGUÊS']];
+const TR = {
+  en:{
+    /* menús */
+    'JUGAR':'PLAY', 'NIVELES':'LEVELS', 'CÓMO SE JUEGA':'HOW TO PLAY', 'SEMILLA NUEVA':'NEW SEED', 'SEMILLA':'SEED',
+    'DAR VUELTA PANTALLA':'FLIP SCREEN', 'LISTO':'GOT IT', 'VOLVER':'BACK', 'MEJORAS':'UPGRADES', 'SEGUIR':'CONTINUE',
+    'CONTINUAR':'CONTINUE', 'MENÚ':'MENU', 'TE HICIERON PURÉ':'YOU GOT MASHED', 'OTRA VEZ':'AGAIN', 'PAUSA':'PAUSED',
+    'REINICIAR NIVEL':'RESTART LEVEL', 'NIVEL LIMPIO':'LEVEL CLEAR', '¡TE LOS COMISTE A TODOS!':'YOU BEAT THEM ALL!',
+    'VOLVER AL MENÚ':'BACK TO MENU', 'MEJORAS Y SEGUIR':'UPGRADE AND GO', 'TIEMPO':'TIME', 'COMBO MÁXIMO':'MAX COMBO',
+    'GOLPES DADOS':'HITS LANDED', 'DAÑO RECIBIDO':'DAMAGE TAKEN', 'GUITA':'CASH', 'PUNTAJE':'SCORE', 'MÁX':'MAX',
+    'RÉCORD':'BEST', 'SIN JUGAR':'UNPLAYED', 'CERRADO':'LOCKED', 'PUÑOS, PATADAS Y MALA ONDA':'FISTS, KICKS AND BAD VIBES',
+    /* tienda */
+    'AGUANTE':'TOUGHNESS', 'NUDILLOS':'KNUCKLES', 'PIERNAS':'LEGS', 'MALA LECHE':'BAD TEMPER', 'BOLSILLOS':'POCKETS', 'SANGUIJUELA':'LEECH',
+    '+25 de vida máxima':'+25 max health', '+18% de daño en todo':'+18% damage on everything', 'dash más seguido':'dash more often',
+    'la furia se carga más rápido':'fury charges faster', '+4 balas en cada arma que levantes':'+4 rounds on every weapon you pick up',
+    'cada 6 golpes de combo te curás':'every 6 combo hits you heal',
+    /* niveles y jefes */
+    'EL BARRIO':'THE BLOCK', 'LA FÁBRICA':'THE FACTORY', 'EL SUBTE':'THE SUBWAY', 'LAS AZOTEAS':'THE ROOFS', 'LA TORRE':'THE TOWER',
+    'EL COMANDO':'THE COMMANDO', 'EL CARNICERO':'THE BUTCHER', 'LOS MELLIZOS':'THE TWINS', 'LA MÁQUINA':'THE MACHINE', 'EL REY':'THE KING',
+    /* avisos y HUD */
+    'TE FALTA GUITA':'NOT ENOUGH CASH', 'OLEADA':'WAVE', '¡CAMINO LIBRE!':'PATH CLEAR!', '¡LIMPIO! SEGUÍ':'CLEAR! KEEP GOING', 'NIVEL':'LEVEL',
+    'GOLPES':'HITS', 'QUEDAN':'LEFT', 'FASE':'PHASE', '¡TAMBALEA! PEGALE':'STAGGERED! HIT HIM', 'A ROMPERLE':'SMASH HIM',
+    /* textos que saltan en la pelea */
+    'SE ACABÓ':'OVER', 'SE ROMPIÓ':'IT BROKE', '¡FURIA!':'FURY!', '¡ARRIBA!':'UP!', '¡AGARRADO!':'GOTCHA!', '¡FUERA!':'OUTTA HERE!',
+    'SIN BALAS':'OUT OF AMMO', '¡PARRY!':'PARRY!', 'BLOQUEA':'BLOCKED', '¡LISTO!':'DONE!', '¡ESCUDO ROTO!':'SHIELD BROKEN!', '¡CRACK!':'CRACK!',
+    'BLOQUEÓ':'BLOCKED', '¡AHORA!':'NOW!', 'PISTOLA':'PISTOL', 'ESCOPETA':'SHOTGUN', 'FUSIL':'RIFLE', 'CAÑO':'PIPE',
+    '¡SE TAMBALEA!':'HE\'S STAGGERING!', '¡SE VOLVIÓ LOCO!':'HE WENT NUTS!', '¡SE CALIENTA!':'HE\'S HEATING UP!', '¡MUCHACHOS!':'BOYS!',
+    'DRONES':'DRONES', '¡GUARDIAS!':'GUARDS!'
+  },
+  pt:{
+    'JUGAR':'JOGAR', 'NIVELES':'NÍVEIS', 'CÓMO SE JUEGA':'COMO JOGAR', 'SEMILLA NUEVA':'NOVA SEMENTE', 'SEMILLA':'SEMENTE',
+    'DAR VUELTA PANTALLA':'GIRAR A TELA', 'LISTO':'ENTENDI', 'VOLVER':'VOLTAR', 'MEJORAS':'MELHORIAS', 'SEGUIR':'CONTINUAR',
+    'CONTINUAR':'CONTINUAR', 'MENÚ':'MENU', 'TE HICIERON PURÉ':'VIROU PURÊ', 'OTRA VEZ':'DE NOVO', 'PAUSA':'PAUSA',
+    'REINICIAR NIVEL':'REINICIAR NÍVEL', 'NIVEL LIMPIO':'NÍVEL LIMPO', '¡TE LOS COMISTE A TODOS!':'ACABOU COM TODOS!',
+    'VOLVER AL MENÚ':'VOLTAR AO MENU', 'MEJORAS Y SEGUIR':'MELHORAR E SEGUIR', 'TIEMPO':'TEMPO', 'COMBO MÁXIMO':'COMBO MÁXIMO',
+    'GOLPES DADOS':'GOLPES DADOS', 'DAÑO RECIBIDO':'DANO RECEBIDO', 'GUITA':'GRANA', 'PUNTAJE':'PONTUAÇÃO', 'MÁX':'MÁX',
+    'RÉCORD':'RECORDE', 'SIN JUGAR':'A JOGAR', 'CERRADO':'BLOQUEADO', 'PUÑOS, PATADAS Y MALA ONDA':'SOCOS, CHUTES E MAU HUMOR',
+    'AGUANTE':'RESISTÊNCIA', 'NUDILLOS':'SOCO DURO', 'PIERNAS':'PERNAS', 'MALA LECHE':'PAVIO CURTO', 'BOLSILLOS':'BOLSOS', 'SANGUIJUELA':'SANGUESSUGA',
+    '+25 de vida máxima':'+25 de vida máxima', '+18% de daño en todo':'+18% de dano em tudo', 'dash más seguido':'dash mais frequente',
+    'la furia se carga más rápido':'a fúria carrega mais rápido', '+4 balas en cada arma que levantes':'+4 balas em cada arma que você pegar',
+    'cada 6 golpes de combo te curás':'a cada 6 golpes de combo você se cura',
+    'EL BARRIO':'O BAIRRO', 'LA FÁBRICA':'A FÁBRICA', 'EL SUBTE':'O METRÔ', 'LAS AZOTEAS':'OS TELHADOS', 'LA TORRE':'A TORRE',
+    'EL COMANDO':'O COMANDO', 'EL CARNICERO':'O AÇOUGUEIRO', 'LOS MELLIZOS':'OS GÊMEOS', 'LA MÁQUINA':'A MÁQUINA', 'EL REY':'O REI',
+    'TE FALTA GUITA':'FALTA GRANA', 'OLEADA':'ONDA', '¡CAMINO LIBRE!':'CAMINHO LIVRE!', '¡LIMPIO! SEGUÍ':'LIMPO! SIGA', 'NIVEL':'NÍVEL',
+    'GOLPES':'GOLPES', 'QUEDAN':'RESTAM', 'FASE':'FASE', '¡TAMBALEA! PEGALE':'CAMBALEOU! BATE NELE', 'A ROMPERLE':'PRA CIMA DELE',
+    'SE ACABÓ':'ACABOU', 'SE ROMPIÓ':'QUEBROU', '¡FURIA!':'FÚRIA!', '¡ARRIBA!':'PRA CIMA!', '¡AGARRADO!':'PEGUEI!', '¡FUERA!':'FORA!',
+    'SIN BALAS':'SEM BALAS', '¡PARRY!':'PARRY!', 'BLOQUEA':'BLOQUEIA', '¡LISTO!':'JÁ ERA!', '¡ESCUDO ROTO!':'ESCUDO QUEBRADO!', '¡CRACK!':'CRACK!',
+    'BLOQUEÓ':'BLOQUEOU', '¡AHORA!':'AGORA!', 'PISTOLA':'PISTOLA', 'ESCOPETA':'ESCOPETA', 'FUSIL':'FUZIL', 'CAÑO':'CANO',
+    '¡SE TAMBALEA!':'ESTÁ CAMBALEANDO!', '¡SE VOLVIÓ LOCO!':'FICOU LOUCO!', '¡SE CALIENTA!':'ESQUENTOU!', '¡MUCHACHOS!':'RAPAZIADA!',
+    'DRONES':'DRONES', '¡GUARDIAS!':'GUARDAS!'
+  }
+};
+/* frases con números adentro: una plantilla por idioma */
+const FR = {
+  es:{ muerte:(n,nom,p,g)=> 'Nivel '+n+' — '+nom+'. Llegaste al '+p+'% y juntaste '+g+' de guita.',
+       pausa:(n,nom,c,g)=> 'Nivel '+n+' — '+nom+'  ·  combo máx '+c+'  ·  guita '+g,
+       tienda:(g,nom)=> 'Guita: '+g+(nom? '   ·   ahora viene: '+nom : '') },
+  en:{ muerte:(n,nom,p,g)=> 'Level '+n+' — '+nom+'. You made it '+p+'% of the way and picked up '+g+' cash.',
+       pausa:(n,nom,c,g)=> 'Level '+n+' — '+nom+'  ·  max combo '+c+'  ·  cash '+g,
+       tienda:(g,nom)=> 'Cash: '+g+(nom? '   ·   up next: '+nom : '') },
+  pt:{ muerte:(n,nom,p,g)=> 'Nível '+n+' — '+nom+'. Você chegou a '+p+'% e juntou '+g+' de grana.',
+       pausa:(n,nom,c,g)=> 'Nível '+n+' — '+nom+'  ·  combo máx '+c+'  ·  grana '+g,
+       tienda:(g,nom)=> 'Grana: '+g+(nom? '   ·   a seguir: '+nom : '') },
+};
+/* cómo se juega tiene negritas de colores adentro: va entero por idioma */
+const COMO_TXT = {
+  en:`<b style="color:#ff8a7a">PUNCH</b> — three-hit combo. The third one sends them flying.<br>
+      <b style="color:#ff8a7a">PUNCH swiping UP</b> — uppercut: launches them into the air.<br>
+      <b style="color:#ff8a7a">PUNCH in the air</b> — flying kick; keep the chain going up there.<br>
+      <b style="color:#ff8a7a">PUNCH swiping DOWN in the air</b> — ground slam: shockwave when you land.<br>
+      <b style="color:#5ac8ff">JUMP ×2</b> — double jump. Against a wall, wall jump.<br>
+      <b style="color:#ffd24a">DOUBLE TAP an arrow</b> — dash: invincible for a moment, goes through shields and breaks them.<br>
+      <b style="color:#5ac8ff">Slide your finger on the arrows</b> — up or down counts as ▲ or ▼ (drop from a platform: ▼ + JUMP).<br>
+      <b style="color:#9cffae">SHIELD</b> — blocks. Let go of the block right on impact for a
+      <b>parry</b>: slow motion and a counter.<br>
+      <b style="color:#ff8a7a">PUNCH</b> next to a dizzy one — grab him and throw him at the others.<br>
+      <b style="color:#ff7a2f">FURY</b> — fills up with combos. Double damage and unstoppable hits.<br>
+      Weapons on the floor: step on them to pick them up. They wear out.`,
+  pt:`<b style="color:#ff8a7a">SOCO</b> — combo de três. O terceiro manda longe.<br>
+      <b style="color:#ff8a7a">SOCO deslizando PRA CIMA</b> — gancho: levanta o inimigo no ar.<br>
+      <b style="color:#ff8a7a">SOCO no ar</b> — voadora; dá pra encadear no ar.<br>
+      <b style="color:#ff8a7a">SOCO deslizando PRA BAIXO no ar</b> — pisão: onda de choque ao cair.<br>
+      <b style="color:#5ac8ff">PULO ×2</b> — pulo duplo. Contra uma parede, ricochete.<br>
+      <b style="color:#ffd24a">TOQUE DUPLO numa seta</b> — dash: invencível por um instante, atravessa escudos e os quebra.<br>
+      <b style="color:#5ac8ff">Deslize o dedo nas setas</b> — pra cima ou pra baixo conta como ▲ ou ▼ (descer de uma plataforma: ▼ + PULO).<br>
+      <b style="color:#9cffae">ESCUDO</b> — bloqueia. Se soltar o bloqueio bem na hora do impacto,
+      <b>parry</b>: câmera lenta e contra-ataque.<br>
+      <b style="color:#ff8a7a">SOCO</b> colado num tonto — você agarra e arremessa contra os outros.<br>
+      <b style="color:#ff7a2f">FÚRIA</b> — enche com combos. Dano dobrado e golpes imparáveis.<br>
+      Armas no chão: pise nelas para pegar. Elas se gastam.`
+};
+function idiomaInicial(){ const n = (navigator.language||'es').slice(0,2).toLowerCase(); return n==='en' || n==='pt' ? n : 'es'; }
+let IDI = 'es';
+try{ const l = localStorage.getItem('eltipo.idioma'); IDI = (l==='es' || l==='en' || l==='pt') ? l : idiomaInicial(); }catch(e){ IDI = idiomaInicial(); }
+const TRC = {};   /* por idioma: {re, cache} */
+function trad(s){
+  if(IDI==='es' || s==null) return s;
+  s = String(s); const D = TR[IDI]; if(!D) return s;
+  if(D[s] !== undefined) return D[s];
+  let C = TRC[IDI];
+  if(!C){ const ks = Object.keys(D).sort((a,b)=> b.length - a.length).map(k=> k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    C = TRC[IDI] = {re:new RegExp('(?<![\\p{L}])(' + ks.join('|') + ')(?![\\p{L}])', 'gu'), cache:new Map()}; }
+  let r = C.cache.get(s); if(r !== undefined) return r;
+  r = s.replace(C.re, m=> D[m]).replace(/[¡¿]/g, '');      /* en inglés y portugués no se abre con ¡ */
+  if(C.cache.size > 600) C.cache.clear();
+  C.cache.set(s, r); return r;
+}
+const frase = (k, ...a)=> (FR[IDI] || FR.es)[k](...a);
+let COMO_ES = null;
+function aplicarIdioma(){
+  document.documentElement.lang = IDI === 'pt' ? 'pt-BR' : IDI;
+  const como = document.querySelector('#capaComo p.sub');
+  if(como){ if(COMO_ES===null) COMO_ES = como.innerHTML; como.innerHTML = IDI==='es' ? COMO_ES : COMO_TXT[IDI]; }
+  document.querySelectorAll('#idiomas .boton').forEach(b=>{ b.classList.toggle('gris', b.dataset.l!==IDI); delete b.dataset.pl; });
+  /* lo ya pixelado se rehace desde el castellano guardado en data-px */
+  const ver = document.querySelector('.capa.ver');
+  if(ver){ if(ver.id==='capaNiveles') pintarNiveles(); else if(ver.id==='capaTienda') pintarTienda(); else pixelarCapa(ver.id); }
+}
+function ponerIdioma(l){
+  IDI = l; try{ localStorage.setItem('eltipo.idioma', l); }catch(e){}
+  aplicarIdioma();
+}
 
 /* ---------- fuente de píxeles 5x7 (con tildes y Ñ) ---------- */
 const FUENTE_PX = {
@@ -3510,8 +3642,11 @@ const FUENTE_PX = {
  '◉':[".....",".###.","#####","#####","#####",".###.","....."], '·':[".",".",".","#",".",".","."], '—':["#####"+"",".....",".....","#####",".....",".....","....."].map((r,i)=> i===0?".....":r),
  '%':["##..#","##.#.","...#.","..#..",".#...",".#.##","#..##"], '>':["#....",".#...","..#..","...#.","..#..",".#...","#...."],
 };
-const ACENTOS_PX = {'Á':['A','a'],'É':['E','a'],'Í':['I','a'],'Ó':['O','a'],'Ú':['U','a'],'Ñ':['N','t'],'Ü':['U','d']};
-const MARCAS_PX = {a:[[3,-3],[2,-2]], t:[[0,-2],[1,-3],[2,-3],[3,-2],[4,-3]], d:[[1,-2],[3,-2]]};
+const ACENTOS_PX = {'Á':['A','a'],'É':['E','a'],'Í':['I','a'],'Ó':['O','a'],'Ú':['U','a'],'Ñ':['N','t'],'Ü':['U','d'],
+  /* portugués: tilde en A y O, circunflejo, grave y cedilla */
+  'Ã':['A','t'],'Õ':['O','t'],'Â':['A','c'],'Ê':['E','c'],'Ô':['O','c'],'À':['A','g'],'Ç':['C','z']};
+const MARCAS_PX = {a:[[3,-3],[2,-2]], t:[[0,-2],[1,-3],[2,-3],[3,-2],[4,-3]], d:[[1,-2],[3,-2]],
+  c:[[1,-2],[2,-3],[3,-2]], g:[[1,-3],[2,-2]], z:[[2,7],[1,8],[2,8]]};
 function glifoPx(ch){
   const c = ch.toUpperCase();
   if(FUENTE_PX[c]) return {f:FUENTE_PX[c], m:null};
@@ -3524,7 +3659,7 @@ function puntosTexto(str){
   for(const ch of str){
     const g = glifoPx(ch), w = g.f[0].length;
     for(let r=0;r<7;r++) for(let k=0;k<w;k++) if(g.f[r][k]==='#') pts.push([x+k, r, r]);
-    if(g.m) for(const [mx,my] of g.m) pts.push([x+mx, my, 0]);
+    if(g.m) for(const [mx,my] of g.m) pts.push([x+mx, my, my<0 ? 0 : 3]);   /* la cedilla va abajo, en tono medio */
     x += w + 1;
   }
   return {pts, w:Math.max(1,x-1)};
@@ -3543,11 +3678,12 @@ const GRAD_RANGO = {S:GRAD.oro, A:GRAD.verde, B:GRAD.azul, C:GRAD.gris, D:GRAD.r
 const cacheTxt = new Map();
 function lienzoTexto(str, o){
   o = o || {};
+  str = trad(str);                                   /* se traduce acá: HUD, avisos y menús pasan todos por este lienzo */
   const clave = str+'|'+(o.grad? o.grad[0]+o.grad[6] : o.col)+'|'+(o.borde||'');
   if(cacheTxt.has(clave)) return cacheTxt.get(clave);
   const {pts, w} = puntosTexto(str);
   const arriba = 3, c = document.createElement('canvas');
-  c.width = w + 3; c.height = arriba + 7 + 3;
+  c.width = w + 3; c.height = arriba + 7 + 3 + (/[çÇ]/.test(str) ? 1 : 0);   /* la cola de la Ç pide una fila más */
   const g = c.getContext('2d'), ox = 1, oy = arriba + 1, borde = o.borde || '#141018';
   g.fillStyle = 'rgba(10,6,16,0.75)';
   for(const [x,y] of pts) g.fillRect(ox+x-1, oy+y, 3, 3);                 /* sombra abajo-derecha */
@@ -3563,12 +3699,12 @@ function pixelar(el, S, o){
   if(!el) return;
   const txt = el.textContent.trim() !== '' ? el.textContent.trim() : (el.dataset.px||'');
   if(!txt) return;
-  if(el.dataset.px === txt && el.querySelector('canvas.px')) return;
-  el.dataset.px = txt; el.textContent = '';
+  if(el.dataset.px === txt && el.dataset.pl === IDI && el.querySelector('canvas.px')) return;
+  el.dataset.px = txt; el.dataset.pl = IDI; el.textContent = '';
   const src = lienzoTexto(txt, o), c = document.createElement('canvas');
   c.width = src.width; c.height = src.height; c.getContext('2d').drawImage(src,0,0);
   c.className = 'px'; c.style.width = (c.width*S)+'px'; c.style.height = (c.height*S)+'px';
-  c.setAttribute('aria-label', txt);
+  c.setAttribute('aria-label', trad(txt));
   el.appendChild(c);
 }
 const ICONOS_PX = {
@@ -3769,8 +3905,7 @@ function capa(id){
 }
 function alternarPausa(){
   if(J.modo==='juega'){ J.modo='pausa'; capa('capaPausa');
-    document.getElementById('txPausa').textContent =
-      'Nivel '+J.nivel+' — '+J.mundo.nom+'  ·  combo máx '+J.comboMax+'  ·  guita '+J.guita; }
+    document.getElementById('txPausa').textContent = frase('pausa', J.nivel, trad(J.mundo.nom), J.comboMax, J.guita); }
   else if(J.modo==='pausa'){ J.modo='juega'; capa(null); }
 }
 function pintarTitulo(){
@@ -3832,6 +3967,9 @@ clic('btMuerteMenu', menu);
 clic('btSeguirJuego', ()=>{ J.modo='juega'; capa(null); });
 clic('btPausaReiniciar', ()=> empezarNivel(J.nivel));
 clic('btPausaMenu', menu);
+document.querySelectorAll('#idiomas .boton').forEach(b=>{ const l = b.dataset.l;
+  b.addEventListener('click', e=>{ e.preventDefault(); audioListo(); SFX.blip();
+    if(!document.fullscreenElement) pantallaHorizontal(); if(l!==IDI) ponerIdioma(l); }); });
 
 /* ---------- sondas para el banco ---------- */
 window.__T = {
@@ -3875,6 +4013,7 @@ pintarTitulo();
 ponerIconosMandos();
 if(!J.semillaTx) nuevaSemilla();
 document.getElementById('btSemilla').textContent = 'SEMILLA: '+J.semillaTx;
+aplicarIdioma();
 menu();
 requestAnimationFrame(bucle);
 </script>

@@ -552,3 +552,26 @@ sin frenar, 53–56. Sin errores. Sondas: `window.__S` — `iniciar(n,sem)`, `an
 - Medido: recorrido completo en inglés y portugués (portada, operaciones, equipo, armería, instrucción, HUD, aviso, pausa, informe):
   sin restos en castellano y todo entra; el idioma queda guardado. Toques 11/11, menús sin botones tapados, sin red y sin errores.
 
+### 2026-09-23 (17) — los otros cuatro juegos en tres idiomas
+**Pedido textual:** «en todos los anteriores» (el selector de idioma de BRECHA 7). EL TIPO, A OSCURAS, ANDES y BRONCA; el Bosque no.
+
+Misma receta que BRECHA en los cuatro: se escribe en castellano, se traduce al mostrar (entero o por palabras enteras con una regex y
+caché), el HTML fijo por TreeWalker desde el original, idioma guardado y la primera vez de `navigator.language`; selector
+ESPAÑOL · ENGLISH · PORTUGUÊS en la portada. Nombres propios (héroes, apodos, riders, EL MOLE) y los títulos de los juegos no se traducen.
+- **EL TIPO**: el traductor se llama `trad()` porque `T` ya es el tema del nivel. Engancha en `lienzoTexto()` y `texto()`; `pixelar()`
+  guarda el castellano en `data-px` y el idioma en `data-pl` y rehace desde ahí. Idioma en `eltipo.idioma`.
+- **A OSCURAS**: engancha en `lienzoTexto()` (todo lo pixelado); los avisos que no entran a escala 2 bajan a 1.
+- **Fuente de píxeles** (EL TIPO y A OSCURAS): Ã Õ Â Ê Ô À Ç. **Trampa:** la cedilla de una fila se la comía el contorno; son 3 píxeles
+  y el lienzo crece una fila **sólo** si el texto tiene Ç (con la fila en todos, las tarjetas de niveles se desbordaban).
+- **ANDES**: engancha en `aviso`, `mostrarCombo`, `hud`, `metasHtml`, taller y resultado; números con el formato de cada idioma.
+- **BRONCA**: engancha en `aviso`, `texto`, textos flotantes, `botonesHab`, misiones, base y resultado.
+- **Trampa:** `¡` no es letra: `¡NIVEL 3!` salía «¡LEVEL 3!». Las que empiezan con `¡` van con clave entera o se les saca el signo.
+  «SONIDO: SÍ/NO» va con clave entera para que `NO` no se traduzca suelto.
+- **Defectos viejos que aparecieron de paso** (ya estaban en castellano): en ANDES el VOLVER de «Cómo se juega» quedaba fuera de
+  pantalla (467 px en 412: dos columnas + `justify-content: safe center`) y el texto del sonido no salía del guardado; en EL TIPO las
+  tarjetas de niveles centradas cortaban las tildes de arriba (`flex-start`).
+- Medido en cada juego: recorrido por toques CDP en inglés y portugués sin restos en castellano ni nada desbordado, idioma guardado al
+  recargar, cero `pageerror`, bots como antes (EL TIPO 15/15, A OSCURAS 5/5 invencible, ANDES 14/15 con partidas idénticas, BRONCA 5/5
+  invencible), gestos iguales y el traductor a 0,2 µs por llamada (nada medible en el cuadro). Control final: toque real en cada botón
+  de idioma de los cinco juegos, sin red.
+
