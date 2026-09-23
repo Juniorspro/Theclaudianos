@@ -892,3 +892,47 @@ Lo que costó una vuelta:
   tensa contra el casco.
 
 Auditoría completa y 80 toques al azar sin errores.
+
+### 2026-09-23 (aa) — menú principal, tres idiomas y tres calidades
+**Pedido textual:** «Ahora agrega un menú principal antes de que inicie el juego donde habrán 3 opciones.
+Una opción para iniciar el juego / Otra para cambiar el idioma, español, inglés y portugués (cuando el
+juego se traduzca a un idioma debe ser traducido al 100%) / Un botonnoara elegir la calidad gráfica
+(alta, media y baja)».
+
+**Menú** encima del juego ya cargado: logo, lema, `JUGAR` y un panel con `IDIOMA` (ESPAÑOL /
+ENGLISH / PORTUGUÊS) y `CALIDAD GRÁFICA` (ALTA / MEDIA / BAJA, con una línea que dice qué cambia).
+Atrás la cámara se pasea despacio frente a la popa, con la base viva (gente, remolcador, pájaros).
+Mientras está abierto no se arma la palanca, no corre el tutorial, no hay HUD y el cuerpo
+invisible del jugador no deja su sombra. Idioma y calidad quedan guardados en el navegador.
+
+**Traducción:** `tr(frase, …)` con la frase en castellano como clave y `{0}`, `{1}` para números y
+nombres; 260 frases en inglés y portugués: HUD, carta, terminal, tienda, álbum con las 21 fichas,
+fotos (anotación y pie de la copia), los 80 epítetos de los bichos, el tutorial entero, los
+carteles pintados en la plataforma y la pantalla de la terminal (se repintan al cambiar), y
+«CARGANDO», que se traduce antes de que cargue three. Las tablas (galaxias, cámaras, mejoras,
+motores, fichas) se traducen en el lugar guardando el original. Lo que falte queda en `TR_FALTA`.
+
+**Calidad:**
+
+| | resolución | sombra | multimuestra | oclusión | brillo | motas | gente se dibuja / hace sombra |
+|---|---|---|---|---|---|---|---|
+| alta | ×2 | 2048 suave | 4 | ½ res | sí | 720 | 85 / 38 m |
+| media | ×1,5 | 1024 suave | 2 | ¼ res | sí | 380 | 70 / 22 m |
+| baja | ×1 | 1024 PCF | 0 | no | no | 0 | 55 m / sin sombra |
+
+Lo que costó una vuelta:
+- **El botón de la nave decidía qué hacer leyendo su propio texto** (`=== 'DESPEGAR'`): traducido,
+  no despegaba nunca. Ahora la acción va en `data-k` y el texto es sólo lo que se ve.
+- **La multimuestra se fija al armar el target**: cambiar `samples` no hace nada hasta tirarlo
+  (`dispose`) y que three lo rearme. Y el tipo de sombra va compilado en cada material: cambiarlo
+  pide `needsUpdate` en todos.
+- **Los carteles de la plataforma van debajo de las rayas del rodaje**: repintar sólo las letras
+  las dejaba encima. Se repinta el lienzo entero.
+- Las sondas del banco llaman `paso()` directo: con el menú abierto no pasaba nada. Van con
+  `__A.jugar()` después de cargar.
+
+Medido: auditoría completa en inglés (calidad alta), portugués (baja) y castellano (media): 14 de
+14, **`TR_FALTA` vacío** en los dos idiomas, cero frases con tildes o «de/que/la/el» en carta,
+terminal, álbum, HUD y los 13 pasos del tutorial en inglés. Tutorial entero en portugués hasta
+«hecho». Fuzz en inglés y calidad baja sin errores. Con la misma resolución, baja da 4,0 cuadros
+contra 2,3 de media en el banco (sin GPU), y 136 llamadas contra 164 de alta.

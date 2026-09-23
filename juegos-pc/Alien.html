@@ -212,6 +212,29 @@
   #album .ficha i{display:block;font-style:normal;font-size:10.5px;line-height:1.5;color:#93a7ba;margin-top:4px}
   #album .ficha u{display:block;text-decoration:none;font-size:9.5px;color:#ffc98a;margin-top:5px;letter-spacing:.1em}
   #especies{cursor:pointer;pointer-events:auto}
+  #menu{position:fixed;inset:0;z-index:26;display:none;align-items:center;justify-content:center;
+    background:linear-gradient(90deg,rgba(6,8,14,.62),rgba(6,8,14,.10) 45%,rgba(6,8,14,.35));color:#e8eef5;
+    padding:calc(env(safe-area-inset-top,0px) + 14px) 22px 14px}
+  #menu.ver{display:flex}
+  #menu .caja{width:100%;max-width:760px;display:grid;grid-template-columns:1fr 1fr;gap:18px 26px;align-items:center}
+  #menu .logo{font-size:38px;font-weight:900;letter-spacing:.20em;line-height:1;color:#f2f6fa;
+    text-shadow:0 0 18px rgba(120,220,255,.45),0 2px 0 rgba(0,0,0,.6)}
+  #menu .lema{font-size:12px;letter-spacing:.08em;color:#c9d8e4;margin:8px 0 18px;text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 10px rgba(0,0,0,.7)}
+  #menu button{font:inherit;color:inherit;cursor:pointer}
+  #menu .jugar{display:block;width:100%;max-width:280px;padding:15px 0;border-radius:14px;font-size:17px;font-weight:900;
+    letter-spacing:.28em;color:#08141e;border:0;background:linear-gradient(180deg,#9ff0ff,#4fc3ee);
+    box-shadow:0 8px 28px rgba(80,200,255,.35)}
+  #menu .jugar:active{transform:scale(.97)}
+  #menu .op{margin-bottom:14px}
+  #menu .op h4{font-size:10px;letter-spacing:.24em;color:#9fd8ff;font-weight:800;margin-bottom:7px}
+  #menu .chips{display:flex;gap:7px}
+  #menu .chips button{flex:1;padding:10px 4px;border-radius:10px;font-size:11px;font-weight:800;letter-spacing:.10em;
+    background:rgba(255,255,255,.06);border:1px solid rgba(180,210,235,.22);color:#c9d8e4}
+  #menu .chips button.sel{background:rgba(110,220,255,.18);border-color:rgba(140,230,255,.8);color:#fff;
+    box-shadow:0 0 14px rgba(110,220,255,.25)}
+  #menu .nota{font-size:10px;line-height:1.4;color:#8ea2b6;min-height:28px;margin-top:6px}
+  #menu .der{background:rgba(10,14,22,.62);border:1px solid rgba(160,200,230,.16);border-radius:16px;padding:14px 14px 4px}
+  #stage.enmenu #ui,#stage.enmenu #tuto{display:none !important}
   #carga{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:#0b0d14;
     color:#7fd8ff;font-size:12px;letter-spacing:.2em;transition:opacity .5s}
 </style>
@@ -222,30 +245,42 @@
 <div id="ui">
   <div class="chip">ALIEN GRID</div>
   <div id="especies">ESPECIES 0/21</div>
-  <div id="pista">izquierda: mover<br>derecha: mirar<br>botón: saltar</div>
+  <div id="pista" data-t="izquierda: mover<br>derecha: mirar<br>botón: saltar">izquierda: mover<br>derecha: mirar<br>botón: saltar</div>
   <div id="base"></div><div id="puno"></div>
-  <div id="panelb">PANEL</div>
-  <div id="compub">COMPUTADORA</div>
+  <div id="panelb" data-t="PANEL">PANEL</div>
+  <div id="compub" data-t="COMPUTADORA">COMPUTADORA</div>
   <div id="plata">◈ 0</div>
   <div id="rollo">CARRETE 0/3</div>
   <div id="galnom">VEGA ROTA</div>
-  <div id="aviso">MASA COLOSAL EN APROXIMACIÓN</div>
+  <div id="aviso" data-t="MASA COLOSAL EN APROXIMACIÓN">MASA COLOSAL EN APROXIMACIÓN</div>
   <div id="usar">TOMAR CÁMARA</div>
   <div id="volar">DESPEGAR</div>
   <div id="visor"><i></i><i></i><i></i><i></i><b>REC</b></div>
-  <div id="bajar">BAJAR</div>
+  <div id="bajar" data-t="BAJAR">BAJAR</div>
   <div id="salto">SALTO</div>
   <div id="casco"><div class="ref"></div><div class="vin"></div></div>
 </div>
-<div id="galaxias"><div class="caja"><h3>CARTA DE NAVEGACIÓN</h3><div class="sub">elegí a dónde saltar</div><div id="listagal"></div><div class="cerrar" id="cerrargal">CERRAR</div></div></div>
-<div id="compu"><div class="caja"><h3>TERMINAL DE CARGA</h3><div class="sub" id="compusub">vender lo que trajiste</div><div id="listacompu"></div><div class="cerrar" id="cerrarcompu">CERRAR</div></div></div>
-<div id="album"><div class="caja"><h3>ÁLBUM DE ESPECIES</h3><div class="sub" id="albumsub">0 de 21</div><div id="listaalbum"></div><div class="cerrar" id="cerraralbum">CERRAR</div></div></div>
+<div id="galaxias"><div class="caja"><h3 data-t="CARTA DE NAVEGACIÓN">CARTA DE NAVEGACIÓN</h3><div class="sub" data-t="elegí a dónde saltar">elegí a dónde saltar</div><div id="listagal"></div><div class="cerrar" id="cerrargal" data-t="CERRAR">CERRAR</div></div></div>
+<div id="compu"><div class="caja"><h3 data-t="TERMINAL DE CARGA">TERMINAL DE CARGA</h3><div class="sub" id="compusub">vender lo que trajiste</div><div id="listacompu"></div><div class="cerrar" id="cerrarcompu" data-t="CERRAR">CERRAR</div></div></div>
+<div id="album"><div class="caja"><h3 data-t="ÁLBUM DE ESPECIES">ÁLBUM DE ESPECIES</h3><div class="sub" id="albumsub">0 de 21</div><div id="listaalbum"></div><div class="cerrar" id="cerraralbum" data-t="CERRAR">CERRAR</div></div></div>
 <div id="tuto"><div class="paso"><span></span><i></i></div><div class="tit"></div><div class="txt"></div>
-  <div class="barra"><i></i></div><div class="bot"><b class="sig">EMPEZAR</b><span class="saltar">saltar tutorial</span></div></div>
+  <div class="barra"><i></i></div><div class="bot"><b class="sig">EMPEZAR</b><span class="saltar" data-t="saltar tutorial">saltar tutorial</span></div></div>
 <div id="peligro"></div>
 <div id="fogonazo"></div>
-<div id="copia"><canvas id="papel"></canvas><small>TOCÁ PARA CERRAR</small></div>
-<div id="carga">CARGANDO</div>
+<div id="copia"><canvas id="papel"></canvas><small data-t="TOCÁ PARA CERRAR">TOCÁ PARA CERRAR</small></div>
+<div id="menu"><div class="caja">
+  <div class="izq"><div class="logo">ALIEN<br>GRID</div><div class="lema" data-t="Fotografiá lo que vive ahí afuera.">Fotografiá lo que vive ahí afuera.</div>
+    <button class="jugar" id="mjugar" data-t="JUGAR">JUGAR</button></div>
+  <div class="der">
+    <div class="op"><h4 data-t="IDIOMA">IDIOMA</h4><div class="chips">
+      <button data-l="es">ESPAÑOL</button><button data-l="en">ENGLISH</button><button data-l="pt">PORTUGUÊS</button></div></div>
+    <div class="op"><h4 data-t="CALIDAD GRÁFICA">CALIDAD GRÁFICA</h4><div class="chips">
+      <button data-c="alta" data-t="ALTA">ALTA</button><button data-c="media" data-t="MEDIA">MEDIA</button><button data-c="baja" data-t="BAJA">BAJA</button></div>
+      <div class="nota" id="mnota"></div></div>
+  </div></div></div>
+<div id="carga" data-t="CARGANDO">CARGANDO</div>
+<script>try{var l=localStorage.getItem('aliengrid.idioma'),c=document.getElementById('carga');
+if(l==='en')c.textContent='LOADING';else if(l==='pt')c.textContent='CARREGANDO';if(l)document.documentElement.lang=l;}catch(e){}</script>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -274,6 +309,43 @@ const col = h => new THREE.Color(h).convertSRGBToLinear();
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
 const lerp = (a,b,t) => a+(b-a)*t;
 const acercar = (a,b,t) => a + (b-a)*(1-Math.exp(-t));
+
+/* ================================================================== idioma
+   La clave es la frase en castellano: en castellano sale tal cual y en los otros se busca en el
+   diccionario ([inglés, portugués]). {0}, {1}… son los huecos para números y nombres. Lo que
+   falte queda anotado en TR_FALTA (el banco lo revisa) y sale en castellano en vez de romperse. */
+const DIC = {"izquierda: mover<br>derecha: mirar<br>botón: saltar":["left: move<br>right: look<br>button: jump","esquerda: mover<br>direita: olhar<br>botão: pular"],"PANEL":["PANEL","PAINEL"],"COMPUTADORA":["COMPUTER","COMPUTADOR"],"MASA COLOSAL EN APROXIMACIÓN":["COLOSSAL MASS APPROACHING","MASSA COLOSSAL SE APROXIMANDO"],"TOMAR CÁMARA":["TAKE CAMERA","PEGAR CÂMERA"],"DESPEGAR":["TAKE OFF","DECOLAR"],"ATERRIZAR":["LAND","POUSAR"],"SALIR AL ESPACIO":["EXIT TO SPACE","SAIR PARA O ESPAÇO"],"ENTRAR":["GO INSIDE","ENTRAR"],"CARRETE LLENO":["ROLL FULL","FILME CHEIO"],"FOTO":["PHOTO","FOTO"],"CARRETE {0}/{1}":["ROLL {0}/{1}","FILME {0}/{1}"],"SUBIR":["UP","SUBIR"],"BAJAR":["DOWN","DESCER"],"SALTO":["JUMP","PULO"],"ESPECIES {0}/{1}":["SPECIES {0}/{1}","ESPÉCIES {0}/{1}"],"CARTA DE NAVEGACIÓN":["STAR CHART","CARTA DE NAVEGAÇÃO"],"elegí a dónde saltar":["choose where to jump","escolha para onde saltar"],"CERRAR":["CLOSE","FECHAR"],"TERMINAL DE CARGA":["CARGO TERMINAL","TERMINAL DE CARGA"],"vender lo que trajiste":["sell what you brought back","venda o que você trouxe"],"ÁLBUM DE ESPECIES":["SPECIES ALBUM","ÁLBUM DE ESPÉCIES"],"saltar tutorial":["skip tutorial","pular tutorial"],"TOCÁ PARA CERRAR":["TAP TO CLOSE","TOQUE PARA FECHAR"],"CARGANDO":["LOADING","CARREGANDO"],"ESTÁS ACÁ · ":["YOU ARE HERE · ","VOCÊ ESTÁ AQUI · "],"{0} de {1} especies en la cámara":["{0} of {1} species on camera","{0} de {1} espécies na câmera"],"fuera del alcance del motor":["out of the engine's range","fora do alcance do motor"],"NECESITA {0} · {1} cr en la terminal":["NEEDS {0} · {1} cr at the terminal","PRECISA DE {0} · {1} cr no terminal"],"VEGA ROTA":["BROKEN VEGA","VEGA PARTIDA"],"Polvo viejo y un sol que ya no calienta.":["Old dust and a sun that no longer warms.","Poeira velha e um sol que já não aquece."],"EL HERVIDERO":["THE CAULDRON","O CALDEIRÃO"],"Demasiado cerca de algo que arde.":["Too close to something that burns.","Perto demais de algo que arde."],"LA QUIETUD":["THE STILLNESS","A QUIETUDE"],"No hay nada, y sin embargo algo pasa.":["There is nothing, and yet something is happening.","Não há nada, e mesmo assim algo acontece."],"CORAL PROFUNDO":["DEEP CORAL","CORAL PROFUNDO"],"Lo que se ve, se ve porque brilla solo.":["What you see, you see because it glows on its own.","O que se vê, se vê porque brilha sozinho."],"EL REVERSO":["THE REVERSE","O AVESSO"],"Las cosas vuelven antes de haber ido.":["Things come back before they have left.","As coisas voltam antes de terem ido."],"EL VACÍO":["THE VOID","O VAZIO"],"No vuelvas. Igual vas a volver.":["Don't come back. You will anyway.","Não volte. Você vai voltar mesmo assim."],"PLACA VELADA":["FOGGED PLATE","CHAPA VELADA"],"no entró nada en el cuadro":["nothing made it into the frame","nada entrou no quadro"],"rareza {0}":["rarity {0}","raridade {0}"],"COLOSAL":["COLOSSAL","COLOSSAL"],"RAREZA {0}  ·  ESPECIE N° {1}":["RARITY {0}  ·  SPECIMEN No. {1}","RARIDADE {0}  ·  ESPÉCIME Nº {1}"],"sin nada adentro":["nothing inside","nada dentro"],"{0} foto":["{0} photo","{0} foto"],"{0} fotos":["{0} photos","{0} fotos"],"mejor pago {0} cr":["best pay {0} cr","melhor pagamento {0} cr"],"Hueco vacío. Todavía nadie le sacó una foto.":["Empty slot. Nobody has photographed it yet.","Espaço vazio. Ninguém tirou uma foto dele ainda."],"{0} de {1} huecos llenos":["{0} of {1} slots filled","{0} de {1} espaços preenchidos"]," · faltan {0}":[" · {0} to go"," · faltam {0}"]," · álbum completo":[" · album complete"," · álbum completo"],"EL ACECHANTE":["THE STALKER","O ESPREITADOR"],"Piernas larguísimas y brazos que le llegan a las rodillas, con una sola ranura de luz por cara. No corre: se queda quieto mirándote y avanza de golpe.":["Endless legs and arms that hang down to its knees, with a single slit of light for a face. It never runs: it stands still watching you, then lunges forward.","Pernas compridíssimas e braços que chegam aos joelhos, com uma única fenda de luz no lugar do rosto. Não corre: fica parado olhando para você e avança de repente."],"EL INSECTO":["THE INSECT","O INSETO"],"Tórax segmentado, seis patas, mandíbulas y aguijón. Corre de a tramos cortos y se para en seco, como si escuchara.":["Segmented thorax, six legs, mandibles and a stinger. It runs in short bursts and stops dead, as if listening.","Tórax segmentado, seis patas, mandíbulas e ferrão. Corre em trechos curtos e para de repente, como se estivesse escutando."],"LA MEDUSA":["THE JELLYFISH","A ÁGUA-VIVA"],"Una campana que se contrae para empujarse sola, con los ojos abajo y los hilos colgando cinco metros. Nunca tiene apuro.":["A bell that contracts to push itself along, eyes underneath and threads hanging five meters down. It is never in a hurry.","Um sino que se contrai para se empurrar sozinho, com os olhos embaixo e os fios pendendo cinco metros. Nunca tem pressa."],"EL VIGÍA":["THE WATCHER","O VIGIA"],"Un ojo del tamaño de una cabeza rodeado de ojos chicos. Te orbita sin dejar de mirarte y cada tanto parpadea.":["An eye the size of a head surrounded by small eyes. It orbits you without ever looking away, and every so often it blinks.","Um olho do tamanho de uma cabeça rodeado de olhos pequenos. Orbita você sem parar de olhar e de vez em quando pisca."],"LAS FAUCES":["THE MAW","AS FAUCES"],"Dos mandíbulas dentadas y un cuerpito atrás que apenas alcanza a sostenerlas. Se echa atrás, abre grande y muerde.":["Two toothed jaws and a little body behind that can barely hold them up. It pulls back, opens wide and bites.","Duas mandíbulas dentadas e um corpinho atrás que mal consegue sustentá-las. Recua, abre bem a boca e morde."],"LA COLONIA":["THE COLONY","A COLÔNIA"],"Un coral que se ramifica sin centro, con un ojo en la punta de cada rama. Gira en espiral y late despacio.":["A coral that branches out with no center, an eye at the tip of every branch. It spins in a spiral and pulses slowly.","Um coral que se ramifica sem centro, com um olho na ponta de cada galho. Gira em espiral e pulsa devagar."],"EL HUECO":["THE HOLLOW","O OCO"],"El esqueleto abierto de algo que no está adentro. Cae dando vueltas y cada tanto se sacude solo.":["The open skeleton of something that is not inside it. It tumbles as it falls and now and then shakes by itself.","O esqueleto aberto de algo que não está dentro. Cai girando e de vez em quando se sacode sozinho."],"LA TORRE":["THE TOWER","A TORRE"],"Segmentos apilados, cada uno con su propia cara y su propio ritmo. El apilado se retuerce mientras gira.":["Stacked segments, each with its own face and its own rhythm. The stack twists as it turns.","Segmentos empilhados, cada um com seu próprio rosto e seu próprio ritmo. A pilha se retorce enquanto gira."],"LA FORJA":["THE FORGE","A FORJA"],"Planchas soldadas con las costuras todavía al rojo. No se sabe si está viva o si alguien la armó y la dejó ahí.":["Welded plates with the seams still red-hot. Nobody knows whether it is alive or someone built it and left it there.","Chapas soldadas com as costuras ainda em brasa. Não se sabe se está viva ou se alguém a montou e a deixou ali."],"EL ENJAMBRE":["THE SWARM","O ENXAME"],"No es uno: son seis cúmulos que respiran juntos y se abren cuando te acercás demasiado.":["It is not one: six clusters that breathe together and spread apart when you get too close.","Não é um só: são seis aglomerados que respiram juntos e se abrem quando você chega perto demais."],"EL PEREGRINO":["THE PILGRIM","O PEREGRINO"],"Un aro enorme cruzando el vacío tan despacio que no parece movimiento. Hace mucho que va y no vuelve.":["An enormous ring crossing the void so slowly it hardly seems to move. It has been going for a long time and never comes back.","Um anel enorme cruzando o vazio tão devagar que nem parece se mover. Faz muito tempo que vai e não volta."],"LA VELA":["THE SAIL","A VELA"],"Una membrana finita que ondea y se deja llevar por lo que sea que sople ahí afuera.":["A thin membrane that ripples and lets itself drift on whatever blows out there.","Uma membrana fininha que ondula e se deixa levar por seja lá o que sopre lá fora."],"EL FAROL":["THE LANTERN","O LAMPIÃO"],"Cuerpo oscuro y un cebo encendido en la punta de una caña. La luz no es para ver: es para que vayas.":["A dark body and a glowing lure at the end of a rod. The light is not for seeing: it is for luring you in.","Corpo escuro e uma isca acesa na ponta de uma vara. A luz não é para ver: é para que você vá até ela."],"LA RAÍZ":["THE ROOT","A RAIZ"],"Un árbol dado vuelta que camina con las raíces. Abajo no tiene tierra y camina igual.":["An upside-down tree that walks on its roots. There is no soil beneath it, and it walks anyway.","Uma árvore de ponta-cabeça que caminha com as raízes. Embaixo não há terra e caminha mesmo assim."],"EL ESPEJO":["THE MIRROR","O ESPELHO"],"Dos mitades que se copian con retardo. Cada tanto se alinean y por un segundo parece una sola cosa.":["Two halves that copy each other with a delay. Every so often they line up, and for a second it looks like a single thing.","Duas metades que se copiam com atraso. De vez em quando se alinham e por um segundo parece uma coisa só."],"EL NUDO":["THE KNOT","O NÓ"],"Aros trabados girando cada uno por su lado. No tiene punta por donde empezar a desatarlo.":["Interlocked rings, each spinning its own way. There is no loose end to start untying it.","Anéis travados girando cada um para um lado. Não tem ponta por onde começar a desatá-lo."],"EL SEGADOR":["THE REAPER","O CEIFADOR"],"Un arco de más de cien metros con el filo encendido y doce ojos en la cabeza. Barre despacio, como algo que ya pasó y no terminó de pasar.":["An arc more than a hundred meters long with a glowing edge and twelve eyes on its head. It sweeps slowly, like something that already happened and never finished happening.","Um arco de mais de cem metros com o fio aceso e doze olhos na cabeça. Varre devagar, como algo que já passou e não terminou de passar."],"LA CATEDRAL":["THE CATHEDRAL","A CATEDRAL"],"Seis pisos de columnas y arcos con ventanas que titilan, y un rosetón con un ojo en el medio. Cada piso gira con su propia fase.":["Six floors of columns and arches with flickering windows, and a rose window with an eye in the middle. Each floor turns in its own phase.","Seis andares de colunas e arcos com janelas que piscam, e uma rosácea com um olho no meio. Cada andar gira na sua própria fase."],"EL DESOLLADO":["THE FLAYED","O ESFOLADO"],"Doce vértebras, nueve pares de costillas abiertas y una calavera de tres mandíbulas que se da vuelta a mirarte.":["Twelve vertebrae, nine pairs of open ribs and a three-jawed skull that turns around to look at you.","Doze vértebras, nove pares de costelas abertas e uma caveira de três mandíbulas que se vira para olhar para você."],"EL POZO":["THE WELL","O POÇO"],"Una esfera oscura con cuatro anillos dentados girando al revés uno del otro. De cerca tira para adentro.":["A dark sphere with four toothed rings spinning against each other. Up close, it pulls you in.","Uma esfera escura com quatro anéis dentados girando ao contrário um do outro. De perto, puxa para dentro."],"LA MAREA":["THE TIDE","A MARÉ"],"Cinco cortinas de tentáculos desfasadas, con ojos a lo largo de la cresta. Llega como una ola y no rompe nunca.":["Five staggered curtains of tentacles, with eyes all along the crest. It arrives like a wave and never breaks.","Cinco cortinas de tentáculos defasadas, com olhos ao longo da crista. Chega como uma onda e nunca quebra."],"ÁLBUM · {0}/{1} ESPECIES":["ALBUM · {0}/{1} SPECIES","ÁLBUM · {0}/{1} ESPÉCIES"],"CARRETE — {0}/{1}":["ROLL — {0}/{1}","FILME — {0}/{1}"],"SIN FOTOS":["NO PHOTOS","SEM FOTOS"],"salí al espacio y traé algo":["go out into space and bring something back","saia para o espaço e traga algo"],"no paga nada":["pays nothing","não paga nada"],"VENDER TODO · {0} cr":["SELL ALL · {0} cr","VENDER TUDO · {0} cr"],"NADA QUE VENDER":["NOTHING TO SELL","NADA PARA VENDER"],"CÁMARAS":["CAMERAS","CÂMERAS"],"EN USO":["IN USE","EM USO"],"TOCÁ PARA PONERLA":["TAP TO EQUIP","TOQUE PARA EQUIPAR"]," · carrete {0} · alcance {1} m":[" · roll {0} · range {1} m"," · filme {0} · alcance {1} m"],"MOTOR DE SALTO":["JUMP DRIVE","MOTOR DE SALTO"],"abre {0}":["opens {0}","abre {0}"],"INSTALADO":["INSTALLED","INSTALADO"],"antes hay que poner {0}":["requires {0} first","antes é preciso instalar {0}"],"MEJORAS DE LA NAVE":["SHIP UPGRADES","MELHORIAS DA NAVE"],"PUESTA":["INSTALLED","INSTALADA"],"{0} créditos":["{0} credits","{0} créditos"]," · última venta {0} cr":[" · last sale {0} cr"," · última venda {0} cr"],"Vendé el carrete antes de poner la {0}":["Sell the roll before equipping the {0}","Venda o filme antes de equipar a {0}"],"CÁMARA DE MANO":["HANDHELD CAMERA","CÂMERA DE MÃO"],"la que estaba sobre la mesa":["the one that was on the table","a que estava sobre a mesa"],"RÉFLEX DE 6×6":["6×6 REFLEX","REFLEX 6×6"],"negativo grande: cada copia paga mucho más":["large negative: every print pays much more","negativo grande: cada cópia paga muito mais"],"TELEOBJETIVO 600":["600 TELEPHOTO","TELEOBJETIVA 600"],"llega a los colosos sin tener que acercarse":["reaches the colossi without getting close","alcança os colossos sem precisar se aproximar"],"LUCES DE BODEGA":["CARGO BAY LIGHTS","LUZES DO PORÃO"],"el doble de luz adentro de la nave":["twice the light inside the ship","o dobro de luz dentro da nave"],"SOGA LARGA":["LONG TETHER","CORDA LONGA"],"28 m en vez de 16 para alejarse":["28 m instead of 16 to roam farther","28 m em vez de 16 para ir mais longe"],"IMPULSORES DEL TRAJE":["SUIT THRUSTERS","PROPULSORES DO TRAJE"],"empuje 7 → 12 en caminata espacial":["thrust 7 → 12 on spacewalks","empuxo 7 → 12 na caminhada espacial"],"SALTO CLASE II":["CLASS II JUMP","SALTO CLASSE II"],"SALTO CLASE III":["CLASS III JUMP","SALTO CLASSE III"],"SALTO CLASE IV":["CLASS IV JUMP","SALTO CLASSE IV"],"BLINDAJE DE VACÍO":["VOID SHIELDING","BLINDAGEM DE VAZIO"],"[ HAY QUE VENDER ]":["[ READY TO SELL ]","[ HORA DE VENDER ]"],"[ SIN MATERIAL ]":["[ NO MATERIAL ]","[ SEM MATERIAL ]"],"BASE ALFA · PLATAFORMA 03":["BASE ALFA · PAD 03","BASE ALFA · PLATAFORMA 03"],"ACCESO CONTROLADO — ALTO EN LA BARRERA":["RESTRICTED ACCESS — STOP AT THE BARRIER","ACESSO CONTROLADO — PARE NA CANCELA"],"CARGA — NO ESTACIONAR":["LOADING ZONE — NO PARKING","CARGA — PROIBIDO ESTACIONAR"],"TUTORIAL · PASO {0} DE {1}":["TUTORIAL · STEP {0} OF {1}","TUTORIAL · PASSO {0} DE {1}"],"EMPEZAR":["START","COMEÇAR"],"LISTO":["DONE","PRONTO"],"BIENVENIDO A BASE ALFA":["WELCOME TO BASE ALFA","BEM-VINDO À BASE ALFA"],"Sos el <b>fotógrafo</b> de esta nave. Salís al espacio, fotografiás lo que vive ahí afuera y <b>vendés las fotos</b>. Con los créditos comprás mejores cámaras y motores para llegar a galaxias cada vez más raras. Tu meta: <b>llenar el álbum de 21 especies</b>.":["You are this ship's <b>photographer</b>. You go out into space, photograph whatever lives out there and <b>sell the photos</b>. With the credits you buy better cameras and engines to reach stranger and stranger galaxies. Your goal: <b>fill the album of 21 species</b>.","Você é o <b>fotógrafo</b> desta nave. Sai para o espaço, fotografa o que vive lá fora e <b>vende as fotos</b>. Com os créditos você compra câmeras melhores e motores para chegar a galáxias cada vez mais estranhas. Sua meta: <b>completar o álbum de 21 espécies</b>."],"CAMINAR":["WALK","ANDAR"],"Apoyá el pulgar en la <b>mitad izquierda</b> de la pantalla y arrastralo: es la palanca. Más lejos del centro, más rápido. El botón <b>SALTO</b> salta.":["Put your thumb on the <b>left half</b> of the screen and drag it: that is the joystick. The farther from the center, the faster. The <b>JUMP</b> button jumps.","Apoie o polegar na <b>metade esquerda</b> da tela e arraste: é o joystick. Quanto mais longe do centro, mais rápido. O botão <b>PULO</b> pula."],"MIRAR":["LOOK","OLHAR"],"Arrastrá el otro dedo en la <b>mitad derecha</b> para mirar alrededor.":["Drag your other finger on the <b>right half</b> to look around.","Arraste o outro dedo na <b>metade direita</b> para olhar em volta."],"SUBÍ A LA NAVE":["BOARD THE SHIP","SUBA NA NAVE"],"La nave está enfrente. Subí por la <b>rampa de atrás</b>, siguiendo el marcador.":["The ship is right ahead. Go up the <b>rear ramp</b>, following the marker.","A nave está à sua frente. Suba pela <b>rampa traseira</b>, seguindo o marcador."],"TOMÁ LA CÁMARA":["GRAB THE CAMERA","PEGUE A CÂMERA"],"En la bodega hay una mesa con una cámara. Acercate y tocá <b>TOMAR CÁMARA</b>.":["In the cargo bay there is a table with a camera on it. Walk up to it and tap <b>TAKE CAMERA</b>.","No porão há uma mesa com uma câmera. Chegue perto e toque em <b>PEGAR CÂMERA</b>."],"DESPEGÁ":["TAKE OFF","DECOLE"],"Con la cámara en la mano, tocá <b>DESPEGAR</b>. Tiene que estar adentro de la nave.":["With the camera in hand, tap <b>TAKE OFF</b>. You have to be inside the ship.","Com a câmera na mão, toque em <b>DECOLAR</b>. Você precisa estar dentro da nave."],"SUBIENDO":["CLIMBING","SUBINDO"],"Agarrate. Se cierra la compuerta y el cielo se vuelve espacio.":["Hold on. The hatch closes and the sky turns into space.","Segure-se. A comporta se fecha e o céu vira espaço."],"SALÍ AL ESPACIO":["GO OUT INTO SPACE","SAIA PARA O ESPAÇO"],"Andá a la <b>compuerta de popa</b>, la misma por donde entraste, y tocá <b>SALIR AL ESPACIO</b>. Vas atado a una soga: no te perdés.":["Go to the <b>stern hatch</b>, the same one you came in through, and tap <b>EXIT TO SPACE</b>. You are tied to a tether: you will not get lost.","Vá até a <b>comporta de popa</b>, a mesma por onde você entrou, e toque em <b>SAIR PARA O ESPAÇO</b>. Você vai preso a uma corda: não tem como se perder."],"FLOTAR":["FLOAT","FLUTUAR"],"Acá no hay gravedad. La palanca te empuja hacia donde mirás, <b>SUBIR</b> y <b>BAJAR</b> te llevan arriba y abajo (tocá para un envión, dejá apretado para seguir). La soga tira cuando se termina.":["There is no gravity out here. The joystick pushes you where you are looking, <b>UP</b> and <b>DOWN</b> move you up and down (tap for a burst, hold to keep going). The tether pulls when it runs out.","Aqui não há gravidade. O joystick empurra você para onde está olhando, <b>SUBIR</b> e <b>DESCER</b> levam você para cima e para baixo (toque para um impulso, segure para continuar). A corda puxa quando acaba."],"TU PRIMERA FOTO":["YOUR FIRST PHOTO","SUA PRIMEIRA FOTO"],"Volvé a salir por la compuerta de popa para buscar un alien.":["Go back out through the stern hatch to look for an alien.","Saia de novo pela comporta de popa para procurar um alien."],"Esa salió <b>velada</b>: no había nada en el cuadro. Poné al alien en el centro y tocá <b>FOTO</b>.":["That one came out <b>fogged</b>: there was nothing in the frame. Put the alien in the center and tap <b>PHOTO</b>.","Essa saiu <b>velada</b>: não havia nada no quadro. Coloque o alien no centro e toque em <b>FOTO</b>."],"Buscá un alien (el marcador lo señala), ponelo en el <b>centro del visor</b> y tocá <b>FOTO</b>. Cuanto más grande sale en el cuadro, más paga.":["Find an alien (the marker points to it), put it in the <b>center of the viewfinder</b> and tap <b>PHOTO</b>. The bigger it is in the frame, the more it pays.","Procure um alien (o marcador aponta para ele), coloque-o no <b>centro do visor</b> e toque em <b>FOTO</b>. Quanto maior ele sair no quadro, mais paga."],"¡PRIMERA FOTO!":["FIRST PHOTO!","PRIMEIRA FOTO!"],"El carrete tiene <b>{0} fotos</b> y te quedan {1}. Sacá más si querés (cada especie nueva entra al álbum) y después volvé a la compuerta: tocá <b>ENTRAR</b>.":["The roll holds <b>{0} photos</b> and you have {1} left. Take more if you want (every new species goes into the album), then head back to the hatch: tap <b>GO INSIDE</b>.","O filme tem <b>{0} fotos</b> e restam {1}. Tire mais se quiser (cada espécie nova entra no álbum) e depois volte para a comporta: toque em <b>ENTRAR</b>."],"VENDÉ LAS FOTOS":["SELL THE PHOTOS","VENDA AS FOTOS"],"La <b>computadora</b> está en la bodega, a estribor, al lado de la escalera. Acercate, tocá <b>COMPUTADORA</b> y después <b>VENDER TODO</b>. Paga según la rareza y el encuadre.":["The <b>computer</b> is in the cargo bay, on the starboard side next to the stairs. Walk up, tap <b>COMPUTER</b> and then <b>SELL ALL</b>. It pays according to rarity and framing.","O <b>computador</b> fica no porão, a estibordo, ao lado da escada. Chegue perto, toque em <b>COMPUTADOR</b> e depois em <b>VENDER TUDO</b>. Paga conforme a raridade e o enquadramento."],"¡PRIMERA VENTA!":["FIRST SALE!","PRIMEIRA VENDA!"],"Con los créditos, en la misma computadora: <b>cámaras</b> con más fotos y más alcance, <b>mejoras</b> para la nave y el traje, y <b>motores de salto</b> que abren galaxias nuevas. La <b>carta de navegación</b> está en el puente, arriba. El <b>ÁLBUM</b> guarda cada especie que fotografiaste. Buena caza.":["With the credits, at the same computer: <b>cameras</b> with more shots and more range, <b>upgrades</b> for the ship and the suit, and <b>jump drives</b> that open new galaxies. The <b>star chart</b> is on the bridge, upstairs. The <b>ALBUM</b> keeps every species you have photographed. Good hunting.","Com os créditos, no mesmo computador: <b>câmeras</b> com mais fotos e mais alcance, <b>melhorias</b> para a nave e o traje, e <b>motores de salto</b> que abrem galáxias novas. A <b>carta de navegação</b> fica na ponte, lá em cima. O <b>ÁLBUM</b> guarda cada espécie que você fotografou. Boa caçada."],"JUGAR":["PLAY","JOGAR"],"IDIOMA":["LANGUAGE","IDIOMA"],"CALIDAD GRÁFICA":["GRAPHICS QUALITY","QUALIDADE GRÁFICA"],"ALTA":["HIGH","ALTA"],"MEDIA":["MEDIUM","MÉDIA"],"BAJA":["LOW","BAIXA"],"Fotografiá lo que vive ahí afuera.":["Photograph what lives out there.","Fotografe o que vive lá fora."],"todo al máximo: sombras finas, oclusión, brillo y resolución completa":["everything maxed out: sharp shadows, occlusion, bloom and full resolution","tudo no máximo: sombras nítidas, oclusão, brilho e resolução completa"],"el equilibrio para la mayoría de los celulares":["the balance for most phones","o equilíbrio para a maioria dos celulares"],"para celulares viejos: sin oclusión, sin brillo y menos resolución":["for older phones: no occlusion, no bloom and lower resolution","para celulares antigos: sem oclusão, sem brilho e menos resolução"],"elegí el idioma":["choose the language","escolha o idioma"],"elegí la calidad":["choose the quality","escolha a qualidade"],"largo":["the long","comprido"],"que no se agacha":["who never stoops","que não se agacha"],"de brazos largos":["of the long arms","de braços longos"],"quieto":["the still","quieto"],"de siete patas":["of seven legs","de sete patas"],"que raspa":["who scrapes","que raspa"],"blindado":["the armored","blindado"],"que corre":["who runs","que corre"],"que cuelga":["who hangs","que pende"],"pálido":["the pale","pálido"],"de mil hilos":["of a thousand threads","de mil fios"],"sin apuro":["in no hurry","sem pressa"],"que mira dos veces":["who looks twice","que olha duas vezes"],"abierto":["the open","aberto"],"sin párpado":["without eyelids","sem pálpebra"],"atento":["the watchful","atento"],"de nueve bocas":["of nine mouths","de nove bocas"],"que traga":["who swallows","que engole"],"abierto de par en par":["wide open","escancarado"],"hambriento":["the hungry","faminto"],"que se repite":["who repeats itself","que se repete"],"de muchas manos":["of many hands","de muitas mãos"],"creciendo":["the growing","crescendo"],"sin centro":["without a center","sem centro"],"sin adentro":["without an inside","sem interior"],"hueco":["the hollow","oco"],"que ya estaba":["who was already there","que já estava lá"],"vacío":["the empty","vazio"],"apilado":["the stacked","empilhado"],"anterior":["the former","anterior"],"que no termina":["who never ends","que não termina"],"al rojo":["red-hot","em brasa"],"soldado":["the welded","soldado"],"que humea":["who smolders","que fumega"],"de una pieza":["of one piece","de uma peça só"],"que no es uno":["who is not one","que não é um só"],"de a muchos":["the many","de muitos"],"que zumba":["who hums","que zumbe"],"partido":["the split","partido"],"que pasa":["who passes by","que passa"],"viejo":["the old","velho"],"que no vuelve":["who never returns","que não volta"],"que se deja llevar":["who drifts","que se deixa levar"],"fino":["the thin","fino"],"de papel":["of paper","de papel"],"callado":["the silent","calado"],"que alumbra":["who shines","que ilumina"],"con cebo":["with the lure","com isca"],"de boca grande":["of the wide mouth","de boca grande"],"paciente":["the patient","paciente"],"dado vuelta":["upside down","de ponta-cabeça"],"que camina":["who walks","que caminha"],"sin tierra":["without soil","sem terra"],"torcido":["the twisted","torto"],"al revés":["backwards","ao contrário"],"que se copia":["who copies itself","que se copia"],"partido al medio":["split in half","partido ao meio"],"doble":["the double","duplo"],"que no se desata":["who never comes undone","que não se desata"],"enredado":["the tangled","enredado"],"sin punta":["without an end","sem ponta"],"que vuelve":["who returns","que volta"],"que corta despacio":["who cuts slowly","que corta devagar"],"de un solo filo":["of a single edge","de um só fio"],"que ya pasó":["who already passed","que já passou"],"sin vuelta":["of no return","sem volta"],"que reza sola":["who prays alone","que reza sozinha"],"de mil ventanas":["of a thousand windows","de mil janelas"],"que estuvo siempre":["who was always there","que sempre esteve lá"],"que no abre":["who never opens","que não abre"],"sin cuero":["without skin","sem pele"],"de tres bocas":["of three mouths","de três bocas"],"que se acuerda":["who remembers","que se lembra"],"sin fondo":["the bottomless","sem fundo"],"que llama":["who calls","que chama"],"abierto para abajo":["open downward","aberto para baixo"],"que sube":["who rises","que sobe"],"de muchos hilos":["of many threads","de muitos fios"],"que no se corta":["who never breaks","que não se rompe"],"pareja":["the even","constante"]};
+const IDIOMAS = ['es', 'en', 'pt'];
+let IDIOMA = 'es';
+try { const l = localStorage.getItem('aliengrid.idioma'); if(IDIOMAS.includes(l)) IDIOMA = l; } catch(e){}
+const TR_FALTA = new Set();
+function tr(s){
+  let r = s;
+  if(IDIOMA !== 'es' && s){
+    const d = DIC[s];
+    if(d) r = d[IDIOMA === 'en' ? 0 : 1]; else TR_FALTA.add(s);
+  }
+  for(let i = 1; i < arguments.length; i++) r = r.split('{' + (i - 1) + '}').join(arguments[i]);
+  return r;
+}
+const REPINTAR = [];                 /* lienzos con letras que hay que volver a pintar al cambiar el idioma */
+
+/* ================================================================== calidad gráfica
+   Tres escalones que tocan lo que más cuesta en el celular: resolución, mapa de sombra,
+   multimuestra, oclusión, brillo, polvo en el aire y hasta dónde se dibuja a la gente. */
+const CALIDADES = {
+  alta: {dpr:2.0, sombra:2048, suave:true,  msaa:4, ao:0.9, aoDiv:1, brillo:true,  motas:720, gVer:85, gSombra:38},
+  media:{dpr:1.5, sombra:1024, suave:true,  msaa:2, ao:0.8, aoDiv:2, brillo:true,  motas:380, gVer:70, gSombra:22},
+  baja: {dpr:1.0, sombra:1024, suave:false, msaa:0, ao:0,   aoDiv:2, brillo:false, motas:0,   gVer:55, gSombra:0}
+};
+const CAL_DESC = {alta:'todo al máximo: sombras finas, oclusión, brillo y resolución completa',
+                  media:'el equilibrio para la mayoría de los celulares',
+                  baja:'para celulares viejos: sin oclusión, sin brillo y menos resolución'};
+let CAL_NIVEL = 'alta';
+try { const q = localStorage.getItem('aliengrid.calidad'); if(CALIDADES[q]) CAL_NIVEL = q; } catch(e){}
+let CAL = CALIDADES[CAL_NIVEL];
+const dprTope = () => Math.min(devicePixelRatio || 1, CAL.dpr);
+const MENU = {abierto:true, t:0};    /* el menú principal: mientras está abierto el juego no recibe nada */
 
 /* ================================================================== sonido
    La guía (sección 7): cada efecto se busca POR NOMBRE en window.SONIDOS (un data: de audio que
@@ -524,12 +596,12 @@ const SON = (function(){
 /* -------------------------------------------------------------- renderer */
 const lienzo = document.getElementById('lienzo');
 const rend = new THREE.WebGLRenderer({canvas:lienzo, antialias:true, powerPreference:'high-performance'});
-rend.setPixelRatio(Math.min(devicePixelRatio||1, 2));
+rend.setPixelRatio(dprTope());
 rend.outputEncoding = THREE.sRGBEncoding;
 /* el tono lo pone el revelado al final: la escena se dibuja lineal y en HDR */
 rend.toneMapping = THREE.NoToneMapping;
 rend.shadowMap.enabled = true;
-rend.shadowMap.type = THREE.PCFSoftShadowMap;
+rend.shadowMap.type = CAL.suave ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
 rend.info.autoReset = false;
 
 /* ------------------------------------------------------------- revelado
@@ -548,7 +620,7 @@ const POST = (function(){
   const esc3d = w2 && THREE.WebGLMultisampleRenderTarget
     ? new THREE.WebGLMultisampleRenderTarget(4, 4, Object.assign(prof, base))
     : new THREE.WebGLRenderTarget(4, 4, Object.assign(prof, base));
-  if(esc3d.isWebGLMultisampleRenderTarget) esc3d.samples = 4;
+  if(esc3d.isWebGLMultisampleRenderTarget) esc3d.samples = CAL.msaa;
   /* LA PROFUNDIDAD SALE DEL MISMO DIBUJO: con una textura de profundidad en el target, three la
      copia al resolver la multimuestra (mismo formato: 24 bits con stencil). Sin otra pasada de
      geometría, que con diez personas y la base serían otras cien llamadas. */
@@ -562,6 +634,8 @@ const POST = (function(){
                 magFilter:THREE.LinearFilter, depthBuffer:false};
   const ao = new THREE.WebGLRenderTarget(4, 4, bajo), aoB = new THREE.WebGLRenderTarget(4, 4, bajo);
   const blanco1 = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1); blanco1.needsUpdate = true;
+  const negro1 = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1); negro1.needsUpdate = true;
+  const opc = {aoDiv:CAL.aoDiv, brillo:CAL.brillo};
   const chico = () => new THREE.WebGLRenderTarget(4, 4, Object.assign({depthBuffer:false}, base));
   /* cadena de mitades: un borrón ralo a 1/4 dibuja copias sueltas de cada punto (se ve una
      cuadrícula); ½ -> ¼ -> ⅛ con gaussiano en cada escala queda liso */
@@ -644,7 +718,7 @@ const POST = (function(){
       }
       gl_FragColor = vec4(suma/peso, c0.g, 0.0, 1.0);
     }`);
-  const U = {t:{value:null}, tBrillo:{value:null}, tBrillo2:{value:null}, tAO:{value:null}, uAO:{value:0.9},
+  const U = {t:{value:null}, tBrillo:{value:null}, tBrillo2:{value:null}, tAO:{value:null}, uAO:{value:CAL.ao},
              uExpo:{value:1.06}, uBloom:{value:0.34},
              uGrano:{value:1.0}, uTiempo:{value:0}, uVineta:{value:0.28}, uAberr:{value:0.0014},
              uRes:{value:new THREE.Vector2(4, 4)}};
@@ -681,7 +755,8 @@ const POST = (function(){
     medio.setSize(Math.max(2, W >> 1), Math.max(2, H >> 1));
     cuarto.setSize(Math.max(2, W >> 2), Math.max(2, H >> 2)); cuartoB.setSize(Math.max(2, W >> 2), Math.max(2, H >> 2));
     octavo.setSize(Math.max(2, W >> 3), Math.max(2, H >> 3)); octavoB.setSize(Math.max(2, W >> 3), Math.max(2, H >> 3));
-    ao.setSize(Math.max(2, W >> 1), Math.max(2, H >> 1)); aoB.setSize(Math.max(2, W >> 1), Math.max(2, H >> 1));
+    const k = opc.aoDiv;                           /* media: la oclusión a un cuarto */
+    ao.setSize(Math.max(2, W >> k), Math.max(2, H >> k)); aoB.setSize(Math.max(2, W >> k), Math.max(2, H >> k));
     U.uRes.value.set(W, H);
   }
   function pasada(mat, destino){ quad.material = mat; rend.setRenderTarget(destino); rend.render(escPost, camPost); }
@@ -695,9 +770,11 @@ const POST = (function(){
     U.uTiempo.value += dt || 0.016;
     rend.setRenderTarget(esc3d); rend.render(escena, camara);
     mUmbral.uniforms.t.value = esc3d.texture; mUmbral.uniforms.uExpo.value = U.uExpo.value;
-    pasada(mUmbral, medio);
-    bajar(medio, cuarto);  borrar(cuarto, cuartoB);
-    bajar(cuarto, octavo); borrar(octavo, octavoB);
+    if(opc.brillo){                                /* baja: sin brillo son siete pasadas menos */
+      pasada(mUmbral, medio);
+      bajar(medio, cuarto);  borrar(cuarto, cuartoB);
+      bajar(cuarto, octavo); borrar(octavo, octavoB);
+    }
     if(conProf && U.uAO.value > 0.001){
       const A = mAO.uniforms;
       A.tProf.value = esc3d.depthTexture; A.uTexel.value.set(1/W, 1/H);
@@ -707,10 +784,18 @@ const POST = (function(){
       mAOBorron.uniforms.t.value = aoB.texture; mAOBorron.uniforms.uPaso.value.set(0, 1/aoB.height); pasada(mAOBorron, ao);
       U.tAO.value = ao.texture;
     } else U.tAO.value = blanco1;
-    U.t.value = esc3d.texture; U.tBrillo.value = cuarto.texture; U.tBrillo2.value = octavo.texture;
+    U.t.value = esc3d.texture;
+    U.tBrillo.value = opc.brillo ? cuarto.texture : negro1; U.tBrillo2.value = opc.brillo ? octavo.texture : negro1;
     pasada(mFinal, null);
   }
-  return {tam, revelar, U, mUmbral, mAO, hdr, msaa: !!esc3d.isWebGLMultisampleRenderTarget, esc3d, ao, conProf};
+  /* cambiar de calidad en caliente: la multimuestra se fija al armar el target, así que se tira
+     y three lo vuelve a armar con las muestras nuevas en el próximo dibujo */
+  function calidad(c){
+    opc.aoDiv = c.aoDiv; opc.brillo = c.brillo; U.uAO.value = c.ao;
+    if(esc3d.isWebGLMultisampleRenderTarget && esc3d.samples !== c.msaa){ esc3d.samples = c.msaa; esc3d.dispose(); }
+    tam(W, H);
+  }
+  return {tam, revelar, U, mUmbral, mAO, hdr, msaa: !!esc3d.isWebGLMultisampleRenderTarget, esc3d, ao, conProf, calidad, opc};
 })();
 
 const esc = new THREE.Scene();
@@ -891,7 +976,7 @@ esc.add(hemi);
 const clave = new THREE.DirectionalLight(col(0xffbd80), LUZ.sol);  /* 40° de costado, 35° de alto */
 clave.position.set(18, 15, -22);
 clave.castShadow = true;
-clave.shadow.mapSize.set(2048,2048);
+clave.shadow.mapSize.set(CAL.sombra, CAL.sombra);
 /* con la caja de 240 m de fondo, -0,0006 eran 14 cm de despegue: la sombra flotaba del pie */
 clave.shadow.bias = -0.00022;
 clave.shadow.normalBias = 0.06;
@@ -1443,6 +1528,7 @@ const MUROS_TIERRA = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1, soloT
   const g = c.getContext('2d');
   const px = x => (x - X0)/W*S, pz = z => (z - Z0)/D*S, esc1 = S/W;
 
+  function pintar(){                                       /* entera: los carteles van debajo de las rayas */
   g.fillStyle = '#34363a'; g.fillRect(0, 0, S, S);         /* asfalto */
   for(let i = 0; i < 26000; i++){                          /* grano y manchas de aceite */
     const a = Math.random()*0.10;
@@ -1471,9 +1557,9 @@ const MUROS_TIERRA = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1, soloT
   g.font = 'bold ' + Math.round(13*esc1) + 'px ui-monospace, monospace';
   g.save(); g.translate(cx, pz(11)); g.fillText('ALFA-3', 0, 0); g.restore();
   g.font = 'bold ' + Math.round(6*esc1) + 'px ui-monospace, monospace';
-  g.fillText('BASE ALFA · PLATAFORMA 03', cx, pz(-13));
-  g.fillText('ACCESO CONTROLADO — ALTO EN LA BARRERA', cx, pz(-26));
-  g.fillText('CARGA — NO ESTACIONAR', cx, pz(58));
+  g.fillText(tr('BASE ALFA · PLATAFORMA 03'), cx, pz(-13));
+  g.fillText(tr('ACCESO CONTROLADO — ALTO EN LA BARRERA'), cx, pz(-26));
+  g.fillText(tr('CARGA — NO ESTACIONAR'), cx, pz(58));
 
   /* pasillo de rodaje hacia el portón */
   g.strokeStyle = '#d8c23c'; g.lineWidth = 0.35*esc1;
@@ -1496,6 +1582,8 @@ const MUROS_TIERRA = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1, soloT
     for(const z of zs){ g.beginPath(); g.moveTo(px(x0), pz(z)); g.lineTo(px(x1), pz(z)); g.stroke(); }
     g.beginPath(); g.moveTo(px(x0), pz(zs[0])); g.lineTo(px(x0), pz(zs[zs.length-1])); g.stroke();
   }
+  }
+  pintar();
 
   const t = new THREE.CanvasTexture(c);
   t.encoding = THREE.sRGBEncoding; t.anisotropy = rend.capabilities.getMaxAnisotropy();
@@ -1506,6 +1594,7 @@ const MUROS_TIERRA = (x0,x1,z0,z1,y0,y1) => MUROS.push({x0,x1,z0,z1,y0,y1, soloT
   m.position.set((X0+X1)/2, 0.03, (Z0+Z1)/2); m.userData.calco = true;
   m.receiveShadow = true;
   mundo.add(m);
+  REPINTAR.push(() => { pintar(); t.needsUpdate = true; });
 })();
 
 /* ------------------------------------------------- camino de acceso */
@@ -2282,12 +2371,12 @@ function sacarFoto(){
   if(FOTO.rollo.length >= camAct().carrete){ SON.fx('negado'); return null; }   /* carrete lleno: hay que ir a vender */
   SON.fx('obturador');
   const presa = bichoEnCuadro();
-  let anota = {nombre:'PLACA VELADA', detalle:'no entró nada en el cuadro', precio:0};
+  let anota = {nombre:tr('PLACA VELADA'), detalle:tr('no entró nada en el cuadro'), precio:0};
   if(presa){
     const cob = cobertura(presa);
     anota = {nombre:presa.userData.nombre,
-             detalle:'rareza ' + rareza9(presa.userData).toFixed(1) + ' · ' +
-                     GALAXIAS[GAL.actual].nombre + (presa.userData.colosal ? ' · COLOSAL' : ''),
+             detalle:tr('rareza {0}', rareza9(presa.userData).toFixed(1)) + ' · ' +
+                     GALAXIAS[GAL.actual].nombre + (presa.userData.colosal ? ' · ' + tr('COLOSAL') : ''),
              precio:precioFoto(presa.userData, cob)};
     presa.userData.capturado = 0.0001;
     BICHOS.cazados++;
@@ -2402,12 +2491,12 @@ function sacarFoto(){
     p.fillText(presa.userData.nombre, dPapel.width/2, H + M + 36);
     p.fillStyle = 'rgba(74,56,32,0.70)';
     p.font = '12px Georgia, "Times New Roman", serif';
-    p.fillText('RAREZA ' + (presa.userData.nivel + 1) + '  ·  ESPECIE N° ' + BICHOS.cazados,
+    p.fillText(tr('RAREZA {0}  ·  ESPECIE N° {1}', presa.userData.nivel + 1, BICHOS.cazados),
                dPapel.width/2, H + M + 58);
   } else {
     p.fillStyle = 'rgba(74,56,32,0.55)';
     p.font = 'italic 14px Georgia, "Times New Roman", serif';
-    p.fillText('sin nada adentro', dPapel.width/2, H + M + 44);
+    p.fillText(tr('sin nada adentro'), dPapel.width/2, H + M + 44);
   }
   p.globalCompositeOperation = 'destination-out';
   for(let k = 0; k < 16; k++){
@@ -3061,7 +3150,7 @@ function nombreBicho(rnd, nivel, arq){
   const b = ['ok','ath','uul','ix','or','esh','un','ai','ogg','yr','ek','ous','imm'];
   let n = a[(rnd()*a.length)|0] + b[(rnd()*b.length)|0];
   if(nivel >= 2) n += '-' + (2 + ((rnd()*97)|0));
-  if(nivel >= 1) n += ' ' + arq.mote[(rnd()*arq.mote.length)|0];
+  if(nivel >= 1) n += ' ' + tr(arq.mote[(rnd()*arq.mote.length)|0]);
   return n;
 }
 
@@ -4314,13 +4403,13 @@ function pasoGente(dt){
   for(const n of GENTE.lista){
     const dc = cam.position.distanceTo(n.pos);
     _gEs.center.set(n.pos.x, n.pos.y + 1.0, n.pos.z);
-    let ve = ver && dc < 85 && (dc < 38 || _gFr.intersectsSphere(_gEs));
+    let ve = ver && dc < CAL.gVer && (dc < CAL.gSombra || _gFr.intersectsSphere(_gEs));
     if(ve && adentro) ve = cruza(_gEs.center, 12.0, 2.6, N.y0 - 0.5, N.y0 + N.dintel + 0.2) ||
                            cruza(_gEs.center, 38.6, 4.0, N.y1 + 1.0, N.y1 + 2.8);
     n.g.visible = ve;
     n.g.position.copy(n.pos); n.g.rotation.y = n.yaw;
     if(!n.g.visible) continue;
-    const sombra = dc < 38;                              /* la caja de sombra llega a 40: más allá no cae en ningún lado */
+    const sombra = dc < CAL.gSombra;                              /* la caja de sombra llega a 40: más allá no cae en ningún lado */
     if(n.sombra !== sombra){ n.sombra = sombra; n.mallas.forEach(o => { o.castShadow = sombra; }); }
     ponerClipNPC(n, n.v > 2.4 ? 'run' : n.v > 0.2 ? 'walk' : 'idle', 0.3);
     const cl = n.acc[n.actual].getClip(), propia = cl.userData ? cl.userData.vel : 0;
@@ -4382,10 +4471,9 @@ function pintarPanel(){
     b.className = 'fila' + (i === GAL.actual ? ' aca' : '') + (abierta ? '' : ' trabada');
     b.innerHTML = abierta
       ? '<b>' + g.nombre + '</b><i>' + g.linea + '</i><u>' +
-        (i === GAL.actual ? 'ESTÁS ACÁ · ' : '') + vistas + ' de ' + g.especies.length +
-        ' especies en la cámara</u>'
-      : '<b>◼ ' + g.nombre + '</b><i>fuera del alcance del motor</i><u>NECESITA ' +
-        saltoDe(g.llave).nombre + ' · ' + saltoDe(g.llave).precio + ' cr en la terminal</u>';
+        (i === GAL.actual ? tr('ESTÁS ACÁ · ') : '') + tr('{0} de {1} especies en la cámara', vistas, g.especies.length) + '</u>'
+      : '<b>◼ ' + g.nombre + '</b><i>' + tr('fuera del alcance del motor') + '</i><u>' +
+        tr('NECESITA {0} · {1} cr en la terminal', saltoDe(g.llave).nombre, saltoDe(g.llave).precio) + '</u>';
     if(abierta) b.addEventListener('pointerdown', e => { e.stopPropagation(); viajarA(i); });
     dListaGal.appendChild(b);
   });
@@ -4401,6 +4489,7 @@ function pintarPalanca(px, py, vis){
   dBase.style.opacity = dPuno.style.opacity = vis ? '1' : '0';
 }
 addEventListener('pointerdown', e => {
+  if(MENU.abierto) return;
   if(FOTO.abierta) return;                    /* con la copia abierta no se arma la palanca */
   if(PANEL.abierto || COMPU.abierto || ALBUM_ABIERTO.v) return;
   if(e.target.closest && e.target.closest('#tuto')) return;
@@ -4458,7 +4547,7 @@ dBajar.addEventListener('mouseup', largarBajar);
 function tocarVolar(e){
   e.preventDefault();
   dVolar.classList.add('on');
-  const q = dVolar.textContent;
+  const q = dVolar.dataset.k;                  /* la clave en castellano: el texto depende del idioma */
   if(q === 'DESPEGAR') despegar();
   else if(q === 'ATERRIZAR') aterrizar();
   else if(q === 'SALIR AL ESPACIO') salirAlEspacio();
@@ -4498,8 +4587,22 @@ dSalto.addEventListener('mouseup', largar);
 /* ------------------------------------------------------------------- paso */
 const ejeX = new THREE.Vector3(), ejeZ = new THREE.Vector3(), deseo = new THREE.Vector3();
 
+/* el menú principal: la cámara se pasea despacio frente a la popa, con la rampa abierta */
+const _vMenu = new THREE.Vector3();
+function camaraMenu(dt){
+  MENU.t += dt;
+  const a = Math.sin(MENU.t*0.07)*0.62;
+  cam.position.set(Math.sin(a)*40, 4.6 + Math.sin(MENU.t*0.19)*0.6, 24 - Math.cos(a)*40);
+  cam.lookAt(0, 5.0, 24);
+  if(Math.abs(cam.fov - CFG.fovBase) > 0.05){ cam.fov = CFG.fovBase; cam.updateProjectionMatrix(); }
+  centroSombra(_vMenu.set(0, 0, 18), clave.target.position);
+  clave.position.copy(clave.target.position).addScaledVector(SOL_DIR, 110);
+  clave.target.updateMatrixWorld();
+  cielo.position.copy(cam.position);
+}
 function paso(dt){
   GENTE.pend += dt;
+  if(MENU.abierto){ camaraMenu(dt); return; }
   TUTO.paso();
   /* dirección pedida, relativa a la cámara */
   let ix = ent.x, iy = ent.y, mag = ent.mag;
@@ -4625,7 +4728,7 @@ function hud(){
   FOTO.lleno = FOTO.rollo.length >= camAct().carrete;
   const verUsar = FOTO.tiene || FOTO.cerca;
   if(verUsar !== dUsar.classList.contains('ver')) dUsar.classList.toggle('ver', verUsar);
-  const txtUsar = FOTO.tiene ? (FOTO.lleno ? 'CARRETE LLENO' : 'FOTO') : 'TOMAR CÁMARA';
+  const txtUsar = tr(FOTO.tiene ? (FOTO.lleno ? 'CARRETE LLENO' : 'FOTO') : 'TOMAR CÁMARA');
   if(dUsar.textContent !== txtUsar) dUsar.textContent = txtUsar;
   if(FOTO.tiene !== dVisor.classList.contains('ver')) dVisor.classList.toggle('ver', FOTO.tiene);
 
@@ -4638,7 +4741,7 @@ function hud(){
   const verRollo = FOTO.tiene;
   if(verRollo !== dRollo.classList.contains('ver')) dRollo.classList.toggle('ver', verRollo);
   if(verRollo){
-    const t = 'CARRETE ' + FOTO.rollo.length + '/' + camAct().carrete;
+    const t = tr('CARRETE {0}/{1}', FOTO.rollo.length, camAct().carrete);
     if(dRollo.textContent !== t) dRollo.textContent = t;
   }
 
@@ -4653,7 +4756,7 @@ function hud(){
   /* primera persona: el casco, la mano y la tarea */
   if(EVA.activa !== dCasco.classList.contains('ver')) dCasco.classList.toggle('ver', EVA.activa);
   if(EVA.activa !== dBajar.classList.contains('ver')){ dBajar.classList.toggle('ver', EVA.activa);
-    dSalto.textContent = EVA.activa ? 'SUBIR' : 'SALTO'; if(!EVA.activa){ ent.bajaHold = false; ent.subeHold = false; } }
+    dSalto.textContent = tr(EVA.activa ? 'SUBIR' : 'SALTO'); if(!EVA.activa){ ent.bajaHold = false; ent.subeHold = false; } }
   linterna.intensity = EVA.activa ? 1.25 : 0;
   luzEsclusa.intensity = (EVA.activa ? 1.5 : 0);
   const verGal = VUELO.espacio > 0.5;
@@ -4667,7 +4770,7 @@ function hud(){
   else if(aBordo && VUELO.estado === 'tierra') txt = 'DESPEGAR';
   const puede = !!txt;
   if(puede !== dVolar.classList.contains('ver')) dVolar.classList.toggle('ver', puede);
-  if(txt && dVolar.textContent !== txt) dVolar.textContent = txt;
+  if(txt && dVolar.dataset.k !== txt){ dVolar.dataset.k = txt; dVolar.textContent = tr(txt); }
 }
 
 /* animación de código; con GLB riggeado manda el mixer */
@@ -4817,7 +4920,7 @@ addEventListener('orientationchange', () => setTimeout(medir, 220));
 if(window.visualViewport) visualViewport.addEventListener('resize', medir);
 medir();
 
-let ultimo = performance.now(), suavems = 16, dpr = Math.min(devicePixelRatio||1, 2);
+let ultimo = performance.now(), suavems = 16, dpr = dprTope();
 /* Qué brilla lo decide el ojo: al sol la chapa llega a 4-6 (lineal) y no puede encandilar
    entera; adentro o en el espacio lo que pasa de 2,2 son lámparas, ojos y estrellas. El umbral
    se acomoda en ~0,4 s, como la vista al entrar de la pista a la bodega. */
@@ -4830,7 +4933,7 @@ function dibujar(dt){
   POST.mUmbral.uniforms.uUmbral.value = umbralVista;
   pasoMotas(dt, adentro);
   const dg = GENTE.pend; GENTE.pend = 0;
-  if(dg > 0){ DETALLES.paso(dg); pasoGente(dg); TUTO.cuadro(dg); }
+  if(dg > 0){ DETALLES.paso(dg); pasoGente(dg); if(!MENU.abierto) TUTO.cuadro(dg); }
   cam.updateMatrixWorld(); nieblaPorCuadro(); rend.info.reset(); POST.revelar(esc, cam, dt);
 }
 let medirPendiente = false;
@@ -4847,7 +4950,7 @@ function marco(ahora){
   SON.cuadro(dt);
   suavems = suavems*0.92 + (performance.now() - ahora)*0.08;
   if(suavems > 26 && dpr > 0.75){ dpr = Math.max(0.75, dpr-0.12); medirPendiente = true; suavems = 16; }
-  else if(suavems < 11 && dpr < Math.min(devicePixelRatio||1,2)){ dpr = Math.min(Math.min(devicePixelRatio||1,2), dpr+0.1); medirPendiente = true; suavems = 16; }
+  else if(suavems < 11 && dpr < dprTope()){ dpr = Math.min(dprTope(), dpr+0.1); medirPendiente = true; suavems = 16; }
 }
 
 /* la linterna del casco: afuera es la única luz que le pega al casco de cerca */
@@ -4937,7 +5040,7 @@ function anotarEnAlbum(u, precio, tapa){
   if(precio >= a.precio || !a.tapa){    /* se guarda la mejor copia, no la última */
     a.precio = precio; a.nombre = u.nombre; a.rareza = rareza9(u); a.tapa = tapa || a.tapa;
   }
-  dEspecies.textContent = 'ESPECIES ' + Object.keys(ALBUM).length + '/' + ALBUM_TOTAL;
+  dEspecies.textContent = tr('ESPECIES {0}/{1}', Object.keys(ALBUM).length, ALBUM_TOTAL);
   dEspecies.classList.add('ver');
 }
 function abrirAlbum(){ if(ALBUM_ABIERTO.v || FOTO.abierta) return; ALBUM_ABIERTO.v = true; pintarAlbum(); dAlbum.classList.add('ver'); }
@@ -4960,22 +5063,22 @@ function pintarAlbum(){
         const tapa = a.tapa ? '<img src="' + a.tapa + '" alt="">' : '◆';
         h += '<div class="ficha"><div class="tapa">' + tapa + '<span class="num">' + num + '</span></div>' +
              '<div class="txt"><b>' + f[0] + '</b><i>' + f[1] + '</i>' +
-             '<u>' + a.nombre + ' · rareza ' + a.rareza.toFixed(1) +
-             ' · ' + a.veces + (a.veces === 1 ? ' foto' : ' fotos') +
-             ' · mejor pago ' + a.precio + ' cr</u></div></div>';
+             '<u>' + a.nombre + ' · ' + tr('rareza {0}', a.rareza.toFixed(1)) +
+             ' · ' + tr(a.veces === 1 ? '{0} foto' : '{0} fotos', a.veces) +
+             ' · ' + tr('mejor pago {0} cr', a.precio) + '</u></div></div>';
       } else {
         const sil = siluetaDe(id);
         h += '<div class="ficha no"><div class="tapa vacia">' +
              (sil ? '<img class="sil" src="' + sil + '" alt="">' : '?') +
              '<span class="num">' + num + '</span></div>' +
-             '<div class="txt"><b>?</b><i>Hueco vacío. Todavía nadie le sacó una foto.</i>' +
+             '<div class="txt"><b>?</b><i>' + tr('Hueco vacío. Todavía nadie le sacó una foto.') + '</i>' +
              '<u>' + num + ' · ' + g.nombre + '</u></div></div>';
       }
     }
   }
   const faltan = ALBUM_TOTAL - hechas;
-  dAlbumSub.textContent = hechas + ' de ' + ALBUM_TOTAL + ' huecos llenos' +
-    (faltan ? ' · faltan ' + faltan : ' · álbum completo');
+  dAlbumSub.textContent = tr('{0} de {1} huecos llenos', hechas, ALBUM_TOTAL) +
+    (faltan ? tr(' · faltan {0}', faltan) : tr(' · álbum completo'));
   dListaAlbum.innerHTML = h;
 }
 dEspecies.addEventListener('pointerdown', e => { e.stopPropagation(); abrirAlbum(); }, {passive:true});
@@ -5045,7 +5148,7 @@ const terminal = (function(){
 function pintarTerminal(){
   const c = terminal.cx, W = 256, H = 192;
   const cam = camAct(), n = FOTO.rollo.length;
-  const firma = PLATA.creditos + '|' + n + '|' + cam.id;
+  const firma = PLATA.creditos + '|' + n + '|' + cam.id + '|' + IDIOMA;
   if(firma === terminal.dicho) return;
   terminal.dicho = firma;
   c.fillStyle = '#04070a'; c.fillRect(0, 0, W, H);
@@ -5053,15 +5156,15 @@ function pintarTerminal(){
   for(let y = 0; y < H; y += 4) c.fillRect(0, y, W, 2);      /* rayas del tubo */
   c.textAlign = 'center';
   c.fillStyle = '#7fe6a8'; c.font = 'bold 15px ui-monospace, monospace';
-  c.fillText('TERMINAL DE CARGA', W/2, 34);
+  c.fillText(tr('TERMINAL DE CARGA'), W/2, 34);
   c.fillStyle = '#ffd24a'; c.font = 'bold 22px ui-monospace, monospace';
   c.fillText(PLATA.creditos + ' cr', W/2, 76);
   c.fillStyle = '#c8ff6a'; c.font = '14px ui-monospace, monospace';
-  c.fillText('CARRETE ' + n + '/' + cam.carrete, W/2, 110);
+  c.fillText(tr('CARRETE {0}/{1}', n, cam.carrete), W/2, 110);
   c.fillStyle = '#6d8a58'; c.font = '12px ui-monospace, monospace';
   c.fillText(cam.nombre, W/2, 134);
   c.fillStyle = n ? '#8dff9f' : '#40563c'; c.font = 'bold 13px ui-monospace, monospace';
-  c.fillText(n ? '[ HAY QUE VENDER ]' : '[ SIN MATERIAL ]', W/2, 162);
+  c.fillText(tr(n ? '[ HAY QUE VENDER ]' : '[ SIN MATERIAL ]'), W/2, 162);
   c.strokeStyle = 'rgba(140,255,120,.3)'; c.lineWidth = 2; c.strokeRect(12, 12, W-24, H-24);
   terminal.tex.needsUpdate = true;
 }
@@ -5098,48 +5201,48 @@ function pintarCompu(){
   const total = FOTO.rollo.reduce((a, f) => a + f.precio, 0);
   let h = '';
   h += '<button class="vender" data-a="1" style="border-color:rgba(150,200,255,.45);' +
-       'background:rgba(90,160,255,.12);color:#cfe3ff">ÁLBUM · ' +
-       Object.keys(ALBUM).length + '/' + ALBUM_TOTAL + ' ESPECIES</button>';
-  h += '<div class="tit">CARRETE — ' + FOTO.rollo.length + '/' + camAct().carrete + '</div>';
+       'background:rgba(90,160,255,.12);color:#cfe3ff">' +
+       tr('ÁLBUM · {0}/{1} ESPECIES', Object.keys(ALBUM).length, ALBUM_TOTAL) + '</button>';
+  h += '<div class="tit">' + tr('CARRETE — {0}/{1}', FOTO.rollo.length, camAct().carrete) + '</div>';
   if(!FOTO.rollo.length){
-    h += '<div class="fila no"><b>SIN FOTOS</b><i>salí al espacio y traé algo</i></div>';
+    h += '<div class="fila no"><b>' + tr('SIN FOTOS') + '</b><i>' + tr('salí al espacio y traé algo') + '</i></div>';
   } else {
     for(const f of FOTO.rollo){
       h += '<div class="fila"><b>' + f.nombre + '</b><i>' + f.detalle + '</i>' +
-           '<u>' + (f.precio ? f.precio + ' cr' : 'no paga nada') + '</u></div>';
+           '<u>' + (f.precio ? f.precio + ' cr' : tr('no paga nada')) + '</u></div>';
     }
   }
   h += '<button class="vender' + (total ? '' : ' no') + '" data-v="1">' +
-       (total ? 'VENDER TODO · ' + total + ' cr' : 'NADA QUE VENDER') + '</button>';
-  h += '<div class="tit">CÁMARAS</div>';
+       (total ? tr('VENDER TODO · {0} cr', total) : tr('NADA QUE VENDER')) + '</button>';
+  h += '<div class="tit">' + tr('CÁMARAS') + '</div>';
   CAMARAS.forEach((c, i) => {
     const puesta = i === PLATA.camara, tiene = i === 0 || PLATA.compradas['cam_' + c.id];
     const puede = tiene || PLATA.creditos >= c.precio;
     h += '<div class="fila' + (puesta ? ' puesta' : (puede ? '' : ' no')) + '" data-c="' + i + '">' +
          '<b>' + c.nombre + '</b><i>' + c.linea + '</i>' +
-         '<u>' + (puesta ? 'EN USO' : (tiene ? 'TOCÁ PARA PONERLA' : c.precio + ' cr')) +
-         ' · carrete ' + c.carrete + ' · alcance ' + c.alcance + ' m</u></div>';
+         '<u>' + (puesta ? tr('EN USO') : (tiene ? tr('TOCÁ PARA PONERLA') : c.precio + ' cr')) +
+         tr(' · carrete {0} · alcance {1} m', c.carrete, c.alcance) + '</u></div>';
   });
-  h += '<div class="tit">MOTOR DE SALTO</div>';
+  h += '<div class="tit">' + tr('MOTOR DE SALTO') + '</div>';
   for(const t of SALTOS){
     const tiene = !!PLATA.compradas[t.id];
     const listo = !t.antes || !!PLATA.compradas[t.antes];
     const puede = listo && PLATA.creditos >= t.precio;
     h += '<div class="fila' + (tiene ? ' puesta' : (puede ? '' : ' no')) + '" data-s="' + t.id + '">' +
-         '<b>' + t.nombre + '</b><i>abre ' + GALAXIAS[t.abre].nombre + '</i>' +
-         '<u>' + (tiene ? 'INSTALADO' : (listo ? t.precio + ' cr' :
-                  'antes hay que poner ' + saltoDe(t.antes).nombre)) + '</u></div>';
+         '<b>' + t.nombre + '</b><i>' + tr('abre {0}', GALAXIAS[t.abre].nombre) + '</i>' +
+         '<u>' + (tiene ? tr('INSTALADO') : (listo ? t.precio + ' cr' :
+                  tr('antes hay que poner {0}', saltoDe(t.antes).nombre))) + '</u></div>';
   }
-  h += '<div class="tit">MEJORAS DE LA NAVE</div>';
+  h += '<div class="tit">' + tr('MEJORAS DE LA NAVE') + '</div>';
   for(const m of MEJORAS){
     const tiene = !!PLATA.compradas[m.id], puede = PLATA.creditos >= m.precio;
     h += '<div class="fila' + (tiene ? ' puesta' : (puede ? '' : ' no')) + '" data-m="' + m.id + '">' +
          '<b>' + m.nombre + '</b><i>' + m.linea + '</i>' +
-         '<u>' + (tiene ? 'PUESTA' : m.precio + ' cr') + '</u></div>';
+         '<u>' + (tiene ? tr('PUESTA') : m.precio + ' cr') + '</u></div>';
   }
   dCompuSub.textContent = PLATA.aviso ? PLATA.aviso
-    : (PLATA.creditos + ' créditos' +
-       (PLATA.ultimaVenta ? ' · última venta ' + PLATA.ultimaVenta + ' cr' : ''));
+    : (tr('{0} créditos', PLATA.creditos) +
+       (PLATA.ultimaVenta ? tr(' · última venta {0} cr', PLATA.ultimaVenta) : ''));
   dListaCompu.innerHTML = h;
 }
 function venderTodo(){
@@ -5162,7 +5265,7 @@ function ponerCamara(i){
   }
   /* nunca se tiran fotos sin avisar: si no entran en el carrete nuevo, primero se venden */
   if(FOTO.rollo.length > c.carrete){
-    PLATA.aviso = 'Vendé el carrete antes de poner la ' + c.nombre;
+    PLATA.aviso = tr('Vendé el carrete antes de poner la {0}', c.nombre);
     SON.fx('negado'); pintarCompu(); return false;
   }
   PLATA.aviso = ''; PLATA.camara = i;
@@ -5235,45 +5338,44 @@ const TUTO = (function(){
   /* cada paso: título, texto (puede depender del estado), si se cumple, y adónde apunta */
   const PASOS = [
     {tit:'BIENVENIDO A BASE ALFA', boton:'EMPEZAR',
-     txt:() => 'Sos el <b>fotógrafo</b> de esta nave. Salís al espacio, fotografiás lo que vive ahí afuera y ' +
+     txt:() => tr('Sos el <b>fotógrafo</b> de esta nave. Salís al espacio, fotografiás lo que vive ahí afuera y ' +
                '<b>vendés las fotos</b>. Con los créditos comprás mejores cámaras y motores para llegar a galaxias ' +
-               'cada vez más raras. Tu meta: <b>llenar el álbum de 21 especies</b>.'},
-    {tit:'CAMINAR', txt:() => 'Apoyá el pulgar en la <b>mitad izquierda</b> de la pantalla y arrastralo: es la palanca. ' +
-               'Más lejos del centro, más rápido. El botón <b>SALTO</b> salta.',
+               'cada vez más raras. Tu meta: <b>llenar el álbum de 21 especies</b>.')},
+    {tit:'CAMINAR', txt:() => tr('Apoyá el pulgar en la <b>mitad izquierda</b> de la pantalla y arrastralo: es la palanca. ' +
+               'Más lejos del centro, más rápido. El botón <b>SALTO</b> salta.'),
      cumple:() => E.anda > 3},
-    {tit:'MIRAR', txt:() => 'Arrastrá el otro dedo en la <b>mitad derecha</b> para mirar alrededor.',
+    {tit:'MIRAR', txt:() => tr('Arrastrá el otro dedo en la <b>mitad derecha</b> para mirar alrededor.'),
      cumple:() => E.mira > 1.3},
-    {tit:'SUBÍ A LA NAVE', txt:() => 'La nave está enfrente. Subí por la <b>rampa de atrás</b>, siguiendo el marcador.',
+    {tit:'SUBÍ A LA NAVE', txt:() => tr('La nave está enfrente. Subí por la <b>rampa de atrás</b>, siguiendo el marcador.'),
      cumple:() => !!enNave(jug.pos.x, jug.pos.y, jug.pos.z) || FOTO.tiene, meta:() => _v.set(0, N.y0 + 0.2, N.z0 + 0.6)},
-    {tit:'TOMÁ LA CÁMARA', txt:() => 'En la bodega hay una mesa con una cámara. Acercate y tocá <b>TOMAR CÁMARA</b>.',
+    {tit:'TOMÁ LA CÁMARA', txt:() => tr('En la bodega hay una mesa con una cámara. Acercate y tocá <b>TOMAR CÁMARA</b>.'),
      cumple:() => FOTO.tiene, meta:() => _v.set(MESA.x, N.y0 + MESA.alto, MESA.z)},
-    {tit:'DESPEGÁ', txt:() => 'Con la cámara en la mano, tocá <b>DESPEGAR</b>. Tiene que estar adentro de la nave.',
+    {tit:'DESPEGÁ', txt:() => tr('Con la cámara en la mano, tocá <b>DESPEGAR</b>. Tiene que estar adentro de la nave.'),
      cumple:() => VUELO.estado !== 'tierra', meta:() => enNave(jug.pos.x, jug.pos.y, jug.pos.z) ? null : _v.set(0, N.y0 + 0.2, N.z0 + 0.6)},
-    {tit:'SUBIENDO', txt:() => 'Agarrate. Se cierra la compuerta y el cielo se vuelve espacio.',
+    {tit:'SUBIENDO', txt:() => tr('Agarrate. Se cierra la compuerta y el cielo se vuelve espacio.'),
      cumple:() => VUELO.estado === 'espacio'},
-    {tit:'SALÍ AL ESPACIO', txt:() => 'Andá a la <b>compuerta de popa</b>, la misma por donde entraste, y tocá <b>SALIR AL ESPACIO</b>. ' +
-               'Vas atado a una soga: no te perdés.',
+    {tit:'SALÍ AL ESPACIO', txt:() => tr('Andá a la <b>compuerta de popa</b>, la misma por donde entraste, y tocá <b>SALIR AL ESPACIO</b>. ' +
+               'Vas atado a una soga: no te perdés.'),
      cumple:() => EVA.activa || buenas() > 0, meta:() => EVA.activa ? null : _v.copy(ANCLA)},
-    {tit:'FLOTAR', txt:() => 'Acá no hay gravedad. La palanca te empuja hacia donde mirás, <b>SUBIR</b> y <b>BAJAR</b> ' +
-               'te llevan arriba y abajo (tocá para un envión, dejá apretado para seguir). La soga tira cuando se termina.',
+    {tit:'FLOTAR', txt:() => tr('Acá no hay gravedad. La palanca te empuja hacia donde mirás, <b>SUBIR</b> y <b>BAJAR</b> ' +
+               'te llevan arriba y abajo (tocá para un envión, dejá apretado para seguir). La soga tira cuando se termina.'),
      cumple:() => !EVA.activa || jug.pos.distanceTo(ANCLA) > 4 || E.t > 8},
-    {tit:'TU PRIMERA FOTO', txt:() => !EVA.activa ? 'Volvé a salir por la compuerta de popa para buscar un alien.'
-               : E.velada ? 'Esa salió <b>velada</b>: no había nada en el cuadro. Poné al alien en el centro y tocá <b>FOTO</b>.'
-               : 'Buscá un alien (el marcador lo señala), ponelo en el <b>centro del visor</b> y tocá <b>FOTO</b>. ' +
-                 'Cuanto más grande sale en el cuadro, más paga.',
+    {tit:'TU PRIMERA FOTO', txt:() => !EVA.activa ? tr('Volvé a salir por la compuerta de popa para buscar un alien.')
+               : E.velada ? tr('Esa salió <b>velada</b>: no había nada en el cuadro. Poné al alien en el centro y tocá <b>FOTO</b>.')
+               : tr('Buscá un alien (el marcador lo señala), ponelo en el <b>centro del visor</b> y tocá <b>FOTO</b>. ' +
+                 'Cuanto más grande sale en el cuadro, más paga.'),
      cumple:() => buenas() > 0,
      meta:() => { if(!EVA.activa) return _v.copy(ANCLA); const a = alien(); return a ? _v.copy(a.position) : null; }},
-    {tit:'¡PRIMERA FOTO!', txt:() => 'El carrete tiene <b>' + camAct().carrete + ' fotos</b> y te quedan ' +
-               Math.max(0, camAct().carrete - FOTO.rollo.length) + '. Sacá más si querés (cada especie nueva entra al álbum) ' +
-               'y después volvé a la compuerta: tocá <b>ENTRAR</b>.',
+    {tit:'¡PRIMERA FOTO!', txt:() => tr('El carrete tiene <b>{0} fotos</b> y te quedan {1}. Sacá más si querés (cada especie nueva entra al álbum) ' +
+               'y después volvé a la compuerta: tocá <b>ENTRAR</b>.', camAct().carrete, Math.max(0, camAct().carrete - FOTO.rollo.length)),
      cumple:() => !EVA.activa, meta:() => EVA.activa ? _v.copy(ANCLA) : null},
-    {tit:'VENDÉ LAS FOTOS', txt:() => E.venta ? '' : 'La <b>computadora</b> está en la bodega, a estribor, al lado de la escalera. ' +
-               'Acercate, tocá <b>COMPUTADORA</b> y después <b>VENDER TODO</b>. Paga según la rareza y el encuadre.',
+    {tit:'VENDÉ LAS FOTOS', txt:() => E.venta ? '' : tr('La <b>computadora</b> está en la bodega, a estribor, al lado de la escalera. ' +
+               'Acercate, tocá <b>COMPUTADORA</b> y después <b>VENDER TODO</b>. Paga según la rareza y el encuadre.'),
      cumple:() => E.venta, meta:() => _v.set(COMPU.x, N.y0 + 1.0, COMPU.z)},
     {tit:'¡PRIMERA VENTA!', boton:'LISTO',
-     txt:() => 'Con los créditos, en la misma computadora: <b>cámaras</b> con más fotos y más alcance, <b>mejoras</b> para la ' +
+     txt:() => tr('Con los créditos, en la misma computadora: <b>cámaras</b> con más fotos y más alcance, <b>mejoras</b> para la ' +
                'nave y el traje, y <b>motores de salto</b> que abren galaxias nuevas. La <b>carta de navegación</b> está en el ' +
-               'puente, arriba. El <b>ÁLBUM</b> guarda cada especie que fotografiaste. Buena caza.'}
+               'puente, arriba. El <b>ÁLBUM</b> guarda cada especie que fotografiaste. Buena caza.')}
   ];
   const _v = new THREE.Vector3();
   /* el marcador: una flecha que baja y un aro, sin profundidad para verse a través del casco */
@@ -5286,11 +5388,11 @@ const TUTO = (function(){
 
   function pintar(){
     const P = PASOS[E.i];
-    dPaso.textContent = 'TUTORIAL · PASO ' + (E.i + 1) + ' DE ' + PASOS.length;
-    dTit.textContent = P.tit;
+    dPaso.textContent = tr('TUTORIAL · PASO {0} DE {1}', E.i + 1, PASOS.length);
+    dTit.textContent = tr(P.tit);
     const html = P.txt(); if(dTxt.innerHTML !== html) dTxt.innerHTML = html;
     dBarra.style.width = (100*E.i/(PASOS.length - 1)).toFixed(0) + '%';
-    dSig.textContent = P.boton || ''; dSig.classList.toggle('ver', !!P.boton);
+    dSig.textContent = P.boton ? tr(P.boton) : ''; dSig.classList.toggle('ver', !!P.boton);
   }
   function ir(i){
     E.i = i; E.t = 0; E.listo = 0; d.classList.remove('listo');
@@ -5341,7 +5443,7 @@ const TUTO = (function(){
     } else if(dDist.textContent) dDist.textContent = '';
   }
   function evento(n){ if(n === 'venta') E.venta = true; E.eventos[n] = (E.eventos[n] || 0) + 1; }
-  return {paso, cuadro, evento, E, PASOS, reiniciar(){ try { localStorage.removeItem(clave); } catch(e){}
+  return {paso, cuadro, evento, E, PASOS, pintar, reiniciar(){ try { localStorage.removeItem(clave); } catch(e){}
     E.activo = true; E.venta = false; E.anda = 0; E.mira = 0; d.classList.add('ver'); ir(0); },
     estado(){ return {activo:E.activo, paso:E.i, titulo:PASOS[E.i] ? PASOS[E.i].tit : null, marca:marca.visible,
       dist:dDist.textContent, texto:dTxt.textContent.slice(0, 90)}; }, saltar:terminar,
@@ -5350,6 +5452,8 @@ const TUTO = (function(){
 
 /* ----------------------------------------------------------------- sondas */
 window.__A = {
+  MENU, aplicarIdioma, aplicarCalidad, TR_FALTA, idioma:() => IDIOMA, calidad:() => CAL_NIVEL,
+  jugar(){ MENU.jugar(); },
   CFG, jug, cam, esc, MAT, hueso, mezcla, rend, POST, SON, GENTE, DETALLES, MUROS, TUTO,
   simular(n, dt){ dt = dt || 1/60; for(let i = 0; i < n; i++) paso(dt);
     const dg = GENTE.pend; GENTE.pend = 0; if(dg > 0){ DETALLES.paso(dg); pasoGente(dg); TUTO.cuadro(dg); } return +GENTE.t.toFixed(2); },
@@ -5460,6 +5564,76 @@ Promise.all([
   B64.pared ? meterTextura(B64.pared, [MAT_NAVE.dentro]).catch(e => 'pared falló: ' + e) : 'pared lisa',
   B64.glb   ? meterGLB(B64.glb).catch(e => 'glb falló: ' + e)       : 'alien de código'
 ]).then(r => { window.__A.horneado = r; });
+
+/* ============================================================== idioma, calidad y menú */
+function traducirTablas(){
+  /* los nombres de las tablas se usan en muchos lados: se traducen en el lugar, guardando el original */
+  for(const o of [].concat(GALAXIAS, CAMARAS, MEJORAS, SALTOS)){
+    if(!o._es) o._es = {nombre:o.nombre, linea:o.linea};
+    o.nombre = tr(o._es.nombre); if(o._es.linea) o.linea = tr(o._es.linea);
+  }
+  for(const id in FICHAS){ const f = FICHAS[id]; if(!f._es) f._es = [f[0], f[1]]; f[0] = tr(f._es[0]); f[1] = tr(f._es[1]); }
+}
+function aplicarIdioma(l){
+  if(!IDIOMAS.includes(l)) return;
+  IDIOMA = l; try { localStorage.setItem('aliengrid.idioma', l); } catch(e){}
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-t]').forEach(el => { el.innerHTML = tr(el.dataset.t); });
+  traducirTablas();
+  REPINTAR.forEach(f => f());
+  pintarTerminal();
+  dVolar.dataset.k = '';                           /* el HUD vuelve a poner cada rótulo en el próximo cuadro */
+  dUsar.textContent = ''; dRollo.textContent = '';
+  dSalto.textContent = tr(EVA.activa ? 'SUBIR' : 'SALTO');
+  dEspecies.textContent = tr('ESPECIES {0}/{1}', Object.keys(ALBUM).length, ALBUM_TOTAL);
+  if(dGalNom) dGalNom.textContent = GALAXIAS[GAL.actual].nombre;
+  if(TUTO.E.activo) TUTO.pintar();
+  if(PANEL.abierto) pintarPanel(); if(COMPU.abierto) pintarCompu(); if(ALBUM_ABIERTO.v) pintarAlbum();
+}
+function aplicarCalidad(q){
+  if(!CALIDADES[q]) return;
+  const antes = CAL; CAL_NIVEL = q; CAL = CALIDADES[q];
+  try { localStorage.setItem('aliengrid.calidad', q); } catch(e){}
+  if(antes.sombra !== CAL.sombra || !clave.shadow.map){
+    clave.shadow.mapSize.set(CAL.sombra, CAL.sombra);
+    if(clave.shadow.map){ clave.shadow.map.dispose(); clave.shadow.map = null; }   /* three lo rearma del tamaño nuevo */
+  }
+  const tipo = CAL.suave ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+  if(rend.shadowMap.type !== tipo){                /* el tipo de sombra va compilado en cada material */
+    rend.shadowMap.type = tipo;
+    esc.traverse(o => { if(o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { m.needsUpdate = true; }); });
+  }
+  POST.calidad(CAL);
+  MOTAS.pts.geometry.setDrawRange(0, CAL.motas);
+  dpr = dprTope(); medirPendiente = true;
+}
+(function menu(){
+  const d = document.getElementById('menu'), dNota = document.getElementById('mnota');
+  function pintar(){
+    d.querySelectorAll('[data-l]').forEach(b => b.classList.toggle('sel', b.dataset.l === IDIOMA));
+    d.querySelectorAll('[data-c]').forEach(b => b.classList.toggle('sel', b.dataset.c === CAL_NIVEL));
+    dNota.textContent = tr(CAL_DESC[CAL_NIVEL]);
+  }
+  function jugar(){
+    if(!MENU.abierto) return;
+    MENU.abierto = false; d.classList.remove('ver'); stage.classList.remove('enmenu');
+    alien.visible = true;                          /* en el menú no hay jugador: tampoco su sombra */
+    ent.salto = false; ent.x = ent.y = ent.mag = 0;
+    for(const k in teclas) teclas[k] = false;
+    ultimo = performance.now();
+  }
+  d.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    const b = e.target.closest && e.target.closest('button'); if(!b) return;
+    if(b.dataset.l){ aplicarIdioma(b.dataset.l); pintar(); }
+    else if(b.dataset.c){ aplicarCalidad(b.dataset.c); pintar(); }
+    else if(b.id === 'mjugar') jugar();
+  });
+  MENU.jugar = jugar; MENU.pintar = pintar;
+  stage.classList.add('enmenu'); alien.visible = false;
+  aplicarIdioma(IDIOMA); aplicarCalidad(CAL_NIVEL); pintar();
+  d.classList.add('ver');
+})();
 
 const carga = document.getElementById('carga');
 carga.style.opacity = '0';
