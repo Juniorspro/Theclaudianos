@@ -85,7 +85,28 @@ function bajoMira(){
 /* ====================== menús ====================== */
 const CAPAS_UI = ['capaTitulo','capaMisiones','capaEquipo','capaArmeria','capaComo','capaPausa','capaRes'];
 function mostrar(id){ for(const c of CAPAS_UI) $(c).classList.toggle('ver', c===id); $('mandos').classList.toggle('ver', !id && J.modo==='juego');
-  if(id){ soltarTodo(); $('bBrecha').style.display = 'none'; $('mira').classList.remove('ver'); } $('dinero').textContent = '$ ' + G.dinero; fondoArte(id); }
+  if(id){ soltarTodo(); $('bBrecha').style.display = 'none'; $('mira').classList.remove('ver'); } $('dinero').textContent = '$ ' + G.dinero; fondoArte(id); if(id){ $(id).scrollTop = 0; requestAnimationFrame(marcarDeslizables); } }
+/* ====================== desplazar los menús con el dedo ======================
+   Con la pantalla girada por CSS, el desplazamiento nativo va para el lado que no es y a los tirones: se hace a mano, en las
+   coordenadas del juego, con inercia al soltar. Si el dedo se movió, el toque no cuenta como botón. */
+const DESL = {el:null, y:0, s:0, v:0, t:0, movio:false, raf:0, sinClic:0};
+function capaQueDesliza(n){ while(n && n.classList){ if(n.classList.contains('capa')) return n.scrollHeight > n.clientHeight + 2 ? n : null; n = n.parentNode; } return null; }
+function marcarDeslizables(){ document.querySelectorAll('.capa').forEach(c=> c.classList.toggle('desliza', c.scrollHeight > c.clientHeight + 2 && c.scrollTop + c.clientHeight < c.scrollHeight - 4)); }
+function inercia(){ cancelAnimationFrame(DESL.raf); let ult = performance.now();
+  const f = ahora=>{ const dt = Math.min(40, ahora - ult); ult = ahora; if(!DESL.el) return; DESL.el.scrollTop += DESL.v*dt; DESL.v *= Math.pow(0.9955, dt); marcarDeslizables();
+    const tope = DESL.el.scrollTop <= 0 || DESL.el.scrollTop >= DESL.el.scrollHeight - DESL.el.clientHeight - 1;
+    if(Math.abs(DESL.v) > 0.02 && !tope) DESL.raf = requestAnimationFrame(f); };
+  DESL.raf = requestAnimationFrame(f); }
+document.addEventListener('touchstart', ev=>{ const c = capaQueDesliza(ev.target); cancelAnimationFrame(DESL.raf); DESL.el = c; if(!c || ev.touches.length > 1) return;
+  const t = ev.touches[0]; DESL.y = aLocalD(t.clientX, t.clientY)[1]; DESL.s = c.scrollTop; DESL.v = 0; DESL.t = performance.now(); DESL.y0 = DESL.y; DESL.movio = false; }, {passive:true, capture:true});
+document.addEventListener('touchmove', ev=>{ const c = DESL.el; if(!c) return; const t = ev.touches[0], y = aLocalD(t.clientX, t.clientY)[1], ahora = performance.now();
+  if(Math.abs(y - DESL.y0) > 9) DESL.movio = true; if(!DESL.movio) return;
+  const dt = Math.max(1, ahora - DESL.t); DESL.v = lerp(DESL.v, (DESL.y - y)/dt, 0.6); DESL.t = ahora;
+  c.scrollTop += DESL.y - y; DESL.y = y; marcarDeslizables(); }, {passive:true, capture:true});
+document.addEventListener('touchend', ev=>{ if(!DESL.el) return; if(DESL.movio){ DESL.sinClic = performance.now() + 400; if(performance.now() - DESL.t > 90) DESL.v = 0; inercia(); } }, {passive:true, capture:true});
+/* un arrastre no es un toque */
+document.addEventListener('click', ev=>{ if(performance.now() < DESL.sinClic && capaQueDesliza(ev.target)){ ev.preventDefault(); ev.stopPropagation(); } }, true);
+document.querySelectorAll('.capa').forEach(c=> c.addEventListener('scroll', marcarDeslizables, {passive:true}));
 function boton(id, fn){ $(id).addEventListener('click', ev=>{ ev.preventDefault(); audioIni(); sfx('boton'); fn(); pantallaHorizontal(); }); }
 function iniciarDemo(){ J.demo = true; J.bot = true; J.dios = true; const op = [0, 1, 4].filter(i=> i < G.abierto + 1); iniciarMision(op.length ? elegirR(op) : 0, 'DEMO' + Math.floor(Math.random()*9999)); J.modo = 'menu'; MUS.on = true; }
 const elegirR = a => a[Math.floor(Math.random()*a.length)];

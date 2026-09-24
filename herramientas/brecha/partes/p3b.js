@@ -288,6 +288,26 @@ function guante(g, x, y, z, izq){ const q = new THREE.Mesh(CAJA, MATE_GUANTE());
   const dedos = new THREE.Mesh(CAJA, MATE_GUANTE()); dedos.position.set(x + (izq ? 0.02 : -0.02), y + 0.035, z - 0.03); dedos.scale.set(0.03, 0.03, 0.08); g.add(dedos); return q; }
 function manga(g, x, y, z, rx, ry, largo){ const m = new THREE.Mesh(CAJA, MATE_MANGA()); m.position.set(x, y, z); m.scale.set(0.095, 0.095, largo); m.rotation.set(rx, ry, 0); g.add(m);
   const puno = new THREE.Mesh(CAJA, mat('#3a4046', {roughness:0.9})); puno.position.set(0, 0, -0.5); puno.scale.set(1.08, 1.08, 0.12); m.add(puno); return m; }
+/* las armas generadas que ya traen una óptica en el modelo */
+const CON_OPTICA = {r4:1, m14:1, l96:1};
+/* lo más alto del modelo en una franja angosta alrededor de (x=0, z) */
+function altoSobre(geo, z, dz){ const p = geo.attributes.position.array; let y = -1e9;
+  for(let i=0;i<p.length;i+=3) if(Math.abs(p[i]) < 0.014 && Math.abs(p[i+2] - z) < dz) y = Math.max(y, p[i+1]); return y > -1e9 ? y : null; }
+const MAT_ROJO = {};
+function ponerRojo(g, geo, P){
+  const E = P.empunadura, zc = P.mira.z, L = 0.042, base = Math.max(altoSobre(geo, zc, L*0.6) || P.mira.y, altoSobre(geo, zc - L*0.5, 0.008) || -1, altoSobre(geo, zc + L*0.5, 0.008) || -1);
+  const mo = MAT_ROJO.cuerpo || (MAT_ROJO.cuerpo = mat('#16181b', {roughness:0.45, metalness:0.6})), s = new THREE.Group();
+  const pieza = (w, h, d, x, y, z)=>{ const m = new THREE.Mesh(CAJA, mo); m.scale.set(w, h, d); m.position.set(x, y, z); s.add(m); };
+  pieza(0.02, 0.006, L, 0, 0.003, 0);                                   /* base sobre el riel */
+  pieza(0.0035, 0.024, 0.008, -0.0118, 0.018, -0.012); pieza(0.0035, 0.024, 0.008, 0.0118, 0.018, -0.012);   /* marco */
+  pieza(0.027, 0.0035, 0.008, 0, 0.0308, -0.012); pieza(0.01, 0.006, 0.014, 0, 0.009, 0.012);                /* techo y perilla */
+  const vid = new THREE.Mesh(new THREE.PlaneGeometry(0.02, 0.02), MAT_ROJO.vidrio || (MAT_ROJO.vidrio = new THREE.MeshBasicMaterial({color:new THREE.Color(0.35, 0.55, 0.7), transparent:true, opacity:0.22, depthWrite:false})));
+  vid.position.set(0, 0.018, -0.012); s.add(vid);
+  const punto = new THREE.Mesh(new THREE.PlaneGeometry(0.0022, 0.0022), MAT_ROJO.punto || (MAT_ROJO.punto = new THREE.MeshBasicMaterial({color:new THREE.Color(4, 0.2, 0.1), transparent:true, depthWrite:false})));
+  punto.position.set(0, 0.018, -0.0115); s.add(punto);
+  s.position.set(-E.x, base - E.y, zc - E.z); g.add(s);
+  VM.mira.set(0, base + 0.018 - E.y, zc - E.z);                        /* apuntando, el punto rojo queda en el centro */
+}
 function armarVM(id){
   if(VM.id === id) return; VM.id = id; if(VM.arma) VM.g.remove(VM.arma);
   const A = ARMAS[id], g = new THREE.Group(), idm = 'arma_' + id, P = puntosArma(idm);
@@ -297,8 +317,9 @@ function armarVM(id){
     const boca = P.boca.clone().sub(P.empunadura), gm = P.guardamano.clone().sub(P.empunadura);
     VM.boca = boca.z; VM.bocaY = boca.y; VM.mira.copy(P.mira).sub(P.empunadura);
     if(tieneMej(id,'silen')){ const s = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.2, 14), mat('#15171a', {roughness:0.5, metalness:0.6})); s.rotation.x = Math.PI/2; s.position.set(0, boca.y, boca.z - 0.1); g.add(s); VM.boca -= 0.2; }
-    if(tieneMej(id,'mira') && A.clase!=='francotirador'){ const s = new THREE.Mesh(CAJA, mat('#15171a', {roughness:0.4, metalness:0.5})); s.position.set(0, VM.mira.y + 0.022, VM.mira.z - 0.02); s.scale.set(0.034, 0.042, 0.07); g.add(s);
-      const vid = new THREE.Mesh(new THREE.PlaneGeometry(0.026, 0.026), new THREE.MeshBasicMaterial({color:new THREE.Color(0.9, 0.2, 0.15), transparent:true, opacity:0.35})); vid.position.set(0, VM.mira.y + 0.028, VM.mira.z - 0.056); g.add(vid); VM.mira.y += 0.03; }
+    /* mira holo: sólo en las que no traen óptica en el modelo, apoyada sobre lo más alto del arma en ese punto (antes era una caja
+       metida adentro del modelo) */
+    if(tieneMej(id,'mira') && !CON_OPTICA[id] && A.clase!=='francotirador') ponerRojo(g, MODELOS[idm].geo, P);
     /* manos: la derecha en la empuñadura, la izquierda en el guardamano (la pistola, a dos manos) */
     /* manos generadas (palma en el origen, antebrazo hacia +z): la derecha envuelve la empuñadura, la izquierda sostiene el guardamano */
     const md = mallaModelo('mano_der', false), mi = mallaModelo('mano_izq', false);

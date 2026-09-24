@@ -332,9 +332,9 @@ function columna(O, x, z, alto, t){ O.caja(x, alto/2, z, 0.7, alto, 0.7, t.pared
 function decorar(O, c, t){
   const p = c.plan, W = c.W, cx = c.cx, A = Math.random;
   if(p.tipo==='nave' && hayModelo('prop_autoelevador') && A() < 0.8){ const s = A() < 0.5 ? -1 : 1, z = lerp(c.z1 + 3, c.z0 - 7, A());
-    ponerProp('prop_autoelevador', cx + s*(W/2 - 1.6), 0, z, s > 0 ? Math.PI/2 : -Math.PI/2); O.choque(cx + s*(W/2 - 1.6), 1.1, z, 1.3, 2.2, 2.4, false); }
+    ponerProp('prop_autoelevador', cx + s*(W/2 - 1.6), 0, z, s > 0 ? Math.PI/2 : -Math.PI/2); O.choque(cx + s*(W/2 - 1.6), 0.8, z, 2.3, 1.6, 1.0, true); }   /* sólido: ni balas ni cuerpos lo atraviesan */
   if((p.tipo==='lab' || p.tipo==='hall') && TEMAS.indexOf(t)===4 && hayModelo('prop_rack')){ for(let k=0;k<4;k++){ const s = A() < 0.5 ? -1 : 1, z = lerp(c.z1 + 2, c.z0 - 3, A());
-    ponerProp('prop_rack', cx + s*(W/2 - 0.45), 0, z, s > 0 ? -Math.PI/2 : Math.PI/2, 0.7, 2.0, 1.0); } }
+    if(ponerProp('prop_rack', cx + s*(W/2 - 0.45), 0, z, s > 0 ? -Math.PI/2 : Math.PI/2, 0.7, 2.0, 1.0)) O.choque(cx + s*(W/2 - 0.45), 1, z, 1.0, 2.0, 0.7, true); } }
 }
 /* ====================== niveles interiores: cuartos en fila hacia −z ======================
    cada cuarto trae su evento: combate (con cubierta para el jugador), brecha, apariciones, captor o jefe */
@@ -413,9 +413,11 @@ function generarInterior(mis, t){
       for(let k=0;k<5;k++) O.caja(s*(W/2 - 0.7), 1.3 + ri(0,2)*1.6, zr + rf(-2,2), 0.8, 0.7, 0.8, '#b0885a', false, 0, 'carton'); }
     if(p.tipo==='salon' || p.tipo==='hall'){ O.caja(0, 0.005, (z0+z1)/2, W*0.55, 0.02, L*0.7, t.acento, false, 0, 'alfombra');
       for(let k=0;k<3;k++){ const s = elegir([-1,1]); O.caja(s*(W/2 - 0.02), H*0.5, rf(z1+2, z0-2), 0.04, 1.1, 1.5, elegir(['#6a8a5a','#8a5a3a','#3a4a6a','#9a8a4a']), false, 0, 'cuadro'); } }
-    if(p.tipo==='pasillo') for(let lz = z0 - 1; lz > z1 + 1; lz -= rf(1,2.2)) if(rnd() < 0.5){ const s = elegir([-1,1]); if(!ponerProp('prop_archivero', cx + s*(W/2 - 0.3), 0, lz, s > 0 ? -Math.PI/2 : Math.PI/2)) O.caja(cx + s*(W/2 - 0.25), 0.95, lz, 0.45, 1.9, 0.5, t.noche ? '#5a6a62' : '#6a7a8a', false, 0, 'metal'); }
+    if(p.tipo==='pasillo') for(let lz = z0 - 1; lz > z1 + 1; lz -= rf(1,2.2)) if(rnd() < 0.5){ const s = elegir([-1,1]); if(ponerProp('prop_archivero', cx + s*(W/2 - 0.3), 0, lz, s > 0 ? -Math.PI/2 : Math.PI/2)) O.choque(cx + s*(W/2 - 0.3), 0.65, lz, 0.81, 1.3, 0.68, true); else O.caja(cx + s*(W/2 - 0.25), 0.95, lz, 0.45, 1.9, 0.5, t.noche ? '#5a6a62' : '#6a7a8a', true, 0, 'metal'); }
     /* puestos de aparición: la puerta del fondo y los huecos laterales */
-    c.aparece.push({x:xSal, z:z1 - 1.2, tipo:'puerta'});
+    /* los que llegan aparecen en la puerta de salida, del lado de adentro; el último cuarto no tiene puerta y salen del fondo
+       (antes nacían del otro lado y atravesaban la pared o la puerta cerrada de la brecha siguiente) */
+    c.aparece.push(ultimo ? {x:xSal, z:z1 + 1.4, tipo:'fondo'} : {x:xSal, z:z1 + 0.9, tipo:'puerta'});   /* aparecen en la puerta, del lado de adentro */
     for(const l of c.laterales) c.aparece.push({x:l.x, z:l.z, tipo:'lado', s:l.s});
     /* puerta cerrada para las brechas (se abre a patadas) */
     if(p.ev==='brecha'){ const pu = new THREE.Mesh(CAJA, mat('#6a5038')); pu.scale.set(1.6, 2.4, 0.08); pu.position.set(xPuerta, 1.2, z0); pu.castShadow = true; dinamico(pu); c.puerta = pu;

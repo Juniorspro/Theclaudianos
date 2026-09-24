@@ -641,3 +641,30 @@ sin GPU), con calidad automática: 11–14 cuadros por segundo a CPU normal y 7�
 53–56 y 32–46; el puerto es el más pesado: se ve todo el muelle, 88.000 triángulos de utilería y los modelos de contenedor
 sólo a menos de 50 m de los puestos): ahí se pagan en la CPU los triángulos y el PBR por píxel. En un teléfono con GPU no lo pude medir; si va lento,
 GRÁFICOS: BAJOS.
+
+### 2026-09-24 (19) — BRECHA 7: miras, enemigos que atravesaban cosas y menús que se deslizan
+**Pedido textual:** «Arregla las miras agujerea los modelos 3D de las armas también arregla que atraviesen objetos ponerlos bien
+ubicados a los npc en brecha no te deben disparar atraves, también deberías agregar que se puedan desplazar por los menús anda
+tosco, y eso».
+
+- **Miras**: la mejora «mira holo» pegaba una caja negra metida adentro de todos los modelos, también en los que ya traen óptica.
+  Ahora, en los que no traen (P9, K5, B12), va un punto rojo de marco abierto apoyado sobre lo más alto del arma en ese punto
+  (`altoSobre` sobre la geometría del modelo), y apuntando el punto queda en el centro. Los que traen óptica en el modelo (R4,
+  M14) no llevan nada encima; como el fondo de esa óptica es opaco y tapaba el centro, al apuntar del todo el arma se esconde y
+  aparece la mira holo (R4, `#holo` por CSS) o la telescópica (M14, la del L96).
+- **Enemigos que atravesaban cosas**: caminaban en línea recta a través de cajones, escritorios y paredes, y el último cuarto
+  tenía un punto de aparición **detrás de la pared de fondo** (esa pared no tiene puerta): nacían afuera y la atravesaban.
+  Ahora los destinos se acomodan donde entra un cuerpo (`acomodar`), al caminar se rodea la primera caja que corta el camino por
+  la esquina que menos alarga (`rodear`), lo que igual quede metido se empuja afuera (`sacarDeCajas`), y si en 3 s no se acercó
+  medio metro se queda donde está. Aparecen en la puerta **del lado de adentro**; en el último cuarto, desde el fondo. La puerta
+  cerrada de una brecha también frena. Autoelevador, racks y archiveros pasaron a ser sólidos (antes no frenaban ni balas ni cuerpos).
+- **Tiros a través**: el enemigo disparaba sin mirar si había algo en el medio; los de adentro de una brecha tiraban a través de
+  la puerta todavía cerrada. Ahora sólo dispara con línea de tiro (la misma prueba que la vista: cabeza o pecho libres); si no, sigue
+  apuntando y espera. Si la pierde en medio de la ráfaga, la bala pega en lo que haya.
+- **Menús**: con la pantalla girada por CSS el desplazamiento nativo iba para el lado que no era. Ahora se desliza a mano, en las
+  coordenadas del juego, con envión al soltar; arrastrar sobre un botón no lo aprieta; un degradé abajo avisa que hay más.
+
+Medido: misiones de interior (depósito, embajada, búnker × 2 semillas, con el bot y vida infinita) — enemigos metidos adentro de
+una caja: **50 de 582 muestras antes, 0 de 610 ahora**; tiros que te pegaron a través de algo: **3 antes, 0 ahora**. Menús con toques
+reales girado y sin girar: 188 px arrastrando y el envión suma ~85; arrastrar sobre COMPRAR no compra, tocar sí. Bot con
+invencibilidad 15/15, sin invencibilidad 13/15 (convoy y El Coloso, como antes). Toques 11/11, menús, sin red e idiomas sin errores.

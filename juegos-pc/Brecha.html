@@ -16,6 +16,12 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101214;touch-action:n
 #hud{pointer-events:none}
 #mira{position:absolute;inset:0;pointer-events:none;display:none;background:radial-gradient(circle at 50% 50%,transparent 0,transparent 33vmin,rgba(0,0,0,.35) 33.4vmin,#000 34vmin)}
 #mira.ver{display:block}
+#holo{position:absolute;inset:0;pointer-events:none;display:none}
+#holo.ver{display:block}
+#holo::before{content:'';position:absolute;left:50%;top:50%;width:52vmin;height:38vmin;transform:translate(-50%,-50%);border:2.6vmin solid rgba(16,18,20,.94);border-radius:2.4vmin;
+  background:radial-gradient(ellipse at 50% 45%,rgba(150,200,255,.05),rgba(150,200,255,.14));box-shadow:0 0 0 .5vmin rgba(60,66,72,.9) inset,0 1vmin 3vmin rgba(0,0,0,.5)}
+#holo::after{content:'';position:absolute;left:50%;top:50%;width:16vmin;height:16vmin;transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle,#ff4a36 0 .5vmin,transparent .75vmin),radial-gradient(circle,transparent 6.9vmin,rgba(255,74,54,.85) 7.1vmin,rgba(255,74,54,.85) 7.5vmin,transparent 7.7vmin);filter:drop-shadow(0 0 .6vmin rgba(255,60,40,.8))}
 #mira::before,#mira::after{content:'';position:absolute;left:50%;top:50%;background:#000}
 #mira::before{width:1px;height:66vmin;transform:translate(-50%,-50%)}
 #mira::after{height:1px;width:66vmin;transform:translate(-50%,-50%)}
@@ -44,7 +50,8 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101214;touch-action:n
 @keyframes late{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
 /* ---------- capas ---------- */
 .capa{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;justify-content:safe center;gap:10px;
-  padding:14px 20px;text-align:center;overflow-y:auto;touch-action:pan-y}
+  padding:14px 20px;text-align:center;overflow-y:auto;touch-action:none;overscroll-behavior:contain;scrollbar-width:thin}
+.capa.desliza::after{content:'';position:sticky;bottom:-14px;display:block;flex:none;width:100%;height:22px;margin-top:-22px;pointer-events:none;background:linear-gradient(transparent,rgba(12,14,16,.7))}
 .capa.ver{display:flex;animation:entra .3s ease both}
 .capa.velo{background:linear-gradient(90deg,rgba(12,14,16,.94),rgba(12,14,16,.78) 60%,rgba(12,14,16,.6))}
 @keyframes entra{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -126,6 +133,7 @@ h2 small{display:block;font-size:11px;letter-spacing:4px;color:#d63a2a;font-weig
 <div id="pantalla">
   <canvas id="lienzo3d"></canvas>
   <div id="mira"></div>
+  <div id="holo"></div>
   <canvas id="hud"></canvas>
   <div id="aviso"></div>
   <div id="mandos">
@@ -5363,9 +5371,9 @@ function columna(O, x, z, alto, t){ O.caja(x, alto/2, z, 0.7, alto, 0.7, t.pared
 function decorar(O, c, t){
   const p = c.plan, W = c.W, cx = c.cx, A = Math.random;
   if(p.tipo==='nave' && hayModelo('prop_autoelevador') && A() < 0.8){ const s = A() < 0.5 ? -1 : 1, z = lerp(c.z1 + 3, c.z0 - 7, A());
-    ponerProp('prop_autoelevador', cx + s*(W/2 - 1.6), 0, z, s > 0 ? Math.PI/2 : -Math.PI/2); O.choque(cx + s*(W/2 - 1.6), 1.1, z, 1.3, 2.2, 2.4, false); }
+    ponerProp('prop_autoelevador', cx + s*(W/2 - 1.6), 0, z, s > 0 ? Math.PI/2 : -Math.PI/2); O.choque(cx + s*(W/2 - 1.6), 0.8, z, 2.3, 1.6, 1.0, true); }   /* sólido: ni balas ni cuerpos lo atraviesan */
   if((p.tipo==='lab' || p.tipo==='hall') && TEMAS.indexOf(t)===4 && hayModelo('prop_rack')){ for(let k=0;k<4;k++){ const s = A() < 0.5 ? -1 : 1, z = lerp(c.z1 + 2, c.z0 - 3, A());
-    ponerProp('prop_rack', cx + s*(W/2 - 0.45), 0, z, s > 0 ? -Math.PI/2 : Math.PI/2, 0.7, 2.0, 1.0); } }
+    if(ponerProp('prop_rack', cx + s*(W/2 - 0.45), 0, z, s > 0 ? -Math.PI/2 : Math.PI/2, 0.7, 2.0, 1.0)) O.choque(cx + s*(W/2 - 0.45), 1, z, 1.0, 2.0, 0.7, true); } }
 }
 /* ====================== niveles interiores: cuartos en fila hacia −z ======================
    cada cuarto trae su evento: combate (con cubierta para el jugador), brecha, apariciones, captor o jefe */
@@ -5444,9 +5452,11 @@ function generarInterior(mis, t){
       for(let k=0;k<5;k++) O.caja(s*(W/2 - 0.7), 1.3 + ri(0,2)*1.6, zr + rf(-2,2), 0.8, 0.7, 0.8, '#b0885a', false, 0, 'carton'); }
     if(p.tipo==='salon' || p.tipo==='hall'){ O.caja(0, 0.005, (z0+z1)/2, W*0.55, 0.02, L*0.7, t.acento, false, 0, 'alfombra');
       for(let k=0;k<3;k++){ const s = elegir([-1,1]); O.caja(s*(W/2 - 0.02), H*0.5, rf(z1+2, z0-2), 0.04, 1.1, 1.5, elegir(['#6a8a5a','#8a5a3a','#3a4a6a','#9a8a4a']), false, 0, 'cuadro'); } }
-    if(p.tipo==='pasillo') for(let lz = z0 - 1; lz > z1 + 1; lz -= rf(1,2.2)) if(rnd() < 0.5){ const s = elegir([-1,1]); if(!ponerProp('prop_archivero', cx + s*(W/2 - 0.3), 0, lz, s > 0 ? -Math.PI/2 : Math.PI/2)) O.caja(cx + s*(W/2 - 0.25), 0.95, lz, 0.45, 1.9, 0.5, t.noche ? '#5a6a62' : '#6a7a8a', false, 0, 'metal'); }
+    if(p.tipo==='pasillo') for(let lz = z0 - 1; lz > z1 + 1; lz -= rf(1,2.2)) if(rnd() < 0.5){ const s = elegir([-1,1]); if(ponerProp('prop_archivero', cx + s*(W/2 - 0.3), 0, lz, s > 0 ? -Math.PI/2 : Math.PI/2)) O.choque(cx + s*(W/2 - 0.3), 0.65, lz, 0.81, 1.3, 0.68, true); else O.caja(cx + s*(W/2 - 0.25), 0.95, lz, 0.45, 1.9, 0.5, t.noche ? '#5a6a62' : '#6a7a8a', true, 0, 'metal'); }
     /* puestos de aparición: la puerta del fondo y los huecos laterales */
-    c.aparece.push({x:xSal, z:z1 - 1.2, tipo:'puerta'});
+    /* los que llegan aparecen en la puerta de salida, del lado de adentro; el último cuarto no tiene puerta y salen del fondo
+       (antes nacían del otro lado y atravesaban la pared o la puerta cerrada de la brecha siguiente) */
+    c.aparece.push(ultimo ? {x:xSal, z:z1 + 1.4, tipo:'fondo'} : {x:xSal, z:z1 + 0.9, tipo:'puerta'});   /* aparecen en la puerta, del lado de adentro */
     for(const l of c.laterales) c.aparece.push({x:l.x, z:l.z, tipo:'lado', s:l.s});
     /* puerta cerrada para las brechas (se abre a patadas) */
     if(p.ev==='brecha'){ const pu = new THREE.Mesh(CAJA, mat('#6a5038')); pu.scale.set(1.6, 2.4, 0.08); pu.position.set(xPuerta, 1.2, z0); pu.castShadow = true; dinamico(pu); c.puerta = pu;
@@ -6188,6 +6198,26 @@ function guante(g, x, y, z, izq){ const q = new THREE.Mesh(CAJA, MATE_GUANTE());
   const dedos = new THREE.Mesh(CAJA, MATE_GUANTE()); dedos.position.set(x + (izq ? 0.02 : -0.02), y + 0.035, z - 0.03); dedos.scale.set(0.03, 0.03, 0.08); g.add(dedos); return q; }
 function manga(g, x, y, z, rx, ry, largo){ const m = new THREE.Mesh(CAJA, MATE_MANGA()); m.position.set(x, y, z); m.scale.set(0.095, 0.095, largo); m.rotation.set(rx, ry, 0); g.add(m);
   const puno = new THREE.Mesh(CAJA, mat('#3a4046', {roughness:0.9})); puno.position.set(0, 0, -0.5); puno.scale.set(1.08, 1.08, 0.12); m.add(puno); return m; }
+/* las armas generadas que ya traen una óptica en el modelo */
+const CON_OPTICA = {r4:1, m14:1, l96:1};
+/* lo más alto del modelo en una franja angosta alrededor de (x=0, z) */
+function altoSobre(geo, z, dz){ const p = geo.attributes.position.array; let y = -1e9;
+  for(let i=0;i<p.length;i+=3) if(Math.abs(p[i]) < 0.014 && Math.abs(p[i+2] - z) < dz) y = Math.max(y, p[i+1]); return y > -1e9 ? y : null; }
+const MAT_ROJO = {};
+function ponerRojo(g, geo, P){
+  const E = P.empunadura, zc = P.mira.z, L = 0.042, base = Math.max(altoSobre(geo, zc, L*0.6) || P.mira.y, altoSobre(geo, zc - L*0.5, 0.008) || -1, altoSobre(geo, zc + L*0.5, 0.008) || -1);
+  const mo = MAT_ROJO.cuerpo || (MAT_ROJO.cuerpo = mat('#16181b', {roughness:0.45, metalness:0.6})), s = new THREE.Group();
+  const pieza = (w, h, d, x, y, z)=>{ const m = new THREE.Mesh(CAJA, mo); m.scale.set(w, h, d); m.position.set(x, y, z); s.add(m); };
+  pieza(0.02, 0.006, L, 0, 0.003, 0);                                   /* base sobre el riel */
+  pieza(0.0035, 0.024, 0.008, -0.0118, 0.018, -0.012); pieza(0.0035, 0.024, 0.008, 0.0118, 0.018, -0.012);   /* marco */
+  pieza(0.027, 0.0035, 0.008, 0, 0.0308, -0.012); pieza(0.01, 0.006, 0.014, 0, 0.009, 0.012);                /* techo y perilla */
+  const vid = new THREE.Mesh(new THREE.PlaneGeometry(0.02, 0.02), MAT_ROJO.vidrio || (MAT_ROJO.vidrio = new THREE.MeshBasicMaterial({color:new THREE.Color(0.35, 0.55, 0.7), transparent:true, opacity:0.22, depthWrite:false})));
+  vid.position.set(0, 0.018, -0.012); s.add(vid);
+  const punto = new THREE.Mesh(new THREE.PlaneGeometry(0.0022, 0.0022), MAT_ROJO.punto || (MAT_ROJO.punto = new THREE.MeshBasicMaterial({color:new THREE.Color(4, 0.2, 0.1), transparent:true, depthWrite:false})));
+  punto.position.set(0, 0.018, -0.0115); s.add(punto);
+  s.position.set(-E.x, base - E.y, zc - E.z); g.add(s);
+  VM.mira.set(0, base + 0.018 - E.y, zc - E.z);                        /* apuntando, el punto rojo queda en el centro */
+}
 function armarVM(id){
   if(VM.id === id) return; VM.id = id; if(VM.arma) VM.g.remove(VM.arma);
   const A = ARMAS[id], g = new THREE.Group(), idm = 'arma_' + id, P = puntosArma(idm);
@@ -6197,8 +6227,9 @@ function armarVM(id){
     const boca = P.boca.clone().sub(P.empunadura), gm = P.guardamano.clone().sub(P.empunadura);
     VM.boca = boca.z; VM.bocaY = boca.y; VM.mira.copy(P.mira).sub(P.empunadura);
     if(tieneMej(id,'silen')){ const s = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.2, 14), mat('#15171a', {roughness:0.5, metalness:0.6})); s.rotation.x = Math.PI/2; s.position.set(0, boca.y, boca.z - 0.1); g.add(s); VM.boca -= 0.2; }
-    if(tieneMej(id,'mira') && A.clase!=='francotirador'){ const s = new THREE.Mesh(CAJA, mat('#15171a', {roughness:0.4, metalness:0.5})); s.position.set(0, VM.mira.y + 0.022, VM.mira.z - 0.02); s.scale.set(0.034, 0.042, 0.07); g.add(s);
-      const vid = new THREE.Mesh(new THREE.PlaneGeometry(0.026, 0.026), new THREE.MeshBasicMaterial({color:new THREE.Color(0.9, 0.2, 0.15), transparent:true, opacity:0.35})); vid.position.set(0, VM.mira.y + 0.028, VM.mira.z - 0.056); g.add(vid); VM.mira.y += 0.03; }
+    /* mira holo: sólo en las que no traen óptica en el modelo, apoyada sobre lo más alto del arma en ese punto (antes era una caja
+       metida adentro del modelo) */
+    if(tieneMej(id,'mira') && !CON_OPTICA[id] && A.clase!=='francotirador') ponerRojo(g, MODELOS[idm].geo, P);
     /* manos: la derecha en la empuñadura, la izquierda en el guardamano (la pistola, a dos manos) */
     /* manos generadas (palma en el origen, antebrazo hacia +z): la derecha envuelve la empuñadura, la izquierda sostiene el guardamano */
     const md = mallaModelo('mano_der', false), mi = mallaModelo('mano_izq', false);
@@ -6319,9 +6350,9 @@ function lanzarOla(c, ola){
   const tipos = tiposPara(c, ola); let dem = 0;
   for(const tipo of tipos){
     const libres = c.puestos.filter(q=> !q.ocupado); const pu = libres.length ? elegir(libres) : null;
-    const ap = elegir(c.aparece); const ini = V3(ap.x, 0, ap.z);
+    const ap = elegir(c.aparece); const ini = acomodar(V3(ap.x, 0, ap.z));
     const e = crearEnemigo(tipo, ini, {cuarto:c, espera:dem});
-    if(pu){ pu.ocupado = e; e.puesto = pu; e.destino = V3(pu.x, 0, pu.z); } else e.destino = V3(rf(-c.W/2 + 1.5, c.W/2 - 1.5), 0, rf(c.z1 + 2, c.z1 + c.L*0.5));
+    if(pu){ pu.ocupado = e; e.puesto = pu; e.destino = acomodar(V3(pu.x, 0, pu.z)); } else e.destino = acomodar(V3(rf(-c.W/2 + 1.5, c.W/2 - 1.5), 0, rf(c.z1 + 2, c.z1 + c.L*0.5)));
     if(tipo==='escopeta') e.avanza = true;
     dem += rf(0.3, 0.9);
   }
@@ -6344,6 +6375,45 @@ function capturar(c, pos){
 
 /* ====================== pasar enemigos ====================== */
 const _v = V3(0,0,0);
+/* ====================== que los enemigos no atraviesen las cosas ======================
+   Las cajas sólidas del mundo (paredes, cubiertas, utilería) son el obstáculo: los destinos se acomodan donde entra un
+   cuerpo, al caminar se rodea la primera caja que corta el camino por la esquina que menos alarga, y lo que igual quede
+   metido se empuja para afuera. */
+const CUERPO_R = 0.3;
+const cajaCuerpo = (b, y)=> b.y0 < y + 1.6 && b.y1 > y + 0.2;   /* la puerta cerrada de una brecha también frena */
+function libreEn(x, z, r, y){ r = r || CUERPO_R; y = y || 0;
+  for(const b of MUNDO.cajas){ if(!cajaCuerpo(b, y)) continue; const cx = lim(x, b.x0, b.x1), cz = lim(z, b.z0, b.z1); if((x - cx)*(x - cx) + (z - cz)*(z - cz) < r*r) return false; }
+  return true; }
+function acomodar(p, r){ if(!p || libreEn(p.x, p.z, r, p.y)) return p;
+  for(let rad = 0.3; rad <= 3; rad += 0.3) for(let k=0;k<12;k++){ const a = (k + rad)/12*TAU, x = p.x + Math.cos(a)*rad, z = p.z + Math.sin(a)*rad; if(libreEn(x, z, r, p.y)) return V3(x, p.y||0, z); }
+  return p; }
+/* dónde corta el segmento a la caja agrandada en r (0..1), o null */
+function cortaCaja(ax, az, bx, bz, b, r){
+  const dx = bx - ax, dz = bz - az; let t0 = 0, t1 = 1;
+  for(const [o, d, lo, hi] of [[ax, dx, b.x0 - r, b.x1 + r], [az, dz, b.z0 - r, b.z1 + r]]){
+    if(Math.abs(d) < 1e-9){ if(o <= lo || o >= hi) return null; continue; }
+    let ta = (lo - o)/d, tb = (hi - o)/d; if(ta > tb){ const q = ta; ta = tb; tb = q; } t0 = Math.max(t0, ta); t1 = Math.min(t1, tb); if(t0 >= t1) return null; }
+  return t0; }
+function rodear(p, dest, r, y){
+  let caja = null, tm = 2;
+  for(const b of MUNDO.cajas){ if(!cajaCuerpo(b, y)) continue; const t = cortaCaja(p.x, p.z, dest.x, dest.z, b, r); if(t !== null && t < tm){ tm = t; caja = b; } }
+  if(!caja) return dest;
+  const m = r + 0.18; let el = null, costo = 1e9, cerca = null, dc = 1e9;
+  for(const [x, z] of [[caja.x0 - m, caja.z0 - m], [caja.x1 + m, caja.z0 - m], [caja.x0 - m, caja.z1 + m], [caja.x1 + m, caja.z1 + m]]){
+    const a = Math.hypot(x - p.x, z - p.z), c = a + Math.hypot(dest.x - x, dest.z - z);
+    if(a < dc && a > 0.05){ dc = a; cerca = [x, z]; }
+    if(a > 0.05 && cortaCaja(p.x, p.z, x, z, caja, r*0.9) === null && c < costo){ costo = c; el = [x, z]; } }
+  const q = el || cerca; return q ? V3(q[0], 0, q[1]) : dest; }
+function sacarDeCajas(p, r, y){
+  for(const b of MUNDO.cajas){ if(!cajaCuerpo(b, y)) continue; const cx = lim(p.x, b.x0, b.x1), cz = lim(p.z, b.z0, b.z1), dx = p.x - cx, dz = p.z - cz, d2 = dx*dx + dz*dz;
+    if(d2 >= r*r) continue;
+    if(d2 > 1e-8){ const d = Math.sqrt(d2), k = (r - d)/d; p.x += dx*k; p.z += dz*k; }
+    else { const op = [[b.x0 - r - p.x, 0], [b.x1 + r - p.x, 0], [0, b.z0 - r - p.z], [0, b.z1 + r - p.z]].sort((u, v)=> Math.abs(u[0] + u[1]) - Math.abs(v[0] + v[1]))[0]; p.x += op[0]; p.z += op[1]; } } }
+/* ¿el enemigo te tiene a tiro? la misma prueba que usa la vista: cabeza o pecho sin nada en el medio */
+function lineaLibre(e, cp){
+  const ps = e.pts ? [e.pts.cab, e.pts.pec] : [e.boca || e.pos.clone().add(V3(0, 1.4, 0))];
+  for(const q of ps){ const d = q.clone().sub(cp), L = d.length(); d.normalize(); const w = rayoMundo(cp, d, L); if(!w || w.t >= L - 0.25) return true; }
+  return false; }
 function pasarEnemigo(e, dt){
   const def = e.def, j = J.jug, cp = camPos();
   if(!e.vivo){ if(e.trapo) pasarTrapo(e); return; }
@@ -6359,19 +6429,23 @@ function pasarEnemigo(e, dt){
     case 'captor': e.rumbo = aJug; e.apunta = 0.3; e.cuenta -= dt; if(e.cuenta <= 0 && e.rehen && e.rehen.vivo){ ejecutar(e); } break;
     case 'llegar': {
       _v.subVectors(e.destino, e.pos); _v.y = 0; const d = _v.length(); e.moviendo = d > 0.2;
-      if(e.moviendo){ const v = def.vel*(e.avanza ? 1.1 : 1)*dt; e.pos.addScaledVector(_v, Math.min(1, v/d)); e.rumbo = e.rumbo + angDif(e.rumbo, Math.atan2(_v.x, _v.z))*0.2; e.fase += dt*def.vel*3.2; e.agache = lerp(e.agache, 0, 0.1); e.apunta = lerp(e.apunta, 0.4, 0.1);
+      if(e.moviendo && !e.padre){ const meta = rodear(e.pos, e.destino, CUERPO_R, e.pos.y); _v.set(meta.x - e.pos.x, 0, meta.z - e.pos.z); }
+      if(e.moviendo){ const dm = Math.max(1e-6, _v.length()), v = def.vel*(e.avanza ? 1.1 : 1)*dt; e.pos.addScaledVector(_v, Math.min(1, v/dm));
+        /* si en 3 s no se acercó medio metro, se queda donde está (y no camina contra la pared para siempre) */
+        if(d < (e.dAnt === undefined ? 1e9 : e.dAnt) - 0.5){ e.dAnt = d; e.trabaT = 0; } else if((e.trabaT = (e.trabaT||0) + dt) > 3){ e.trabaT = 0; e.dAnt = undefined; e.destino = acomodar(V3(e.pos.x, 0, e.pos.z)); } e.rumbo = e.rumbo + angDif(e.rumbo, Math.atan2(_v.x, _v.z))*0.2; e.fase += dt*def.vel*3.2; e.agache = lerp(e.agache, 0, 0.1); e.apunta = lerp(e.apunta, 0.4, 0.1);
         /* el escopetero que avanza tira apenas te tiene a tiro */
         if(e.avanza && dist < 9 && e.t > 1.2){ e.estado = 'apuntar'; e.avisoT = def.aviso/J.mis.dif; e.moviendo = false; } }
-      else { e.estado = e.puesto && e.puesto.alto < 2 ? 'cubierto' : 'apuntar'; e.t = 0; e.espT = rf(0.4, 1.4); e.avisoT = def.aviso/J.mis.dif; }
+      else { e.trabaT = 0; e.dAnt = undefined; e.estado = e.puesto && e.puesto.alto < 2 ? 'cubierto' : 'apuntar'; e.t = 0; e.espT = rf(0.4, 1.4); e.avisoT = def.aviso/J.mis.dif; }
       break; }
     case 'cubierto': e.moviendo = false; e.rumbo = e.rumbo + angDif(e.rumbo, aJug)*0.15; e.agache = lerp(e.agache, 1, 0.15); e.apunta = lerp(e.apunta, 0.2, 0.1);
       if(e.t > e.espT){ e.estado = 'apuntar'; e.t = 0; e.avisoT = def.aviso/J.mis.dif*(0.8 + Math.random()*0.4); } break;
     case 'apuntar': e.moviendo = false; e.rumbo = e.rumbo + angDif(e.rumbo, aJug)*0.2; e.agache = lerp(e.agache, 0, 0.18); e.apunta = lerp(e.apunta, 1, 0.2);
       e.avisoT -= dt; e.laser = e.apunta > 0.7;
-      if(e.avisoT <= 0){ e.estado = 'disparar'; e.t = 0; e.disparos = 0; e.laser = false; if(def.jefe) sfx('minigun', 0.8); } break;
+      /* sin línea de tiro (pared, cajón, la puerta todavía cerrada) no dispara: sigue apuntando y espera */
+      if(e.avisoT <= 0){ if(!lineaLibre(e, cp)){ e.avisoT = 0.3; e.laser = false; } else { e.estado = 'disparar'; e.t = 0; e.disparos = 0; e.laser = false; if(def.jefe) sfx('minigun', 0.8); } } break;
     case 'disparar': e.rumbo = e.rumbo + angDif(e.rumbo, aJug)*0.2; e.apunta = 1;
       if(e.t >= def.cadR){ e.t = 0; dispararEnemigo(e, dist); e.disparos++;
-        if(e.disparos >= def.rafaga){ if(e.avanza && dist > 3.5){ e.estado = 'llegar'; e.destino = V3(cp.x, 0, cp.z).lerp(e.pos, 0.55); e.t = 0; }
+        if(e.disparos >= def.rafaga){ if(e.avanza && dist > 3.5){ e.estado = 'llegar'; e.destino = acomodar(V3(cp.x, 0, cp.z).lerp(e.pos, 0.55)); e.t = 0; }
           else { e.estado = e.puesto && e.puesto.alto < 2 ? 'cubierto' : 'apuntar'; e.t = 0; e.espT = rf(0.8, 2.2)/J.mis.dif; e.avisoT = def.aviso/J.mis.dif*(0.9 + Math.random()*0.5); } } }
       break;
   }
@@ -6380,13 +6454,15 @@ function pasarEnemigo(e, dt){
     let visto = false;
     if(e.pts) for(const k of ['cab','pec']){ const d = e.pts[k].clone().sub(cp), L = d.length(); d.normalize(); const w = rayoMundo(cp, d, L); if((!w || w.t >= L - 0.2) && !civEnLinea(cp, d, L, 0.012) && Math.abs(angDif(Math.atan2(-d.x, -d.z) - J.jug.base, 0)) < rangoYaw() - 0.04){ visto = true; break; } }
     e.oculto = visto ? 0 : (e.oculto||0) + 0.5;
-    if(e.oculto > 6 && e.cuarto){ e.oculto = 0; if(e.puesto) e.puesto.ocupado = null; e.puesto = null; const c = e.cuarto;
+    const encerrado = e.cuarto && e.cuarto.cajaPuerta && MUNDO.cajas.includes(e.cuarto.cajaPuerta);
+    if(e.oculto > 6 && e.cuarto && !encerrado){ e.oculto = 0; if(e.puesto) e.puesto.ocupado = null; e.puesto = null; const c = e.cuarto;
       let mejor = null; for(let k=0;k<16 && !mejor;k++){ const q = V3(lim(cp.x + vr(-4, 4), c.cx - c.W/2 + 1, c.cx + c.W/2 - 1), 0, lim(cp.z - vr(5, 11), c.z1 + 1, c.z0 - 4.5));
-        const cab = q.clone().add(V3(0, 1.65, 0)), d = cab.clone().sub(cp), L = d.length(); d.normalize(); const w = rayoMundo(cp, d, L); if(!w || w.t > L - 0.3) mejor = q; }
-      e.destino = mejor || V3(cp.x, 0, cp.z - 6); e.estado = 'llegar'; e.t = 0; e.avanza = false; } }
+        const cab = q.clone().add(V3(0, 1.65, 0)), d = cab.clone().sub(cp), L = d.length(); d.normalize(); const w = rayoMundo(cp, d, L); if((!w || w.t > L - 0.3) && libreEn(q.x, q.z)) mejor = q; }
+      e.destino = acomodar(mejor || V3(cp.x, 0, cp.z - 6)); e.estado = 'llegar'; e.t = 0; e.avanza = false; } }
   /* los que no tienen cubierta baja se corren de costado (columna) cuando esperan */
   if(e.puesto && e.puesto.alto >= 2 && e.estado==='apuntar' && e.avisoT > def.aviso*0.6) e.moviendo = false;
   if(e.jefe || def.jefe) pasarColoso(e, dt, dist);
+  if(!e.padre) sacarDeCajas(e.pos, def.jefe ? 0.55 : CUERPO_R, e.pos.y);
 }
 function dispararEnemigo(e, dist){
   const def = e.def, j = J.jug, cp = camPos(), dif = J.mis.dif;
@@ -6399,6 +6475,11 @@ function dispararEnemigo(e, dist){
   if(def.corto && dist > 13) prob *= 0.3;
   const pega = !cubierto && Math.random() < prob;
   const dest = cp.clone().add(V3(vr(-0.6,0.6), vr(-0.5,0.3), vr(-0.6,0.6)));
+  /* con algo en el medio (pared, cajón, puerta) la bala pega ahí: nunca a través; y si pasa seguido, se muda a donde te vea */
+  if(!cubierto && !lineaLibre(e, cp)){ const dd = dest.clone().sub(boca), L = dd.length(); dd.normalize(); const h = rayoMundo(boca, dd, L);
+    if(h){ const p = boca.clone().addScaledVector(dd, h.t); chispas(p, 3); agujero(p, h.n); trazo(boca, p, '#ffcf8a', 0.06); }
+    e.bloqueado = (e.bloqueado||0) + 1; if(e.bloqueado >= 3){ e.bloqueado = 0; e.oculto = 7; } return; }
+  e.bloqueado = 0;
   if(cubierto){ /* pega en la cubierta de adelante */ const h = rayoMundo(boca, dest.clone().sub(boca).normalize(), boca.distanceTo(dest)); if(h){ const p = boca.clone().addScaledVector(dest.clone().sub(boca).normalize(), h.t); chispas(p, 3); agujero(p, h.n); trazo(boca, p, '#ffcf8a'); } return; }
   trazo(boca, pega ? cp.clone().add(V3(0,-0.3,0)) : dest, '#ffcf8a', 0.06);
   if(pega) danarJugador(def.dmg*(def.corto && dist < 6 ? 1.6 : 1)*(0.75 + dif*0.25), boca);
@@ -6447,7 +6528,7 @@ const DIFERIDOS = []; function setTimeout0(t, fn){ DIFERIDOS.push({t, fn}); }
 function pasarColoso(e, dt, dist){
   e.faseJ = e.hp < e.hpMax*0.5 ? 2 : 1;
   if(e.estado==='cubierto') e.estado = 'apuntar';
-  if(e.estado==='apuntar' && e.t > 0.05 && !e.camina){ e.camina = true; e.destino = V3(rf(-7,7), 0, lerp(e.cuarto.z1 + 4, e.cuarto.z0 - 10, rnd())); }
+  if(e.estado==='apuntar' && e.t > 0.05 && !e.camina){ e.camina = true; e.destino = acomodar(V3(rf(-7,7), 0, lerp(e.cuarto.z1 + 4, e.cuarto.z0 - 10, rnd())), 0.7); }
   if(e.camina && e.estado==='apuntar'){ _v.subVectors(e.destino, e.pos); _v.y = 0; const d = _v.length(); if(d > 0.3){ e.pos.addScaledVector(_v, Math.min(1, e.def.vel*dt/d)); e.moviendo = true; e.fase += dt*3; } else { e.moviendo = false; } }
   if(e.estado==='disparar') e.camina = false;
   /* granadas en la segunda fase */
@@ -6801,9 +6882,11 @@ function ubicarCamara(dt){
   const ax = -VM.mira.x*es, ay = -VM.mira.y*es - 0.004;   /* apuntando, la mira del modelo queda en el centro de la pantalla */
   vm.position.set(lerp(PZ.x, ax, ads), lerp(PZ.y, ay, ads) - c*0.25 - rec*0.06 - VM.cambio*0.3 + (j.caminando ? Math.abs(Math.sin(j.bob))*0.012 : 0), lerp(PZ.z, PZ.za, ads) + VM.patada*0.07);
   vm.rotation.set(VM.patada*0.16 - rec*0.7 + c*0.5, rec*0.4, rec*0.5);
-  vm.visible = !(ads > 0.85 && A.clase==='francotirador');
+  /* con óptica propia en el modelo (R4 holo, M14 mira), apuntando del todo se ve por la óptica: el fondo del modelo es opaco */
+  const optica = A.clase==='francotirador' ? 'mira' : (CON_OPTICA[VM.id] && MODELOS['arma_' + VM.id] ? (VM.id==='m14' ? 'mira' : 'holo') : null);
+  vm.visible = !(ads > 0.85 && optica); $('holo').classList.toggle('ver', ads > 0.85 && optica === 'holo');
   if(VM.flT > 0){ VM.flT -= dt; VM.fl.position.set(0, VM.bocaY, VM.boca - 0.03); VM.fl.rotation.z = vr(0,3); VM.fl.scale.setScalar(vr(0.8, 1.25)); VM.luzF.position.copy(VM.fl.position).applyMatrix4(VM.arma.matrixWorld); VM.luzF.intensity = 3.5; if(VM.flT <= 0){ VM.fl.visible = false; VM.luzF.intensity = 0; } }
-  $('mira').classList.toggle('ver', ads > 0.85 && A.clase==='francotirador');
+  $('mira').classList.toggle('ver', ads > 0.85 && optica === 'mira');
 }
 
 /* ====================== piloto automático (banco y portada) ====================== */
@@ -7021,7 +7104,28 @@ function bajoMira(){
 /* ====================== menús ====================== */
 const CAPAS_UI = ['capaTitulo','capaMisiones','capaEquipo','capaArmeria','capaComo','capaPausa','capaRes'];
 function mostrar(id){ for(const c of CAPAS_UI) $(c).classList.toggle('ver', c===id); $('mandos').classList.toggle('ver', !id && J.modo==='juego');
-  if(id){ soltarTodo(); $('bBrecha').style.display = 'none'; $('mira').classList.remove('ver'); } $('dinero').textContent = '$ ' + G.dinero; fondoArte(id); }
+  if(id){ soltarTodo(); $('bBrecha').style.display = 'none'; $('mira').classList.remove('ver'); } $('dinero').textContent = '$ ' + G.dinero; fondoArte(id); if(id){ $(id).scrollTop = 0; requestAnimationFrame(marcarDeslizables); } }
+/* ====================== desplazar los menús con el dedo ======================
+   Con la pantalla girada por CSS, el desplazamiento nativo va para el lado que no es y a los tirones: se hace a mano, en las
+   coordenadas del juego, con inercia al soltar. Si el dedo se movió, el toque no cuenta como botón. */
+const DESL = {el:null, y:0, s:0, v:0, t:0, movio:false, raf:0, sinClic:0};
+function capaQueDesliza(n){ while(n && n.classList){ if(n.classList.contains('capa')) return n.scrollHeight > n.clientHeight + 2 ? n : null; n = n.parentNode; } return null; }
+function marcarDeslizables(){ document.querySelectorAll('.capa').forEach(c=> c.classList.toggle('desliza', c.scrollHeight > c.clientHeight + 2 && c.scrollTop + c.clientHeight < c.scrollHeight - 4)); }
+function inercia(){ cancelAnimationFrame(DESL.raf); let ult = performance.now();
+  const f = ahora=>{ const dt = Math.min(40, ahora - ult); ult = ahora; if(!DESL.el) return; DESL.el.scrollTop += DESL.v*dt; DESL.v *= Math.pow(0.9955, dt); marcarDeslizables();
+    const tope = DESL.el.scrollTop <= 0 || DESL.el.scrollTop >= DESL.el.scrollHeight - DESL.el.clientHeight - 1;
+    if(Math.abs(DESL.v) > 0.02 && !tope) DESL.raf = requestAnimationFrame(f); };
+  DESL.raf = requestAnimationFrame(f); }
+document.addEventListener('touchstart', ev=>{ const c = capaQueDesliza(ev.target); cancelAnimationFrame(DESL.raf); DESL.el = c; if(!c || ev.touches.length > 1) return;
+  const t = ev.touches[0]; DESL.y = aLocalD(t.clientX, t.clientY)[1]; DESL.s = c.scrollTop; DESL.v = 0; DESL.t = performance.now(); DESL.y0 = DESL.y; DESL.movio = false; }, {passive:true, capture:true});
+document.addEventListener('touchmove', ev=>{ const c = DESL.el; if(!c) return; const t = ev.touches[0], y = aLocalD(t.clientX, t.clientY)[1], ahora = performance.now();
+  if(Math.abs(y - DESL.y0) > 9) DESL.movio = true; if(!DESL.movio) return;
+  const dt = Math.max(1, ahora - DESL.t); DESL.v = lerp(DESL.v, (DESL.y - y)/dt, 0.6); DESL.t = ahora;
+  c.scrollTop += DESL.y - y; DESL.y = y; marcarDeslizables(); }, {passive:true, capture:true});
+document.addEventListener('touchend', ev=>{ if(!DESL.el) return; if(DESL.movio){ DESL.sinClic = performance.now() + 400; if(performance.now() - DESL.t > 90) DESL.v = 0; inercia(); } }, {passive:true, capture:true});
+/* un arrastre no es un toque */
+document.addEventListener('click', ev=>{ if(performance.now() < DESL.sinClic && capaQueDesliza(ev.target)){ ev.preventDefault(); ev.stopPropagation(); } }, true);
+document.querySelectorAll('.capa').forEach(c=> c.addEventListener('scroll', marcarDeslizables, {passive:true}));
 function boton(id, fn){ $(id).addEventListener('click', ev=>{ ev.preventDefault(); audioIni(); sfx('boton'); fn(); pantallaHorizontal(); }); }
 function iniciarDemo(){ J.demo = true; J.bot = true; J.dios = true; const op = [0, 1, 4].filter(i=> i < G.abierto + 1); iniciarMision(op.length ? elegirR(op) : 0, 'DEMO' + Math.floor(Math.random()*9999)); J.modo = 'menu'; MUS.on = true; }
 const elegirR = a => a[Math.floor(Math.random()*a.length)];

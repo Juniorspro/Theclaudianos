@@ -246,9 +246,11 @@ function ubicarCamara(dt){
   const ax = -VM.mira.x*es, ay = -VM.mira.y*es - 0.004;   /* apuntando, la mira del modelo queda en el centro de la pantalla */
   vm.position.set(lerp(PZ.x, ax, ads), lerp(PZ.y, ay, ads) - c*0.25 - rec*0.06 - VM.cambio*0.3 + (j.caminando ? Math.abs(Math.sin(j.bob))*0.012 : 0), lerp(PZ.z, PZ.za, ads) + VM.patada*0.07);
   vm.rotation.set(VM.patada*0.16 - rec*0.7 + c*0.5, rec*0.4, rec*0.5);
-  vm.visible = !(ads > 0.85 && A.clase==='francotirador');
+  /* con óptica propia en el modelo (R4 holo, M14 mira), apuntando del todo se ve por la óptica: el fondo del modelo es opaco */
+  const optica = A.clase==='francotirador' ? 'mira' : (CON_OPTICA[VM.id] && MODELOS['arma_' + VM.id] ? (VM.id==='m14' ? 'mira' : 'holo') : null);
+  vm.visible = !(ads > 0.85 && optica); $('holo').classList.toggle('ver', ads > 0.85 && optica === 'holo');
   if(VM.flT > 0){ VM.flT -= dt; VM.fl.position.set(0, VM.bocaY, VM.boca - 0.03); VM.fl.rotation.z = vr(0,3); VM.fl.scale.setScalar(vr(0.8, 1.25)); VM.luzF.position.copy(VM.fl.position).applyMatrix4(VM.arma.matrixWorld); VM.luzF.intensity = 3.5; if(VM.flT <= 0){ VM.fl.visible = false; VM.luzF.intensity = 0; } }
-  $('mira').classList.toggle('ver', ads > 0.85 && A.clase==='francotirador');
+  $('mira').classList.toggle('ver', ads > 0.85 && optica === 'mira');
 }
 
 /* ====================== piloto automático (banco y portada) ====================== */

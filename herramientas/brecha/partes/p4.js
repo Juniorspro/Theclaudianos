@@ -98,9 +98,9 @@ function lanzarOla(c, ola){
   const tipos = tiposPara(c, ola); let dem = 0;
   for(const tipo of tipos){
     const libres = c.puestos.filter(q=> !q.ocupado); const pu = libres.length ? elegir(libres) : null;
-    const ap = elegir(c.aparece); const ini = V3(ap.x, 0, ap.z);
+    const ap = elegir(c.aparece); const ini = acomodar(V3(ap.x, 0, ap.z));
     const e = crearEnemigo(tipo, ini, {cuarto:c, espera:dem});
-    if(pu){ pu.ocupado = e; e.puesto = pu; e.destino = V3(pu.x, 0, pu.z); } else e.destino = V3(rf(-c.W/2 + 1.5, c.W/2 - 1.5), 0, rf(c.z1 + 2, c.z1 + c.L*0.5));
+    if(pu){ pu.ocupado = e; e.puesto = pu; e.destino = acomodar(V3(pu.x, 0, pu.z)); } else e.destino = acomodar(V3(rf(-c.W/2 + 1.5, c.W/2 - 1.5), 0, rf(c.z1 + 2, c.z1 + c.L*0.5)));
     if(tipo==='escopeta') e.avanza = true;
     dem += rf(0.3, 0.9);
   }
@@ -123,6 +123,45 @@ function capturar(c, pos){
 
 /* ====================== pasar enemigos ====================== */
 const _v = V3(0,0,0);
+/* ====================== que los enemigos no atraviesen las cosas ======================
+   Las cajas sólidas del mundo (paredes, cubiertas, utilería) son el obstáculo: los destinos se acomodan donde entra un
+   cuerpo, al caminar se rodea la primera caja que corta el camino por la esquina que menos alarga, y lo que igual quede
+   metido se empuja para afuera. */
+const CUERPO_R = 0.3;
+const cajaCuerpo = (b, y)=> b.y0 < y + 1.6 && b.y1 > y + 0.2;   /* la puerta cerrada de una brecha también frena */
+function libreEn(x, z, r, y){ r = r || CUERPO_R; y = y || 0;
+  for(const b of MUNDO.cajas){ if(!cajaCuerpo(b, y)) continue; const cx = lim(x, b.x0, b.x1), cz = lim(z, b.z0, b.z1); if((x - cx)*(x - cx) + (z - cz)*(z - cz) < r*r) return false; }
+  return true; }
+function acomodar(p, r){ if(!p || libreEn(p.x, p.z, r, p.y)) return p;
+  for(let rad = 0.3; rad <= 3; rad += 0.3) for(let k=0;k<12;k++){ const a = (k + rad)/12*TAU, x = p.x + Math.cos(a)*rad, z = p.z + Math.sin(a)*rad; if(libreEn(x, z, r, p.y)) return V3(x, p.y||0, z); }
+  return p; }
+/* dónde corta el segmento a la caja agrandada en r (0..1), o null */
+function cortaCaja(ax, az, bx, bz, b, r){
+  const dx = bx - ax, dz = bz - az; let t0 = 0, t1 = 1;
+  for(const [o, d, lo, hi] of [[ax, dx, b.x0 - r, b.x1 + r], [az, dz, b.z0 - r, b.z1 + r]]){
+    if(Math.abs(d) < 1e-9){ if(o <= lo || o >= hi) return null; continue; }
+    let ta = (lo - o)/d, tb = (hi - o)/d; if(ta > tb){ const q = ta; ta = tb; tb = q; } t0 = Math.max(t0, ta); t1 = Math.min(t1, tb); if(t0 >= t1) return null; }
+  return t0; }
+function rodear(p, dest, r, y){
+  let caja = null, tm = 2;
+  for(const b of MUNDO.cajas){ if(!cajaCuerpo(b, y)) continue; const t = cortaCaja(p.x, p.z, dest.x, dest.z, b, r); if(t !== null && t < tm){ tm = t; caja = b; } }
+  if(!caja) return dest;
+  const m = r + 0.18; let el = null, costo = 1e9, cerca = null, dc = 1e9;
+  for(const [x, z] of [[caja.x0 - m, caja.z0 - m], [caja.x1 + m, caja.z0 - m], [caja.x0 - m, caja.z1 + m], [caja.x1 + m, caja.z1 + m]]){
+    const a = Math.hypot(x - p.x, z - p.z), c = a + Math.hypot(dest.x - x, dest.z - z);
+    if(a < dc && a > 0.05){ dc = a; cerca = [x, z]; }
+    if(a > 0.05 && cortaCaja(p.x, p.z, x, z, caja, r*0.9) === null && c < costo){ costo = c; el = [x, z]; } }
+  const q = el || cerca; return q ? V3(q[0], 0, q[1]) : dest; }
+function sacarDeCajas(p, r, y){
+  for(const b of MUNDO.cajas){ if(!cajaCuerpo(b, y)) continue; const cx = lim(p.x, b.x0, b.x1), cz = lim(p.z, b.z0, b.z1), dx = p.x - cx, dz = p.z - cz, d2 = dx*dx + dz*dz;
+    if(d2 >= r*r) continue;
+    if(d2 > 1e-8){ const d = Math.sqrt(d2), k = (r - d)/d; p.x += dx*k; p.z += dz*k; }
+    else { const op = [[b.x0 - r - p.x, 0], [b.x1 + r - p.x, 0], [0, b.z0 - r - p.z], [0, b.z1 + r - p.z]].sort((u, v)=> Math.abs(u[0] + u[1]) - Math.abs(v[0] + v[1]))[0]; p.x += op[0]; p.z += op[1]; } } }
+/* ¿el enemigo te tiene a tiro? la misma prueba que usa la vista: cabeza o pecho sin nada en el medio */
+function lineaLibre(e, cp){
+  const ps = e.pts ? [e.pts.cab, e.pts.pec] : [e.boca || e.pos.clone().add(V3(0, 1.4, 0))];
+  for(const q of ps){ const d = q.clone().sub(cp), L = d.length(); d.normalize(); const w = rayoMundo(cp, d, L); if(!w || w.t >= L - 0.25) return true; }
+  return false; }
 function pasarEnemigo(e, dt){
   const def = e.def, j = J.jug, cp = camPos();
   if(!e.vivo){ if(e.trapo) pasarTrapo(e); return; }
@@ -138,19 +177,23 @@ function pasarEnemigo(e, dt){
     case 'captor': e.rumbo = aJug; e.apunta = 0.3; e.cuenta -= dt; if(e.cuenta <= 0 && e.rehen && e.rehen.vivo){ ejecutar(e); } break;
     case 'llegar': {
       _v.subVectors(e.destino, e.pos); _v.y = 0; const d = _v.length(); e.moviendo = d > 0.2;
-      if(e.moviendo){ const v = def.vel*(e.avanza ? 1.1 : 1)*dt; e.pos.addScaledVector(_v, Math.min(1, v/d)); e.rumbo = e.rumbo + angDif(e.rumbo, Math.atan2(_v.x, _v.z))*0.2; e.fase += dt*def.vel*3.2; e.agache = lerp(e.agache, 0, 0.1); e.apunta = lerp(e.apunta, 0.4, 0.1);
+      if(e.moviendo && !e.padre){ const meta = rodear(e.pos, e.destino, CUERPO_R, e.pos.y); _v.set(meta.x - e.pos.x, 0, meta.z - e.pos.z); }
+      if(e.moviendo){ const dm = Math.max(1e-6, _v.length()), v = def.vel*(e.avanza ? 1.1 : 1)*dt; e.pos.addScaledVector(_v, Math.min(1, v/dm));
+        /* si en 3 s no se acercó medio metro, se queda donde está (y no camina contra la pared para siempre) */
+        if(d < (e.dAnt === undefined ? 1e9 : e.dAnt) - 0.5){ e.dAnt = d; e.trabaT = 0; } else if((e.trabaT = (e.trabaT||0) + dt) > 3){ e.trabaT = 0; e.dAnt = undefined; e.destino = acomodar(V3(e.pos.x, 0, e.pos.z)); } e.rumbo = e.rumbo + angDif(e.rumbo, Math.atan2(_v.x, _v.z))*0.2; e.fase += dt*def.vel*3.2; e.agache = lerp(e.agache, 0, 0.1); e.apunta = lerp(e.apunta, 0.4, 0.1);
         /* el escopetero que avanza tira apenas te tiene a tiro */
         if(e.avanza && dist < 9 && e.t > 1.2){ e.estado = 'apuntar'; e.avisoT = def.aviso/J.mis.dif; e.moviendo = false; } }
-      else { e.estado = e.puesto && e.puesto.alto < 2 ? 'cubierto' : 'apuntar'; e.t = 0; e.espT = rf(0.4, 1.4); e.avisoT = def.aviso/J.mis.dif; }
+      else { e.trabaT = 0; e.dAnt = undefined; e.estado = e.puesto && e.puesto.alto < 2 ? 'cubierto' : 'apuntar'; e.t = 0; e.espT = rf(0.4, 1.4); e.avisoT = def.aviso/J.mis.dif; }
       break; }
     case 'cubierto': e.moviendo = false; e.rumbo = e.rumbo + angDif(e.rumbo, aJug)*0.15; e.agache = lerp(e.agache, 1, 0.15); e.apunta = lerp(e.apunta, 0.2, 0.1);
       if(e.t > e.espT){ e.estado = 'apuntar'; e.t = 0; e.avisoT = def.aviso/J.mis.dif*(0.8 + Math.random()*0.4); } break;
     case 'apuntar': e.moviendo = false; e.rumbo = e.rumbo + angDif(e.rumbo, aJug)*0.2; e.agache = lerp(e.agache, 0, 0.18); e.apunta = lerp(e.apunta, 1, 0.2);
       e.avisoT -= dt; e.laser = e.apunta > 0.7;
-      if(e.avisoT <= 0){ e.estado = 'disparar'; e.t = 0; e.disparos = 0; e.laser = false; if(def.jefe) sfx('minigun', 0.8); } break;
+      /* sin línea de tiro (pared, cajón, la puerta todavía cerrada) no dispara: sigue apuntando y espera */
+      if(e.avisoT <= 0){ if(!lineaLibre(e, cp)){ e.avisoT = 0.3; e.laser = false; } else { e.estado = 'disparar'; e.t = 0; e.disparos = 0; e.laser = false; if(def.jefe) sfx('minigun', 0.8); } } break;
     case 'disparar': e.rumbo = e.rumbo + angDif(e.rumbo, aJug)*0.2; e.apunta = 1;
       if(e.t >= def.cadR){ e.t = 0; dispararEnemigo(e, dist); e.disparos++;
-        if(e.disparos >= def.rafaga){ if(e.avanza && dist > 3.5){ e.estado = 'llegar'; e.destino = V3(cp.x, 0, cp.z).lerp(e.pos, 0.55); e.t = 0; }
+        if(e.disparos >= def.rafaga){ if(e.avanza && dist > 3.5){ e.estado = 'llegar'; e.destino = acomodar(V3(cp.x, 0, cp.z).lerp(e.pos, 0.55)); e.t = 0; }
           else { e.estado = e.puesto && e.puesto.alto < 2 ? 'cubierto' : 'apuntar'; e.t = 0; e.espT = rf(0.8, 2.2)/J.mis.dif; e.avisoT = def.aviso/J.mis.dif*(0.9 + Math.random()*0.5); } } }
       break;
   }
@@ -159,13 +202,15 @@ function pasarEnemigo(e, dt){
     let visto = false;
     if(e.pts) for(const k of ['cab','pec']){ const d = e.pts[k].clone().sub(cp), L = d.length(); d.normalize(); const w = rayoMundo(cp, d, L); if((!w || w.t >= L - 0.2) && !civEnLinea(cp, d, L, 0.012) && Math.abs(angDif(Math.atan2(-d.x, -d.z) - J.jug.base, 0)) < rangoYaw() - 0.04){ visto = true; break; } }
     e.oculto = visto ? 0 : (e.oculto||0) + 0.5;
-    if(e.oculto > 6 && e.cuarto){ e.oculto = 0; if(e.puesto) e.puesto.ocupado = null; e.puesto = null; const c = e.cuarto;
+    const encerrado = e.cuarto && e.cuarto.cajaPuerta && MUNDO.cajas.includes(e.cuarto.cajaPuerta);
+    if(e.oculto > 6 && e.cuarto && !encerrado){ e.oculto = 0; if(e.puesto) e.puesto.ocupado = null; e.puesto = null; const c = e.cuarto;
       let mejor = null; for(let k=0;k<16 && !mejor;k++){ const q = V3(lim(cp.x + vr(-4, 4), c.cx - c.W/2 + 1, c.cx + c.W/2 - 1), 0, lim(cp.z - vr(5, 11), c.z1 + 1, c.z0 - 4.5));
-        const cab = q.clone().add(V3(0, 1.65, 0)), d = cab.clone().sub(cp), L = d.length(); d.normalize(); const w = rayoMundo(cp, d, L); if(!w || w.t > L - 0.3) mejor = q; }
-      e.destino = mejor || V3(cp.x, 0, cp.z - 6); e.estado = 'llegar'; e.t = 0; e.avanza = false; } }
+        const cab = q.clone().add(V3(0, 1.65, 0)), d = cab.clone().sub(cp), L = d.length(); d.normalize(); const w = rayoMundo(cp, d, L); if((!w || w.t > L - 0.3) && libreEn(q.x, q.z)) mejor = q; }
+      e.destino = acomodar(mejor || V3(cp.x, 0, cp.z - 6)); e.estado = 'llegar'; e.t = 0; e.avanza = false; } }
   /* los que no tienen cubierta baja se corren de costado (columna) cuando esperan */
   if(e.puesto && e.puesto.alto >= 2 && e.estado==='apuntar' && e.avisoT > def.aviso*0.6) e.moviendo = false;
   if(e.jefe || def.jefe) pasarColoso(e, dt, dist);
+  if(!e.padre) sacarDeCajas(e.pos, def.jefe ? 0.55 : CUERPO_R, e.pos.y);
 }
 function dispararEnemigo(e, dist){
   const def = e.def, j = J.jug, cp = camPos(), dif = J.mis.dif;
@@ -178,6 +223,11 @@ function dispararEnemigo(e, dist){
   if(def.corto && dist > 13) prob *= 0.3;
   const pega = !cubierto && Math.random() < prob;
   const dest = cp.clone().add(V3(vr(-0.6,0.6), vr(-0.5,0.3), vr(-0.6,0.6)));
+  /* con algo en el medio (pared, cajón, puerta) la bala pega ahí: nunca a través; y si pasa seguido, se muda a donde te vea */
+  if(!cubierto && !lineaLibre(e, cp)){ const dd = dest.clone().sub(boca), L = dd.length(); dd.normalize(); const h = rayoMundo(boca, dd, L);
+    if(h){ const p = boca.clone().addScaledVector(dd, h.t); chispas(p, 3); agujero(p, h.n); trazo(boca, p, '#ffcf8a', 0.06); }
+    e.bloqueado = (e.bloqueado||0) + 1; if(e.bloqueado >= 3){ e.bloqueado = 0; e.oculto = 7; } return; }
+  e.bloqueado = 0;
   if(cubierto){ /* pega en la cubierta de adelante */ const h = rayoMundo(boca, dest.clone().sub(boca).normalize(), boca.distanceTo(dest)); if(h){ const p = boca.clone().addScaledVector(dest.clone().sub(boca).normalize(), h.t); chispas(p, 3); agujero(p, h.n); trazo(boca, p, '#ffcf8a'); } return; }
   trazo(boca, pega ? cp.clone().add(V3(0,-0.3,0)) : dest, '#ffcf8a', 0.06);
   if(pega) danarJugador(def.dmg*(def.corto && dist < 6 ? 1.6 : 1)*(0.75 + dif*0.25), boca);
@@ -226,7 +276,7 @@ const DIFERIDOS = []; function setTimeout0(t, fn){ DIFERIDOS.push({t, fn}); }
 function pasarColoso(e, dt, dist){
   e.faseJ = e.hp < e.hpMax*0.5 ? 2 : 1;
   if(e.estado==='cubierto') e.estado = 'apuntar';
-  if(e.estado==='apuntar' && e.t > 0.05 && !e.camina){ e.camina = true; e.destino = V3(rf(-7,7), 0, lerp(e.cuarto.z1 + 4, e.cuarto.z0 - 10, rnd())); }
+  if(e.estado==='apuntar' && e.t > 0.05 && !e.camina){ e.camina = true; e.destino = acomodar(V3(rf(-7,7), 0, lerp(e.cuarto.z1 + 4, e.cuarto.z0 - 10, rnd())), 0.7); }
   if(e.camina && e.estado==='apuntar'){ _v.subVectors(e.destino, e.pos); _v.y = 0; const d = _v.length(); if(d > 0.3){ e.pos.addScaledVector(_v, Math.min(1, e.def.vel*dt/d)); e.moviendo = true; e.fase += dt*3; } else { e.moviendo = false; } }
   if(e.estado==='disparar') e.camina = false;
   /* granadas en la segunda fase */
