@@ -205,7 +205,7 @@ function abrirCofre(){
 function volverAlMenu(){ J.modo = 'menu'; J.pausa = false; J.gen++; UI.p = 'principal'; UI.t = 0; SON.musica('menu'); SON.ambiente('templo'); SON.filtroMuerte(false); SON.lento(0); SON.cinta(0.3);
   POST.satur = 1.15; POST.vin = 0.3; J.ts = 1; prepararFondoMenu(); }
 function reintentar(){ if(J.infinito) empezarInfinito(); else empezarNivel(J.idx); }
-function pausar(){ if(J.modo !== 'juego' || NIN.est === 'muerto') return; J.pausa = !J.pausa; UI.p = 'pausa'; UI.t = 0; J.apunta = null; DEDO = null; SON.fx('boton'); }
+function pausar(){ if(J.modo !== 'juego' || NIN.est === 'muerto') return; J.pausa = !J.pausa; UI.p = 'pausa'; UI.t = 0; J.apunta = null; DEDO = null; SON.fx('boton'); SON.lento(0); }
 /* ---------- el fondo del menú: una torre infinita con un ninja que salta solo ---------- */
 function prepararFondoMenu(){ J.nivel = {id:'menu', mundo:'bambu', mi:0, n:0}; J.infinito = false; armarInfinito(); arrancarCorrida(0); J.modo = 'menu'; J.tinta = null; NIN.quieto = 0; }
 function pasoFondoMenu(dt){

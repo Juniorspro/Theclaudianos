@@ -120,7 +120,7 @@ function terminarCorrida(gano){
   if(J.infinito){ res.record = J.puntos > PROG.record; if(res.record){ PROG.record = J.puntos; } }
   else if(gano){ const est = 1 + (J.monedas >= J.totMonedas ? 1 : 0) + (J.bajas >= J.totEnem ? 1 : 0), ant = PROG.niveles[J.nivel.id] || 0;
     res.estrellas = est; res.ant = ant; res.monOk = J.monedas >= J.totMonedas; res.bajOk = J.bajas >= J.totEnem; PROG.niveles[J.nivel.id] = Math.max(ant, est); PROG.abierto = Math.max(PROG.abierto, J.idx + 1); }
-  guardarProg(); UI.res = res; J.modo = 'resultado'; UI.p = gano ? 'gana' : 'muerte'; UI.t = 0; SON.filtroMuerte(false); if(!gano) SON.musica(null);
+  guardarProg(); UI.res = res; J.modo = 'resultado'; SON.lento(0); UI.p = gano ? 'gana' : 'muerte'; UI.t = 0; SON.filtroMuerte(false); if(!gano) SON.musica(null);
 }
 
 /* ================================================================ saltar */

@@ -360,7 +360,7 @@ const SON = (() => {
         else tocarMel(x, this.M, (tt, m, d, k) => koto(B, tt, m + (q === 2 ? 12 : 0), d, 0.5*k, {b:0.6, eco:0.3}));
       }},
     /* la hirajōshi, 92: lo-fi con swing, koto arpegiado en corcheas, bajo que camina y el shakuhachi que se turna con el koto */
-    bambu:{bpm:92, vol:1, intro:1, kMin:0.75, swing:0.2, ton:9, esc:[0, 2, 3, 7, 8], capas:{perc:0.15, lead:0.3, extra:0.55, taiko:0.88},
+    bambu:{bpm:92, vol:1, intro:1, kMin:0.3, swing:0.2, ton:9, esc:[0, 2, 3, 7, 8], capas:{perc:0.1, lead:0.2, extra:0.45, taiko:0.7},
       prog:'Am9 Fmaj7 Dm9 Esus Am9 Fmaj7 Bm7b5 E7b9',
       mel:'E5.3 F5.3 E5.2 C5.4 B4.4 A4.6 B4.2 C5.8 F5.4 E5.4 C5.3 B4.3 A4.2 B4.12 -.4 E5.3 F5.3 A5.2 B5.4 A5.4 F5.6 E5.2 C5.8 B4.3 C5.3 E5.2 F5.4 B4.4 E5.12 -.4',
       mel2:'A5.2 B5.2 C6.4 B5.2 A5.2 E5.4 F5.2 E5.2 C5.4 A4.8 F5.2 A5.2 C6.4 A5.2 F5.2 E5.4 B5.6 A5.2 E5.8 C6.3 B5.3 A5.2 E5.4 C5.4 F5.4 A5.4 C6.4 E6.4 F6.3 E6.3 C6.2 B5.4 A5.4 B5.4 F5.4 E5.8',
@@ -384,7 +384,7 @@ const SON = (() => {
         if(x.on('taiko')){ if(s === 0 || s === 8) taiko(D.taiko, t, 0.6, {f:62}); if(s % 4 === 2) shime(D.taiko, t, 0.3); }
       }},
     /* mi in, 88: frío y abierto. Batería a medio tiempo, campanitas que caen, viento en el colchón y mucha sala */
-    montana:{bpm:88, vol:1.05, intro:1, kMin:0.75, swing:0.14, ton:4, esc:[0, 1, 5, 7, 8], capas:{perc:0.15, lead:0.3, extra:0.55, taiko:0.9},
+    montana:{bpm:88, vol:1.05, intro:1, kMin:0.3, swing:0.14, ton:4, esc:[0, 1, 5, 7, 8], capas:{perc:0.1, lead:0.2, extra:0.45, taiko:0.75},
       prog:'Em9 Cmaj7 Am9 Bsus Em9 Cmaj7 Fmaj7 Bsus',
       mel:'B4.8 C5.4 E5.4 F5.12 E5.4 C5.8 B4.4 A4.4 B4.16 E5.8 F5.4 A5.4 B5.12 A5.4 F5.8 E5.4 C5.4 B4.16',
       mel2:'-.8 B5.4 C6.4 E6.8 C6.8 A5.8 B5.4 C6.4 B5.16 -.8 E6.4 F6.4 E6.8 C6.8 A5.8 F5.8 B5.16',
@@ -405,7 +405,7 @@ const SON = (() => {
         if(x.on('taiko')){ if(s === 0 || s === 8) taiko(D.taiko, t, 0.45, {f:55, larga:0.9, sala:0.6}); }
       }},
     /* do in, 112: el castillo en llamas. Taikos, shime en corcheas, bajo que empuja y el koto que no para */
-    castillo:{bpm:112, vol:0.95, intro:1, kMin:0.7, swing:0, ton:0, esc:[0, 1, 5, 7, 8], capas:{perc:0.1, lead:0.3, extra:0.55, taiko:0.8},
+    castillo:{bpm:112, vol:0.95, intro:1, kMin:0.3, swing:0, ton:0, esc:[0, 1, 5, 7, 8], capas:{perc:0.05, lead:0.15, extra:0.4, taiko:0.65},
       prog:'Csus Cm Dbmaj7 Cm Fm Abmaj7 Db G7sus',
       mel:'G5.4 Ab5.4 G5.2 F5.2 C5.4 Db5.6 C5.2 G4.8 Ab4.4 C5.4 Db5.4 F5.4 G5.12 -.4 C6.4 Db6.4 C6.2 Ab5.2 G5.4 F5.6 G5.2 Ab5.8 G5.3 F5.3 Db5.2 C5.4 Db5.4 C5.12 -.4',
       mel2:'C6.2 G5.2 Ab5.2 G5.2 C6.2 Db6.2 C6.2 G5.2 F5.2 G5.2 Ab5.2 C6.2 Db6.4 C6.4 F6.2 Db6.2 C6.2 Ab5.2 F5.2 Ab5.2 C6.2 Db6.2 C6.4 G5.4 Ab5.4 G5.4 C6.2 C6.2 Db6.2 C6.2 Ab5.2 G5.2 F5.2 G5.2 Ab5.4 C6.4 F6.4 Ab5.4 G5.2 Ab5.2 G5.2 F5.2 Db5.2 F5.2 G5.2 Db6.2 C6.8 G5.8',
@@ -664,9 +664,9 @@ const SON = (() => {
       TN({t:t + 0.13, f:140, f2:90, d:0.08, v:0.35, dest:d}); return 0.6; },
     /* ---- los menús */
     boton(t, o, d){ mokugyo(d, t, 0.6, 820*o.tono); kotoFx(d, t, 81 + semi(o.tono), 0.3, 0.3, {b:0.7}); return 0.6; },
-    clic(t, o, d){ RZ({t, d:0.008, v:0.8, f:3200*o.tono, q:6, dest:d}); TN({t, f:1900*o.tono, d:0.02, v:0.08, tipo:'triangle', dest:d}); return 0.1; },
-    atras(t, o, d){ RZ({t, d:0.01, v:0.9, f:2600, q:6, dest:d}); RZ({t:t + 0.06, d:0.012, v:0.8, f:1800, q:6, dest:d});
-      RZ({t, a:0.03, d:0.09, v:0.35, f:1500, f2:600, q:1, col:'rosa', dest:d}); return 0.3; },
+    clic(t, o, d){ RZ({t, d:0.01, v:1.4, f:3200*o.tono, q:5, dest:d}); TN({t, f:1900*o.tono, d:0.025, v:0.16, tipo:'triangle', dest:d}); return 0.1; },
+    atras(t, o, d){ RZ({t, d:0.012, v:1.6, f:2600, q:5, dest:d}); RZ({t:t + 0.06, d:0.014, v:1.4, f:1800, q:5, dest:d});
+      RZ({t, a:0.03, d:0.09, v:0.6, f:1500, f2:600, q:1, col:'rosa', dest:d}); return 0.3; },
     desliza_menu(t, o, d){ const k = o.tono;                                                            /* el fusuma que se corre */
       RZ({t, a:0.08, d:0.2, v:0.9, f:900*k, f2:1500*k, fd:0.25, q:0.9, col:'rosa', dest:d}); RZ({t, a:0.05, d:0.2, v:0.4, f:200, tipo:'lowpass', col:'pardo', dest:d});
       RZ({t:t + 0.26, d:0.02, v:0.25, f:700, q:4, dest:d}); return 0.45; },
