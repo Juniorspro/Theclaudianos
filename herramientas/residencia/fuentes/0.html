@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>NO LO DEJES ENTRAR</title>
+<style>
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:"Trebuchet MS", "Arial Rounded MT Bold", "Segoe UI", Roboto, system-ui, sans-serif; color:#fff; }
+  #stage { position:fixed; left:50%; top:50%; transform-origin:50% 50%; overflow:hidden; background:#000; }
+  #lienzo { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  #grano { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; opacity:0.16; mix-blend-mode:screen; }
+  #vineta { position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.55) 85%, rgba(0,0,0,0.85) 100%); }
+  #velo { position:absolute; inset:0; pointer-events:none; background:#000; opacity:0; }
+  #destello { position:absolute; inset:0; pointer-events:none; background:#8a0000; opacity:0; mix-blend-mode:multiply; }
+  .oculto { display:none !important; }
+
+  /* ---------------- el HUD: como en el original, texto blanco con borde */
+  #hud { position:absolute; inset:0; pointer-events:none; }
+  .txt { text-shadow:0 0 3px #000, 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; font-weight:800; letter-spacing:0.02em; }
+  #reloj { position:absolute; top:2.2%; left:50%; transform:translateX(-50%); font-size:clamp(18px, 5.2vmin, 34px); }
+  #objetivo { position:absolute; top:2.4%; right:2.2%; text-align:right; font-size:clamp(11px, 3.1vmin, 19px); line-height:1.15; max-width:42%; }
+  #objetivo b { display:block; font-size:1.05em; }
+  #lista { margin:0.25em 0 0; padding:0; list-style:none; font-size:0.72em; font-weight:700; }
+  #lista li.ok { color:#6dff7a; }
+  #lista li::before { content:"- "; }
+  #bateria { position:absolute; left:2.4%; bottom:4.5%; font-size:clamp(12px, 3.4vmin, 20px); }
+  #batN { display:block; margin-bottom:2px; }
+  .pila { width:clamp(46px, 13vmin, 78px); height:clamp(22px, 6vmin, 36px); border:3px solid #fff; border-radius:5px; padding:2px; display:flex; gap:2px; position:relative; box-shadow:0 0 3px #000; background:rgba(0,0,0,0.25); }
+  .pila::after { content:""; position:absolute; right:-8px; top:28%; width:5px; height:44%; background:#fff; border-radius:0 2px 2px 0; }
+  .pila i { flex:1; background:#fff; border-radius:1px; }
+  .pila i.off { background:transparent; }
+  .pila.baja i { background:#ff5a4a; }
+  #barras { position:absolute; right:1.6%; top:31%; height:39%; display:flex; gap:6px; align-items:flex-end; }
+  .barra { width:clamp(7px, 1.8vmin, 11px); height:100%; border-radius:6px; background:rgba(255,255,255,0.18); box-shadow:0 0 3px #000; position:relative; overflow:hidden; }
+  .barra i { position:absolute; left:0; right:0; bottom:0; background:#fff; border-radius:6px; }
+  #o2b.baja i { background:#ff5a4a; }
+  #stamb { height:62%; }
+  #stamb i { background:#fff; }
+  #barrasEt { position:absolute; right:0.6%; top:71%; font-size:clamp(10px, 2.6vmin, 15px); }
+  #avisos { position:absolute; right:6.5%; top:44%; display:flex; flex-direction:column; gap:6px; align-items:center; font-size:clamp(20px, 6vmin, 38px); }
+  #avisos span { animation:parpadeo 0.8s steps(2) infinite; filter:drop-shadow(0 0 2px #000); }
+  @keyframes parpadeo { 50% { opacity:0.25; } }
+  #mira { position:absolute; left:50%; top:50%; width:5px; height:5px; margin:-2.5px 0 0 -2.5px; border-radius:50%; background:rgba(255,255,255,0.8); box-shadow:0 0 2px #000; }
+  #mira.activa { width:9px; height:9px; margin:-4.5px 0 0 -4.5px; background:#fff; }
+  #aviso { position:absolute; left:50%; top:63%; transform:translateX(-50%); font-size:clamp(12px, 3.3vmin, 20px); white-space:nowrap; }
+  #subs { position:absolute; left:50%; bottom:23%; transform:translateX(-50%); width:70%; text-align:center; font-size:clamp(12px, 3.6vmin, 21px); line-height:1.25; }
+  #subs em { font-style:normal; color:#ffe27a; }
+  #pensado { position:absolute; left:50%; top:65%; transform:translateX(-50%); font-size:clamp(12px, 3.3vmin, 19px); white-space:nowrap; opacity:0; transition:opacity 0.4s; }
+
+  /* la barra de objetos, abajo al medio */
+  #barra { position:absolute; left:50%; bottom:3%; transform:translateX(-50%); display:flex; gap:6px; pointer-events:auto; }
+  .ranura { width:clamp(38px, 10.5vmin, 62px); height:clamp(38px, 10.5vmin, 62px); background:rgba(20,20,24,0.55); border:2px solid rgba(255,255,255,0.35); border-radius:6px; position:relative; display:flex; align-items:center; justify-content:center; }
+  .ranura.sel { border-color:#fff; background:rgba(60,60,70,0.7); }
+  .ranura.vacia { opacity:0.35; }
+  .ranura canvas { width:78%; height:78%; image-rendering:auto; }
+  .ranura .n { position:absolute; right:3px; bottom:1px; font-size:clamp(9px, 2.5vmin, 14px); }
+  .ranura .k { position:absolute; left:3px; top:1px; font-size:clamp(8px, 2vmin, 11px); opacity:0.7; }
+
+  /* los botones de la derecha, redondos y translúcidos como en el celular */
+  .bot { position:absolute; pointer-events:auto; border:none; border-radius:50%; background:rgba(25,25,30,0.45); box-shadow:0 0 0 2px rgba(255,255,255,0.25) inset; color:#fff; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:0; font:inherit; }
+  .bot:active, .bot.apretado { background:rgba(255,255,255,0.28); }
+  .bot svg { width:52%; height:52%; }
+  .bot small { position:absolute; bottom:-1.5em; left:50%; transform:translateX(-50%); white-space:nowrap; font-size:clamp(9px, 2.5vmin, 13px); }
+  #bAccion { right:4%; bottom:10%; width:clamp(58px, 17vmin, 96px); height:clamp(58px, 17vmin, 96px); }
+  #bAccion.apagado { opacity:0.35; }
+  #bLinterna { right:calc(4% + clamp(66px, 19vmin, 108px)); bottom:6%; width:clamp(46px, 13vmin, 74px); height:clamp(46px, 13vmin, 74px); }
+  #bLinterna.on { box-shadow:0 0 0 2px #ffe27a inset, 0 0 14px rgba(255,226,122,0.45); }
+  #bCorrer { right:5.5%; bottom:calc(10% + clamp(70px, 20vmin, 112px)); width:clamp(44px, 12vmin, 70px); height:clamp(44px, 12vmin, 70px); }
+  #bPausa { left:2%; top:3%; width:clamp(34px, 9vmin, 50px); height:clamp(34px, 9vmin, 50px); border-radius:8px; font-size:clamp(11px, 3vmin, 16px); font-weight:800; }
+  #palanca { position:absolute; width:clamp(90px, 26vmin, 150px); height:clamp(90px, 26vmin, 150px); border-radius:50%; background:rgba(255,255,255,0.08); box-shadow:0 0 0 2px rgba(255,255,255,0.22) inset; transform:translate(-50%,-50%); opacity:0; transition:opacity 0.15s; }
+  #palanca.viva { opacity:1; }
+  #palancaB { position:absolute; left:50%; top:50%; width:44%; height:44%; margin:-22% 0 0 -22%; border-radius:50%; background:rgba(255,255,255,0.35); }
+
+  /* ---------------- las cámaras de seguridad */
+  #camaras { position:absolute; inset:0; pointer-events:auto; }
+  #camaras .marco { position:absolute; inset:6% 7%; border:0 solid transparent; }
+  #camaras .esq { position:absolute; width:12%; height:18%; border-color:#fff; border-style:solid; border-width:0; }
+  #camaras .e1 { left:0; top:0; border-left-width:4px; border-top-width:4px; }
+  #camaras .e2 { right:0; top:0; border-right-width:4px; border-top-width:4px; }
+  #camaras .e3 { left:0; bottom:0; border-left-width:4px; border-bottom-width:4px; }
+  #camaras .e4 { right:0; bottom:0; border-right-width:4px; border-bottom-width:4px; }
+  #camNombre { position:absolute; left:8.5%; bottom:9%; font-size:clamp(10px, 2.8vmin, 15px); }
+  #camHora { position:absolute; left:8.5%; top:8.5%; font-size:clamp(10px, 2.8vmin, 15px); font-family:monospace; }
+  #camRec { position:absolute; right:9%; top:9%; width:14px; height:14px; border-radius:50%; background:#ff2a2a; animation:parpadeo 1s steps(2) infinite; }
+  #camCentro { position:absolute; left:50%; top:50%; width:46px; height:46px; margin:-23px 0 0 -23px; border:3px solid rgba(255,255,255,0.8); border-radius:6px; }
+  #camCentro::after { content:""; position:absolute; left:50%; top:50%; width:8px; height:8px; margin:-4px 0 0 -4px; background:#ff4a4a; border-radius:50%; }
+  #camSenal { position:absolute; left:30%; right:30%; bottom:7.5%; height:5px; background:rgba(255,255,255,0.25); }
+  #camSenal i { position:absolute; left:0; top:0; bottom:0; background:#fff; }
+  #camSenal.mala i { background:#ff5a6a; }
+  #camPerdida { position:absolute; left:50%; top:40%; transform:translateX(-50%); font-size:clamp(14px, 4.5vmin, 26px); color:#fff; font-family:monospace; }
+  .camFlecha { position:absolute; top:50%; transform:translateY(-50%); width:clamp(44px, 12vmin, 70px); height:clamp(60px, 17vmin, 96px); background:none; border:none; color:#fff; font-size:clamp(34px, 10vmin, 60px); font-weight:800; padding:0; }
+  #camIzq { left:1.5%; } #camDer { right:1.5%; }
+  #camCerrar { position:absolute; left:50%; bottom:1.5%; transform:translateX(-50%); background:none; border:none; color:#fff; font-size:clamp(14px, 4vmin, 22px); font-weight:800; padding:6px 18px; }
+
+  /* ---------------- el placard: aguantar la puerta */
+  #placard { position:absolute; inset:0; pointer-events:auto; }
+  #placard .rendija { position:absolute; inset:0; background:repeating-linear-gradient(0deg, rgba(0,0,0,0.92) 0 9%, rgba(0,0,0,0) 9% 12%); }
+  #qte { position:absolute; left:50%; top:62%; transform:translateX(-50%); width:44%; }
+  #qteBarra { position:relative; height:10px; background:linear-gradient(90deg, #4a0505, #a01010 29%, #ff6a6a 30.5%, #fff 40%, #fff 60%, #ff6a6a 69.5%, #a01010 71%, #4a0505); border-radius:5px; opacity:0.85; transition:box-shadow 0.15s; }
+  #qteBarra.mal { box-shadow:0 0 14px 4px rgba(255,30,30,0.85); }
+  #qteMarca { position:absolute; top:-7px; width:6px; height:24px; margin-left:-3px; background:#fff; box-shadow:0 0 6px #000; border-radius:2px; }
+  #qteTip { margin-top:14px; text-align:center; font-size:clamp(11px, 3vmin, 17px); }
+  .qteB { position:absolute; top:42%; width:clamp(58px, 16vmin, 92px); height:clamp(58px, 16vmin, 92px); border-radius:12px; border:3px solid rgba(255,255,255,0.8); background:rgba(0,0,0,0.4); color:#fff; font-size:clamp(26px, 8vmin, 44px); font-weight:800; }
+  .qteB.luz { background:rgba(255,255,255,0.85); color:#000; }
+  #qteIzq { left:12%; } #qteDer { right:12%; }
+  #salirPlacard { position:absolute; left:50%; bottom:6%; transform:translateX(-50%); }
+
+  /* ---------------- menús */
+  #menu { position:absolute; inset:0; pointer-events:auto; display:flex; align-items:center; justify-content:center; }
+  #menu.fondo { background:radial-gradient(ellipse at 50% 60%, rgba(0,0,0,0.2), rgba(0,0,0,0.75)); }
+  .panel { background:rgba(8,8,10,0.82); border:2px solid rgba(255,255,255,0.18); border-radius:14px; padding:clamp(10px, 3vmin, 22px) clamp(14px, 4vmin, 30px); max-width:88%; max-height:92%; overflow:auto; text-align:center; }
+  .titulo { font-size:clamp(26px, 9.5vmin, 64px); line-height:0.95; margin:0 0 0.2em; }
+  .titulo em { font-style:normal; color:#ff2323; }
+  .sub { font-size:clamp(11px, 3.1vmin, 17px); opacity:0.85; margin-bottom:1em; }
+  .boton { display:block; width:100%; min-width:clamp(160px, 42vmin, 300px); margin:0.45em auto; padding:0.55em 1em; border:2px solid rgba(255,255,255,0.75); border-radius:10px; background:rgba(0,0,0,0.35); color:#fff; font:inherit; font-weight:800; font-size:clamp(13px, 3.8vmin, 21px); letter-spacing:0.04em; }
+  .boton:active, .boton.sel { background:#fff; color:#000; }
+  .boton.rojo { border-color:#ff3b3b; }
+  .boton.rojo:active { background:#ff3b3b; color:#fff; }
+  .fila { display:flex; gap:0.5em; justify-content:center; flex-wrap:wrap; }
+  .fila .boton { width:auto; min-width:0; flex:1; }
+  .op { display:flex; align-items:center; justify-content:space-between; gap:1em; margin:0.35em 0; font-size:clamp(12px, 3.3vmin, 18px); }
+  .op .fila { flex-wrap:nowrap; }
+  .op .boton { margin:0; padding:0.35em 0.8em; font-size:clamp(11px, 3vmin, 16px); }
+  .tarjeta { display:flex; gap:1em; align-items:center; text-align:left; font-size:clamp(11px, 3.2vmin, 17px); line-height:1.3; }
+  .tarjeta canvas { width:clamp(110px, 32vmin, 220px); height:auto; border-radius:8px; border:2px solid rgba(255,255,255,0.3); flex:none; }
+  .bandera { width:1.6em; height:1.05em; vertical-align:-0.15em; margin-right:0.5em; border-radius:2px; }
+  #menuTitulo { position:absolute; left:5%; top:10%; text-align:left; }
+  #menuBotones { position:absolute; right:6%; top:50%; transform:translateY(-50%); width:clamp(180px, 46vmin, 340px); }
+  .nota { font-size:clamp(10px, 2.6vmin, 14px); opacity:0.7; margin-top:0.6em; }
+  .grande { font-size:clamp(28px, 10vmin, 70px); line-height:1; margin:0.1em 0 0.3em; }
+  .grande.rojo { color:#ff2a2a; }
+  #carga { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#000; font-size:clamp(14px, 4vmin, 22px); letter-spacing:0.3em; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="lienzo"></canvas>
+  <canvas id="grano" width="192" height="108"></canvas>
+  <div id="vineta"></div>
+  <div id="destello"></div>
+  <div id="hud" class="oculto">
+    <div id="reloj" class="txt">4 PM</div>
+    <div id="objetivo" class="txt"><b id="objT">Objetivo:</b><span id="objTxt"></span><ul id="lista"></ul></div>
+    <div id="bateria" class="txt"><span id="batN">×1</span><div class="pila" id="pila"><i></i><i></i><i></i><i></i></div></div>
+    <div id="barras"><div class="barra" id="o2b"><i></i></div><div class="barra" id="stamb"><i></i></div></div>
+    <div id="barrasEt" class="txt">O₂</div>
+    <div id="avisos"><span id="avLuz" class="oculto">⚡</span><span id="avGen" class="oculto">⛽</span><span id="avAire" class="oculto">☣</span></div>
+    <div id="mira"></div>
+    <div id="pensado" class="txt"></div>
+    <div id="aviso" class="txt"></div>
+    <div id="subs" class="txt"></div>
+    <div id="barra"></div>
+    <div id="palanca"><div id="palancaB"></div></div>
+    <button class="bot" id="bAccion"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12.6 2c-.9 0-1.6.7-1.6 1.6V11h-.8V4.4c0-.9-.7-1.6-1.6-1.6S7 3.5 7 4.4v8.9l-1.7-2c-.6-.7-1.6-.8-2.3-.2-.6.5-.8 1.4-.3 2.1l3.6 5.4C7.6 20.6 9.7 22 12.3 22h.9c3.2 0 5.8-2.6 5.8-5.8V7.1c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6V11H15V4.4c0-.9-.7-1.6-1.6-1.6h-.8z"/></svg><small id="bAccionT" class="txt"></small></button>
+    <button class="bot" id="bLinterna"><svg viewBox="0 0 24 24" fill="#fff"><path d="M8 2h8l-1 5H9L8 2zm1 6h6v2l-1.5 2.5V21a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-8.5L9 10V8z"/></svg></button>
+    <button class="bot" id="bCorrer"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3l7 7-2 2-5-5-5 5-2-2 7-7zm0 7l7 7-2 2-5-5-5 5-2-2 7-7z"/></svg></button>
+    <button class="bot txt" id="bPausa">❚❚</button>
+  </div>
+  <div id="camaras" class="oculto">
+    <div class="marco"><div class="esq e1"></div><div class="esq e2"></div><div class="esq e3"></div><div class="esq e4"></div></div>
+    <div id="camHora" class="txt"></div><div id="camRec"></div><div id="camCentro"></div>
+    <div id="camNombre" class="txt"></div><div id="camSenal"><i></i></div><div id="camPerdida" class="txt oculto"></div>
+    <button class="camFlecha txt" id="camIzq">&lt;</button><button class="camFlecha txt" id="camDer">&gt;</button>
+    <button id="camCerrar" class="txt">[ X ]</button>
+  </div>
+  <div id="placard" class="oculto">
+    <div class="rendija"></div>
+    <div id="qte" class="oculto"><div id="qteBarra"><div id="qteMarca"></div></div><div id="qteTip" class="txt"></div></div>
+    <button class="qteB txt oculto" id="qteIzq">◀</button><button class="qteB txt oculto" id="qteDer">▶</button>
+    <button class="boton" id="salirPlacard" style="width:auto"></button>
+  </div>
+  <div id="menu"></div>
+  <div id="carga">CARGANDO</div>
+  <script>try { var a = JSON.parse(localStorage.getItem('residencia.ajustes') || '{}'), l = a.idioma || (navigator.language || 'es').slice(0, 2).toLowerCase(); document.getElementById('carga').textContent = l === 'en' ? 'LOADING' : l === 'pt' ? 'CARREGANDO' : 'CARGANDO'; } catch(e){}</script>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){

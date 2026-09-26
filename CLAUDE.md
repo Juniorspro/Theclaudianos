@@ -17,6 +17,9 @@ se prueba **en el celular, en vertical (412×892)**.
 | `juegos-pc/Sombra.html` | **SOMBRA.** Saltos verticales a lo *Ninja Tobu*, se juega **parado**: arrastrar para atrás y soltar, cámara lenta al apuntar, doble salto, enemigos que se matan atravesándolos, 3 mundos × 8 desafíos generados y verificados con **un jefe al final de cada mundo** (Gran Tengu, Yuki-onna, Shogun), modo infinito que pasa por los tres mundos con tinta que sube, tienda de 7 ninjas y 7 efectos, cofre, ES/EN/PT. |
 | `herramientas/sombra/` | Fuentes de `Sombra.html` (`fuentes/`), `armar.sh` y el banco (`banco/`: bot que juega los 24 niveles y el infinito, bot de jefes, dedo, fuzz, pantallas). **Se edita la fuente.** |
 | `.claude/skills/juego-vertical` | Receta de los saltos verticales: torre en anillo, tramos verificados con la física real, bot que sigue el plan. |
+| `juegos-pc/Residencia.html` | **NO LO DEJES ENTRAR.** Terror en primera persona a lo *Residence Massacre* (Roblox): casa de bloques de dos pisos, de 4 PM a 12 te preparás (radio, linterna, tablas en las ventanas, cámaras, generador que da el aire, fusibles) y de 12 a 6 AM un bicho da vueltas, respira detrás de una ventana antes de atacar, se espanta con la luz del cuarto y si entra te busca: placard con minijuego o susto. Tres dificultades, ES/EN/PT, three.js r128. Se juega apaisado. |
+| `herramientas/residencia/` | Fuentes de `Residencia.html` (`fuentes/`), `armar.sh` y el banco (`banco/`: noche entera con un jugador que reacciona, la preparación con la mano, alcance caminando, placard sin navegador, dedos, idiomas, fuzz, capturas). **Se edita la fuente.** |
+| `.claude/skills/juego-terror` | Receta del terror en primera persona: luz de adentro separada del sol, cuatro luces fijas, interacción por ángulo, bicho con estados y caminos, placard medido contra una persona, susto encuadrado. |
 | `herramientas/mate/` | Fuentes de `Mate.html` por partes (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`). **Se edita la fuente, no el HTML.** |
 | `.claude/skills/juego-25d` | Receta del 2.5D pixel art: render, sprites, niveles verificados, cinemáticas, menús, idiomas. |
 | `docs/GUIA_JUEGOS_2D_PIXEL.md` | Receta para juegos 2D pixel art (escala entera, piezas, banco). La usa `Saltos.html`. |
@@ -1872,3 +1875,110 @@ Medido (`banco/audio_jefes.js` y `banco/jefes.js` con `SONIDO=1`):
   errores de audio.
 - Idiomas, fuzz de 500, dedo e infinito sin errores.
 
+
+### 2026-09-26 (ay) — NO LO DEJES ENTRAR, a lo Residence Massacre
+**Pedido textual:** «Okey, hagamos un último juego, esfuérzate todo lo que puedas. Investiga todo lo que puedas el juego
+"residence massacre" es un juego de roblox así que quiero que mires videos y busques información (toda la que puedas) para
+hacer que el juego realmente genere miedo, confío en ti mi bro» (con tres capturas: la miniatura «DON'T LET IT GET INSIDE»,
+el juego a las 12 AM con las ventanas tapiadas y a las 7 PM con la barra de O₂).
+
+**Lo que se sacó del original** (*Residence Massacre*, de MisterGamer_67). Los videos completos de YouTube pedían
+verificación de robot, así que se bajaron los **storyboards** (las hojas de miniaturas) de cuatro partidas y se miraron
+cuadro por cuadro. Además se leyeron guías de jugadores:
+- 4 PM «entrá a tu casa», la radio de emergencia y el «preparate para la noche» con lista: tapar una ventana, instalar una
+  cámara, cargar el generador.
+- Las tablas están arriba: se llevan de a tres, van hasta tres por ventana y hay quince en total. Se clavan con martillo.
+- El generador está en el galpón y cada bidón carga un tercio. **El generador es el aire**: si se apaga, te ahogás.
+- La caja de fusibles está atrás de la casa. Salta si prendés muchas luces y se arregla con la llave en el cable que echa
+  chispas.
+- Hay tres cámaras que se miran desde la compu de arriba.
+- De 12 a 6 el bicho **respira del otro lado del vidrio** antes de romperlo, y la luz del cuarto lo espanta. Si entra,
+  titilan las luces y te busca.
+- Si te escondés en el placard, hay que mantener el agarre en el centro. Y al morir, un consejo.
+
+`juegos-pc/Residencia.html` (336 KB, un archivo, three r128 del CDN). Primera persona, bloques estilo Roblox, **se juega
+apaisado**. Llegás a tu casa en el barrio Bloxia, pegado a una planta química que tuvo un derrame.
+- **La casa**: dos pisos con living, entrada, cocina, comedor, dormitorio, baño, lavadero, dormitorio grande, cuarto del
+  nene, baño de arriba y depósito. Tiene escalera, 13 ventanas, 9 puertas (las de afuera con llave), 14 llaves de luz,
+  3 placards, heladera, tele y teléfono. En el patio están el galpón, el tambor de nafta, la caja de fusibles, los árboles,
+  el poste con la cámara, el farol y la vereda; enfrente, la calle con la planta verde al fondo.
+- **La tarde (4 PM a 12)**:
+  - la radio lee el aviso: seis líneas con voz sintetizada y subtítulos;
+  - después hay que buscar la linterna y las pilas, sacar las tablas de arriba, clavarlas manteniendo la mano, instalar
+    las tres cámaras, cargar el generador de a bidones y agarrar la llave inglesa del lavadero;
+  - a las 7 suena el teléfono y alguien respira; a las 9 la tele da el derrame y pasan patrulleros que te pisan si estás
+    en la calle;
+  - a las 10 el bicho se para en el fondo mirando la casa; a las 11:20 cruza la calle galopando;
+  - con todo listo, la radio deja adelantar la noche.
+- **La noche (12 a 6)**:
+  - el bicho da vueltas por un grafo alrededor de la casa;
+  - elige una ventana y **respira** detrás del vidrio (que se empaña), rompe el vidrio y arranca las tablas de a una;
+  - la luz del cuarto o la linterna en la cara lo espantan;
+  - por las ventanas de arriba trepa; las puertas con llave las embiste;
+  - adentro camina una grilla con A* por los dos pisos, olfatea los placards, oye tus pasos, te persigue si te ve y
+    **te saca del placard** si te vio entrar.
+  - Sustos guionados: golpes en la puerta a la 1, pasos arriba sin nadie, la cara en la tele a las 2, los fusibles que
+    saltan a las 2:30 y la segunda llamada, que después manda al bicho a la ventana de la cocina.
+- **El placard**: el bicho tira de la puerta para un lado y cada toque de ◀ ▶ corre la marca para el otro.
+- **El susto**: se tira encima desde 1,9 m hasta tener la cara entera delante, con la cara iluminada, temblor, el HUD
+  apagado y el golpe más fuerte de la mezcla. Después sale la pantalla de muerte con la causa, un consejo,
+  «REINTENTAR DESDE LAS 12» y empezar de nuevo.
+- **Dificultad**:
+  - fácil: 18 tablas, más tiempo y más respiración, y el placard tira menos;
+  - normal: como el original;
+  - pesadilla: 12 tablas, menos nafta y respiración de 4,2 → 2,8 s, sin reintentos.
+- **Sonido todo sintetizado** (lo hizo un agente aparte, 117 KB): 69 efectos, 12 bucles, 8 músicas, dos reverbs, paneo
+  HRTF con Doppler en la sirena, corazón que late con el miedo, grillos que se callan cuando el bicho está cerca y el
+  placard que amortigua todo.
+- Menús con idioma y banderas, título sobre la casa de noche, cómo se juega, opciones (calidad, sensibilidad, brillo,
+  música, sonido, subtítulos, vibración) y pausa. **Castellano, inglés y portugués** (170 frases).
+
+Lo que costó una vuelta cada uno:
+- **Una pared fantasma cruzaba el hall de lado a lado.** Dos paredes comparten la línea z = 0 y la de la izquierda se
+  quedaba con el arco de la cocina, que es de la otra: del living a x 4,4 era pared maciza. Tapaba la escalera y **cortaba
+  los caminos del bicho**, que nunca llegaba al sur del hall. Los huecos se filtran al tramo de cada pared. Medido con la
+  grilla de alcance: los 58 objetos se alcanzan caminando.
+- **Lo que está sobre un mueble no se podía agarrar.** La vista muestreaba el segmento y el último punto caía adentro de la
+  mesa de la radio, del tambor o del escritorio de la compu. El mueble que sostiene la cosa no la tapa.
+- **El placard era imposible para una persona.** Cada toque daba velocidad y con 0,3 s de atraso el control oscila: ganaba
+  el 9%. Ahora el toque corre la marca y frena el tirón (`qte.js`).
+- **Con 2,4 s de respiración nadie llega a prender la luz.** Ahora va por dificultad: en normal, de 5,5 s a las 12 a 3,6 s
+  a las 6.
+- **El susto a 0,6 m mostraba el entrecejo**, y en el cuarto a oscuras la cara medía 40 sobre 255. Ahora se mide dónde quedó
+  la cabeza respecto de la raíz y se la pone a 1,05 m, con una luz pegada.
+- **Los pisos de adentro salían con el pasto**: estaban al mismo alto. El piso va 1,5 cm arriba.
+- **El cielo de la tarde salía blanco**: pasaba por el ACES y la codificación sRGB, y la niebla no. Ahora sale tal cual,
+  igual que la niebla.
+- **Detrás del vidrio empañado no se veía nada.** La cabeza del bicho quedaba por arriba del dintel: ahora se agacha y se
+  mide dónde quedó la cabeza para ponerla en el medio de la ventana, a 0,6 m del vidrio y mirando para adentro. Los ojos
+  se dibujan después del vidrio, el halo crece de noche, la piel tiene un pelo de emisión y el vaho se quedó en la mitad.
+- El estado del placard **pasaba de una partida a la otra** («perdido» desde el arranque).
+- Una sonda que pone `abierta` a mano no mueve la hoja ni su colisión: las puertas se abren con `meta` y se animan.
+
+Medido:
+- **Una noche entera con un jugador que reacciona** (`noche.js`, normal):
+
+  | cómo juega | sobrevive |
+  |---|---|
+  | quieto en el hall | 0 de 7 |
+  | sólo se esconde (placard jugado como persona) | 3 de 12 |
+  | prende la luz a los 2,5 s | 9 de 10 |
+  | prende la luz a los 4 s | 9 de 10 |
+  | tablas en todo y luz a los 5,5 s | 4 de 4 |
+
+  Con la luz a los 2,5 s, en fácil 4 de 4 y en pesadilla 4 de 4. Hay unos 10 ataques por noche y 6 recargas de nafta.
+  Esconderse sirve para zafar, no para pasar la noche: el bicho vuelve a entrar y a las 5 el placard se pierde más.
+- **El placard** contra una persona (`qte.js`, a las 12 / a las 3 / a las 6): rápida 100/97/87%, normal 100/95/75%,
+  lenta 98/87/47%.
+- **La preparación con la mano** (`prep.js`): puerta, radio, linterna, pilas, llave, heladera, tablas, clavar, las tres
+  cámaras, bidón, tambor, generador, luz, tele, compu, placard, teléfono, fusibles y cerrojo. Todo anda. La radio dura
+  35 s y hacen falta dos bidones para llegar al 60% (20 → 54 → 88).
+- **Dedos de verdad** en la pantalla girada (`toques.js`): la palanca adelante camina 1,7 m, arrastrar a la derecha gira
+  −0,50 rad, arriba sube 0,34, dos dedos a la vez caminan y giran, y los botones de linterna, pausa y mano andan.
+- Idiomas: `TR_FALTA` vacío en inglés (160 textos vistos) y en portugués (158).
+- Fuzz de 300 acciones en portugués sin errores, sin NaN y sin estados imposibles.
+- Audio: todo efecto pedido existe (0 faltantes). El pico más alto fuera del susto es 0,88; el susto llega a 0,90.
+- Llamadas de dibujo: 20 a 60 adentro y 100 a 145 afuera, con 15 a 17 mil triángulos.
+
+Queda para decidir: el horneado del sonido en un celular puede dar tirones de 200 a 400 ms durante los primeros ~30 s
+después del primer toque (casi siempre caen en el menú). La dificultad la tiene que probar una persona con auriculares.
