@@ -50,7 +50,8 @@ function dibujarLuchador(e, cam){
   const u = MED.u, s = e.T.alto*e.escala/P.meta.alto*u, x = (e.x - cam)*u, y = PISO*u;
   /* la sombra: más chica si salta o cae */
   g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(x, y + 2*u, e.T.alto*0.26*e.escala*u, 7*u, 0, 0, 7); g.fill();
-  g.save(); g.translate(x, y); if(e.dir < 0) g.scale(-1, 1);
+  /* sosteniendo la carga, el cuerpo tiembla un pelo: se ve que va a soltar */
+  g.save(); g.translate(x + (e.animT < 0 ? Math.sin(RELOJ.real*62)*1.3*u : 0), y); if(e.dir < 0) g.scale(-1, 1);
   if(e.tint){ g.shadowColor = e.tint; g.shadowBlur = 16*u; }
   if(e.aturdido > 0 && Math.floor(RELOJ.real*8) % 2) g.globalAlpha = 0.85;
   g.drawImage(q.c, q.ox*s, q.oy*s, q.w*s, q.h*s);

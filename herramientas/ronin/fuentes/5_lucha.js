@@ -8,18 +8,18 @@ const PISO = 350, ARENA = {x0:40, x1:1180};
 /* cada tipo: su personaje, alto en el mundo, vida, equilibrio, sus golpes y cómo pelea */
 const TIPOS = {
   heroe:{pj:'heroe', alto:196, vida:300, post:100, vel:150},
-  bandido:{pj:'e_bandido', nombre:'Bandido de la montaña', alto:192, vida:130, post:80, vel:95, dano:34, pesado:70, alc:112, alcP:125, p:{ataque:0.55, pesado:0.25, guardia:0.25, atras:0.1}, espera:[0.7, 1.5], oro:14},
-  lancero:{pj:'e_lancero', nombre:'Lancero ashigaru', alto:192, vida:150, post:90, vel:85, dano:30, pesado:66, alc:170, alcP:185, p:{ataque:0.6, pesado:0.2, guardia:0.3, atras:0.2}, espera:[0.8, 1.6], oro:16},
-  shinobi:{pj:'e_shinobi', nombre:'Shinobi', alto:176, vida:120, post:70, vel:170, dano:28, pesado:62, alc:105, alcP:118, rapido:1.35, p:{ataque:0.65, pesado:0.2, guardia:0.15, atras:0.35}, espera:[0.35, 0.9], oro:20},
-  monje:{pj:'e_monje', nombre:'Monje guerrero', alto:204, vida:200, post:120, vel:80, dano:38, pesado:82, alc:165, alcP:180, p:{ataque:0.45, pesado:0.3, guardia:0.45, atras:0.1}, espera:[0.8, 1.7], oro:24},
-  general:{pj:'j_general', nombre:'General Akagane', jefe:true, alto:250, vida:1100, post:260, vel:80, dano:46, pesado:96, alc:160, alcP:185, p:{ataque:0.45, pesado:0.3, especial:0.2, guardia:0.35, atras:0.05}, espera:[0.6, 1.3], oro:260, armadura:0.35},
-  maestro:{pj:'j_maestro', nombre:'Kageyama, el maestro de la espada', jefe:true, alto:204, vida:1250, post:240, vel:120, dano:44, pesado:90, alc:150, alcP:170, rapido:1.2, p:{ataque:0.55, pesado:0.25, especial:0.2, guardia:0.5, atras:0.15}, espera:[0.35, 0.9], oro:420},
-  oni:{pj:'j_oni', nombre:'Shuten, el oni', jefe:true, alto:286, vida:1700, post:320, vel:70, dano:58, pesado:120, alc:175, alcP:205, p:{ataque:0.4, pesado:0.35, especial:0.25, guardia:0.15, atras:0.05}, espera:[0.7, 1.4], oro:650, armadura:0.5},
-  gashadokuro:{pj:'y_gashadokuro', nombre:'Gashadokuro', yokai:true, jefe:true, alto:250, vida:2600, post:400, vel:40, dano:62, pesado:130, alc:230, alcP:260, p:{ataque:0.5, pesado:0.45, guardia:0, atras:0}, espera:[0.8, 1.6], oro:900, armadura:0.6, fijo:true},
-  oogama:{pj:'y_oogama', nombre:'Oogama', yokai:true, jefe:true, alto:230, vida:2200, post:360, vel:55, dano:56, pesado:118, alc:220, alcP:250, p:{ataque:0.55, pesado:0.4, guardia:0, atras:0}, espera:[0.7, 1.4], oro:800, armadura:0.55, fijo:true},
+  bandido:{pj:'e_bandido', nombre:'Bandido de la montaña', alto:192, vida:130, post:80, vel:95, dano:34, pesado:70, alc:140, alcP:153, p:{ataque:0.55, pesado:0.25, guardia:0.25, atras:0.1}, espera:[0.7, 1.5], oro:14},
+  lancero:{pj:'e_lancero', nombre:'Lancero ashigaru', alto:192, vida:150, post:90, vel:85, dano:30, pesado:66, alc:198, alcP:213, p:{ataque:0.6, pesado:0.2, guardia:0.3, atras:0.2}, espera:[0.8, 1.6], oro:16},
+  shinobi:{pj:'e_shinobi', nombre:'Shinobi', alto:176, vida:120, post:70, vel:170, dano:28, pesado:62, alc:133, alcP:146, rapido:1.35, p:{ataque:0.65, pesado:0.2, guardia:0.15, atras:0.35}, espera:[0.35, 0.9], oro:20},
+  monje:{pj:'e_monje', nombre:'Monje guerrero', alto:204, vida:200, post:120, vel:80, dano:38, pesado:82, alc:193, alcP:208, p:{ataque:0.45, pesado:0.3, guardia:0.45, atras:0.1}, espera:[0.8, 1.7], oro:24},
+  general:{pj:'j_general', nombre:'General Akagane', jefe:true, alto:250, vida:880, post:230, vel:80, dano:40, pesado:84, alc:188, alcP:213, p:{ataque:0.45, pesado:0.3, especial:0.2, guardia:0.35, atras:0.05}, espera:[0.6, 1.3], oro:260, armadura:0.35},
+  maestro:{pj:'j_maestro', nombre:'Kageyama, el maestro de la espada', jefe:true, alto:204, vida:1250, post:240, vel:120, dano:44, pesado:90, alc:178, alcP:198, rapido:1.2, p:{ataque:0.55, pesado:0.25, especial:0.2, guardia:0.5, atras:0.15}, espera:[0.35, 0.9], oro:420},
+  oni:{pj:'j_oni', nombre:'Shuten, el oni', jefe:true, alto:286, vida:1700, post:320, vel:70, dano:58, pesado:120, alc:203, alcP:233, p:{ataque:0.4, pesado:0.35, especial:0.25, guardia:0.15, atras:0.05}, espera:[0.7, 1.4], oro:650, armadura:0.5},
+  gashadokuro:{pj:'y_gashadokuro', nombre:'Gashadokuro', yokai:true, cuerpo:150, jefe:true, alto:250, vida:2600, post:400, vel:40, dano:62, pesado:130, alc:300, alcP:330, p:{ataque:0.5, pesado:0.45, guardia:0, atras:0}, espera:[0.8, 1.6], oro:900, armadura:0.6, fijo:true},
+  oogama:{pj:'y_oogama', nombre:'Oogama', yokai:true, cuerpo:110, jefe:true, alto:230, vida:2200, post:360, vel:55, dano:56, pesado:118, alc:248, alcP:278, p:{ataque:0.55, pesado:0.4, guardia:0, atras:0}, espera:[0.7, 1.4], oro:800, armadura:0.55, fijo:true},
 };
 /* los golpes del héroe: el combo va rápido, rápido, fuerte; cada uno con su alcance, daño y equilibrio que saca */
-const GOLPES = {tajo2:{alc:118, dano:1, post:14, fps:24, sig:'tajo3'}, tajo3:{alc:140, dano:1.1, post:16, fps:24, sig:'tajo'}, tajo:{alc:122, dano:1.55, post:26, fps:22, sig:null}};
+const GOLPES = {tajo2:{alc:146, dano:1, post:14, fps:24, sig:'tajo3'}, tajo3:{alc:168, dano:1.1, post:16, fps:24, sig:'tajo'}, tajo:{alc:150, dano:1.55, post:26, fps:22, sig:null}};
 const ESPADAS = {
   sarashi:{nombre:'Katana sin nombre', rango:0, dano:30, hab:'aniquilacion', precio:0},
   kaze:{nombre:'Filo del viento', rango:1, dano:36, hab:'concentracion', precio:600},
@@ -56,10 +56,12 @@ const LUCHA = {heroe:null, enemigo:null, fx:[], manchas:[], numeros:[], cam:0, c
   ki:0, conc:0, distorsion:0, fin:null, finT:0, texto:null, textoT:0, bend:{}, combo:0, comboT:0, stats:null, tutorial:null, dmgMult:1};
 function nuevaPelea(tipoEnemigo, extra){
   const L = LUCHA, H = L.heroe || luchador('heroe', 380, 1);
-  Object.assign(H, {x:ARENA.x0 + 300, dir:1, estado:'quieto', t:0, vivo:true, aturdido:0, flash:0, ivul:0, golpeo:false}); anima(H, 'quieto');
+  Object.assign(H, {x:ARENA.x0 + 300, dir:1, estado:'quieto', t:0, vivo:true, aturdido:0, flash:0, ivul:0, golpeo:false, empuje:0, sinPostT:9, animVel:1}); anima(H, 'quieto');
   H.post = H.postMax; L.heroe = H;
+  /* un dedo que quedó apoyado de la pelea anterior no pasa a esta */
+  ENT.izq = ENT.der = ENT.guardia = false; ENT.dedos.clear(); ENT.ataque = ENT.esquive = ENT.habilidad = -9;
   const E = luchador(tipoEnemigo, H.x + 330, -1, extra); anima(E, 'quieto'); E.estado = 'entra'; E.t = 0; L.enemigo = E;
-  L.fx = []; L.numeros = []; L.fin = null; L.finT = 0; L.congelado = 0; L.lento = 0; L.conc = 0; L.distorsion = 0; L.combo = 0;
+  L.fx = []; L.numeros = []; L.fin = null; L.finT = 0; L.congelado = 0; L.lento = 0; L.lentoT = 0; L.pendiente = null; L.textoT = 0; L.cerrando = false; L.resucito = false; RELOJ.escala = 1; L.conc = 0; L.distorsion = 0; L.combo = 0;
   L.cam = L.camObj = (H.x + E.x)/2 - 446; L.stats = L.stats || {desvios:0, relampagos:0, golpes:0, recibido:0};
   SON.fx(TIPOS[tipoEnemigo].jefe ? 'jefe_aparece' : 'etapa'); SON.intensidad(0.3);
 }
@@ -134,10 +136,12 @@ function pasoHeroe(H, E, dt){
   else if(H.estado === 'aturdido'){ H.aturdido -= dt; if(H.aturdido <= 0){ H.post = H.postMax*0.5; ponerEstado(H, 'quieto'); } }
   else if(pedido('habilidad', 0.2) && LUCHA.ki >= 1 && (libre || encadenable)){ ENT.habilidad = -9; usarHabilidad(H, E, st); }
   else if(pedido('esquive', 0.2) && (libre || encadenable || H.estado === 'golpeado' && H.t > 0.18)){ ENT.esquive = -9; ponerEstado(H, 'esquive'); anima(H, 'esquive'); H.fpsAnim = 26; H.ivul = 0.42; SON.fx('esquive'); }
+  /* la guardia corta el final de un tajo o de un golpe recibido: si no, desviar dependería de no haber atacado */
+  else if(ENT.guardia && RELOJ.t - ENT.guardiaDesde < 0.2 && (encadenable || H.estado === 'golpeado' && H.t > 0.2 || H.estado === 'desvio' && H.t > 0.12)){ ponerEstado(H, 'guardia'); anima(H, 'guardia'); H.fpsAnim = 26; }
   else if(pedido('ataque') && (libre || encadenable)){
     ENT.ataque = -9;
     /* ¿está por llegar un golpe imparable? atacar justo antes es el contragolpe relámpago */
-    if(E.vivo && E.aviso === 'pesado' && E.tImpacto - E.t < 0.5 && E.tImpacto - E.t > 0.02 && Math.abs(E.x - H.x) < E.T.alcP + 60) relampago(H, E, false);
+    if(E.vivo && E.aviso === 'pesado' && E.tImpacto - E.t < 0.5 && E.tImpacto - E.t > 0.02 && Math.abs(E.x - H.x) < E.T.alcP + 60 + (E.T.cuerpo || 0)) relampago(H, E, false);
     else if(LUCHA.conc > 0 && E.vivo && Math.abs(E.x - H.x) < 260){ LUCHA.conc--; relampago(H, E, true); }
     else { const sig = encadenable ? GOLPES[H.estado].sig || 'tajo2' : 'tajo2'; ponerEstado(H, sig); anima(H, sig); H.fpsAnim = GOLPES[sig].fps; SON.fx(sig === 'tajo3' ? 'estocada' : sig, {pan:panDe(H.x)}); }
   }
@@ -150,7 +154,7 @@ function pasoHeroe(H, E, dt){
   /* los golpes del combo: pegan en su cuadro */
   const G = GOLPES[H.estado];
   if(G){ if(!H.golpeo && H.t >= tGolpe(H, H.estado, G.fps)){ H.golpeo = true;
-      if(E.vivo && Math.abs(E.x - H.x) < G.alc*1.0 && Math.sign(E.x - H.x) === H.dir){
+      if(E.vivo && Math.abs(E.x - H.x) < G.alc + (E.T.cuerpo || 0) && Math.sign(E.x - H.x) === H.dir){
         if(E.estado === 'guardiaE' || (E.estado === 'quieto' || E.estado === 'caminar') && !E.T.fijo && Math.random() < E.T.p.guardia*(E.aturdido > 0 ? 0 : 1)){
           bloqueaEnemigo(E, H, G); }
         else { danar(E, H, st.dano*G.dano*rv(0.92, 1.08), G.post, {fuerte:H.estado === 'tajo', ang:H.estado === 'tajo2' ? -0.7 : H.estado === 'tajo3' ? 0 : 0.8}); LUCHA.stats.golpes++; pausaGolpe(H.estado === 'tajo' ? 0.08 : 0.05); }
@@ -218,7 +222,7 @@ function pasoEnemigo(E, H, dt){
       if(!H.vivo || LUCHA.fin){ if(E.estado !== 'quieto') ponerEstado(E, 'quieto'); break; }
       E.espera -= d; const quiere = T.alc - 14;
       if(!T.fijo && dist > quiere + 20){ E.x += haciaH*T.vel*d; if(E.estado !== 'caminar'){ ponerEstado(E, 'caminar'); anima(E, 'caminar'); E.fpsAnim = 12; } }
-      else if(!T.fijo && dist < 70){ E.x -= haciaH*T.vel*0.8*d; if(E.estado !== 'caminar'){ ponerEstado(E, 'caminar'); anima(E, 'caminar'); E.fpsAnim = 12; } E.animVel = -1; }
+      else if(!T.fijo && dist < 96){ E.x -= haciaH*T.vel*0.8*d; if(E.estado !== 'caminar'){ ponerEstado(E, 'caminar'); anima(E, 'caminar'); E.fpsAnim = 12; } E.animVel = -1; }
       else if(E.estado !== 'quieto') ponerEstado(E, 'quieto');
       /* reacciona al tajo del héroe: a veces se cubre antes de que llegue */
       if(GOLPES[H.estado] && !H.golpeo && dist < 170 && !T.fijo && Math.random() < T.p.guardia*d*4){ ponerEstado(E, 'guardiaE'); E.guardiaT = 0.55; break; }
@@ -241,13 +245,15 @@ function elegirAtaque(E, H){
   if(r > p.ataque) cual = r > p.ataque + p.pesado && PJ[E.pj].anims.especial ? 'especial' : 'pesado';
   ponerEstado(E, cual); anima(E, cual); const A = animDe(E);
   E.fpsAnim = cual === 'ataque' ? 16 : 13; if(furia) E.fpsAnim *= 1.15;
-  E.tImpacto = tGolpe(E, cual, E.fpsAnim); E.aviso = cual === 'ataque' ? 'ligero' : 'pesado'; E.avisoDado = false;
+  /* la carga: si el video pega enseguida (un iaido), se sostiene la pose de arranque hasta que alcance para reaccionar */
+  E.pre = Math.max(0, (cual === 'ataque' ? 0.46 : 0.62)*(furia ? 0.9 : 1) - tGolpe(E, cual, E.fpsAnim)); E.animT = -E.pre;
+  E.tImpacto = tGolpe(E, cual, E.fpsAnim) + E.pre; E.aviso = cual === 'ataque' ? 'ligero' : 'pesado'; E.avisoDado = false;
   E.espera = rv(T.espera[0], T.espera[1])*(furia ? 0.7 : 1);
 }
 function ataqueEnemigo(E, H, d){
-  const T = E.T, dur = duracion(E, E.estado, E.fpsAnim), ti = E.tImpacto;
+  const T = E.T, dur = duracion(E, E.estado, E.fpsAnim) + (E.pre || 0), ti = E.tImpacto;
   /* el aviso: destello blanco 0,35 s antes del golpe normal; el kanji rojo desde que arranca el imparable */
-  if(!E.avisoDado && (E.aviso === 'pesado' || E.t >= ti - 0.38)){ E.avisoDado = true;
+  if(!E.avisoDado && (E.aviso === 'pesado' || E.t >= ti - 0.38)){ E.avisoDado = true; LUCHA.stats.avisos = (LUCHA.stats.avisos || 0) + 1;
     if(E.aviso === 'pesado'){ SON.fx('aviso_pesado', {pan:panDe(E.x)}); fx('kanjiAviso', E.x, PISO - T.alto*E.escala - 30, {vida:ti - E.t + 0.15, e:E}); }
     else { SON.fx('aviso_ligero', {pan:panDe(E.x)}); fx('destello', E.x + E.dir*T.alc*0.55, PISO - T.alto*0.62*E.escala, {vida:0.4}); } }
   if(!E.golpeo && E.t >= ti){ E.golpeo = true; const aviso = E.aviso; E.aviso = null;
@@ -284,7 +290,7 @@ function pasoLucha(dtReal){
   if(L.distorsion > 0) L.distorsion -= dtReal;
   pasoHeroe(H, E, dt); pasoEnemigo(E, H, dt);
   /* los cuerpos no se atraviesan: el que empuja es el enemigo, el héroe apenas cede */
-  { const sep = E.T.yokai ? 150 : E.T.jefe ? 84 : 74, d = E.x - H.x;
+  { const sep = (E.T.jefe ? 112 : 102) + (E.T.cuerpo || 0), d = E.x - H.x;
     if(E.vivo && H.vivo && H.estado !== 'esquive' && H.estado !== 'relampago' && Math.abs(d) < sep){ const falta = sep - Math.abs(d), s = d >= 0 ? 1 : -1; E.x += s*falta*0.8; H.x -= s*falta*0.2; H.x = lim(H.x, ARENA.x0, ARENA.x1); } }
   /* la cámara sigue el medio de la pelea */
   L.camObj = lim((H.x + E.x)/2 - 446, ARENA.x0 - 40, ARENA.x1 - 800); L.cam += (L.camObj - L.cam)*Math.min(1, dtReal*3);

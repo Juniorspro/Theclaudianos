@@ -36,6 +36,7 @@
   .cartel .banda.jefe { background:linear-gradient(90deg, #1a0302, #5a0806 50%, #1a0302); }
   .cartel .g { font-size:clamp(22px, 9vmin, 48px); font-weight:900; letter-spacing:0.18em; color:#f0e6d2; }
   .cartel .p { font-size:clamp(11px, 3.4vmin, 17px); letter-spacing:0.3em; color:#d8322a; margin-top:0.3em; }
+  .fila { display:flex; gap:2%; justify-content:center; margin:0.4em 0; } .fila .btn { flex:1 1 0; min-width:0; max-width:34%; margin:0; padding-left:0.4em; padding-right:0.4em; font-size:clamp(9px, 2.6vmin, 13px); white-space:normal; line-height:1.15; }
   .consejo { position:absolute; left:19%; top:17%; width:62%; box-sizing:border-box; text-align:center; background:rgba(12,8,6,0.82); color:#f2e8d2; border-left:4px solid #b3191b;
     padding:0.6em 1em; font-size:clamp(12px, 3.5vmin, 17px); line-height:1.3; border-radius:2px; animation:sube 0.35s both; pointer-events:none; }
   .pergaminos { display:flex; gap:2.5%; justify-content:center; width:92%; }
@@ -55,7 +56,7 @@
 
 const UI = {};
 const uiRaiz = $('ui');
-function capa(html, cls){ uiRaiz.querySelectorAll('.capa').forEach(n => n.remove()); const d = document.createElement('div'); d.className = 'capa ' + (cls || ''); d.innerHTML = html; uiRaiz.appendChild(d); return d; }
+function capa(html, cls){ TITULO.sub = !html.includes(`class="menu-der"`); uiRaiz.querySelectorAll('.consejo').forEach(n => n.remove()); uiRaiz.querySelectorAll('.capa').forEach(n => n.remove()); const d = document.createElement('div'); d.className = 'capa ' + (cls || ''); d.innerHTML = html; uiRaiz.appendChild(d); return d; }
 function tocar(el, f){ if(!el) return; let listo = true; const h = e => { e.preventDefault(); e.stopPropagation(); if(!listo) return; listo = false; setTimeout(() => listo = true, 250); SON.arrancar(); try { f(e); } catch(er){ anotarError(er); } };
   el.addEventListener('touchend', h, {passive:false}); el.addEventListener('click', h); }
 function btn(txt, id, cls, k){ return `<button class="btn ${cls || ''}" id="${id}">${k ? `<span class="k kanji">${k}</span>` : ''}<span>${txt}</span></button>`; }
@@ -72,7 +73,7 @@ UI.idioma = () => { JUEGO.modo = 'menu';
   for(const l of ['es', 'en', 'pt']) tocar(d.querySelector('#l_' + l), () => { ponerIdioma(l); AJ.vistoIdioma = true; guardarAj(); SON.fx('menu_ok'); cortina(() => UI.titulo()); }); };
 
 /* ---------------------------------------------------------------- el título */
-const TITULO = {t0:0};
+const TITULO = {t0:0, sub:false, subK:0};
 UI.titulo = () => {
   JUEGO.modo = 'menu'; JUEGO.pausa = false; TITULO.t0 = RELOJ.real; LUGAR = 'bambu'; CLIMA.length = 0; SON.musica('menu'); SON.ambiente('bambu'); SON.fx('titulo');
   const hayCap = CAPITULOS.length, y = PROG.cap_hecho || {};
@@ -92,25 +93,28 @@ let _tituloCv = null;
 function dibujarTitulo(dt){
   const W = MED.w, H = MED.h, u = MED.u, t = RELOJ.real - TITULO.t0; g.setTransform(MED.dpr, 0, 0, MED.dpr, 0, 0);
   dibujarFondo(W, H, 180 + Math.sin(RELOJ.real*0.08)*120); climaPaso(dt, W, H); climaDibujar(W, H);
-  g.fillStyle = 'rgba(10,6,4,0.28)'; g.fillRect(0, 0, W, H);
+  TITULO.subK += ((TITULO.sub ? 1 : 0) - TITULO.subK)*Math.min(1, dt*7);
+  g.fillStyle = `rgba(10,6,4,${0.28 + TITULO.subK*0.4})`; g.fillRect(0, 0, W, H);
   /* el ronin respira a la izquierda */
   const P = PJ.heroe; if(P && P.anims.quieto){ const e = TITULO.e || (TITULO.e = luchador('heroe', 0, 1)); e.animT = RELOJ.real; e.anim = 'quieto'; e.fpsAnim = 8;
     const x = W*0.2/u + 0; e.x = x; dibujarLuchador(e, 0); }
   /* el título: se revela de izquierda a derecha con un borde de pincel, y gotea */
   if(!_tituloCv){ _tituloCv = document.createElement('canvas'); }
-  const tw = Math.round(W*0.5), th = Math.round(H*0.34), c = _tituloCv; if(c.width !== tw*2 || c.height !== th*2){ c.width = tw*2; c.height = th*2;
+  const tw = Math.round(W*0.5), th = Math.round(H*0.34), c = _tituloCv; if(c.width !== tw*2 || c.height !== th*2 || c._l !== IDIOMA){ c.width = tw*2; c.height = th*2; c._l = IDIOMA;
     const x = c.getContext('2d'); x.scale(2, 2); x.textBaseline = 'middle';
     x.font = `900 ${th*0.2}px Georgia, serif`; x.fillStyle = '#e8dcc2'; x.textAlign = 'left'; x.fillText(tr('EL ÚLTIMO'), th*0.06, th*0.2);
     x.font = `900 ${th*0.52}px Georgia, serif`; x.lineWidth = th*0.03; x.strokeStyle = '#0b0806'; x.strokeText('RŌNIN', 0, th*0.62); x.fillStyle = '#f2e8d4'; x.fillText('RŌNIN', 0, th*0.62);
     x.fillStyle = '#b3191b'; x.fillRect(th*0.04, th*0.92, tw*0.66, th*0.035); }
-  const k = lim((t - 0.2)/1.1, 0, 1), rx = W*0.06 + 0, ry = H*0.1;
+  if(TITULO.subK > 0.98) return;
+  g.globalAlpha = 1 - TITULO.subK;
+  const k = lim((t - 0.2)/1.1, 0, 1), rx = W*0.06 - TITULO.subK*60*u, ry = H*0.1;
   g.save(); g.beginPath(); const bordeX = tw*suave(k); g.moveTo(rx, ry); g.lineTo(rx + bordeX, ry);
   for(let i = 0; i <= 12; i++){ const yy = ry + th*i/12; g.lineTo(rx + bordeX + Math.sin(i*1.7 + t*3)*8*u*(1 - k), yy); } g.lineTo(rx, ry + th); g.closePath(); g.clip();
-  g.drawImage(c, rx, ry, tw, th); g.restore();
+  g.drawImage(c, rx, ry, tw, th); g.restore(); g.globalAlpha = 1 - TITULO.subK;
   /* el sello rojo con 浪人 */
-  const ks = lim((t - 1.2)/0.35, 0, 1); if(ks > 0){ const s = 1 + (1 - ks)*1.6; g.save(); g.translate(rx + tw*0.78, ry + th*0.28); g.scale(s, s); g.rotate(-0.08); g.globalAlpha = ks;
+  const ks = lim((t - 1.2)/0.35, 0, 1); if(ks > 0){ const s = 1 + (1 - ks)*1.6; g.save(); g.translate(rx + tw*0.78, ry + th*0.28); g.scale(s, s); g.rotate(-0.08); g.globalAlpha = ks*(1 - TITULO.subK);
     g.fillStyle = '#b3191b'; g.fillRect(-26*u, -38*u, 52*u, 76*u); g.fillStyle = '#f4ead6'; g.font = `900 ${30*u}px serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('浪', 0, -16*u); g.fillText('人', 0, 18*u); g.restore(); }
-  g.fillStyle = 'rgba(240,230,210,0.55)'; g.font = `700 ${11*u}px Georgia, serif`; g.textAlign = 'left'; g.globalAlpha = lim((t - 1.6)/0.6, 0, 1);
+  g.fillStyle = 'rgba(240,230,210,0.55)'; g.font = `700 ${11*u}px Georgia, serif`; g.textAlign = 'left'; g.globalAlpha = lim((t - 1.6)/0.6, 0, 1)*(1 - TITULO.subK);
   g.fillText(tr('Desviá. Esperá. Cortá.'), rx + 4*u, ry + th + 14*u); g.globalAlpha = 1;
 }
 
@@ -160,10 +164,10 @@ UI.dojo = () => {
 UI.opciones = (desdePausa) => {
   const t = (k, a) => btn((AJ[k] ? '■ ' : '□ ') + tr(a), 'o_' + k, AJ[k] ? '' : 'claro');
   const d = capa(`<div class="panel" style="text-align:center"><p class="titulo-p">${tr('OPCIONES')}</p>
-    <div>${btn('ESPAÑOL', 'l_es', IDIOMA === 'es' ? 'rojo' : 'claro')}${btn('ENGLISH', 'l_en', IDIOMA === 'en' ? 'rojo' : 'claro')}${btn('PORTUGUÊS', 'l_pt', IDIOMA === 'pt' ? 'rojo' : 'claro')}</div>
-    <div>${btn(tr('MÚSICA {0}%', Math.round(AJ.musica*100)), 'o_mus')}${btn(tr('EFECTOS {0}%', Math.round(AJ.efectos*100)), 'o_efe')}</div>
-    <div>${t('vibrar', 'VIBRACIÓN')}${t('sacudida', 'SACUDIDA DE CÁMARA')}${t('sangre', 'SANGRE')}</div>
-    <div>${btn(tr('VOLVER'), 'volver', 'claro')}</div></div>`);
+    <div class="fila">${btn('ESPAÑOL', 'l_es', IDIOMA === 'es' ? 'rojo' : 'claro')}${btn('ENGLISH', 'l_en', IDIOMA === 'en' ? 'rojo' : 'claro')}${btn('PORTUGUÊS', 'l_pt', IDIOMA === 'pt' ? 'rojo' : 'claro')}</div>
+    <div class="fila">${btn(tr('MÚSICA {0}%', Math.round(AJ.musica*100)), 'o_mus')}${btn(tr('EFECTOS {0}%', Math.round(AJ.efectos*100)), 'o_efe')}</div>
+    <div class="fila">${t('vibrar', 'VIBRACIÓN')}${t('sacudida', 'SACUDIDA DE CÁMARA')}${t('sangre', 'SANGRE')}</div>
+    <div class="fila">${btn(tr('VOLVER'), 'volver', 'claro')}</div></div>`);
   for(const l of ['es', 'en', 'pt']) tocar(d.querySelector('#l_' + l), () => { ponerIdioma(l); _tituloCv = null; SON.fx('menu_ok'); UI.opciones(desdePausa); });
   tocar(d.querySelector('#o_mus'), () => { AJ.musica = AJ.musica >= 1 ? 0 : Math.round((AJ.musica + 0.25)*100)/100; guardarAj(); SON.volumen(AJ.musica, AJ.efectos); UI.opciones(desdePausa); });
   tocar(d.querySelector('#o_efe'), () => { AJ.efectos = AJ.efectos >= 1 ? 0 : Math.round((AJ.efectos + 0.25)*100)/100; guardarAj(); SON.volumen(AJ.musica, AJ.efectos); SON.fx('choque'); UI.opciones(desdePausa); });

@@ -20,6 +20,9 @@ se prueba **en el celular, en vertical (412×892)**.
 | `juegos-pc/Residencia.html` | **NO LO DEJES ENTRAR.** Terror en primera persona a lo *Residence Massacre* (Roblox): casa de bloques de dos pisos amueblada cuarto por cuarto, de 4 PM a 12 te preparás (radio, linterna, tablas en las ventanas, cámaras, generador que da el aire, fusibles) y de 12 a 6 AM Larry (el bicho del original, a escala) da vueltas, respira detrás de una ventana antes de atacar, se espanta con la luz del cuarto y si entra te busca: placard con minijuego o susto. Tres dificultades, ES/EN/PT, three.js r128. Se juega apaisado. |
 | `herramientas/residencia/` | Fuentes de `Residencia.html` (`fuentes/`), `armar.sh` y el banco (`banco/`: noche entera con un jugador que reacciona, la preparación con la mano, alcance caminando, orden de los muebles, placard sin navegador, dedos, idiomas, fuzz, capturas, hoja de Larry). **Se edita la fuente.** |
 | `.claude/skills/juego-terror` | Receta del terror en primera persona: luz de adentro separada del sol, cuatro luces fijas, interacción por ángulo, bicho con estados y caminos, placard medido contra una persona, susto encuadrado. |
+| `juegos-pc/Ronin.html` | **EL ÚLTIMO RŌNIN.** Duelos 2D en tinta a lo *Ronin: The Last Samurai*: desvío con GUARDIA justo antes del golpe, 殺 rojo que no se bloquea y se contesta con el **contragolpe relámpago**, equilibrio, combo de tres, tres habilidades, 3 capítulos de 10 etapas con bendiciones, **batallas de yokai** aparte, herrería de 5 espadas y dojo. Los 10 personajes salen de **videos de Rezona** convertidos en cuadros. ES/EN/PT. Se juega apaisado. |
+| `herramientas/ronin/` | Fuentes de `Ronin.html` (`fuentes/`), la cadena de videos (`prompts.py`, `enviar.py`, `esperar.py`, `qa.sh`, `cuadros.py`, `hornear.py`, `procesar.py`), `armar.py` y el banco (`banco/`: bot que pelea como una persona, capítulos enteros, dedos, pantallas en tres idiomas, vitrina, fuzz, audio). **Se edita la fuente.** |
+| `.claude/skills/sprites-video` | Receta de los sprites sacados de video: referencia sobre verde, un video por golpe, control cuadro por cuadro, alfa empaquetado al lado en H.264. |
 | `herramientas/mate/` | Fuentes de `Mate.html` por partes (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`). **Se edita la fuente, no el HTML.** |
 | `.claude/skills/juego-25d` | Receta del 2.5D pixel art: render, sprites, niveles verificados, cinemáticas, menús, idiomas. |
 | `docs/GUIA_JUEGOS_2D_PIXEL.md` | Receta para juegos 2D pixel art (escala entera, piezas, banco). La usa `Saltos.html`. |
@@ -2075,3 +2078,88 @@ Medido:
 - Fuzz de 300 acciones en portugués y 120 en castellano sin errores, sin NaN y sin estados imposibles.
 - Llamadas de dibujo: 30 a 90 adentro y 114 a 139 afuera, con 24 a 35 mil triángulos. El HTML pesa 398 KB.
 
+### 2026-09-26 (ba) — EL ÚLTIMO RŌNIN, con animaciones sacadas de videos de Rezona
+**Pedido textual** (el `.txt` de *Portada_2.zip*, con seis capturas de *Ronin: el Último Samurái* de Dreamotion): «Portada 2 Juegos de
+Lucas Galarza alias en discord Rilex_Gold / la portada 2 será de Ronin el último samurai, Lee las imágenes que te pasé y el siguiente link
+de tiktok para hacer el juego, la idea es que para que las animaciones sean super god vos vayas generando imágenes con Rezona y hagas
+videos y lo animes y extraigan los fotogramas del vídeo pero no sé cómo decirte que no lo hagas tan pesao al juego, si hay una forma de
+comprimir los vídeos sin perder la calidad búscalo y hacelo, todo aquellos personajes y animaciones de cada golpe movimiento debe salir
+bien si un vídeo tiene una fakin falla no lo vayas a poner y crea otro, se muy específico con los prompts y haz los juegos un 1000% mejor
+que otro, confío en ti. / batallas de yokai opcionales buen menú buenas animaciones de menú buen motions graphics etc y bien replicado del
+juego también fondos reales hecho con imágenes etc. / Ronin: el último samurai … TikTok https://share.google/F4HaCT2NhnWkgnUSo / Investiga
+aún más videos de tiktok e imágenes más las que te pasé.»
+
+**Lo que se sacó del original** (las seis capturas, la ficha de la tienda, reseñas y guías; el TikTok resolvió a un video de
+`@inmortal_gamers50` pero **ni TikTok ni YouTube dejaron bajar nada** —TikTok falla la suplantación y YouTube pide «no soy un robot»—, así
+que de los videos sólo se miraron las miniaturas):
+- los golpes normales se **desvían** con la guardia justo antes; los fuertes llevan el **殺 rojo** arriba del enemigo, no se bloquean,
+  y atacando justo antes sale el **contragolpe relámpago**, que atraviesa al enemigo;
+- vida roja y **equilibrio** amarillo: bloquear sólo gasta equilibrio, y sin equilibrio se queda aturdido;
+- habilidades Aniquilación, Concentración (los próximos ataques son relámpagos) y Distorsión del tiempo;
+- capítulos de etapas con élite y jefe, bendiciones a elegir, espadas de Común a Mítica y **batallas de yokai** aparte
+  (Gashadokuro y Oogama).
+
+`juegos-pc/Ronin.html` (3,2 MB, Canvas 2D, sin librerías, apaisado):
+- **Diez personajes animados con video**: el rōnin (13 animaciones), bandido, lancero ashigaru, shinobi y monje guerrero
+  (6 cada uno), los jefes General Akagane, Kageyama el maestro y Shuten el oni (7, con un especial), y los yokai (5).
+  - Cada personaje nació de una imagen de referencia de Rezona sobre verde, de perfil mirando a la derecha.
+  - Cada animación es **un video de Seedance de 4 s** que arranca y termina en la referencia.
+  - Se generaron **87 videos** para quedarse con 68. Se rehicieron 19 por fallas: se daba vuelta hacia la cámara (el golpeado del
+    héroe, del bandido, del maestro y del oni; los especiales del general y del oni dos veces), una explosión de dibujito, auras con
+    restos de verde, un salto que se salía del cuadro por arriba (el pesado del sapo y del esqueleto) y dos rechazos por política
+    del audio.
+- **Compresión**: cada animación es un video chico con el color a la izquierda y el alfa a la derecha, en H.264, y el juego lo
+  desarma en cuadros al cargar. Un tajo de 18 cuadros pesa 96 KB así contra ~170 KB en WebP.
+- **Cinco fondos pintados** de Rezona: la aldea en llamas, el bambú, el templo nevado, la luna de sangre y el cementerio de yokai.
+- **Combate**:
+  - combo de tres tajos;
+  - desvío con GUARDIA (ventana de 0,35 s) y bloqueo si ya estaba apretada;
+  - relámpago contra el 殺 y esquive con invulnerabilidad;
+  - equilibrio y aturdido, las tres habilidades con su kanji y carga de ki;
+  - el enemigo avisa con un destello blanco 0,38 s antes del golpe normal, y con el 殺 desde que arranca el imparable.
+- **3 capítulos de 10 etapas** (la aldea en llamas, el templo nevado, la luna de sangre), con élites y jefe. Entre etapa y etapa se
+  elige una de 3 bendiciones (hay 10). Al caer vuelve a empezar el capítulo, pero el oro queda.
+- **Herrería** de 5 espadas (Común a Mítica, cada una con su habilidad y 10 niveles) y **dojo** (vida, filo, equilibrio y ki).
+- **Menús con motion graphics**: el título se revela con un borde de pincel y lo sella un 浪人 rojo, los botones entran en cascada y
+  se tuercen, los capítulos son pergaminos con su fondo, las bendiciones se dan vuelta como cartas, hay cortina de tinta entre
+  pantallas, y el logo se aparta en los submenús.
+- **Sonido todo sintetizado** (lo hizo un agente aparte): 44 efectos, 6 temas (menú, batalla, jefe y yokai con capas que entran con
+  la vida del enemigo, victoria y derrota) y 5 ambientes. La cámara lenta del relámpago baja la música y cierra el filtro.
+- Tutorial en la primera pelea, que frena el tiempo en el primer destello y en el primer 殺. Castellano, inglés y portugués.
+
+Lo que costó una vuelta cada uno:
+- **Los toques del lienzo no andaban con la pantalla girada.** La cuenta de rotación restaba del ancho del escenario (892) y no del
+  ancho de la pantalla (412): los menús (DOM) andaban y ningún botón de pelea respondía. Con dedos de verdad ahora anda todo.
+- **Quedaban restos de la pelea anterior**: el daño pendiente del relámpago, la cámara lenta y un dedo apoyado. En la pelea
+  siguiente el héroe quedaba en guardia para siempre y el enemigo congelado.
+- **Algunos videos pegan en el segundo cuadro** (el iaido del maestro): no daba tiempo de ver el aviso. El enemigo sostiene la pose
+  de carga, temblando, hasta que haya al menos 0,46 s.
+- **Los yokai eran inmortales**: su cuerpo ancho empujaba al héroe afuera de su propio alcance. Cada luchador tiene un ancho que
+  cuenta para el alcance y la separación.
+- Los cuerpos se superponían: la distancia de pelea venía de números a ojo. Todos los alcances se corrieron 28.
+- **Esperar `requestVideoFrameCallback` con el video en pausa** gastaba el tope entero en cada cuadro: el héroe tardaba 9,2 s en
+  cargar. Sin eso y con tres clips a la vez, 1,5 s.
+- **El Chromium del banco no tiene H.264.** El armado sale doble (WebM para el banco) y el MP4 se probó en un Google Chrome bajado.
+- **El verde se mete en telas y borroneados.** El quitaverde clásico (el verde no pasa del máximo de rojo y azul) sirve; uno con
+  margen fijo no tocaba los oscuros. El forro cian del shinobi lo pintó el propio video y se neutraliza aparte.
+- **Pedirle a la IA una referencia más chica del esqueleto no sirvió**: una vez lo agrandó y la otra lo dejó diminuto. Quedaron los
+  videos grandes, y lo que se corta contra el borde se disuelve como pincel en 48 px.
+- **El bot mentía dos veces**: siempre caminaba para la derecha (después del relámpago quedaba del otro lado) y no veía dos avisos
+  iguales seguidos. Los avisos se cuentan.
+- **Un bucle `while pgrep -f "texto"` se encuentra a sí mismo** y no termina nunca: se ancla con `^python3`.
+
+Medido:
+- **Carga** en un Chrome con H.264: el héroe en 1,5 s; los 10 personajes, 781 cuadros, **ninguno vacío**, de 0,7 a 1,3 s cada uno.
+- **Una persona simulada** (`banco/bot.js`: reacciona al aviso con 0,22 s de reflejo y falla el 15%), sin mejoras:
+  - bandido, lancero, shinobi y monje, 6 de 6;
+  - el general, 5 de 6 (antes de bajarle la vida de 1100 a 880 y de corregir el espaciado, 1 de 6); el maestro, 5 de 6; el oni, 4 de 6;
+  - el Gashadokuro, 3 de 6; la Oogama, 1 de 6.
+- **Capítulos enteros** con bendiciones al azar (`banco/capitulo.js`, reflejo 0,25 s y 20% de falla): los tres se terminan, en 1,4 a 2,5
+  minutos. Antes de corregir el espaciado, el capítulo 3 se terminaba 1 de 5 veces.
+- **Dedos de verdad** en la pantalla girada (`banco/toques.js`): idioma, HISTORIA y el capítulo con toques; ▶ y ◀ caminan, y
+  andan ATACAR, GUARDIA sostenida, ESQUIVE, dos dedos a la vez, la pausa y SEGUIR.
+- Idiomas (`banco/pantallas.js`): `TR_FALTA` vacío en inglés (112 textos vistos) y en portugués (110).
+- Fuzz de 500 acciones en castellano, 300 en portugués y 300 en inglés, con giros de pantalla: sin errores, sin NaN y sin oro negativo.
+- Dibujar un cuadro de pelea: 0,18 a 0,31 ms. Todo efecto que pide el juego existe en el audio.
+
+Queda para decidir: la dificultad la tiene que probar una persona. El sapo sin mejoras es duro a propósito, porque es opcional.

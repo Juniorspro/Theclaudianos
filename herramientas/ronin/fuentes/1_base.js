@@ -45,11 +45,11 @@ function ponerIdioma(l){ AJ.idioma = IDIOMA = l; guardarAj(); document.documentE
 document.documentElement.lang = IDIOMA;
 
 /* ================================================================ el escenario, girado 90° si la pantalla está parada
-   (x, y) de la pantalla → (y, W − x) del escenario; se mide con visualViewport porque vh/vw mienten */
+   (x, y) de la pantalla → (y, H − x) del escenario (H: el alto del escenario, que es el ancho de la pantalla); se mide con visualViewport porque vh/vw mienten */
 const stage = $('stage'), lienzo = $('lienzo'), g = lienzo.getContext('2d');
 const MED = {w:892, h:412, girado:false, dpr:1, u:1};
 function medida(){ const vv = window.visualViewport; return {w:Math.round(vv ? vv.width : innerWidth), h:Math.round(vv ? vv.height : innerHeight)}; }
-function aLocal(px, py){ return MED.girado ? {x:py, y:MED.w - px} : {x:px, y:py}; }
+function aLocal(px, py){ return MED.girado ? {x:py, y:MED.h - px} : {x:px, y:py}; }
 function medir(){
   const m = medida(), vertical = m.h > m.w, w = vertical ? m.h : m.w, h = vertical ? m.w : m.h;
   stage.style.width = w + 'px'; stage.style.height = h + 'px';

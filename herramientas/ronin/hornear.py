@@ -16,6 +16,7 @@ ENEM = {'quieto':{'loop':True, 'max':10, 'recortar':False, 'fps':8}, 'caminar':{
   'ataque':{'golpe':True, 'max':12}, 'pesado':{'golpe':True, 'max':14}, 'golpeado':{'max':8}, 'muerte':{'max':12}, 'especial':{'golpe':True, 'max':14}}
 YOK = {'quieto':{'loop':True, 'max':10, 'recortar':False, 'fps':8}, 'ataque':{'golpe':True, 'max':12}, 'pesado':{'golpe':True, 'max':14}, 'golpeado':{'max':8}, 'muerte':{'max':12}}
 ALTO = {'heroe':300, 'j_general':320, 'j_oni':330, 'y_gashadokuro':320, 'y_oogama':300}
+EXTRA = {('e_bandido', 'golpeado'):{'sinverde':True}}   # una mancha de sangre con verde de fondo adentro
 SRC_HEROE = {'tajo':'heroe_tajo', 'quieto':'heroe_quieto', 'relampago':'heroe_relampago'}
 def pj(p):
     base = HEROE if p == 'heroe' else YOK if p.startswith('y_') else ENEM
@@ -23,7 +24,7 @@ def pj(p):
     for a, s in base.items():
         src = ultimo(SRC_HEROE.get(a, f'{p}_{a}') if p == 'heroe' else f'{p}_{a}')
         if not src: continue
-        anims[a] = dict(s, src=src)
+        anims[a] = dict(s, src=src, **EXTRA.get((p, a), {}), **({'sincian':True} if p == 'e_shinobi' else {}))
     if 'quieto' not in anims: print('falta quieto de', p); return
     spec = {'pj':p, 'alto':ALTO.get(p, 280), 'raiz_de':'quieto', 'anims':anims}
     sp = f'/tmp/ronin/spec_{p}.json'; json.dump(spec, open(sp, 'w'))

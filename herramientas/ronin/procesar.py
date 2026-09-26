@@ -11,6 +11,19 @@ import numpy as np
 from PIL import Image
 FF = '/usr/local/lib/python3.11/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2'
 spec = json.load(open(sys.argv[1])); out = sys.argv[2]; os.makedirs(out, exist_ok=True)
+def bordes(im, sinverde=False, despill=True, sincian=False):
+    # lo que el video cortó contra el borde (la punta de una espada en alto) se disuelve como pincel en 48 px,
+    # en vez de terminar en una línea recta; abajo no, que ahí pisan los pies
+    im = im.astype(np.float32).copy(); h, w = im.shape[:2]; R = 48.0
+    ry = np.clip(np.arange(h)/R, 0, 1)[:, None]; rx = np.clip(np.minimum(np.arange(w), w - 1 - np.arange(w))/R, 0, 1)[None, :]
+    im[..., 3] *= ry*rx
+    if despill:   # el verde del fondo que se ve a través de una tela o de un borroneado: el verde no pasa del máximo de rojo y azul (sirve en los oscuros, donde un margen fijo no toca nada)
+        m = np.maximum(im[..., 0], im[..., 2]); im[..., 1] = np.minimum(im[..., 1], m + 1)
+    if sincian:   # un forro que el video pintó cian: el cian se lleva hacia el rojo del mismo píxel (gris oscuro)
+        c = np.clip(np.minimum(im[..., 1], im[..., 2]) - im[..., 0], 0, None)*0.85; im[..., 1] -= c; im[..., 2] -= c
+    if sinverde:  # restos de pantalla verde metidos en una mancha de tinta: se los hace transparentes
+        v = im[..., 1] - np.maximum(im[..., 0], im[..., 2]); im[..., 3] *= np.clip(1 - (v - 4)/14, 0, 1)
+    return im.astype(np.uint8)
 def cuadros(src): return sorted(glob.glob(f'/tmp/ronin/f/{src}/a_*.png'))
 def pies(a):
     ys, xs = np.nonzero(a > 128); yb = ys.max(); banda = ys > yb - (ys.max() - ys.min())*0.05
@@ -22,7 +35,7 @@ meta = {'pj': spec['pj'], 'alto': spec['alto'], 'anims': {}}; tot = [0, 0]
 tmp = '/tmp/ronin/pk_' + spec['pj']; os.makedirs(tmp, exist_ok=True)
 for nom, s in spec['anims'].items():
     fs = cuadros(s['src'])[s.get('desde', 0): s.get('hasta') or None]
-    ims = [np.asarray(Image.open(f)) for f in fs]
+    ims = [bordes(np.asarray(Image.open(f)), s.get('sinverde'), not spec['pj'].startswith('y_'), s.get('sincian')) for f in fs]
     chico = [np.asarray(Image.fromarray(im).resize((160, 90))).astype(np.float32) for im in ims]
     dif = lambda i, j: float(np.abs(chico[i] - chico[j]).mean())
     i0, i1 = 0, len(ims) - 1
@@ -48,7 +61,7 @@ for nom, s in spec['anims'].items():
         al = a[..., 3:4]/255; rgb = a[..., :3]*al
         Image.fromarray(np.concatenate([rgb, np.repeat(a[..., 3:4], 3, axis=2)], axis=1).clip(0, 255).astype(np.uint8)).save(f'{tmp}/p_{k:03d}.png')
     base = os.path.join(out, f"{spec['pj']}_{nom}")
-    crf = str(s.get('crf', 30))
+    crf = str(s.get('crf', 34))
     subprocess.run([FF, '-loglevel', 'error', '-y', '-framerate', '12', '-i', f'{tmp}/p_%03d.png', '-c:v', 'libx264', '-preset', 'veryslow', '-crf', crf,
                     '-bf', '0', '-g', '999', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an', base + '.mp4'], check=True)
     subprocess.run([FF, '-loglevel', 'error', '-y', '-framerate', '12', '-i', f'{tmp}/p_%03d.png', '-c:v', 'libvpx-vp9', '-crf', str(int(crf) + 4), '-b:v', '0',

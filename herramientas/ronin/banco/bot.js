@@ -17,15 +17,15 @@ const MULT = {bandido:1, lancero:1, shinobi:1.4, monje:1.4, general:1, maestro:1
           for(const s of suelta.filter(s => s[0] <= R.RELOJ.t)) R.apretar(z(s[1]), false); suelta = suelta.filter(s => s[0] > R.RELOJ.t);
           const H = L.heroe, E = L.enemigo, d = E.x - H.x;
           /* un aviso nuevo: se decide si se reacciona y cuándo */
-          if(E.aviso && E.avisoDado && ultimoAviso !== E.tImpacto + E.aviso){ ultimoAviso = E.tImpacto + E.aviso; reaccion = Math.random() < FALLA ? null : {cuando:R.RELOJ.t + REF*(0.8 + Math.random()*0.5), tipo:E.aviso}; }
+          if(E.aviso && E.avisoDado && ultimoAviso !== L.stats.avisos){ ultimoAviso = L.stats.avisos; reaccion = Math.random() < FALLA ? null : {cuando:R.RELOJ.t + REF*(0.8 + Math.random()*0.5), tipo:E.aviso}; }
           if(reaccion && R.RELOJ.t >= reaccion.cuando){ if(reaccion.tipo === 'ligero') tocar('guardia', 0.25); else tocar(Math.random() < 0.6 ? 'ataque' : 'esquive'); reaccion = null; }
           else if(!E.aviso && H.estado !== 'guardia'){
-            if(Math.abs(d) > 125){ R.apretar(z('der'), true); } else { R.apretar(z('der'), false); if(L.ki >= 1) tocar('habilidad'); else if(Math.random() < 0.12) tocar('ataque'); }
-          } else R.apretar(z('der'), false);
+            if(Math.abs(d) > 125 + (E.T.cuerpo || 0)){ R.apretar(z(d > 0 ? 'der' : 'izq'), true); R.apretar(z(d > 0 ? 'izq' : 'der'), false); } else { R.apretar(z('der'), false); R.apretar(z('izq'), false); if(L.ki >= 1) tocar('habilidad'); else if(Math.random() < 0.12) tocar('ataque'); }
+          } else { R.apretar(z('der'), false); R.apretar(z('izq'), false); }
           R.pasoLucha(dt); }
-        return {gana:L.fin === 'victoria', t:+t.toFixed(1), vida:Math.round(L.heroe.vida), eVida:Math.round(L.enemigo.vida), des:L.stats.desvios, rel:L.stats.relampagos, gol:L.stats.golpes}; }, [REF, FALLA]));
+        return {gana:L.fin === 'victoria', t:+t.toFixed(1), vida:Math.round(L.heroe.vida), eVida:Math.round(L.enemigo.vida), des:L.stats.desvios, av:L.stats.avisos || 0, rel:L.stats.relampagos, gol:L.stats.golpes}; }, [REF, FALLA]));
     }
     const g = res.filter(r => r.gana), med = a => a.sort((x, y) => x - y)[a.length >> 1];
-    console.log(tipo.padEnd(12), 'gana', g.length + '/' + N, '· dura', med(res.map(r => r.t)), 's · vida que queda', med(g.map(r => r.vida)) ?? '-', '· desvíos', med(res.map(r => r.des)), '· relámpagos', med(res.map(r => r.rel)), '· golpes', med(res.map(r => r.gol)), res.some(r => r.t >= 150) ? '· ¡SIN FIN!' : '');
+    console.log(tipo.padEnd(12), 'gana', g.length + '/' + N, '· dura', med(res.map(r => r.t)), 's · vida que queda', med(g.map(r => r.vida)) ?? '-', '· avisos', med(res.map(r => r.av)), '· desvíos', med(res.map(r => r.des)), '· relámpagos', med(res.map(r => r.rel)), '· golpes', med(res.map(r => r.gol)), res.some(r => r.t >= 150) ? '· ¡SIN FIN!' : '');
   }
   const er = await p.evaluate(() => __R.ERRORES.slice(0, 5)); console.log(errs.concat(er).join(' | ') || 'sin errores'); await b.close(); })();
