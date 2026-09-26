@@ -11,6 +11,9 @@ se prueba **en el celular, en vertical (412×892)**.
 | `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil, **escenario girado 90°** (se juega apaisado): base militar de arranque, nave de dos cubiertas que se recorre por dentro, seis galaxias que se ganan, caminata espacial con soga, fotos que se venden y álbum de 21 especies. |
 | `juegos-pc/Saltos.html` | **A LOS SALTOS.** Gladiadores 2D pixel art con física de saltos (a la Gladihoppers): 7 clases, cortes y sangre, carrera con edad, fama, mercado y estatuas. Canvas 2D, sin red, **escenario girado 90°** (se juega apaisado), castellano, inglés y portugués. |
 | `juegos-pc/Mate.html` | **MATE AMARGO.** Pixel art 2.5D a lo *My Friend Pedro: Ripe for Revenge*: personajes 2D en planos, mundo 3D iluminado con rayos de dios, 9 niveles en 3 capítulos, jefe, cinemáticas, menús, música sintetizada, ES/EN/PT. Dos palancas fijas: la izquierda apunta el salto, la derecha tira (o arrastre, en OPCIONES). Se juega apaisado. |
+| `juegos-pc/Linea.html` | **LÍNEA CALIENTE.** Acción desde arriba en pixel art a lo *Hotline Miami*, Buenos Aires 1989: prólogo y 4 capítulos (9 pisos generados y verificados), jefe, contestador y viaje en auto, máscaras con ventajas, notas A+ a D, **modo censura** opcional, ES/EN/PT. Dos palancas fijas (caminar / apuntar y pegar) y botón de acción. Se juega apaisado. |
+| `herramientas/linea/` | Fuentes de `Linea.html` (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`: bot que juega solo, toques, idiomas, fuzz). **Se edita la fuente.** |
+| `.claude/skills/juego-topdown` | Receta de la acción desde arriba: choques en celdas, puertas, niveles con semilla verificados, IA, bot de banco, censura. |
 | `herramientas/mate/` | Fuentes de `Mate.html` por partes (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`). **Se edita la fuente, no el HTML.** |
 | `.claude/skills/juego-25d` | Receta del 2.5D pixel art: render, sprites, niveles verificados, cinemáticas, menús, idiomas. |
 | `docs/GUIA_JUEGOS_2D_PIXEL.md` | Receta para juegos 2D pixel art (escala entera, piezas, banco). La usa `Saltos.html`. |
@@ -1511,3 +1514,91 @@ bajar del tablón y su sonda) y la física volvió a ser la del arrastre:
 Medido con dedos de verdad: palanca izquierda arriba-derecha al 75% → planea (0,12) y al soltar sale a 9,5 / 9,4 m/s; de
 costado → desliza a 14,5; la derecha engancha y baja al matón. Los 8 niveles con puerta se terminan, el jefe muere en sus tres
 fases, `TR_FALTA` vacío en inglés y portugués, fuzz de 250 acciones sin errores.
+
+### 2026-09-26 (ar) — LÍNEA CALIENTE, a lo Hotline Miami, con modo censura
+**Pedido textual:** «Quiero un juego así y haceme una beta buenarda a full 100% god y mejor que los otros juegos / Agrégale un
+modo de censura opcional» (con tres imágenes de *Hotline Miami*: la tapa y dos de juego con «6501pts», «+600PTS», «12/24rnds»).
+
+`juegos-pc/Linea.html` (280 KB, un archivo, sin librerías). Buenos Aires, 1989, con la hiperinflación. Un pibe con campera de
+egresados recibe mensajes en el contestador («habla Norma, de la panadería La Espiga…»), se pone una máscara de animal y
+limpia edificios de la patota de traje blanco.
+
+- **Todo se muere de un golpe**:
+  - la piña voltea y en el piso se remata con el botón;
+  - bate y caño matan, cuchillo y katana cortan;
+  - pistola, silenciada, uzi, escopeta y fusil tienen las balas contadas, y vacías se tiran por la cabeza y voltean;
+  - las puertas que abrís de golpe voltean a quien esté atrás, y los vidrios se rompen a tiros o corriendo;
+  - los perros caen con cualquier cosa;
+  - el gordo sólo cae a tiros, a cuchillo o con un portazo;
+  - el Patrón aguanta seis y se remata en el piso.
+- **La patota** ve en un cono y a través del vidrio, tarda medio segundo en reaccionar, corre por un campo de distancias,
+  abre puertas y va a buscar donde oyó un tiro.
+- **Puntaje de los 80**: los puntos ondulan arriba, el combo multiplica (con techo ×4), y los carteles flotan
+  («¡PORTAZO!», «¡REMATE!», «¡AL VUELO!»). Al volver al auto, **nota A+ a D** por bajas, combo, variedad de armas y tiempo.
+  La nota se estampa.
+- **Capítulos**:
+  - **Prólogo** (Floresta, con tutorial que se cumple haciendo la cosa);
+  - **Tarifa social** (Once);
+  - **Noche de cumbia** (una bailanta en Constitución);
+  - **La hiper** (un depósito en Dock Sud);
+  - **El patrón** (la mansión de San Isidro y su sótano, con el jefe y su barra).
+  Cada uno tiene 2 pisos (el prólogo, 1): se sube limpio y se vuelve al auto pisando lo que dejaste.
+- **Seis máscaras** que se ganan capítulo a capítulo, cada una con su ventaja:
+  - carpincho (sin ventajas);
+  - cóndor (corre más);
+  - yaguareté (la piña mata);
+  - hornero (el portazo mata);
+  - mulita (aguanta un tiro);
+  - vizcacha (más balas).
+- **Cinemáticas**:
+  - el departamento con la tele y la lluvia, el contestador que titila y el mensaje a máquina con voz de teléfono;
+  - la radio con el dólar;
+  - el Falcon de noche entre faroles;
+  - el cartel de capítulo con fecha y barrio;
+  - el final al amanecer con el Obelisco, y los créditos.
+- **Menús**:
+  - idioma con banderas, y la advertencia de violencia con **SIN CENSURA / CON CENSURA** la primera vez;
+  - título de neón con la ciudad;
+  - capítulos como casetes con su nota;
+  - máscaras;
+  - opciones: idioma, música, efectos, censura, balanceo de cámara, efectos visuales y vibración;
+  - pausa y resultado.
+- **Modo censura**: sin sangre ni cuerpos partidos, noqueados con estrellitas que giran, confite, REMATAR pasa a ATAR, y
+  cada sonido crudo se cambia por uno de dibujito (bonk, boing, pop, silbato).
+- **Sonido todo sintetizado**, hecho por un agente aparte (91 KB):
+  - darksynth con reverb de compuerta de los 80;
+  - 10 temas (el de la bailanta es cumbia oscura con güiro y acordeón);
+  - 46 efectos, 6 ambientes, voces por teléfono y cinta de VHS.
+- **Revelado** en WebGL: aberración que late con los golpes, brillo, saturación de neón, viñeta, grano y rojo al morir.
+  Además, un balanceo lento de la cámara, que se puede apagar.
+- Español, inglés y portugués.
+
+Lo que costó una vuelta cada uno:
+- **Las puertas no se movían nunca.** La punta de la hoja cerrada toca el marco, y probar el choque ahí la frenaba
+  siempre: se prueba un pelo adentro.
+- **Con radio 5,2 nadie cabía centrado en una celda pegada a la pared**: los caminos van por el centro de las celdas y
+  todos se clavaban en los marcos. Se bajó a 3,8, se agregó que el cuerpo resbale en las esquinas y que la hoja de la
+  puerta se resuelva desde su punto más cercano (en la punta se rodea).
+- **Jugador y patota se encimaban** en el mismo punto y nadie se pegaba: se separan como los enemigos entre sí.
+- **Un piso salió con el cuarto de arranque cerrado por un mueble**: la verificación pedía llegar sólo a la escalera.
+  Ahora pide llegar a todas las puertas y huecos.
+- **Quien llegaba por la escalera aparecía parado en ella**, nunca «salía» y no podía volver a bajar: aparece dos celdas
+  adentro.
+- Con el radio chico, **las balas se escapaban** por al lado del cuerpo: pegan con 2,2 px más.
+
+Medido:
+- Un bot que juega solo (`banco/bot.js`) terminó **los 5 capítulos, dos veces seguidas cada uno**, jefe incluido, sin errores.
+- En los 9 pisos, el pibe quieto 8 segundos en el arranque no muere en ninguno.
+- Dedos de verdad en la pantalla girada:
+  - la izquierda camina 98 px en 1 s;
+  - la derecha apunta, se engancha y baja al enemigo;
+  - dos dedos a la vez andan;
+  - el botón tira y agarra el arma;
+  - arriba al medio pausa.
+- El camino entero con toques anda: idioma, censura, título, JUGAR, cinemática, máscara y juego.
+- Idiomas: `TR_FALTA` vacío en inglés (166 textos vistos) y en portugués (164).
+- Fuzz sin errores ni NaN: 600 toques en castellano y 400 en inglés.
+- La lógica cuesta 0,16 ms por cuadro.
+
+Queda para decidir: el bot mortal muere muchísimo (corre derecho a los que tienen escopeta), y todavía no hay datos de un
+jugador de verdad para calibrar la dificultad y las notas.
