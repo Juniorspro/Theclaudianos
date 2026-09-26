@@ -1,7 +1,7 @@
 
 /* ====================== idiomas: se escribe en castellano y se traduce al mostrar ====================== */
 const TR = {
-  en:{'DUELO AÉREO':'AIR DUEL', 'MISIONES':'MISSIONS', 'HANGAR':'HANGAR', 'CÓMO SE VUELA':'HOW TO FLY', 'AJUSTES':'SETTINGS', 'VOLVER':'BACK', 'DESPEGAR':'TAKE OFF',
+  en:{'CÁMARA LIBRE · DOBLE TOQUE CENTRA':'FREE CAMERA · DOUBLE TAP TO CENTER', 'DUELO AÉREO':'AIR DUEL', 'MISIONES':'MISSIONS', 'HANGAR':'HANGAR', 'CÓMO SE VUELA':'HOW TO FLY', 'AJUSTES':'SETTINGS', 'VOLVER':'BACK', 'DESPEGAR':'TAKE OFF',
     'TEATRO DE OPERACIONES · ARCHIPIÉLAGO':'THEATER OF OPERATIONS · ARCHIPELAGO', 'ANTES DE DESPEGAR':'BEFORE TAKEOFF', 'CONFIGURACIÓN':'CONFIGURATION', 'MISIÓN EN CURSO':'MISSION IN PROGRESS',
     'PAUSA':'PAUSED', 'SEGUIR':'RESUME', 'REINICIAR':'RESTART', 'ABANDONAR':'ABORT', 'INFORME':'DEBRIEF', 'MISIÓN CUMPLIDA':'MISSION COMPLETE', 'MISIÓN FALLIDA':'MISSION FAILED',
     'SIGUIENTE':'NEXT', 'REPETIR':'RETRY', 'ELEGIR':'SELECT', 'EN USO':'IN USE', 'COMPRAR':'BUY', 'AL MÁXIMO':'MAXED', 'CARGANDO…':'LOADING…',
@@ -26,7 +26,7 @@ const TR = {
     'Liviano y nervioso: el que mejor gira. Pocas balas de más: apuntá bien.':'Light and twitchy: the best turner. Not many spare rounds: aim well.',
     'Pesado y veloz, con ocho misiles y un cañón que pega fuerte.':'Heavy and fast, with eight missiles and a hard-hitting gun.',
     'Furtivo: a los enemigos les cuesta el doble fijarte. Rápido y con bodega para ocho misiles.':'Stealthy: enemies take twice as long to lock you. Fast, with a bay for eight missiles.'},
-  pt:{'DUELO AÉREO':'DUELO AÉREO', 'MISIONES':'MISSÕES', 'HANGAR':'HANGAR', 'CÓMO SE VUELA':'COMO VOAR', 'AJUSTES':'AJUSTES', 'VOLVER':'VOLTAR', 'DESPEGAR':'DECOLAR',
+  pt:{'CÁMARA LIBRE · DOBLE TOQUE CENTRA':'CÂMERA LIVRE · TOQUE DUPLO CENTRALIZA', 'DUELO AÉREO':'DUELO AÉREO', 'MISIONES':'MISSÕES', 'HANGAR':'HANGAR', 'CÓMO SE VUELA':'COMO VOAR', 'AJUSTES':'AJUSTES', 'VOLVER':'VOLTAR', 'DESPEGAR':'DECOLAR',
     'TEATRO DE OPERACIONES · ARCHIPIÉLAGO':'TEATRO DE OPERAÇÕES · ARQUIPÉLAGO', 'ANTES DE DESPEGAR':'ANTES DE DECOLAR', 'CONFIGURACIÓN':'CONFIGURAÇÃO', 'MISIÓN EN CURSO':'MISSÃO EM ANDAMENTO',
     'PAUSA':'PAUSA', 'SEGUIR':'CONTINUAR', 'REINICIAR':'REINICIAR', 'ABANDONAR':'ABANDONAR', 'INFORME':'RELATÓRIO', 'MISIÓN CUMPLIDA':'MISSÃO CUMPRIDA', 'MISIÓN FALLIDA':'MISSÃO FRACASSADA',
     'SIGUIENTE':'PRÓXIMA', 'REPETIR':'REPETIR', 'ELEGIR':'ESCOLHER', 'EN USO':'EM USO', 'COMPRAR':'COMPRAR', 'AL MÁXIMO':'NO MÁXIMO', 'CARGANDO…':'CARREGANDO…',
@@ -59,6 +59,7 @@ const COMO_TXT = {
       <p>Si suena la alarma y aparece <b>¡MISIL!</b>, tirá <b>BENGALAS</b> y girá fuerte: el arco rojo te dice de dónde viene.</p>
       <p><b>TURBO</b> enciende el posquemador; <b>FRENO</b> abre los aerofrenos para cerrar el giro o dejar pasar al que te persigue. Muy lento, el avión entra en <b>PÉRDIDA</b>; muy bajo, <b>¡SUBÍ!</b>.</p>
       <p>Tirar muchas G mucho tiempo te cierra la vista. La cámara cambia a cabina con el botón de arriba.</p>
+      <p><b>Mirar</b>: arrastrá la mitad derecha de la pantalla y la cámara gira para donde quieras (también en la cabina); al soltar vuelve sola, y el doble toque la centra.</p>
       <p style="color:#6f8aa3">PC: flechas o WASD vuelan, espacio cañón, M misil, F bengalas, Shift turbo, B freno, C cámara, P pausa.</p>`,
   en:`<p><b>The left stick</b> is where you want to go: push it and the jet banks and pulls on its own; let go and it levels out. With assist off, the stick is real roll and pitch.</p>
       <p><b>GUN</b>: hold it. Aim at the <b>gun pipper</b>: that is where the enemy will be when the bullets arrive. If it overheats, let go for a moment.</p>
@@ -66,6 +67,7 @@ const COMO_TXT = {
       <p>If the alarm sounds and <b>MISSILE!</b> shows up, pop <b>FLARES</b> and turn hard: the red arc tells you where it comes from.</p>
       <p><b>BOOST</b> lights the afterburner; <b>BRAKE</b> opens the speed brakes to tighten a turn or let a chaser overshoot. Too slow and you <b>STALL</b>; too low, <b>PULL UP!</b>.</p>
       <p>Pulling high G for too long closes your vision. The top button switches to cockpit view.</p>
+      <p><b>Look around</b>: drag the right half of the screen and the camera turns wherever you want (in the cockpit too); let go and it comes back, double tap centers it.</p>
       <p style="color:#6f8aa3">PC: arrows or WASD fly, space gun, M missile, F flares, Shift boost, B brake, C camera, P pause.</p>`,
   pt:`<p><b>O manche da esquerda</b> é para onde você quer ir: incline e o avião inclina e puxa sozinho; solte e ele nivela. Com a assistência desligada, o manche é a rolagem e a arfagem de verdade.</p>
       <p><b>CANHÃO</b>: segure. Mire no <b>círculo de tiro</b>: é onde o inimigo vai estar quando a bala chegar. Se superaquecer, solte um instante.</p>
@@ -73,6 +75,7 @@ const COMO_TXT = {
       <p>Se o alarme tocar e aparecer <b>MÍSSIL!</b>, solte <b>FLARES</b> e faça uma curva forte: o arco vermelho mostra de onde ele vem.</p>
       <p><b>TURBO</b> liga o pós-combustor; <b>FREIO</b> abre os aerofreios para fechar a curva ou deixar passar quem te persegue. Muito lento, o avião entra em <b>ESTOL</b>; muito baixo, <b>SUBA!</b>.</p>
       <p>Puxar muitos G por muito tempo fecha sua visão. O botão de cima troca para a câmera da cabine.</p>
+      <p><b>Olhar</b>: arraste a metade direita da tela e a câmera gira para onde você quiser (também na cabine); ao soltar ela volta sozinha, e o toque duplo centraliza.</p>
       <p style="color:#6f8aa3">PC: setas ou WASD voam, espaço canhão, M míssil, F flares, Shift turbo, B freio, C câmera, P pausa.</p>`,
 };
 function idiomaInicial(){ const n = (navigator.language||'es').slice(0,2).toLowerCase(); return n==='en' || n==='pt' ? n : 'es'; }

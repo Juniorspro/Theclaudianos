@@ -21,6 +21,9 @@ html,body{margin:0;height:100%;overflow:hidden;background:#06101c;touch-action:n
 #mandos{position:absolute;inset:0;pointer-events:none;display:none}
 #mandos.ver{display:block}
 #zonaStick{position:absolute;left:0;top:44px;bottom:0;width:46%;pointer-events:auto}
+#zonaMirar{position:absolute;left:46%;right:0;top:44px;bottom:0;pointer-events:auto;cursor:grab}
+#ojo{position:absolute;left:50%;top:52px;transform:translateX(-50%);font:bold 11px Bahnschrift,'Arial Narrow',Arial;letter-spacing:2px;color:#9fe3ff;opacity:0;transition:opacity .25s;pointer-events:none;text-shadow:0 0 6px #000}
+#ojo.ver{opacity:.85}
 #stick{position:absolute;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;border:2px solid rgba(160,220,255,.35);background:radial-gradient(circle,rgba(20,40,70,.18),rgba(20,40,70,.38));
   left:120px;top:calc(100% - 120px);pointer-events:none;transition:opacity .2s;opacity:.55}
 #stick.activo{opacity:1}
@@ -147,6 +150,7 @@ h2 small{display:block;font-size:11px;letter-spacing:5px;color:var(--cian);font-
   <div id="aviso"></div>
   <div id="mandos">
     <div id="zonaStick"></div>
+    <div id="zonaMirar"></div><div id="ojo">CÁMARA LIBRE · DOBLE TOQUE CENTRA</div>
     <div id="stick"><div id="perilla"></div></div>
     <div class="bt" id="bFuego"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg><small>CAÑÓN</small></div>
     <div class="bt" id="bMisil"><svg viewBox="0 0 24 24"><path d="M5 19l9-9M14 10l3-6 3 3-6 3M7 21l-4-4 3-1 2 2z"/></svg><small id="nMis">MISIL</small></div>

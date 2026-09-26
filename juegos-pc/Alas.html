@@ -21,6 +21,9 @@ html,body{margin:0;height:100%;overflow:hidden;background:#06101c;touch-action:n
 #mandos{position:absolute;inset:0;pointer-events:none;display:none}
 #mandos.ver{display:block}
 #zonaStick{position:absolute;left:0;top:44px;bottom:0;width:46%;pointer-events:auto}
+#zonaMirar{position:absolute;left:46%;right:0;top:44px;bottom:0;pointer-events:auto;cursor:grab}
+#ojo{position:absolute;left:50%;top:52px;transform:translateX(-50%);font:bold 11px Bahnschrift,'Arial Narrow',Arial;letter-spacing:2px;color:#9fe3ff;opacity:0;transition:opacity .25s;pointer-events:none;text-shadow:0 0 6px #000}
+#ojo.ver{opacity:.85}
 #stick{position:absolute;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;border:2px solid rgba(160,220,255,.35);background:radial-gradient(circle,rgba(20,40,70,.18),rgba(20,40,70,.38));
   left:120px;top:calc(100% - 120px);pointer-events:none;transition:opacity .2s;opacity:.55}
 #stick.activo{opacity:1}
@@ -147,6 +150,7 @@ h2 small{display:block;font-size:11px;letter-spacing:5px;color:var(--cian);font-
   <div id="aviso"></div>
   <div id="mandos">
     <div id="zonaStick"></div>
+    <div id="zonaMirar"></div><div id="ojo">CÁMARA LIBRE · DOBLE TOQUE CENTRA</div>
     <div id="stick"><div id="perilla"></div></div>
     <div class="bt" id="bFuego"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg><small>CAÑÓN</small></div>
     <div class="bt" id="bMisil"><svg viewBox="0 0 24 24"><path d="M5 19l9-9M14 10l3-6 3 3-6 3M7 21l-4-4 3-1 2 2z"/></svg><small id="nMis">MISIL</small></div>
@@ -4442,7 +4446,7 @@ const MISIONES = [
 
 /* ====================== idiomas: se escribe en castellano y se traduce al mostrar ====================== */
 const TR = {
-  en:{'DUELO AÉREO':'AIR DUEL', 'MISIONES':'MISSIONS', 'HANGAR':'HANGAR', 'CÓMO SE VUELA':'HOW TO FLY', 'AJUSTES':'SETTINGS', 'VOLVER':'BACK', 'DESPEGAR':'TAKE OFF',
+  en:{'CÁMARA LIBRE · DOBLE TOQUE CENTRA':'FREE CAMERA · DOUBLE TAP TO CENTER', 'DUELO AÉREO':'AIR DUEL', 'MISIONES':'MISSIONS', 'HANGAR':'HANGAR', 'CÓMO SE VUELA':'HOW TO FLY', 'AJUSTES':'SETTINGS', 'VOLVER':'BACK', 'DESPEGAR':'TAKE OFF',
     'TEATRO DE OPERACIONES · ARCHIPIÉLAGO':'THEATER OF OPERATIONS · ARCHIPELAGO', 'ANTES DE DESPEGAR':'BEFORE TAKEOFF', 'CONFIGURACIÓN':'CONFIGURATION', 'MISIÓN EN CURSO':'MISSION IN PROGRESS',
     'PAUSA':'PAUSED', 'SEGUIR':'RESUME', 'REINICIAR':'RESTART', 'ABANDONAR':'ABORT', 'INFORME':'DEBRIEF', 'MISIÓN CUMPLIDA':'MISSION COMPLETE', 'MISIÓN FALLIDA':'MISSION FAILED',
     'SIGUIENTE':'NEXT', 'REPETIR':'RETRY', 'ELEGIR':'SELECT', 'EN USO':'IN USE', 'COMPRAR':'BUY', 'AL MÁXIMO':'MAXED', 'CARGANDO…':'LOADING…',
@@ -4467,7 +4471,7 @@ const TR = {
     'Liviano y nervioso: el que mejor gira. Pocas balas de más: apuntá bien.':'Light and twitchy: the best turner. Not many spare rounds: aim well.',
     'Pesado y veloz, con ocho misiles y un cañón que pega fuerte.':'Heavy and fast, with eight missiles and a hard-hitting gun.',
     'Furtivo: a los enemigos les cuesta el doble fijarte. Rápido y con bodega para ocho misiles.':'Stealthy: enemies take twice as long to lock you. Fast, with a bay for eight missiles.'},
-  pt:{'DUELO AÉREO':'DUELO AÉREO', 'MISIONES':'MISSÕES', 'HANGAR':'HANGAR', 'CÓMO SE VUELA':'COMO VOAR', 'AJUSTES':'AJUSTES', 'VOLVER':'VOLTAR', 'DESPEGAR':'DECOLAR',
+  pt:{'CÁMARA LIBRE · DOBLE TOQUE CENTRA':'CÂMERA LIVRE · TOQUE DUPLO CENTRALIZA', 'DUELO AÉREO':'DUELO AÉREO', 'MISIONES':'MISSÕES', 'HANGAR':'HANGAR', 'CÓMO SE VUELA':'COMO VOAR', 'AJUSTES':'AJUSTES', 'VOLVER':'VOLTAR', 'DESPEGAR':'DECOLAR',
     'TEATRO DE OPERACIONES · ARCHIPIÉLAGO':'TEATRO DE OPERAÇÕES · ARQUIPÉLAGO', 'ANTES DE DESPEGAR':'ANTES DE DECOLAR', 'CONFIGURACIÓN':'CONFIGURAÇÃO', 'MISIÓN EN CURSO':'MISSÃO EM ANDAMENTO',
     'PAUSA':'PAUSA', 'SEGUIR':'CONTINUAR', 'REINICIAR':'REINICIAR', 'ABANDONAR':'ABANDONAR', 'INFORME':'RELATÓRIO', 'MISIÓN CUMPLIDA':'MISSÃO CUMPRIDA', 'MISIÓN FALLIDA':'MISSÃO FRACASSADA',
     'SIGUIENTE':'PRÓXIMA', 'REPETIR':'REPETIR', 'ELEGIR':'ESCOLHER', 'EN USO':'EM USO', 'COMPRAR':'COMPRAR', 'AL MÁXIMO':'NO MÁXIMO', 'CARGANDO…':'CARREGANDO…',
@@ -4500,6 +4504,7 @@ const COMO_TXT = {
       <p>Si suena la alarma y aparece <b>¡MISIL!</b>, tirá <b>BENGALAS</b> y girá fuerte: el arco rojo te dice de dónde viene.</p>
       <p><b>TURBO</b> enciende el posquemador; <b>FRENO</b> abre los aerofrenos para cerrar el giro o dejar pasar al que te persigue. Muy lento, el avión entra en <b>PÉRDIDA</b>; muy bajo, <b>¡SUBÍ!</b>.</p>
       <p>Tirar muchas G mucho tiempo te cierra la vista. La cámara cambia a cabina con el botón de arriba.</p>
+      <p><b>Mirar</b>: arrastrá la mitad derecha de la pantalla y la cámara gira para donde quieras (también en la cabina); al soltar vuelve sola, y el doble toque la centra.</p>
       <p style="color:#6f8aa3">PC: flechas o WASD vuelan, espacio cañón, M misil, F bengalas, Shift turbo, B freno, C cámara, P pausa.</p>`,
   en:`<p><b>The left stick</b> is where you want to go: push it and the jet banks and pulls on its own; let go and it levels out. With assist off, the stick is real roll and pitch.</p>
       <p><b>GUN</b>: hold it. Aim at the <b>gun pipper</b>: that is where the enemy will be when the bullets arrive. If it overheats, let go for a moment.</p>
@@ -4507,6 +4512,7 @@ const COMO_TXT = {
       <p>If the alarm sounds and <b>MISSILE!</b> shows up, pop <b>FLARES</b> and turn hard: the red arc tells you where it comes from.</p>
       <p><b>BOOST</b> lights the afterburner; <b>BRAKE</b> opens the speed brakes to tighten a turn or let a chaser overshoot. Too slow and you <b>STALL</b>; too low, <b>PULL UP!</b>.</p>
       <p>Pulling high G for too long closes your vision. The top button switches to cockpit view.</p>
+      <p><b>Look around</b>: drag the right half of the screen and the camera turns wherever you want (in the cockpit too); let go and it comes back, double tap centers it.</p>
       <p style="color:#6f8aa3">PC: arrows or WASD fly, space gun, M missile, F flares, Shift boost, B brake, C camera, P pause.</p>`,
   pt:`<p><b>O manche da esquerda</b> é para onde você quer ir: incline e o avião inclina e puxa sozinho; solte e ele nivela. Com a assistência desligada, o manche é a rolagem e a arfagem de verdade.</p>
       <p><b>CANHÃO</b>: segure. Mire no <b>círculo de tiro</b>: é onde o inimigo vai estar quando a bala chegar. Se superaquecer, solte um instante.</p>
@@ -4514,6 +4520,7 @@ const COMO_TXT = {
       <p>Se o alarme tocar e aparecer <b>MÍSSIL!</b>, solte <b>FLARES</b> e faça uma curva forte: o arco vermelho mostra de onde ele vem.</p>
       <p><b>TURBO</b> liga o pós-combustor; <b>FREIO</b> abre os aerofreios para fechar a curva ou deixar passar quem te persegue. Muito lento, o avião entra em <b>ESTOL</b>; muito baixo, <b>SUBA!</b>.</p>
       <p>Puxar muitos G por muito tempo fecha sua visão. O botão de cima troca para a câmera da cabine.</p>
+      <p><b>Olhar</b>: arraste a metade direita da tela e a câmera gira para onde você quiser (também na cabine); ao soltar ela volta sozinha, e o toque duplo centraliza.</p>
       <p style="color:#6f8aa3">PC: setas ou WASD voam, espaço canhão, M míssil, F flares, Shift turbo, B freio, C câmera, P pausa.</p>`,
 };
 function idiomaInicial(){ const n = (navigator.language||'es').slice(0,2).toLowerCase(); return n==='en' || n==='pt' ? n : 'es'; }
@@ -5515,12 +5522,16 @@ function crearAvion(def, equipo, pos, rumbo, o){
 function soltarAvion(a){ escena.remove(a.g); for(const c of a.cintas){ escena.remove(c.m); c.geo.dispose(); } }
 const adelante = a=> _t1.set(0,0,-1).applyQuaternion(a.q), arribaDe = a=> V3(0,1,0).applyQuaternion(a.q), derechaDe = a=> V3(1,0,0).applyQuaternion(a.q);
 /* vuelo: velocidades de giro limitadas por la G, empuje contra arrastre, la gravedad a lo largo de la trayectoria y pérdida por debajo de la mínima */
+const ARCADE = 3.4;
 function volar(a, dt){
   const d = a.def, c = a.ctrl;
   a.acel = lerp(a.acel, c.acel, dt*1.5); a.turbo = lerp(a.turbo, c.turbo ? 1 : 0, dt*(c.turbo ? 2.5 : 3.5)); a.freno = lerp(a.freno, c.freno ? 1 : 0, dt*4);
   const F = V3(0,0,-1).applyQuaternion(a.q), v = a.v;
-  const eff = lim((v - d.vmin*0.7)/(d.vmin*1.6), 0.18, 1);
-  const gLim = d.gmax*GRAV/Math.max(v, 40);
+  /* G de juego de celular: con el límite real (8 G a 1150 km/h = 0,25 rad/s) una vuelta tardaba 22 s. El avión gira con ARCADE veces
+     esos G y el HUD, el apagón y la resistencia siguen viendo los G «reales» (divididos por ARCADE). A baja velocidad no pierde mando
+     hasta cerca de la pérdida, así que frenar cierra el giro. */
+  const eff = lim((v - d.vmin*0.6)/(d.vmin*0.9), 0.25, 1);
+  const gLim = d.gmax*GRAV*ARCADE/Math.max(v, 40);
   let pr = c.cabeceo*d.giro*eff*(1 - a.freno*0.1); pr = lim(pr, -gLim*0.45, gLim);
   const rr = c.alabeo*d.alabeo*(0.35 + 0.65*eff), yr = c.guinada*d.guinada*eff;
   a.pr = lerp(a.pr, pr, dt*7); a.rr = lerp(a.rr, rr, dt*9);
@@ -5530,7 +5541,7 @@ function volar(a, dt){
   if(v < d.vmin){ const k = 1 - v/d.vmin; _q1.setFromAxisAngle(_EJEX, -0.6*k*dt*(F.y > -0.7 ? 1 : 0)); a.q.multiply(_q1); }
   a.q.normalize();
   const F2 = V3(0,0,-1).applyQuaternion(a.q);
-  a.gF = 1 + v*Math.abs(a.pr)/GRAV;
+  a.gF = 1 + v*Math.abs(a.pr)/(GRAV*ARCADE);
   const kd = d.empuje/Math.pow(d.vmax*0.82, 2);
   const empuje = d.empuje*(0.22 + 0.78*a.acel) + a.turbo*d.empuje*0.62;
   const arrastre = kd*v*v*(1 + a.freno*2.2) + 1.35*Math.max(0, a.gF - 1);
@@ -5708,6 +5719,22 @@ $('zonaStick').addEventListener('touchmove', ev=>{ ev.preventDefault(); for(cons
   IN.x = dx/STICK.R; IN.y = dy/STICK.R; $('perilla').style.transform = `translate(${dx}px,${dy}px)`; } }, {passive:false});
 const sueltaStick = ev=>{ for(const t of ev.changedTouches) if(t.identifier === STICK.id){ STICK.id = null; IN.x = IN.y = 0; $('perilla').style.transform = ''; $('stick').classList.remove('activo'); } };
 $('zonaStick').addEventListener('touchend', sueltaStick); $('zonaStick').addEventListener('touchcancel', sueltaStick);
+/* cámara libre: arrastrar la mitad derecha mira para cualquier lado (alrededor del avión, o la cabeza en la cabina); al soltar vuelve
+   sola atrás del avión, y el doble toque la centra de una */
+const MIRAR = {id:null, x:0, y:0, yaw:0, pit:0, suelto:9, raton:false, toque:0, movio:0};
+function mirarMover(dx, dy){ MIRAR.yaw -= dx*0.011; MIRAR.yaw = ((MIRAR.yaw + Math.PI*3) % TAU) - Math.PI; MIRAR.pit = lim(MIRAR.pit - dy*0.009, -1.3, 1.3); MIRAR.suelto = 0; MIRAR.movio += Math.abs(dx) + Math.abs(dy); }
+function mirarCentrar(){ MIRAR.yaw = MIRAR.pit = 0; MIRAR.suelto = 9; }
+$('zonaMirar').addEventListener('touchstart', ev=>{ ev.preventDefault(); audioIni(); const t = ev.changedTouches[0]; if(MIRAR.id !== null) return; MIRAR.id = t.identifier;
+  [MIRAR.x, MIRAR.y] = aLocal(t.clientX, t.clientY); MIRAR.movio = 0; }, {passive:false});
+$('zonaMirar').addEventListener('touchmove', ev=>{ ev.preventDefault(); for(const t of ev.changedTouches){ if(t.identifier !== MIRAR.id) continue; const [x, y] = aLocal(t.clientX, t.clientY);
+  mirarMover(x - MIRAR.x, y - MIRAR.y); MIRAR.x = x; MIRAR.y = y; } }, {passive:false});
+const sueltaMirar = ev=>{ for(const t of ev.changedTouches) if(t.identifier === MIRAR.id){ MIRAR.id = null; MIRAR.suelto = 0;
+  if(MIRAR.movio < 8){ const ahora = performance.now(); if(ahora - MIRAR.toque < 330) mirarCentrar(); MIRAR.toque = ahora; } } if(ev.type === 'touchend') pantallaHorizontal(); };
+$('zonaMirar').addEventListener('touchend', sueltaMirar); $('zonaMirar').addEventListener('touchcancel', sueltaMirar);
+$('zonaMirar').addEventListener('mousedown', ev=>{ ev.preventDefault(); MIRAR.raton = true; MIRAR.x = ev.clientX; MIRAR.y = ev.clientY; MIRAR.movio = 0; });
+addEventListener('mousemove', ev=>{ if(!MIRAR.raton) return; const [dx, dy] = aLocalD(ev.clientX - MIRAR.x, ev.clientY - MIRAR.y); mirarMover(dx, dy); MIRAR.x = ev.clientX; MIRAR.y = ev.clientY; });
+addEventListener('mouseup', ()=>{ if(MIRAR.raton){ MIRAR.raton = false; MIRAR.suelto = 0; } });
+$('zonaMirar').addEventListener('dblclick', mirarCentrar);
 const BOTONES = {bFuego:'fuego', bMisil:'misil', bTurbo:'turbo', bFreno:'freno', bBengala:'bengala', bCamara:'camara'};
 function apretar(k, v){
   if(k === 'misil'){ if(v) IN.misilP = true; return; } if(k === 'bengala'){ if(v) IN.bengalaP = true; return; }
@@ -5742,7 +5769,10 @@ function mandosJugador(a){
   const arriba = G.invertir ? sy : -sy, c = a.ctrl, F = adelante(a).clone(), U = arribaDe(a);
   if(G.asistencia){ const b = banqueo(a), vertical = Math.abs(F.y) > 0.72, invertido = U.y < 0 && Math.abs(arriba) > 0.25;
     if(vertical || invertido){ c.alabeo = sx; c.cabeceo = arriba; }
-    else { const obj = sx*1.2; c.alabeo = lim((obj - b)*2.4, -1, 1); c.cabeceo = lim(arriba + Math.abs(sx)*0.62*Math.cos(b), -1, 1); }
+    else { /* más inclinado si la nariz sube, menos si baja: la vuelta queda plana (con 72° fijos subía 600 m por vuelta) */
+      const obj = sx*lim(1.3 + F.y*5, 1.05, 1.5); c.alabeo = lim((obj - b)*2.6, -1, 1);
+      /* tira más cuanto más inclinado (antes tiraba con cos(inclinación): a 70° casi nada, y una vuelta tardaba 22 s); sólo si ya inclinó hacia ese lado */
+      const incl = sx*b > 0 ? lim(Math.abs(b)/0.9, 0, 1) : 0; c.cabeceo = lim(arriba + Math.abs(sx)*incl, -1, 1); }
     c.guinada = sx*0.3; }
   else { c.alabeo = sx; c.cabeceo = arriba; c.guinada = 0; }
   c.turbo = IN.turbo; c.freno = IN.freno; c.acel = IN.freno ? 0.2 : (IN.turbo ? 1 : 0.78); c.fuego = IN.fuego;
@@ -5763,13 +5793,20 @@ function fijar(a, dt, cono, alcance, tiempo){
 }
 
 /* ====================== cámara ====================== */
+const _qMir = new THREE.Quaternion(), _qMir2 = new THREE.Quaternion(), _eMir = new THREE.Euler();
 const CAM = {p:V3(0, 1500, 60), mira:V3(0, 1500, 0), up:V3(0,1,0), fov:62, cineT:0, cineK:0};
 function camaraJuego(a, dt){
   const L = a.def.largo*(a.def.escala||1), F = adelante(a).clone(), U = arribaDe(a);
-  if(J.camModo === 1){ const p = mundoDe(a, V3(0, L*0.07, -L*0.28)); cam.position.copy(p); cam.quaternion.copy(a.q); a.g.visible = false; cam.fov = lerp(cam.fov, 70 + a.turbo*6, 0.1); }
+  /* cámara libre: al soltar espera un poco y vuelve sola */
+  if(MIRAR.id === null && !MIRAR.raton){ MIRAR.suelto += dt; if(MIRAR.suelto > 0.9){ const k = Math.exp(-dt*3.2); MIRAR.yaw *= k; MIRAR.pit *= k; } }
+  const mira = lim((Math.abs(MIRAR.yaw) + Math.abs(MIRAR.pit))/0.5, 0, 1); $('ojo').classList.toggle('ver', mira > 0.3 && J.modo === 'juego');
+  const qL = _qMir.setFromEuler(_eMir.set(MIRAR.pit, MIRAR.yaw, 0, 'YXZ')), qW = _qMir2.copy(a.q).multiply(qL);
+  if(J.camModo === 1){ const p = mundoDe(a, V3(0, L*0.07, -L*0.28)); cam.position.copy(p); cam.quaternion.copy(qW); a.g.visible = false; cam.fov = lerp(cam.fov, 70 + a.turbo*6, 0.1); }
   else { a.g.visible = true;
-    const off = V3(0, L*0.34, L*1.25 + 7 + a.v*0.012).applyQuaternion(a.q), des = _t1.copy(a.pos).add(off);
-    const k = 1 - Math.exp(-dt*(9 + a.v*0.01)); CAM.p.lerp(des, k); const alc = a.pos.clone().addScaledVector(F, 60).addScaledVector(U, L*0.18);
+    const off = V3(0, L*0.34, L*1.25 + 7 + a.v*0.012).applyQuaternion(qW), des = _t1.copy(a.pos).add(off);
+    const k = Math.max(1 - Math.exp(-dt*(9 + a.v*0.01)), mira*0.45); CAM.p.lerp(des, k);
+    /* mirando para otro lado, la cámara apunta al avión (si no, al punto de adelante como siempre) */
+    const alc = a.pos.clone().addScaledVector(F, 60*(1 - mira)).addScaledVector(U, L*0.18*(1 - mira*0.5));
     CAM.mira.lerp(alc, 1 - Math.exp(-dt*14)); CAM.up.lerp(V3(0,1,0).lerp(U, 0.8), 1 - Math.exp(-dt*6)).normalize();
     cam.position.copy(CAM.p); cam.up.copy(CAM.up); cam.lookAt(CAM.mira);
     cam.fov = lerp(cam.fov, 60 + a.turbo*9 + lim((a.v - 200)/200, 0, 1)*6, 0.06); }
@@ -5878,7 +5915,7 @@ function iniciarMision(mi, sem){
   BOMBA.blanco = null;
   if(mis.portaaviones){ BOMBA.blanco = crearBarco('porta', V3(0, 0, 1200), 0.3, 'azul'); }
   for(let k=0;k<(mis.barcos||0);k++){ let p = null; for(let t=0;t<60;t++){ const q = V3(rf(-9000, 9000), 0, rf(-12000, -2000)); if(alturaTerreno(q.x, q.z) < -40 && alturaTerreno(q.x + 200, q.z) < -40){ p = q; break; } } crearBarco('destructor', p || V3(k*800, 0, -6000), rf(0, TAU), 'rojo'); }
-  J.cam = null; cam.fov = 62; CAM.p.copy(J.jug.pos).add(V3(0, 8, 40)); CAM.mira.copy(J.jug.pos);
+  J.cam = null; mirarCentrar(); cam.fov = 62; CAM.p.copy(J.jug.pos).add(V3(0, 8, 40)); CAM.mira.copy(J.jug.pos);
 }
 function lanzarOla(){
   const L = J.mis.olas[J.ola + 1]; if(!L) return false; J.ola++;
@@ -5922,7 +5959,8 @@ function dibujarHUD(){
   hg.lineWidth = 1.6*s; hg.strokeStyle = VERDE; hg.fillStyle = VERDE; hg.shadowColor = 'rgba(0,0,0,0.6)'; hg.shadowBlur = 3*s;
   const cx = W/2, cy = H/2, F = adelante(j).clone(), U = arribaDe(j);
   /* escalera de cabeceo: el horizonte y cada 10 grados, girada con el banqueo */
-  if(j.vivo){ const b = banqueo(j), pitch = Math.asin(lim(F.y, -1, 1)), pxGrado = H/(cam.fov)*1.0;
+  /* mirando para otro lado no tiene sentido (se dibujaría flotando): se esconde con la mira y el vector de vuelo */
+  if(j.vivo && Math.abs(MIRAR.yaw) + Math.abs(MIRAR.pit) < 0.2){ const b = banqueo(j), pitch = Math.asin(lim(F.y, -1, 1)), pxGrado = H/(cam.fov)*1.0;
     hg.save(); hg.translate(cx, cy); hg.rotate(-b); hg.globalAlpha = 0.55;
     for(let g=-40; g<=40; g+=10){ const y = (pitch*180/Math.PI - g)*pxGrado; if(Math.abs(y) > H*0.42) continue; const w = g === 0 ? W*0.2 : W*0.06;
       hg.beginPath(); if(g < 0) hg.setLineDash([6*s, 4*s]); hg.moveTo(-w, y); hg.lineTo(-w*0.35, y); hg.moveTo(w*0.35, y); hg.lineTo(w, y); hg.stroke(); hg.setLineDash([]);
@@ -5996,7 +6034,7 @@ function pasar(){
   if(J.modo === 'juego' || J.modo === 'menu'){
     if(J.modo === 'juego' && J.stats && !J.fin) J.stats.t += dt;
     for(const a of J.aviones){ if(!a.vivo){ if(a.cayendo) pasarCaida(a, dt); continue; }
-      if(a.jug){ if(J.bot || J.demo) botJugador(a, dt); else mandosJugador(a); fijar(a, dt, 0.42, 3300, 1.1); } else ia(a, dt);
+      if(a.jug){ if(J.bot || J.demo) botJugador(a, dt); else mandosJugador(a); fijar(a, dt, 0.42, 3300, 1.1); a.gSost = a.gF > 7.5 ? (a.gSost||0) + dt : Math.max(0, (a.gSost||0) - dt*2); } else ia(a, dt);
       volar(a, dt); const disparaba = a.disparando; dispararCanon(a, dt); if(a.jug && a.disparando && !disparaba) J.stats && J.stats.disparos++;
       a.misT -= dt; a.benT -= dt; efectosAvion(a, dt);
       /* los misiles del jugador se recargan de a uno */
@@ -6059,7 +6097,8 @@ function dibujar(){
   const sp = _t1.copy(cam.position).addScaledVector(SOLDIR, 10000).project(cam), visto = sp.z < 1 && Math.abs(sp.x) < 1.3 && Math.abs(sp.y) < 1.3;
   POST.solUV.set(sp.x*0.5 + 0.5, sp.y*0.5 + 0.5); POST.solVis = lerp(POST.solVis, visto ? (1 - dentro)*(1 - CIELO.tormenta*0.85)*lim(1.3 - Math.max(Math.abs(sp.x), Math.abs(sp.y)), 0, 1)*0.9 : 0, 0.15);
   POST.danio = J.modo === 'juego' ? Math.max(J.golpe*0.7, j && j.vivo ? lim(1 - j.hp/j.hpMax - 0.55, 0, 0.4) : 0) : 0;
-  POST.apagon = lerp(POST.apagon, J.modo === 'juego' && j && j.vivo ? lim((j.gF - 7.2)/2.5, 0, 0.8) : 0, 0.03);
+  /* el apagón sólo si se sostienen muchos G un rato: con los giros rápidos, si no, tapaba cada vuelta */
+  POST.apagon = lerp(POST.apagon, J.modo === 'juego' && j && j.vivo ? lim(((j.gSost||0) - 2.5)/2.5, 0, 0.7) : 0, 0.03);
   HUMO.mat.uniforms.fogColor.value.copy(U_AGUA.fogColor.value); HUMO.mat.uniforms.fogNear.value = FUEGO.mat.uniforms.fogNear.value = U_AGUA.fogNear.value; HUMO.mat.uniforms.fogFar.value = FUEGO.mat.uniforms.fogFar.value = U_AGUA.fogFar.value;
   HUMO.mat.uniforms.luz.value.copy(CIELO.solCol).convertSRGBToLinear().multiplyScalar(0.8);
   pasarBarato();

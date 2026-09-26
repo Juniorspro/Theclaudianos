@@ -173,12 +173,16 @@ function crearAvion(def, equipo, pos, rumbo, o){
 function soltarAvion(a){ escena.remove(a.g); for(const c of a.cintas){ escena.remove(c.m); c.geo.dispose(); } }
 const adelante = a=> _t1.set(0,0,-1).applyQuaternion(a.q), arribaDe = a=> V3(0,1,0).applyQuaternion(a.q), derechaDe = a=> V3(1,0,0).applyQuaternion(a.q);
 /* vuelo: velocidades de giro limitadas por la G, empuje contra arrastre, la gravedad a lo largo de la trayectoria y pérdida por debajo de la mínima */
+const ARCADE = 3.4;
 function volar(a, dt){
   const d = a.def, c = a.ctrl;
   a.acel = lerp(a.acel, c.acel, dt*1.5); a.turbo = lerp(a.turbo, c.turbo ? 1 : 0, dt*(c.turbo ? 2.5 : 3.5)); a.freno = lerp(a.freno, c.freno ? 1 : 0, dt*4);
   const F = V3(0,0,-1).applyQuaternion(a.q), v = a.v;
-  const eff = lim((v - d.vmin*0.7)/(d.vmin*1.6), 0.18, 1);
-  const gLim = d.gmax*GRAV/Math.max(v, 40);
+  /* G de juego de celular: con el límite real (8 G a 1150 km/h = 0,25 rad/s) una vuelta tardaba 22 s. El avión gira con ARCADE veces
+     esos G y el HUD, el apagón y la resistencia siguen viendo los G «reales» (divididos por ARCADE). A baja velocidad no pierde mando
+     hasta cerca de la pérdida, así que frenar cierra el giro. */
+  const eff = lim((v - d.vmin*0.6)/(d.vmin*0.9), 0.25, 1);
+  const gLim = d.gmax*GRAV*ARCADE/Math.max(v, 40);
   let pr = c.cabeceo*d.giro*eff*(1 - a.freno*0.1); pr = lim(pr, -gLim*0.45, gLim);
   const rr = c.alabeo*d.alabeo*(0.35 + 0.65*eff), yr = c.guinada*d.guinada*eff;
   a.pr = lerp(a.pr, pr, dt*7); a.rr = lerp(a.rr, rr, dt*9);
@@ -188,7 +192,7 @@ function volar(a, dt){
   if(v < d.vmin){ const k = 1 - v/d.vmin; _q1.setFromAxisAngle(_EJEX, -0.6*k*dt*(F.y > -0.7 ? 1 : 0)); a.q.multiply(_q1); }
   a.q.normalize();
   const F2 = V3(0,0,-1).applyQuaternion(a.q);
-  a.gF = 1 + v*Math.abs(a.pr)/GRAV;
+  a.gF = 1 + v*Math.abs(a.pr)/(GRAV*ARCADE);
   const kd = d.empuje/Math.pow(d.vmax*0.82, 2);
   const empuje = d.empuje*(0.22 + 0.78*a.acel) + a.turbo*d.empuje*0.62;
   const arrastre = kd*v*v*(1 + a.freno*2.2) + 1.35*Math.max(0, a.gF - 1);

@@ -6,7 +6,7 @@ function pasar(){
   if(J.modo === 'juego' || J.modo === 'menu'){
     if(J.modo === 'juego' && J.stats && !J.fin) J.stats.t += dt;
     for(const a of J.aviones){ if(!a.vivo){ if(a.cayendo) pasarCaida(a, dt); continue; }
-      if(a.jug){ if(J.bot || J.demo) botJugador(a, dt); else mandosJugador(a); fijar(a, dt, 0.42, 3300, 1.1); } else ia(a, dt);
+      if(a.jug){ if(J.bot || J.demo) botJugador(a, dt); else mandosJugador(a); fijar(a, dt, 0.42, 3300, 1.1); a.gSost = a.gF > 7.5 ? (a.gSost||0) + dt : Math.max(0, (a.gSost||0) - dt*2); } else ia(a, dt);
       volar(a, dt); const disparaba = a.disparando; dispararCanon(a, dt); if(a.jug && a.disparando && !disparaba) J.stats && J.stats.disparos++;
       a.misT -= dt; a.benT -= dt; efectosAvion(a, dt);
       /* los misiles del jugador se recargan de a uno */
@@ -69,7 +69,8 @@ function dibujar(){
   const sp = _t1.copy(cam.position).addScaledVector(SOLDIR, 10000).project(cam), visto = sp.z < 1 && Math.abs(sp.x) < 1.3 && Math.abs(sp.y) < 1.3;
   POST.solUV.set(sp.x*0.5 + 0.5, sp.y*0.5 + 0.5); POST.solVis = lerp(POST.solVis, visto ? (1 - dentro)*(1 - CIELO.tormenta*0.85)*lim(1.3 - Math.max(Math.abs(sp.x), Math.abs(sp.y)), 0, 1)*0.9 : 0, 0.15);
   POST.danio = J.modo === 'juego' ? Math.max(J.golpe*0.7, j && j.vivo ? lim(1 - j.hp/j.hpMax - 0.55, 0, 0.4) : 0) : 0;
-  POST.apagon = lerp(POST.apagon, J.modo === 'juego' && j && j.vivo ? lim((j.gF - 7.2)/2.5, 0, 0.8) : 0, 0.03);
+  /* el apagón sólo si se sostienen muchos G un rato: con los giros rápidos, si no, tapaba cada vuelta */
+  POST.apagon = lerp(POST.apagon, J.modo === 'juego' && j && j.vivo ? lim(((j.gSost||0) - 2.5)/2.5, 0, 0.7) : 0, 0.03);
   HUMO.mat.uniforms.fogColor.value.copy(U_AGUA.fogColor.value); HUMO.mat.uniforms.fogNear.value = FUEGO.mat.uniforms.fogNear.value = U_AGUA.fogNear.value; HUMO.mat.uniforms.fogFar.value = FUEGO.mat.uniforms.fogFar.value = U_AGUA.fogFar.value;
   HUMO.mat.uniforms.luz.value.copy(CIELO.solCol).convertSRGBToLinear().multiplyScalar(0.8);
   pasarBarato();

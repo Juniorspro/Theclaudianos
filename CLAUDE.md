@@ -734,3 +734,25 @@ decodifican y suenan. Sin errores. Banco sin GPU: 18–20 cuadros por segundo a 
 la simulación cuesta 0,07 ms por paso y el dibujo 3,4 ms a calidad 1 (43 llamadas, 113.000 triángulos), así que en un teléfono con GPU
 tendría que ir mucho mejor. No lo pude medir en un teléfono. Sondas: `window.__V` — `iniciar(n,sem)`, `anda(n)`, `bot(v)`, `dios(v)`,
 `est()`, `assets()`, `dibujarYa()`, `x` (escena, cámara, islas, agua, barcos).
+
+### 2026-09-26 (21) — ALAS: vueltas rápidas y cámara libre
+**Pedido textual:** «las vueltas dan muy lentas, quiero que pueda dar la vuelta más rápido y que yo pueda mover la cámara a los lados,
+arriba y abajo, ver para donde yo quiera».
+
+- **Giro**: con el límite de G real (8 G a 1150 km/h = 0,25 rad/s) una vuelta tardaba 22 s. El avión gira con `ARCADE` (3,4) veces esos
+  G; el HUD, el apagón y la resistencia inducida ven los G «reales» (divididos por `ARCADE`). La pérdida de mando a baja velocidad
+  empieza más cerca de la pérdida, así que **frenar cierra el giro** (antes lo alargaba: 42 s).
+- **Trampa:** la asistencia tiraba con `cos(inclinación)` (a 70°, casi nada). Ahora tira más cuanto más inclinado y sólo si ya inclinó
+  hacia ese lado; la inclinación objetivo se corrige con la nariz (más si sube, menos si baja) y la vuelta queda plana: subía 630 m
+  por vuelta, ahora 58.
+- El apagón sólo aparece si se sostienen más de 7,5 G durante 2,5 s: con los giros rápidos tapaba cada vuelta.
+- **Cámara libre** (`MIRAR`): arrastrar la mitad derecha (`#zonaMirar`, detrás de los botones) gira la cámara alrededor del avión, o la
+  cabeza en la cabina; mirando para otro lado la cámara apunta al avión y se esconden la escalera, la mira y el vector de vuelo. Al
+  soltar vuelve sola a los 0,9 s; el doble toque la centra. En PC, con el mouse. Cartel «CÁMARA LIBRE» en tres idiomas y línea nueva
+  en «Cómo se vuela».
+
+Medido (`banco/giro.js`, stick a fondo): vuelta del F-14 **21,9 → 5,9 s**, con freno **41,6 → 6,1 s**, rizo **17,7 → 5,5 s**; F-16
+5,4 / 4,8 / 5,2 s. Toques reales por CDP en vertical girado (`banco/mirar.js`): mirar a la derecha, atrás y arriba deja la cámara
+apuntando a ese lado (producto con el eje 0,95 / −0,99 / 0,95), vuelve sola, doble toque centra, stick y mirar con dos dedos a la vez,
+en la cabina, y FUEGO encima de la zona sigue andando. Bot con invencibilidad 15/15, sin invencibilidad **12/15** (antes 10/15).
+Toques, menús en dos tamaños, idiomas y sin red como antes; sin errores.

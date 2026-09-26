@@ -16,6 +16,22 @@ $('zonaStick').addEventListener('touchmove', ev=>{ ev.preventDefault(); for(cons
   IN.x = dx/STICK.R; IN.y = dy/STICK.R; $('perilla').style.transform = `translate(${dx}px,${dy}px)`; } }, {passive:false});
 const sueltaStick = ev=>{ for(const t of ev.changedTouches) if(t.identifier === STICK.id){ STICK.id = null; IN.x = IN.y = 0; $('perilla').style.transform = ''; $('stick').classList.remove('activo'); } };
 $('zonaStick').addEventListener('touchend', sueltaStick); $('zonaStick').addEventListener('touchcancel', sueltaStick);
+/* cámara libre: arrastrar la mitad derecha mira para cualquier lado (alrededor del avión, o la cabeza en la cabina); al soltar vuelve
+   sola atrás del avión, y el doble toque la centra de una */
+const MIRAR = {id:null, x:0, y:0, yaw:0, pit:0, suelto:9, raton:false, toque:0, movio:0};
+function mirarMover(dx, dy){ MIRAR.yaw -= dx*0.011; MIRAR.yaw = ((MIRAR.yaw + Math.PI*3) % TAU) - Math.PI; MIRAR.pit = lim(MIRAR.pit - dy*0.009, -1.3, 1.3); MIRAR.suelto = 0; MIRAR.movio += Math.abs(dx) + Math.abs(dy); }
+function mirarCentrar(){ MIRAR.yaw = MIRAR.pit = 0; MIRAR.suelto = 9; }
+$('zonaMirar').addEventListener('touchstart', ev=>{ ev.preventDefault(); audioIni(); const t = ev.changedTouches[0]; if(MIRAR.id !== null) return; MIRAR.id = t.identifier;
+  [MIRAR.x, MIRAR.y] = aLocal(t.clientX, t.clientY); MIRAR.movio = 0; }, {passive:false});
+$('zonaMirar').addEventListener('touchmove', ev=>{ ev.preventDefault(); for(const t of ev.changedTouches){ if(t.identifier !== MIRAR.id) continue; const [x, y] = aLocal(t.clientX, t.clientY);
+  mirarMover(x - MIRAR.x, y - MIRAR.y); MIRAR.x = x; MIRAR.y = y; } }, {passive:false});
+const sueltaMirar = ev=>{ for(const t of ev.changedTouches) if(t.identifier === MIRAR.id){ MIRAR.id = null; MIRAR.suelto = 0;
+  if(MIRAR.movio < 8){ const ahora = performance.now(); if(ahora - MIRAR.toque < 330) mirarCentrar(); MIRAR.toque = ahora; } } if(ev.type === 'touchend') pantallaHorizontal(); };
+$('zonaMirar').addEventListener('touchend', sueltaMirar); $('zonaMirar').addEventListener('touchcancel', sueltaMirar);
+$('zonaMirar').addEventListener('mousedown', ev=>{ ev.preventDefault(); MIRAR.raton = true; MIRAR.x = ev.clientX; MIRAR.y = ev.clientY; MIRAR.movio = 0; });
+addEventListener('mousemove', ev=>{ if(!MIRAR.raton) return; const [dx, dy] = aLocalD(ev.clientX - MIRAR.x, ev.clientY - MIRAR.y); mirarMover(dx, dy); MIRAR.x = ev.clientX; MIRAR.y = ev.clientY; });
+addEventListener('mouseup', ()=>{ if(MIRAR.raton){ MIRAR.raton = false; MIRAR.suelto = 0; } });
+$('zonaMirar').addEventListener('dblclick', mirarCentrar);
 const BOTONES = {bFuego:'fuego', bMisil:'misil', bTurbo:'turbo', bFreno:'freno', bBengala:'bengala', bCamara:'camara'};
 function apretar(k, v){
   if(k === 'misil'){ if(v) IN.misilP = true; return; } if(k === 'bengala'){ if(v) IN.bengalaP = true; return; }
@@ -50,7 +66,10 @@ function mandosJugador(a){
   const arriba = G.invertir ? sy : -sy, c = a.ctrl, F = adelante(a).clone(), U = arribaDe(a);
   if(G.asistencia){ const b = banqueo(a), vertical = Math.abs(F.y) > 0.72, invertido = U.y < 0 && Math.abs(arriba) > 0.25;
     if(vertical || invertido){ c.alabeo = sx; c.cabeceo = arriba; }
-    else { const obj = sx*1.2; c.alabeo = lim((obj - b)*2.4, -1, 1); c.cabeceo = lim(arriba + Math.abs(sx)*0.62*Math.cos(b), -1, 1); }
+    else { /* más inclinado si la nariz sube, menos si baja: la vuelta queda plana (con 72° fijos subía 600 m por vuelta) */
+      const obj = sx*lim(1.3 + F.y*5, 1.05, 1.5); c.alabeo = lim((obj - b)*2.6, -1, 1);
+      /* tira más cuanto más inclinado (antes tiraba con cos(inclinación): a 70° casi nada, y una vuelta tardaba 22 s); sólo si ya inclinó hacia ese lado */
+      const incl = sx*b > 0 ? lim(Math.abs(b)/0.9, 0, 1) : 0; c.cabeceo = lim(arriba + Math.abs(sx)*incl, -1, 1); }
     c.guinada = sx*0.3; }
   else { c.alabeo = sx; c.cabeceo = arriba; c.guinada = 0; }
   c.turbo = IN.turbo; c.freno = IN.freno; c.acel = IN.freno ? 0.2 : (IN.turbo ? 1 : 0.78); c.fuego = IN.fuego;
@@ -71,13 +90,20 @@ function fijar(a, dt, cono, alcance, tiempo){
 }
 
 /* ====================== cámara ====================== */
+const _qMir = new THREE.Quaternion(), _qMir2 = new THREE.Quaternion(), _eMir = new THREE.Euler();
 const CAM = {p:V3(0, 1500, 60), mira:V3(0, 1500, 0), up:V3(0,1,0), fov:62, cineT:0, cineK:0};
 function camaraJuego(a, dt){
   const L = a.def.largo*(a.def.escala||1), F = adelante(a).clone(), U = arribaDe(a);
-  if(J.camModo === 1){ const p = mundoDe(a, V3(0, L*0.07, -L*0.28)); cam.position.copy(p); cam.quaternion.copy(a.q); a.g.visible = false; cam.fov = lerp(cam.fov, 70 + a.turbo*6, 0.1); }
+  /* cámara libre: al soltar espera un poco y vuelve sola */
+  if(MIRAR.id === null && !MIRAR.raton){ MIRAR.suelto += dt; if(MIRAR.suelto > 0.9){ const k = Math.exp(-dt*3.2); MIRAR.yaw *= k; MIRAR.pit *= k; } }
+  const mira = lim((Math.abs(MIRAR.yaw) + Math.abs(MIRAR.pit))/0.5, 0, 1); $('ojo').classList.toggle('ver', mira > 0.3 && J.modo === 'juego');
+  const qL = _qMir.setFromEuler(_eMir.set(MIRAR.pit, MIRAR.yaw, 0, 'YXZ')), qW = _qMir2.copy(a.q).multiply(qL);
+  if(J.camModo === 1){ const p = mundoDe(a, V3(0, L*0.07, -L*0.28)); cam.position.copy(p); cam.quaternion.copy(qW); a.g.visible = false; cam.fov = lerp(cam.fov, 70 + a.turbo*6, 0.1); }
   else { a.g.visible = true;
-    const off = V3(0, L*0.34, L*1.25 + 7 + a.v*0.012).applyQuaternion(a.q), des = _t1.copy(a.pos).add(off);
-    const k = 1 - Math.exp(-dt*(9 + a.v*0.01)); CAM.p.lerp(des, k); const alc = a.pos.clone().addScaledVector(F, 60).addScaledVector(U, L*0.18);
+    const off = V3(0, L*0.34, L*1.25 + 7 + a.v*0.012).applyQuaternion(qW), des = _t1.copy(a.pos).add(off);
+    const k = Math.max(1 - Math.exp(-dt*(9 + a.v*0.01)), mira*0.45); CAM.p.lerp(des, k);
+    /* mirando para otro lado, la cámara apunta al avión (si no, al punto de adelante como siempre) */
+    const alc = a.pos.clone().addScaledVector(F, 60*(1 - mira)).addScaledVector(U, L*0.18*(1 - mira*0.5));
     CAM.mira.lerp(alc, 1 - Math.exp(-dt*14)); CAM.up.lerp(V3(0,1,0).lerp(U, 0.8), 1 - Math.exp(-dt*6)).normalize();
     cam.position.copy(CAM.p); cam.up.copy(CAM.up); cam.lookAt(CAM.mira);
     cam.fov = lerp(cam.fov, 60 + a.turbo*9 + lim((a.v - 200)/200, 0, 1)*6, 0.06); }
@@ -186,7 +212,7 @@ function iniciarMision(mi, sem){
   BOMBA.blanco = null;
   if(mis.portaaviones){ BOMBA.blanco = crearBarco('porta', V3(0, 0, 1200), 0.3, 'azul'); }
   for(let k=0;k<(mis.barcos||0);k++){ let p = null; for(let t=0;t<60;t++){ const q = V3(rf(-9000, 9000), 0, rf(-12000, -2000)); if(alturaTerreno(q.x, q.z) < -40 && alturaTerreno(q.x + 200, q.z) < -40){ p = q; break; } } crearBarco('destructor', p || V3(k*800, 0, -6000), rf(0, TAU), 'rojo'); }
-  J.cam = null; cam.fov = 62; CAM.p.copy(J.jug.pos).add(V3(0, 8, 40)); CAM.mira.copy(J.jug.pos);
+  J.cam = null; mirarCentrar(); cam.fov = 62; CAM.p.copy(J.jug.pos).add(V3(0, 8, 40)); CAM.mira.copy(J.jug.pos);
 }
 function lanzarOla(){
   const L = J.mis.olas[J.ola + 1]; if(!L) return false; J.ola++;
@@ -230,7 +256,8 @@ function dibujarHUD(){
   hg.lineWidth = 1.6*s; hg.strokeStyle = VERDE; hg.fillStyle = VERDE; hg.shadowColor = 'rgba(0,0,0,0.6)'; hg.shadowBlur = 3*s;
   const cx = W/2, cy = H/2, F = adelante(j).clone(), U = arribaDe(j);
   /* escalera de cabeceo: el horizonte y cada 10 grados, girada con el banqueo */
-  if(j.vivo){ const b = banqueo(j), pitch = Math.asin(lim(F.y, -1, 1)), pxGrado = H/(cam.fov)*1.0;
+  /* mirando para otro lado no tiene sentido (se dibujaría flotando): se esconde con la mira y el vector de vuelo */
+  if(j.vivo && Math.abs(MIRAR.yaw) + Math.abs(MIRAR.pit) < 0.2){ const b = banqueo(j), pitch = Math.asin(lim(F.y, -1, 1)), pxGrado = H/(cam.fov)*1.0;
     hg.save(); hg.translate(cx, cy); hg.rotate(-b); hg.globalAlpha = 0.55;
     for(let g=-40; g<=40; g+=10){ const y = (pitch*180/Math.PI - g)*pxGrado; if(Math.abs(y) > H*0.42) continue; const w = g === 0 ? W*0.2 : W*0.06;
       hg.beginPath(); if(g < 0) hg.setLineDash([6*s, 4*s]); hg.moveTo(-w, y); hg.lineTo(-w*0.35, y); hg.moveTo(w*0.35, y); hg.lineTo(w, y); hg.stroke(); hg.setLineDash([]);
