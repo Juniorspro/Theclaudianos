@@ -44,6 +44,13 @@ description: Reglas de render de three.js que ya costaron una vuelta cada una �
   medio texel para adentro.
 - `Group.add()` devuelve **el grupo**, no el hijo.
 
+- **`PMREMGenerator.fromScene` puede dar basura** (todo Standard negro con halo blanco): el entorno se arma con
+  `fromEquirectangular` sobre un canvas con el cielo pintado.
+- Un material que se clona a Lambert para el modo barato **pierde su `onBeforeCompile`**: hay que llevárselo con su
+  `customProgramCacheKey`, o lo que era una mezcla de texturas sale del color por vértice.
+- Con la pantalla girada por CSS, **`vh` mide el lado largo físico**: los altos van con flex, no con `vh`.
+- La cámara se mueve **en el paso de la simulación**, no al dibujar: si no, a pocos cuadros por segundo se queda atrás.
+
 ## Rendimiento
 - Lo que siempre se paga es el **relleno de píxeles**: dibujar a un destino reducido y estirar.
 - `renderer.info.render` se pone a cero al empezar **cada** `render()`, y la sombra es otra pasada:

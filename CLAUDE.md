@@ -13,6 +13,8 @@ se prueba **en el celular, en vertical (412×892)**. EL TIPO se juega **acostado
 | `juegos-pc/Bronca.html` | **BRONCA · ZOMBIS.** Palitos contra zombis al estilo Anger of Stick 5: combos, armas que apuntan solas, aliados, robot y helicóptero, experiencia y base con tienda; 5 misiones procedurales (una es defensa) con jefe cada una. Canvas 2D vectorial, acostado, sin red. |
 | `juegos-pc/Brecha.html` | **BRECHA 7.** Tirador táctico en primera persona sobre rieles al estilo SIERRA 7: cubrirse para recargar, brechas en cámara lenta con rehenes, francotirador con caída y viento, convoy con helicóptero; 5 misiones procedurales. three.js r128 y **todo lo generado con Rezona adentro del archivo** (texturas PBR, cielos, arte, armas, utilería, vehículos, personajes con esqueleto), sin red, acostado. Se arma con `herramientas/brecha/armar.py`. |
 | `herramientas/brecha` | Partes del código de BRECHA 7, su armador y el banco (`banco/*.js`). |
+| `juegos-pc/Alas.html` | **ALAS · DUELO AÉREO.** Combate aéreo en tercera persona (o cabina) al estilo Modern Warplanes: archipiélago procedural con islas, costa, mar con reflejo y nubes; cañón, misiles con fijado, bengalas, turbo y freno; 5 misiones (duelo, cordillera con compañero, defensa de portaaviones, rasante contra destructores, El As en tormenta), hangar con 4 aviones y mejoras. three.js r128 y todo lo generado con Rezona adentro, sin red, acostado. Se arma con `herramientas/alas/armar.py`. |
+| `herramientas/alas` | Partes del código de ALAS, su armador y el banco (`banco/*.js`). |
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. De otra línea de trabajo. |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -668,3 +670,67 @@ Medido: misiones de interior (depósito, embajada, búnker × 2 semillas, con el
 una caja: **50 de 582 muestras antes, 0 de 610 ahora**; tiros que te pegaron a través de algo: **3 antes, 0 ahora**. Menús con toques
 reales girado y sin girar: 188 px arrastrando y el envión suma ~85; arrastrar sobre COMPRAR no compra, tocar sí. Bot con
 invencibilidad 15/15, sin invencibilidad 13/15 (convoy y El Coloso, como antes). Toques 11/11, menús, sin red e idiomas sin errores.
+
+### 2026-09-26 (20) — ALAS · DUELO AÉREO
+**Pedido textual:** «quiero un juego de aviones inspirado en guerra pero en este caso duelo de aviones, un mundo god con cielo celeste y
+nubes, mares, montañas y islas, el juego va a tratar de vs de aviones, el jugador va a poder controlar el avión y disparar misiles y balas
+al enemigo Hacelo super realista ahí tienes Rezona lab … gasta lo que quieras … que sea 1000% veces mejor que los juegos anteriores en menú
+estilo animaciones e incluso animaciones y motion graphics en los menú» (con capturas de Warplanes, Alliance: Air War y Modern Warplanes, y
+un TikTok de Modern Jet Fighters).
+
+`juegos-pc/Alas.html` (7,5 MB, sin red), armado como BRECHA con `herramientas/alas/armar.py` desde `partes/*` y los generados. Si la
+carpeta de generados no está, reusa los assets del HTML ya armado.
+- **Rezona** (un proyecto, `EUDERiogUk`): 3 cielos equirectangulares con el sol medido, 8 nubes sueltas, 5 texturas de isla (arena, pasto,
+  selva, roca, nieve) + normales de agua, 8 ilustraciones de menú (portada, hangar, mapa del archipiélago, una por misión), 10 modelos
+  (6 jets, misil, portaaviones, destructor, faro) con puntos medidos (toberas, puntas de ala, rieles) y **29 audios**: motor, posquemador,
+  viento y alarma en bucle cosido, cañón, misil, explosión, impacto, pasada, bengalas, música de menú, combate y victoria, y 15 voces de
+  radio (5 frases × es/en/pt). **El audio de Rezona volvió a andar.** Pero `duration` se ignora (la música viene de 8 a 10 s aunque se
+  pidan 30), y el habla a veces devuelve un monólogo inventado de 20–30 s en vez de la frase: se repite hasta que sale sola.
+- **Mundo**: cielo por shader desde el panorama girado para que su sol caiga en la luz; niebla teñida hacia el sol. Mar en un plano que sigue
+  a la cámara: normales en tres escalas, Fresnel con el cielo, brillo de sol, bajío turquesa y espuma desde un mapa de costa. Islas de ruido
+  (meseta, crestas, playa) con mezcla de cinco texturas por pesos por vértice, y la misma altura para choque e IA. Nubes instanciadas que
+  miran a la cámara, ordenadas de atrás para adelante, que se funden de cerca y blanquean la pantalla por dentro.
+- **Vuelo y combate**: cuaterniones con giro limitado por G; empuje contra resistencia (inducida por G) y gravedad por la trayectoria;
+  pérdida; asistencia que inclina para girar. Cañón con calor; balas como segmento contra esfera. Misiles con adelanto, giro limitado,
+  espoleta de proximidad y bengalas. Barcos con antiaérea. HUD de verdad: escalera de cabeceo, vector de vuelo, recuadros, rombo de fijado,
+  pipper de adelanto, flechas fuera de pantalla, cintas de velocidad y altura, G, radar y apagón por G sostenida. Destello de lente.
+- **Menús con motion graphics**: el avión de la portada vuela detrás del título con recuadro de seguimiento, telemetría, radar y texto que
+  se tipea; barrido entre capas y entradas escalonadas; mapa de misiones con rutas que se dibujan, pulso de radar y un avión que las
+  recorre; hangar con el avión girando, rótulos con líneas guía y barras que crecen; resultado con números que cuentan y estrellas.
+
+Trampas que costaron una vuelta:
+- **`PMREMGenerator.fromScene` daba basura** en este armado: todo `MeshStandardMaterial` salía negro con halo blanco (Lambert, Phong y
+  Standard con `envMapIntensity:0` andaban). El entorno sale del panorama dibujado en un canvas con `fromEquirectangular`, como BRECHA.
+- **La cámara se movía al dibujar**: después de `anda()` quedaba vieja y a pocos cuadros por segundo se quedaba atrás del avión. Va en `pasar()`.
+- **El modo barato (Lambert, calidad ≤ 0,45) perdía la mezcla de texturas de la isla**: quedaba el color por vértice, que es la oclusión
+  (casi blanco), y las islas salían como manchas blancas. El clon Lambert se lleva el mismo `onBeforeCompile` y la clave (`userData.propio`).
+- **Las nubes de Rezona salían marrones**: el gris del sprite multiplicado por el sol cálido. Ahora el brillo del sprite elige entre sombra
+  azulada del cielo y sol.
+- **La costa se veía en escalones**: el mapa de costa tenía texeles de 78 m. La caja abraza a las islas, 1024 texeles, dos canales (bajío
+  difuminado y espuma pegada a la orilla). Cuesta 100 ms al armar la misión.
+- **`vh` con la pantalla girada por CSS mide el lado largo físico**: el mapa de misiones medía `52vh` = 463 px en una pantalla de 412 y
+  DESPEGAR quedaba afuera. `flex:1 1 0` con mínimo y máximo. Y el mapa arrancaba su animación antes de que la capa fuera visible (salía
+  transparente): arranca desde `mostrar()`.
+- **El cañón acumulaba deuda de cadencia**: sin gatillo el contador seguía bajando y al apretar salían de golpe todas las balas de los
+  segundos anteriores. El primer caza que disparaba metía 30 balas en un cuadro y **el bot moría a los 7 s en las 15 partidas**.
+- **La espoleta de proximidad miraba una vez por cuadro**: a 1000 m/s de acercamiento son 17 m por cuadro y el misil pasaba de largo el
+  radio de 21 m. Distancia mínima **dentro** del cuadro.
+- **Cada bengala tiraba su propio dado**: con seis juntas el misil se engañaba el 96 % de las veces. Una tirada por salva (78 % contra
+  misiles enemigos, 42 % contra los del jugador).
+- **Círculo de Lufbery**: dos aviones iguales girando a fondo a 900 m, ninguno con la nariz encima, 10 minutos. La IA con pericia alta frena
+  para cortar por dentro después de 4 s de círculo, y esquiva en rachas con descanso (antes quebraba el 90 % de los cuadros con alguien
+  en la cola y nadie conseguía solución de tiro). Para el jugador: cono de fijado 0,42 rad, ayuda de puntería del cañón cerca del blanco
+  fijado y misiles que se recargan de a uno cada 12 s, como en los juegos de celular.
+- **La línea de flotación del manifiesto estaba mal**: la franja roja del destructor llega a ~11 m sobre la quilla, no a 4,5. Se midió a
+  ojo contra el agua: destructor −7,5 m, portaaviones −2,5 m. Antes de culpar a la profundidad del agua con el búfer logarítmico, un
+  material básico en el agua mostró que tapaba bien.
+- `lanzarOla` sumaba oleadas aunque no quedaran; la vitrina del hangar no copiaba la posición a la malla (el avión estaba en el origen).
+
+Medido: bot con invencibilidad **15/15** (3 semillas × 5, misiones de 50 s a 4,5 min), sin invencibilidad **10/15** (pierde contra El As
+y en la rasante contra destructores). Toques reales por CDP **sin red** (cero pedidos): stick en dos ejes, fuego con segundo dedo
+apretando el stick, misil, turbo, freno, bengalas, cámara, pausa, seguir, salir, hangar y cómo se juega; ningún botón tapado ni fuera de
+pantalla en 412×892 ni en 892×412. Inglés y portugués sin restos en castellano (DOM y todo lo escrito en canvas). Los 29 audios
+decodifican y suenan. Sin errores. Banco sin GPU: 18–20 cuadros por segundo a CPU normal y 10–12 a CPU ×6. Ahí manda el compositor:
+la simulación cuesta 0,07 ms por paso y el dibujo 3,4 ms a calidad 1 (43 llamadas, 113.000 triángulos), así que en un teléfono con GPU
+tendría que ir mucho mejor. No lo pude medir en un teléfono. Sondas: `window.__V` — `iniciar(n,sem)`, `anda(n)`, `bot(v)`, `dios(v)`,
+`est()`, `assets()`, `dibujarYa()`, `x` (escena, cámara, islas, agua, barcos).
