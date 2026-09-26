@@ -93,18 +93,24 @@ function aplicarHora(h){
 /* el grupo de luces: los 4 cuartos prendidos más cercanos al jugador (y adentro, el cuarto donde estás primero) */
 function repartirLuces(px, py, pz){
   const L = MUNDO.luces, cand = [];
-  for(const l of L){ const on = l.on && (l.siempre || ELEC.hay) && l.parpadeo <= 0; if(!on) continue;
+  const prendida = l => l.tele ? ELEC.tvOn && ELEC.hay : l.on && (l.siempre || ELEC.hay) && l.parpadeo <= 0;
+  for(const l of L){ if(!prendida(l)) continue;
     const d = Math.hypot(l.pos[0] - px, (l.pos[1] - py)*1.6, l.pos[2] - pz); cand.push([d, l]); }
   cand.sort((a, b) => a[0] - b[0]);
   for(let i = 0; i < RND.pool.length; i++){ const P = RND.pool[i], c = cand[i];
-    if(c){ const l = c[1]; P.position.set(l.pos[0], l.pos[1], l.pos[2]); P.distance = l.alcance; P.intensity = (l.afuera ? 1.6 : 1.25)*(ELEC.titila ? (Math.random() < 0.35 ? 0.1 : 1) : 1)*(l.mult || 1); }
+    if(c){ const l = c[1]; P.position.set(l.pos[0], l.pos[1], l.pos[2]); P.distance = l.alcance; P.color.set(l.color || 0xffc88a);
+      P.intensity = l.tele ? 0.55 + Math.random()*0.35 : (l.afuera ? 1.6 : 1.25)*(ELEC.titila ? (Math.random() < 0.35 ? 0.1 : 1) : 1)*(l.mult || 1); }
     else { P.intensity = 0; P.position.set(0, -60, 0); } }
   /* el susto: una luz pegada a la cara para que se vea entera aunque el cuarto esté a oscuras */
   if(J && J.modo === 'susto'){ const P = RND.pool[0], c = RND.cam; P.position.set(c.position.x, c.position.y + 0.25, c.position.z); P.distance = 4; P.intensity = 1.3 + Math.random()*0.9; }
   /* las bombitas se ven prendidas aunque no les toque una luz del grupo */
-  const bm = MUNDO.bombitas; let cambio = false;
-  L.forEach((l, i) => { const on = l.on && (l.siempre || ELEC.hay) && l.parpadeo <= 0, k = on ? 1 : 0; if(l._k !== k){ l._k = k; bm.setColorAt(i, new THREE.Color(on ? 0xfff0c8 : 0x2a2a2a)); cambio = true; } });
-  if(cambio) bm.instanceColor.needsUpdate = true;
+  const bm = MUNDO.bombitas, hc = MUNDO.halos.geometry.attributes.color; let cambio = false;
+  L.forEach((l, i) => { const on = !l.tele && prendida(l), k = on ? 1 : 0; if(l._k !== k){ l._k = k; bm.setColorAt(i, new THREE.Color(on ? 0xfff0c8 : 0x2a2a2a));
+    const e = on ? (l.afuera ? 0.5 : 0.36) : 0; hc.setXYZ(i, e, e*0.86, e*0.62); cambio = true; } });
+  if(cambio){ bm.instanceColor.needsUpdate = true; hc.needsUpdate = true; }
+  /* de noche, la ventana de un cuarto con la luz prendida brilla cálida (desde afuera se ve la casa habitada) */
+  for(const id in MUNDO.ventanas){ const v = MUNDO.ventanas[id]; if(v._luz === undefined) v._luz = L.find(l => l.sala === v.sala) || null;
+    const k = v._luz && prendida(v._luz) ? Math.round((RND.noche || 0)*20)/20 : 0; if(v._be !== k){ v._be = k; v.mVidrio.material.emissive.setRGB(0.34*k, 0.24*k, 0.1*k); } }
 }
 
 /* el grano de película y la viñeta van por encima, en un lienzo chiquito */

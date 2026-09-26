@@ -3,19 +3,22 @@
    Planta baja de 0 a 3,0; losa de 3,0 a 3,2; planta alta de 3,2 a 6,0; techo a dos aguas arriba. */
 const PISO1 = 3.2, TECHO0 = 3.0, TECHO1 = 6.0, GROSOR = 0.2;
 const SALAS = [
-  {id:'living',   piso:0, x0:-7, x1:-2, z0:-5,  z1:0,   suelo:'alfombra',      pared:'pared',       nombre:'LIVING'},
-  {id:'hall',     piso:0, x0:-2, x1:2,  z0:-5,  z1:2.4, suelo:'alfombra',      pared:'pared',       nombre:'ENTRADA'},
-  {id:'cocina',   piso:0, x0:2,  x1:7,  z0:-5,  z1:0,   suelo:'damero',        pared:'paredCeleste', nombre:'COCINA'},
-  {id:'cuarto',   piso:0, x0:-7, x1:-2, z0:0,   z1:5,   suelo:'alfombraRoja',  pared:'paredVerde',  nombre:'DORMITORIO'},
-  {id:'bano',     piso:0, x0:-2, x1:0.5, z0:2.4, z1:5,  suelo:'damero',        pared:'paredCeleste', nombre:'BAÑO'},
-  {id:'lavadero', piso:0, x0:0.5, x1:2, z0:2.4, z1:5,   suelo:'damero',        pared:'pared',       nombre:'LAVADERO'},
-  {id:'comedor',  piso:0, x0:2,  x1:7,  z0:0,   z1:5,   suelo:'maderaClara',   pared:'pared',       nombre:'COMEDOR'},
-  {id:'master',   piso:1, x0:-7, x1:-2, z0:-5,  z1:0,   suelo:'alfombraRoja',  pared:'pared',       nombre:'DORMITORIO GRANDE'},
-  {id:'pasillo',  piso:1, x0:-2, x1:2,  z0:-5,  z1:5,   suelo:'alfombra',      pared:'pared',       nombre:'PASILLO DE ARRIBA'},
-  {id:'nene',     piso:1, x0:2,  x1:7,  z0:-5,  z1:0,   suelo:'alfombraVerde', pared:'paredCeleste', nombre:'CUARTO DEL NENE'},
-  {id:'bano2',    piso:1, x0:-7, x1:-2, z0:0,   z1:5,   suelo:'damero',        pared:'paredCeleste', nombre:'BAÑO DE ARRIBA'},
-  {id:'deposito', piso:1, x0:2,  x1:7,  z0:0,   z1:5,   suelo:'madera',        pared:'paredVerde',  nombre:'DEPÓSITO'}
+  {id:'living',   piso:0, x0:-7, x1:-2, z0:-5,  z1:0,   suelo:'alfombra',      pared:'pared',          nombre:'LIVING'},
+  {id:'hall',     piso:0, x0:-2, x1:2,  z0:-5,  z1:2.4, suelo:'maderaPiso',    pared:'pared',          nombre:'ENTRADA'},
+  {id:'cocina',   piso:0, x0:2,  x1:7,  z0:-5,  z1:0,   suelo:'damero',        pared:'paredCocina',    nombre:'COCINA'},
+  {id:'cuarto',   piso:0, x0:-7, x1:-2, z0:0,   z1:5,   suelo:'alfombraBeige', pared:'empapelado',     nombre:'DORMITORIO'},
+  {id:'bano',     piso:0, x0:-2, x1:0.5, z0:2.4, z1:5,  suelo:'azulejo',       pared:'azulejoPared',   nombre:'BAÑO'},
+  {id:'lavadero', piso:0, x0:0.5, x1:2, z0:2.4, z1:5,   suelo:'damero',        pared:'paredCocina',    nombre:'LAVADERO'},
+  {id:'comedor',  piso:0, x0:2,  x1:7,  z0:0,   z1:5,   suelo:'maderaClara',   pared:'empapeladoRojo', nombre:'COMEDOR'},
+  {id:'master',   piso:1, x0:-7, x1:-2, z0:-5,  z1:0,   suelo:'alfombraRoja',  pared:'pared',          nombre:'DORMITORIO GRANDE'},
+  {id:'pasillo',  piso:1, x0:-2, x1:2,  z0:-5,  z1:5,   suelo:'maderaPiso',    pared:'pared',          nombre:'PASILLO DE ARRIBA'},
+  {id:'nene',     piso:1, x0:2,  x1:7,  z0:-5,  z1:0,   suelo:'alfombraVerde', pared:'empapeladoNene', nombre:'CUARTO DEL NENE'},
+  {id:'bano2',    piso:1, x0:-7, x1:-2, z0:0,   z1:5,   suelo:'azulejo',       pared:'azulejoPared',   nombre:'BAÑO DE ARRIBA'},
+  {id:'deposito', piso:1, x0:2,  x1:7,  z0:0,   z1:5,   suelo:'maderaPiso',    pared:'paredVerde',     nombre:'DEPÓSITO'}
 ];
+/* metros por repetición de cada textura de piso y de pared (la baldosa del baño mide 15 cm, la tacha 33) */
+const ESC_TEX = {alfombra:0.66, alfombraRoja:0.66, alfombraVerde:0.66, alfombraBeige:0.66, damero:0.6, azulejo:0.6, maderaPiso:0.9, maderaClara:0.9,
+  pared:2.5, paredCocina:2.5, paredVerde:2.5, empapelado:2.0, empapeladoRojo:1.3, empapeladoNene:1.3, azulejoPared:0.9, paredExt:2.5};
 const SALA = Object.fromEntries(SALAS.map(s => [s.id, s]));
 /* la escalera sube hacia el fondo por el costado derecho de la entrada */
 const ESC = {x0:0.8, x1:2.0, z0:-3.2, z1:1.6};
@@ -83,21 +86,32 @@ function construirPared(L){
   const tramos = []; let t = L.a0;
   for(const h of huecos){ if(h.t0 > t) tramos.push({t0:t, t1:h.t0, y0:0, y1:H}); if(h.y0 > 0) tramos.push({t0:h.t0, t1:h.t1, y0:0, y1:h.y0}); tramos.push({t0:h.t0, t1:h.t1, y0:h.y1, y1:H}); t = h.t1; }
   if(t < L.a1) tramos.push({t0:t, t1:L.a1, y0:0, y1:H});
-  for(const s of tramos){ const largo = s.t1 - s.t0, alto = s.y1 - s.y0; if(largo < 0.01 || alto < 0.01) continue;
+  /* cada tramo se corta donde cambia el cuarto de cada lado (si no, el baño se queda con el empapelado del dormitorio) */
+  const cortes = [...new Set(SALAS.filter(q => q.piso === L.piso).flatMap(q => L.eje === 'x' ? [q.x0, q.x1] : [q.z0, q.z1]))].sort((a, b) => a - b), piezas = [];
+  for(const s0 of tramos){ let a = s0.t0; for(const c of cortes) if(c > a + 0.01 && c < s0.t1 - 0.01){ piezas.push({t0:a, t1:c, y0:s0.y0, y1:s0.y1}); a = c; } piezas.push({t0:a, t1:s0.t1, y0:s0.y0, y1:s0.y1}); }
+  for(const s of piezas){ const largo = s.t1 - s.t0, alto = s.y1 - s.y0; if(largo < 0.01 || alto < 0.01) continue;
     const tm = (s.t0 + s.t1)/2, ym = y0 + (s.y0 + s.y1)/2;
     for(const lado of [-1, 1]){ const off = lado*GROSOR/4;
       const x = L.eje === 'x' ? tm : L.f + off, z = L.eje === 'x' ? L.f + off : tm;
       const px = L.eje === 'x' ? tm : L.f + lado*0.5, pz = L.eje === 'x' ? L.f + lado*0.5 : tm, mat = matPared(px, pz, L.piso);
-      if(L.eje === 'x') caja(mat, x, ym, z, largo, alto, GROSOR/2, 0xffffff, {tex:2.5}); else caja(mat, x, ym, z, GROSOR/2, alto, largo, 0xffffff, {tex:2.5}); } }
+      if(L.eje === 'x') caja(mat, x, ym, z, largo, alto, GROSOR/2, 0xffffff, {tex:ESC_TEX[mat] || 2.5}); else caja(mat, x, ym, z, GROSOR/2, alto, largo, 0xffffff, {tex:ESC_TEX[mat] || 2.5}); } }
   /* colisión: la pared entera menos las puertas y los arcos (las ventanas no se cruzan) */
   let c = L.a0; const pasos = huecos.filter(h => h.tipo !== 'v');
   for(const h of pasos){ if(h.t0 > c) colPared(L, c, h.t0); c = h.t1; }
   if(c < L.a1) colPared(L, c, L.a1);
-  /* zócalo de madera oscura adentro */
-  if(true){ let c2 = L.a0; for(const h of pasos.concat([{t0:L.a1, t1:L.a1}])){ if(h.t0 > c2 + 0.05) for(const lado of [-1, 1]){ const px = L.eje === 'x' ? (c2 + h.t0)/2 : L.f + lado*0.5, pz = L.eje === 'x' ? L.f + lado*0.5 : (c2 + h.t0)/2;
-        if(!salaEn(px, pz, L.piso)) continue; const off = lado*(GROSOR/2 + 0.015), l = h.t0 - c2;
-        if(L.eje === 'x') caja('madera', (c2 + h.t0)/2, y0 + 0.07, L.f + off, l, 0.14, 0.03, 0x5a3a20); else caja('madera', L.f + off, y0 + 0.07, (c2 + h.t0)/2, 0.03, 0.14, l, 0x5a3a20); }
-      c2 = h.t1; } }
+  /* adentro: el zócalo de madera y la sombra del rincón en el piso (se cortan en las puertas), la moldura y la sombra del cielorraso */
+  const T = (a, b, off) => L.eje === 'x' ? [a, L.f + off, b, L.f + off] : [L.f + off, a, L.f + off, b];
+  for(const lado of [-1, 1]){ let c2 = L.a0; const cara = lado*GROSOR/2, nx = L.eje === 'x' ? 0 : lado, nz = L.eje === 'x' ? lado : 0;
+    for(const h of pasos.concat([{t0:L.a1, t1:L.a1}])){ if(h.t0 > c2 + 0.05){ const px = L.eje === 'x' ? (c2 + h.t0)/2 : L.f + lado*0.5, pz = L.eje === 'x' ? L.f + lado*0.5 : (c2 + h.t0)/2, s = salaEn(px, pz, L.piso);
+        if(s){ const off = lado*(GROSOR/2 + 0.015), l = h.t0 - c2, col = s.pared === 'azulejoPared' ? 0xd8d8d4 : 0x4a2c16;
+          if(L.eje === 'x') caja('madera', (c2 + h.t0)/2, y0 + 0.07, L.f + off, l, 0.14, 0.03, col); else caja('madera', L.f + off, y0 + 0.07, (c2 + h.t0)/2, 0.03, 0.14, l, col);
+          const [ax, az, bx, bz] = T(c2, h.t0, cara + lado*0.03); franja(ax, az, bx, bz, nx, nz, 0.34, y0 + 0.019); } }
+      c2 = h.t1; }
+    /* arriba, de punta a punta: la moldura blanca y la sombra que deja en el techo */
+    const pm = L.eje === 'x' ? [(L.a0 + L.a1)/2, L.f + lado*0.5] : [L.f + lado*0.5, (L.a0 + L.a1)/2], sm = salaEn(pm[0], pm[1], L.piso);
+    if(sm && !(L.piso === 0 && sm.id === 'hall' && L.eje === 'z' && L.f === 2)){ const off = lado*(GROSOR/2 + 0.02), l = L.a1 - L.a0, ym = y0 + H - 0.06;
+      if(L.eje === 'x') caja('techo', (L.a0 + L.a1)/2, ym, L.f + off, l, 0.12, 0.05, 0xf4f0e6, {fuera:0}); else caja('techo', L.f + off, ym, (L.a0 + L.a1)/2, 0.05, 0.12, l, 0xf4f0e6, {fuera:0});
+      const [ax, az, bx, bz] = T(L.a0, L.a1, cara + lado*0.045); franja(ax, az, bx, bz, nx, nz, 0.4, y0 + H - 0.004); } }
   return huecos;
 }
 function colPared(L, a, b){ const g = GROSOR/2 + 0.02; if(L.eje === 'x') colision(L.piso, a, b, L.f - g, L.f + g); else colision(L.piso, L.f - g, L.f + g, a, b); }
@@ -121,16 +135,16 @@ function construirCasa(){
   const G = new THREE.Group(); MUNDO.grupo = G;
   /* los pisos de cada cuarto, las losas y los cielorrasos */
   for(const s of SALAS){ const y = alturaPiso(s.piso), w = s.x1 - s.x0, d = s.z1 - s.z0;
-    caja(s.suelo, (s.x0 + s.x1)/2, y - 0.035, (s.z0 + s.z1)/2, w, 0.1, d, 0xffffff, {tex:s.suelo === 'damero' ? 1.2 : s.suelo.startsWith('madera') ? 3 : 0.9, fuera:0});
+    caja(s.suelo, (s.x0 + s.x1)/2, y - 0.035, (s.z0 + s.z1)/2, w, 0.1, d, 0xffffff, {tex:ESC_TEX[s.suelo] || 0.9, fuera:0});
     const techo = s.piso ? TECHO1 : TECHO0;
-    if(s.piso === 1 || !(s.id === 'hall')) caja('pared', (s.x0 + s.x1)/2, techo + 0.03, (s.z0 + s.z1)/2, w, 0.06, d, 0xf2eee4, {tex:3, fuera:0});
+    if(s.piso === 1 || !(s.id === 'hall')) caja('techo', (s.x0 + s.x1)/2, techo + 0.03, (s.z0 + s.z1)/2, w, 0.06, d, 0xffffff, {tex:3, fuera:0});
   }
   /* el cielorraso de la entrada tiene el hueco de la escalera */
-  caja('pared', 0, TECHO0 + 0.03, (-5 + ESC.z0)/2, 4, 0.06, ESC.z0 + 5, 0xf2eee4, {tex:3, fuera:0});
-  caja('pared', (-2 + ESC.x0)/2, TECHO0 + 0.03, (ESC.z0 + 2.4)/2, ESC.x0 + 2, 0.06, 2.4 - ESC.z0, 0xf2eee4, {tex:3, fuera:0});
-  caja('pared', 1.4, TECHO0 + 0.03, (ESC.z1 + 2.4)/2, 1.2, 0.06, 2.4 - ESC.z1, 0xf2eee4, {tex:3, fuera:0});
+  caja('techo', 0, TECHO0 + 0.03, (-5 + ESC.z0)/2, 4, 0.06, ESC.z0 + 5, 0xffffff, {tex:3, fuera:0});
+  caja('techo', (-2 + ESC.x0)/2, TECHO0 + 0.03, (ESC.z0 + 2.4)/2, ESC.x0 + 2, 0.06, 2.4 - ESC.z0, 0xffffff, {tex:3, fuera:0});
+  caja('techo', 1.4, TECHO0 + 0.03, (ESC.z1 + 2.4)/2, 1.2, 0.06, 2.4 - ESC.z1, 0xffffff, {tex:3, fuera:0});
   /* la losa entre pisos, con el hueco de la escalera */
-  const losa = (x0, x1, z0, z1) => caja('pared', (x0 + x1)/2, TECHO0 + 0.12, (z0 + z1)/2, x1 - x0, 0.12, z1 - z0, 0xb8b0a0, {tex:3, fuera:0});
+  const losa = (x0, x1, z0, z1) => caja('techo', (x0 + x1)/2, TECHO0 + 0.12, (z0 + z1)/2, x1 - x0, 0.12, z1 - z0, 0xb8b0a0, {tex:3, fuera:0});
   losa(-7, ESC.x0, -5, 5); losa(ESC.x1, 7, -5, 5); losa(ESC.x0, ESC.x1, -5, ESC.z0); losa(ESC.x0, ESC.x1, ESC.z1, 5);
   /* la planta baja: losa de hormigón que asoma */
   caja('vereda', 0, -0.15, 0, 14.6, 0.3, 10.6, 0xb0aaa0, {tex:2});
@@ -140,7 +154,7 @@ function construirCasa(){
   const alero = 0.5, cumbre = 2.5, largo = 14 + alero*2, ancho = 5 + alero, ang = Math.atan2(cumbre, 5), lad = Math.hypot(5 + alero, cumbre + alero*cumbre/5);
   for(const s of [-1, 1]) caja('tejas', 0, TECHO1 + cumbre/2 + 0.05 - 0.1, s*(5 + alero)/2, largo, 0.18, lad, 0xffffff, {rx:s*ang, tex:1.5, fuera:1});
   for(const sx of [-7, 7]) for(let i = 0; i < 10; i++){ const t = i/10, hz = 5*(1 - t) - 0.02; caja('paredExt', sx, TECHO1 + cumbre*t + cumbre/20, 0, GROSOR, cumbre/10, hz*2, 0xffffff, {tex:2.5, fuera:1}); }
-  caja('pared', 0, TECHO1 + 0.08, 0, 14, 0.1, 10, 0xd0c8b8, {tex:3});
+  caja('techo', 0, TECHO1 + 0.08, 0, 14, 0.1, 10, 0xd0c8b8, {tex:3});
   /* las ventanas: marco, vidrio (se rompe) y tres tablas escondidas (se clavan de a una) */
   for(const v of VENTANAS){ const h = v.hueco, m = marcoVentana(v, h), y0 = alturaPiso(v.piso);
     const vid = new THREE.Mesh(new THREE.PlaneGeometry(v.w, h.y1 - h.y0), MAT.vidrio.clone()); vid.position.set(m.cx, y0 + (h.y0 + h.y1)/2, m.cz);
@@ -172,6 +186,9 @@ function construirCasa(){
   /* la escalera: 12 escalones, el costado cerrado abajo (ahí adentro está el placard) y la baranda arriba */
   const n = 12, dz = (ESC.z1 - ESC.z0)/n;
   for(let i = 0; i < n; i++){ const z = ESC.z0 + dz*(i + 0.5), h = PISO1*(i + 1)/n; caja('escalera', (ESC.x0 + ESC.x1)/2, h/2, z, ESC.x1 - ESC.x0, h, dz, 0xffffff, {tex:0.6, fuera:0}); }
+  /* el costado de la escalera que da a la entrada va cerrado con pared (adentro está el placard), y el fondo también */
+  for(let i = 0; i < n; i++){ const z = ESC.z0 + dz*(i + 0.5), h = PISO1*(i + 1)/n; caja('pared', ESC.x0 - 0.012, h/2, z, 0.02, h, dz, 0xffffff, {tex:2.5, fuera:0}); }
+  caja('pared', (ESC.x0 + ESC.x1)/2, PISO1/2 - 0.1, ESC.z1 + 0.012, ESC.x1 - ESC.x0, PISO1 - 0.2, 0.02, 0xffffff, {tex:2.5, fuera:0});
   /* la baranda que sigue la pendiente del lado abierto */
   for(let i = 0; i <= 8; i++){ const z = lerp(ESC.z0 + 0.2, ESC.z1 - 0.1, i/8), h = rampa(z); caja('madera', ESC.x0 + 0.05, h + 0.47, z, 0.05, 0.94, 0.05, 0x5a3418, {fuera:0}); }
   { const L = Math.hypot(ESC.z1 - ESC.z0, PISO1), ang = Math.atan2(PISO1, ESC.z1 - ESC.z0); caja('madera', ESC.x0 + 0.05, PISO1/2 + 0.95, (ESC.z0 + ESC.z1)/2, 0.07, 0.07, L, 0x5a3418, {rx:-ang, fuera:0}); }
@@ -181,8 +198,9 @@ function construirCasa(){
     const largo = Math.max(x1 - x0, z1 - z0), nb = Math.round(largo/0.3); for(let i = 0; i <= nb; i++){ const t = i/nb; caja('madera', lerp(x0, x1, x1 - x0 > 0.2 ? t : 0.5), PISO1 + 0.47, lerp(z0, z1, z1 - z0 > 0.2 ? t : 0.5), 0.05, 0.94, 0.05, 0x5a3418, {fuera:0}); }
     colision(1, x0 - 0.05, x1 + 0.05, z0 - 0.05, z1 + 0.05); }
   /* baranda del lado de la escalera en la planta baja no hace falta: la cierra el costado */
-  construirMuebles(); construirPatio(); construirLuces();
+  construirMuebles(); construirPatio(); construirFachada(); construirLuces();
   for(const k of Object.keys(BALDES)){ const m = mallaDe(k, MAT[k]); if(m){ m.name = 'casa_' + k; G.add(m); } }
+  const mc = mallaCuadros(); if(mc) G.add(mc); for(const m of mallasCalcos()) G.add(m);
   return G;
 }
 function conFuera(g, v){ const n = g.attributes.position.count, a = new Float32Array(n).fill(v); g.setAttribute('aFuera', new THREE.BufferAttribute(a, 1)); return g; }
@@ -197,62 +215,12 @@ function ajustarColPuerta(P){
 
 /* ================================================================ muebles (con colisión) */
 function mueble(piso, x, z, w, d, partes, sinCol){
-  const y0 = alturaPiso(piso);
-  for(const p of partes){ const [mat, px, py, pz, pw, ph, pd, col, o] = p; caja(mat, x + px, y0 + py, z + pz, pw, ph, pd, col, Object.assign({fuera:0}, o || {})); }
-  if(!sinCol) colision(piso, x - w/2, x + w/2, z - d/2, z + d/2);
+  const y0 = alturaPiso(piso); let alto = 0;
+  for(const p of partes){ const [mat, px, py, pz, pw, ph, pd, col, o] = p; caja(mat, x + px, y0 + py, z + pz, pw, ph, pd, col, Object.assign({fuera:0}, o || {})); alto = Math.max(alto, py + ph/2); }
+  if(!sinCol){ colision(piso, x - w/2, x + w/2, z - d/2, z + d/2, {mueble:true, alto});
+    /* la sombra difusa: más ancha cuanto más alto es el mueble (la lámpara del techo la abre) */
+    const m = 0.07 + 0.07*Math.min(alto, 2); manchaSuelo(x - w/2 - m, x + w/2 + m, z - d/2 - m, z + d/2 + m, y0 + 0.036); }
 }
-const cama = (piso, x, z, rot, colCol) => { const L = 2.0, A = 1.4, a = rot ? [A, L] : [L, A];
-  mueble(piso, x, z, a[0], a[1], [['madera', 0, 0.22, 0, a[0], 0.44, a[1], 0x6a3a1c], ['plastico', 0, 0.5, 0, a[0] - 0.08, 0.16, a[1] - 0.08, 0xe8e4dc],
-    ['plastico', rot ? 0 : -L/2 + 0.3, 0.64, rot ? -L/2 + 0.3 : 0, rot ? A*0.8 : 0.4, 0.12, rot ? 0.4 : A*0.8, 0xffffff], ['plastico', rot ? 0 : 0.25, 0.6, rot ? 0.25 : 0, rot ? A - 0.04 : L*0.62, 0.1, rot ? L*0.62 : A - 0.04, colCol],
-    ['madera', rot ? 0 : -L/2 + 0.04, 0.7, rot ? -L/2 + 0.04 : 0, rot ? A : 0.08, 1.0, rot ? 0.08 : A, 0x5a3014]]); };
-function construirMuebles(){
-  /* LIVING: sillón, mesa ratona, la tele sobre su mueble, la radio y una planta */
-  mueble(0, -4.5, -0.55, 2.4, 0.9, [['plastico', 0, 0.3, 0, 2.4, 0.6, 0.9, 0x8e1c1c], ['plastico', 0, 0.8, 0.32, 2.4, 0.5, 0.26, 0x7a1818], ['plastico', -1.1, 0.55, 0, 0.22, 0.5, 0.9, 0x7a1818], ['plastico', 1.1, 0.55, 0, 0.22, 0.5, 0.9, 0x7a1818]]);
-  mueble(0, -4.5, -2.1, 1.2, 0.6, [['madera', 0, 0.35, 0, 1.2, 0.08, 0.6, 0x6a3a1c], ['madera', 0, 0.16, 0, 1.0, 0.3, 0.4, 0x5a3014]]);
-  mueble(0, -4.5, -4.5, 1.8, 0.7, [['madera', 0, 0.3, 0, 1.8, 0.6, 0.7, 0x5a2e14], ['madera', 0, 0.3, -0.36, 1.6, 0.4, 0.02, 0x3a1e0a]]);
-  mueble(0, -6.4, -1.0, 0.7, 0.6, [['madera', 0, 0.35, 0, 0.7, 0.7, 0.6, 0x6a3a1c]]);
-  planta(0, -6.5, -4.4); planta(0, -1.6, -4.5); cuadro(0, 'z', -6.88, -1.3, 1.9, 0x3a6a8a); cuadro(0, 'x', -2.8, -0.14, 1.8, 0x8a5a2a, 0.9);
-  caja('alfombraRoja', -4.5, 0.012, -2.1, 3.0, 0.02, 2.2, 0xffffff, {tex:0.9, fuera:0});
-  /* ENTRADA: felpudo rojo, perchero, planta, cuadros */
-  caja('alfombraRoja', 0.25, 0.012, -4.4, 1.4, 0.02, 0.8, 0xffffff, {tex:0.6, fuera:0});
-  mueble(0, -1.7, -4.0, 0.4, 0.4, [['madera', 0, 0.9, 0, 0.08, 1.8, 0.08, 0x5a3014], ['madera', 0, 1.75, 0, 0.5, 0.06, 0.06, 0x5a3014], ['madera', 0, 1.75, 0, 0.06, 0.06, 0.5, 0x5a3014], ['madera', 0, 0.03, 0, 0.5, 0.06, 0.5, 0x5a3014]]);
-  cuadro(0, 'z', -1.88, -3.9, 1.8, 0x4a8a4a); cuadro(0, 'z', 1.88, -1.2, 1.9, 0x8a4a4a, 1, true);
-  /* COCINA: mesada con cocina y pileta, heladera, mesa con sillas, el teléfono en la pared */
-  mueble(0, 3.3, -4.6, 2.4, 0.7, [['plastico', 0, 0.45, 0, 2.4, 0.9, 0.7, 0xe8e4dc], ['plastico', 0, 0.92, 0, 2.44, 0.06, 0.74, 0x3a3a3e], ['metal', -0.6, 0.97, 0, 0.6, 0.04, 0.5, 0x8a8a90], ['metal', 0.6, 0.97, 0, 0.5, 0.03, 0.45, 0x2a2a2e]]);
-  mueble(0, 6.55, -0.55, 0.8, 0.8, [['plastico', 0, 0.95, 0, 0.8, 1.9, 0.8, 0xf0f0f4], ['metal', -0.42, 1.2, -0.2, 0.04, 0.5, 0.04, 0x9a9aa0], ['plastico', -0.405, 1.45, 0, 0.01, 0.02, 0.76, 0xb0b0b4]]);
-  mueble(0, 4.5, -2.4, 1.4, 0.9, [['madera', 0, 0.75, 0, 1.4, 0.06, 0.9, 0x8a5a2a], ['madera', -0.6, 0.37, -0.35, 0.06, 0.74, 0.06, 0x6a3a1c], ['madera', 0.6, 0.37, -0.35, 0.06, 0.74, 0.06, 0x6a3a1c], ['madera', -0.6, 0.37, 0.35, 0.06, 0.74, 0.06, 0x6a3a1c], ['madera', 0.6, 0.37, 0.35, 0.06, 0.74, 0.06, 0x6a3a1c]]);
-  for(const s of [-1, 1]) mueble(0, 4.5 + s*1.0, -2.4, 0.45, 0.45, [['madera', 0, 0.45, 0, 0.45, 0.06, 0.45, 0x6a3a1c], ['madera', s*0.2, 0.75, 0, 0.05, 0.6, 0.45, 0x6a3a1c], ['madera', 0, 0.22, 0, 0.4, 0.44, 0.4, 0x5a3014]]);
-  mueble(0, 2.13, -1.6, 0.1, 0.3, [['plastico', 0, 1.5, 0, 0.08, 0.3, 0.2, 0x2a2a2e], ['plastico', 0.05, 1.5, 0, 0.05, 0.08, 0.26, 0x1a1a1e]], true);
-  /* DORMITORIO de abajo: cama, cómoda (la linterna), placard */
-  cama(0, -5.9, 4.0, false, 0x3a5a9a); mueble(0, -2.7, 4.6, 0.9, 0.5, [['madera', 0, 0.45, 0, 0.9, 0.9, 0.5, 0x6a3a1c], ['madera', 0, 0.62, -0.26, 0.8, 0.22, 0.02, 0x5a2e14], ['madera', 0, 0.32, -0.26, 0.8, 0.22, 0.02, 0x5a2e14]]);
-  placard('placard_cuarto', 0, -5.8, 0.42, 'x', 1);
-  /* BAÑO: inodoro y lavatorio; LAVADERO: lavarropas y estante */
-  mueble(0, -1.4, 4.6, 0.5, 0.6, [['plastico', 0, 0.22, 0, 0.45, 0.44, 0.55, 0xf4f4f4], ['plastico', 0, 0.6, 0.22, 0.45, 0.5, 0.15, 0xf4f4f4]]);
-  mueble(0, 0.1, 3.0, 0.5, 0.45, [['plastico', 0, 0.8, 0, 0.5, 0.15, 0.45, 0xf4f4f4], ['plastico', 0, 0.4, 0.08, 0.14, 0.8, 0.14, 0xf4f4f4]]);
-  mueble(0, 1.6, 4.55, 0.7, 0.7, [['plastico', 0, 0.45, 0, 0.7, 0.9, 0.7, 0xf0f0f0], ['metal', 0, 0.55, -0.36, 0.4, 0.4, 0.02, 0x6a8aa0]]);
-  mueble(0, 0.75, 3.2, 0.4, 1.2, [['madera', 0, 0.9, 0, 0.35, 0.05, 1.2, 0x6a3a1c], ['madera', 0, 1.4, 0, 0.35, 0.05, 1.2, 0x6a3a1c]], true);
-  /* COMEDOR: mesa, sillas, el piano contra la pared del fondo */
-  mueble(0, 4.8, 2.4, 1.8, 1.0, [['madera', 0, 0.75, 0, 1.8, 0.06, 1.0, 0x7a4a26], ['madera', -0.8, 0.37, -0.4, 0.07, 0.74, 0.07, 0x5a3014], ['madera', 0.8, 0.37, -0.4, 0.07, 0.74, 0.07, 0x5a3014], ['madera', -0.8, 0.37, 0.4, 0.07, 0.74, 0.07, 0x5a3014], ['madera', 0.8, 0.37, 0.4, 0.07, 0.74, 0.07, 0x5a3014]]);
-  mueble(0, 3.2, 4.55, 1.5, 0.6, [['madera', 0, 0.65, 0, 1.5, 1.3, 0.6, 0x2a1a12], ['plastico', 0, 0.8, -0.32, 1.3, 0.05, 0.1, 0xf4f4f0], ['plastico', 0, 0.8, -0.32, 1.3, 0.02, 0.06, 0x111111, {du:0.5}]]);
-  cuadro(0, 'z', 6.88, 1.0, 1.9, 0x6a4a8a);
-  /* DORMITORIO GRANDE (arriba): cama, placard, la compu de las cámaras y la pila de tablas */
-  cama(1, -5.9, -3.9, false, 0x8e2020); placard('placard_master', 1, -6.62, -1.5, 'z', 1);
-  mueble(1, -3.6, -0.4, 1.3, 0.6, [['madera', 0, 0.74, 0, 1.3, 0.05, 0.6, 0x6a3a1c], ['madera', -0.6, 0.36, 0, 0.06, 0.72, 0.55, 0x5a3014], ['madera', 0.6, 0.36, 0, 0.06, 0.72, 0.55, 0x5a3014],
-    ['plastico', 0, 1.02, 0.08, 0.6, 0.42, 0.3, 0xd8d4c8], ['plastico', 0, 1.02, -0.075, 0.5, 0.34, 0.01, 0x101418], ['plastico', 0, 0.78, -0.12, 0.5, 0.03, 0.18, 0xd0ccc0]]);
-  /* CUARTO DEL NENE: camita, juguetes; BAÑO de arriba: bañera; DEPÓSITO: cajas */
-  cama(1, 5.9, -3.8, false, 0x3a8a4a); mueble(1, 3.0, -0.5, 0.8, 0.5, [['madera', 0, 0.3, 0, 0.8, 0.6, 0.5, 0xc8a040], ['plastico', 0.2, 0.7, 0, 0.2, 0.2, 0.2, 0xd83030], ['plastico', -0.15, 0.68, 0.05, 0.16, 0.16, 0.16, 0x3050d8]]);
-  mueble(1, -6.2, 4.2, 1.5, 0.75, [['plastico', 0, 0.3, 0, 1.5, 0.6, 0.75, 0xf4f4f4], ['plastico', 0, 0.55, 0, 1.3, 0.1, 0.55, 0x9ac0d8]]);
-  mueble(1, -2.6, 4.6, 0.5, 0.6, [['plastico', 0, 0.22, 0, 0.45, 0.44, 0.55, 0xf4f4f4], ['plastico', 0, 0.6, 0.22, 0.45, 0.5, 0.15, 0xf4f4f4]]);
-  for(const [x, z, s] of [[6.2, 4.3, 0.8], [5.3, 4.5, 0.6], [6.4, 3.3, 0.7], [6.3, 4.3, 0.5, 0.8]]) mueble(1, x, z, s, s, [['madera', 0, s/2 + (s === 0.5 ? 0.8 : 0), 0, s, s, s, 0xa07840]]);
-  mueble(1, 2.5, 4.5, 0.6, 0.9, [['madera', 0, 1.0, 0, 0.5, 2.0, 0.9, 0x6a3a1c], ['madera', 0, 0.6, 0, 0.52, 0.04, 0.88, 0x5a3014], ['madera', 0, 1.3, 0, 0.52, 0.04, 0.88, 0x5a3014]]);
-  planta(1, -1.6, -4.5); cuadro(1, 'z', -1.88, 0.8, 1.7, 0x8a8a4a);
-  /* el placard de abajo de la escalera se abre desde el pasillo */
-  placard('placard_escalera', 0, 0.62, -0.4, 'z', -1, true);
-}
-function planta(piso, x, z){ mueble(piso, x, z, 0.45, 0.45, [['madera', 0, 0.2, 0, 0.4, 0.4, 0.4, 0x5a3014], ['plastico', 0, 0.6, 0, 0.1, 0.5, 0.1, 0x2a6a2a], ['plastico', 0.15, 0.85, 0, 0.35, 0.08, 0.1, 0x2e8a32, {rz:0.5}], ['plastico', -0.12, 0.8, 0.05, 0.3, 0.08, 0.1, 0x2e8a32, {rz:-0.6}], ['plastico', 0, 0.95, -0.1, 0.1, 0.08, 0.3, 0x2e8a32, {rx:0.5}]]); }
-function cuadro(piso, eje, f, c, y, color, esc, dentroNeg){ const s = esc || 1, o = f > 0 ? -0.12 : 0.12, y0 = alturaPiso(piso);
-  if(eje === 'z'){ caja('madera', f + (dentroNeg ? -0.12 : o), y0 + y, c, 0.04, 0.7*s, 0.9*s, 0x5a3014, {fuera:0}); caja('plastico', f + (dentroNeg ? -0.145 : o*1.2), y0 + y, c, 0.02, 0.56*s, 0.76*s, color, {fuera:0}); }
-  else { caja('madera', c, y0 + y, f + o, 0.9*s, 0.7*s, 0.04, 0x5a3014, {fuera:0}); caja('plastico', c, y0 + y, f + o*1.2, 0.76*s, 0.56*s, 0.02, color, {fuera:0}); } }
 /* un placard para esconderse: el mueble, la puerta de dos hojas y dónde queda la cabeza adentro */
 function placard(id, piso, x, z, eje, lado, bajoEscalera){
   const y0 = alturaPiso(piso);
@@ -266,7 +234,7 @@ function placard(id, piso, x, z, eje, lado, bajoEscalera){
 
 /* ================================================================ afuera: el terreno, la calle, el galpón, los árboles y la planta a lo lejos */
 const GALPON = {x0:-10, x1:-6, z0:10, z1:14, alto:2.6, puerta:[-8, 10]};
-const FUSIBLES = {x:4.0, y:1.35, z:5.16};
+const FUSIBLES = {x:2.6, y:1.35, z:5.16};
 const ARBOLES = [[6.2, 13, 1.25], [-14, 4, 1], [-13, -8, 0.9], [13, -7, 1.1], [14, 6, 1], [11, 18, 1.2], [-3, 19, 1.1], [-15, 17, 1.3], [16, 15, 0.9], [4, 21, 1]];
 const POSTE = {x:6.5, z:-14.4}, FAROL = {x:-6, z:-14.6};
 function construirPatio(){
@@ -315,7 +283,7 @@ function construirPatio(){
   for(const [x, z, s] of ARBOLES){ caja('madera', x, 1.4*s, z, 0.5*s, 2.8*s, 0.5*s, 0x5a3a1c, {fuera:1}); colision(0, x - 0.35*s, x + 0.35*s, z - 0.35*s, z + 0.35*s, {arbol:true});
     const r = mulberry(x*31 + z); for(let i = 0; i < 4; i++){ const w = (2.6 - i*0.5)*s; caja('plastico', x + (r() - 0.5)*0.3, (3.0 + i*0.85)*s, z + (r() - 0.5)*0.3, w, 0.9*s, w, i % 2 ? 0x2a6a2a : 0x2e7a30, {fuera:1}); } }
   /* arbustos del frente */
-  for(const [x, z] of [[-3, -5.7], [-5.7, -5.7], [3.2, -5.7], [5.9, -5.7], [-7.8, 1], [7.8, -1]]) caja('plastico', x, 0.35, z, 1.2, 0.7, 0.7, 0x2a6a2a, {fuera:1});
+  for(const [x, z] of [[-2.9, -5.85], [-6.1, -5.85], [3.1, -5.85], [6.1, -5.85], [-7.8, 0], [7.8, 0]]) caja('plastico', x, 0.35, z, 1.2, 0.7, 0.7, 0x2a6a2a, {fuera:1});
   /* las casas de los vecinos, a oscuras */
   for(const [x, z, rot, rota] of [[-32, -2, 0, true], [32, -4, 0, false], [-30, -34, Math.PI, false], [20, -36, Math.PI, true]]){
     caja('paredExt', x, 3, z, 12, 6, 9, rota ? 0xb8b0a0 : 0xd8d0c0, {tex:2.5, fuera:1}); caja('tejas', x, 6.8, z, 13, 1.6, 10, 0xffffff, {fuera:1});
@@ -336,18 +304,26 @@ function construirPatio(){
 const LLAVES = {living:[-2.15, 1.2, -1.4], hall:[-1.85, 1.2, -4.75], cocina:[2.15, 1.2, -3.35], cuarto:[-2.15, 1.2, 2.1], bano:[-1.6, 1.2, 2.55], lavadero:[0.6, 1.2, 2.6], comedor:[4.3, 1.2, 0.15],
   master:[-2.15, 4.4, -1.6], pasillo:[-1.85, 4.4, -4.75], nene:[2.15, 4.4, -3.5], bano2:[-2.15, 4.4, 2.9], deposito:[2.15, 4.4, 2.5]};
 function construirLuces(){
-  for(const s of SALAS){ const y = (s.piso ? TECHO1 : TECHO0) - 0.12, cx = (s.x0 + s.x1)/2, cz = s.id === 'hall' ? -1.2 : s.id === 'pasillo' ? -0.2 : (s.z0 + s.z1)/2;
-    caja('metal', cx, y + 0.06, cz, 0.5, 0.06, 0.5, 0x3a3a3e, {fuera:0});
-    const k = LLAVES[s.id]; caja('plastico', k[0] + (Math.abs(k[0]) > 1.5 && Math.abs(Math.abs(k[0]) - 2) < 0.3 ? 0 : 0), k[1], k[2], 0.08, 0.14, 0.1, 0xf0ece0, {fuera:0});
-    MUNDO.luces.push({id:s.id, sala:s.id, piso:s.piso, pos:[cx, y - 0.1, cz], on:false, alcance:Math.max(s.x1 - s.x0, s.z1 - s.z0)*1.1 + 1.5, llave:k, parpadeo:0});
+  for(const s of SALAS){ const techo = s.piso ? TECHO1 : TECHO0, y = techo - 0.12, cx = (s.x0 + s.x1)/2, cz = s.id === 'hall' ? -1.2 : s.id === 'pasillo' ? -0.2 : (s.z0 + s.z1)/2;
+    cil('metal', cx, techo - 0.015, cz, 0.13, 0.03, 0xd8d0b8, {fuera:0});
+    const k = LLAVES[s.id]; caja('plastico', k[0], k[1], k[2], 0.08, 0.14, 0.1, 0xf0ece0, {fuera:0});
+    MUNDO.luces.push({id:s.id, sala:s.id, piso:s.piso, pos:[cx, y - 0.1, cz], bulbo:[cx, techo - 0.028, cz, 1], on:false, alcance:Math.max(s.x1 - s.x0, s.z1 - s.z0)*1.1 + 1.5, llave:k, parpadeo:0});
   }
   /* las luces de afuera: la de la puerta de entrada y la de atrás */
-  MUNDO.luces.push({id:'porche', sala:'porche', piso:0, pos:[0.25, 2.5, -5.6], on:false, alcance:7, llave:[-0.55, 1.2, -4.85], afuera:true, parpadeo:0, mult:0.5});
-  MUNDO.luces.push({id:'fondo', sala:'fondo', piso:0, pos:[1.25, 2.5, 5.6], on:false, alcance:7, llave:[0.55, 1.2, 4.85], afuera:true, parpadeo:0, mult:0.5});
-  MUNDO.luces.push({id:'galpon', sala:'galpon', piso:0, pos:[-8, 2.3, 12], on:true, alcance:6, afuera:true, parpadeo:0, siempre:true});
+  MUNDO.luces.push({id:'porche', sala:'porche', piso:0, pos:[0.25, 2.5, -5.6], bulbo:[0.25, 2.42, -5.3, 0.5], on:false, alcance:7, llave:[-0.55, 1.2, -4.85], afuera:true, parpadeo:0, mult:0.5});
+  MUNDO.luces.push({id:'fondo', sala:'fondo', piso:0, pos:[1.25, 2.5, 5.6], bulbo:[1.25, 2.42, 5.3, 0.5], on:false, alcance:7, llave:[0.55, 1.2, 4.85], afuera:true, parpadeo:0, mult:0.5});
+  MUNDO.luces.push({id:'galpon', sala:'galpon', piso:0, pos:[-8, 2.3, 12], bulbo:[-8, 2.36, 12, 0.42], on:true, alcance:6, afuera:true, parpadeo:0, siempre:true});
+  caja('metal', -8, 2.6, 12, 0.012, 0.5, 0.012, 0x1a1a1a, {fuera:1});
+  /* la tele prendida alumbra el living de azul y titila (no es una lámpara: no tiene llave ni cuenta para los fusibles) */
+  MUNDO.luces.push({id:'tele', sala:'tele', piso:0, pos:[TELE_POS.x, 1.05, TELE_POS.pantalla - 0.45], bulbo:[0, -9, 0, 0], on:false, alcance:4.6, tele:true, parpadeo:0, color:0x8aa8ff});
   caja('metal', 0.25, 2.55, -5.2, 0.25, 0.25, 0.2, 0x2a2a2e, {fuera:1}); caja('metal', 1.25, 2.55, 5.2, 0.25, 0.25, 0.2, 0x2a2a2e, {fuera:1});
-  /* las bombitas: una malla instanciada que se prende de a una */
-  const n = MUNDO.luces.length, bm = new THREE.InstancedMesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshBasicMaterial({color:0xffffff, fog:false}), n);
-  const m = new THREE.Matrix4(); MUNDO.luces.forEach((L, i) => { m.makeTranslation(L.pos[0], L.pos[1] + 0.05, L.pos[2]); bm.setMatrixAt(i, m); bm.setColorAt(i, new THREE.Color(0x303030)); });
+  /* los plafones: una media esfera de vidrio instanciada que se prende de a una, con su halo */
+  const n = MUNDO.luces.length, bm = new THREE.InstancedMesh(new THREE.SphereGeometry(0.2, 16, 6, 0, Math.PI*2, Math.PI/2, Math.PI/2), new THREE.MeshBasicMaterial({color:0xffffff, fog:false}), n);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), hp = [], hc = [];
+  MUNDO.luces.forEach((L, i) => { const [x, y, z, e] = L.bulbo; m.compose(new THREE.Vector3(x, y, z), q, new THREE.Vector3(e, e*0.5, e)); bm.setMatrixAt(i, m); bm.setColorAt(i, new THREE.Color(0x303030)); hp.push(x, y - 0.06*e, z); hc.push(0, 0, 0); });
   bm.instanceColor.needsUpdate = true; bm.frustumCulled = false; MUNDO.grupo.add(bm); MUNDO.bombitas = bm;
+  const [cv, g] = lienzo(64, 64), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  const hg = new THREE.BufferGeometry(); hg.setAttribute('position', new THREE.Float32BufferAttribute(hp, 3)); hg.setAttribute('color', new THREE.Float32BufferAttribute(hc, 3));
+  const halos = new THREE.Points(hg, new THREE.PointsMaterial({size:0.95, map:new THREE.CanvasTexture(cv), vertexColors:true, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, fog:true}));
+  halos.frustumCulled = false; halos.renderOrder = 8; MUNDO.grupo.add(halos); MUNDO.halos = halos;
 }

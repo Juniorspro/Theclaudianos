@@ -17,8 +17,8 @@ se prueba **en el celular, en vertical (412×892)**.
 | `juegos-pc/Sombra.html` | **SOMBRA.** Saltos verticales a lo *Ninja Tobu*, se juega **parado**: arrastrar para atrás y soltar, cámara lenta al apuntar, doble salto, enemigos que se matan atravesándolos, 3 mundos × 8 desafíos generados y verificados con **un jefe al final de cada mundo** (Gran Tengu, Yuki-onna, Shogun), modo infinito que pasa por los tres mundos con tinta que sube, tienda de 7 ninjas y 7 efectos, cofre, ES/EN/PT. |
 | `herramientas/sombra/` | Fuentes de `Sombra.html` (`fuentes/`), `armar.sh` y el banco (`banco/`: bot que juega los 24 niveles y el infinito, bot de jefes, dedo, fuzz, pantallas). **Se edita la fuente.** |
 | `.claude/skills/juego-vertical` | Receta de los saltos verticales: torre en anillo, tramos verificados con la física real, bot que sigue el plan. |
-| `juegos-pc/Residencia.html` | **NO LO DEJES ENTRAR.** Terror en primera persona a lo *Residence Massacre* (Roblox): casa de bloques de dos pisos, de 4 PM a 12 te preparás (radio, linterna, tablas en las ventanas, cámaras, generador que da el aire, fusibles) y de 12 a 6 AM un bicho da vueltas, respira detrás de una ventana antes de atacar, se espanta con la luz del cuarto y si entra te busca: placard con minijuego o susto. Tres dificultades, ES/EN/PT, three.js r128. Se juega apaisado. |
-| `herramientas/residencia/` | Fuentes de `Residencia.html` (`fuentes/`), `armar.sh` y el banco (`banco/`: noche entera con un jugador que reacciona, la preparación con la mano, alcance caminando, placard sin navegador, dedos, idiomas, fuzz, capturas). **Se edita la fuente.** |
+| `juegos-pc/Residencia.html` | **NO LO DEJES ENTRAR.** Terror en primera persona a lo *Residence Massacre* (Roblox): casa de bloques de dos pisos amueblada cuarto por cuarto, de 4 PM a 12 te preparás (radio, linterna, tablas en las ventanas, cámaras, generador que da el aire, fusibles) y de 12 a 6 AM Larry (el bicho del original, a escala) da vueltas, respira detrás de una ventana antes de atacar, se espanta con la luz del cuarto y si entra te busca: placard con minijuego o susto. Tres dificultades, ES/EN/PT, three.js r128. Se juega apaisado. |
+| `herramientas/residencia/` | Fuentes de `Residencia.html` (`fuentes/`), `armar.sh` y el banco (`banco/`: noche entera con un jugador que reacciona, la preparación con la mano, alcance caminando, orden de los muebles, placard sin navegador, dedos, idiomas, fuzz, capturas, hoja de Larry). **Se edita la fuente.** |
 | `.claude/skills/juego-terror` | Receta del terror en primera persona: luz de adentro separada del sol, cuatro luces fijas, interacción por ángulo, bicho con estados y caminos, placard medido contra una persona, susto encuadrado. |
 | `herramientas/mate/` | Fuentes de `Mate.html` por partes (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`). **Se edita la fuente, no el HTML.** |
 | `.claude/skills/juego-25d` | Receta del 2.5D pixel art: render, sprites, niveles verificados, cinemáticas, menús, idiomas. |
@@ -1982,3 +1982,96 @@ Medido:
 
 Queda para decidir: el horneado del sonido en un celular puede dar tirones de 200 a 400 ms durante los primeros ~30 s
 después del primer toque (casi siempre caen en el menú). La dificultad la tiene que probar una persona con auriculares.
+
+### 2026-09-26 (az) — la casa amueblada y Larry a escala
+**Pedido textual:** «Mejora la casa en un 700% haz un poquito mejor y mete gráficos buenos como el juego real y también ordena bien todo y
+busca el diseño del monstruo real y reconstruilo a escala real y bien diseñado».
+
+**Larry, como en el original.** Se leyó su ficha en la wiki del juego y se miraron las miniaturas de los videos. Es un Robloxian
+deformado que anda en cuatro patas:
+- la cabeza amarilla de Roblox con dos ojos negros enormes y la pupila blanca redonda;
+- la mandíbula partida en dos mitades, con dientes sólo adelante, y la lengua afuera;
+- el torso partido en dos y unido por la columna (cinco vértebras y la carne a la vista);
+- los antebrazos estirados en dos tramos largos y finos que terminan en hojas de guadaña, con las que camina y ataca;
+- remera gris oscura, pantalón gris claro y sangre por todos lados: lágrimas, boca y salpicaduras.
+
+Se armó de nuevo entero (`8_monstruo.js`) con su jerarquía de piezas y poses para caminar, correr, trepar, asomarse a la ventana,
+gritar y agarrar. Medido sobre los vértices: de pie, un poco encorvado, llega a 2,08 m; en cuatro patas lleva la cabeza a
+1,47-1,53 m y corriendo a 1,34. Los pies apoyan (0 a 2 cm) y en cada paso la hoja que pisa queda en el piso mientras la otra sube
+de 19 a 33 cm. Respirando en la ventana, la cara queda en el medio del vidrio: abajo a 1,66 m con el centro en 1,65, y arriba a
+4,90 con el centro en 4,85. `banco/larry.js` saca la hoja de frente, de costado y en cada pose.
+
+**La casa, cuarto por cuarto** (`4b_muebles.js`, nuevo). Cada mueble se arma en su espacio propio y se gira de a cuartos de vuelta.
+Todo va fundido por material, con su colisión y su sombra en el piso. Son 69 muebles con colisión.
+- **Pisos y paredes**:
+  - el living con la alfombra azul de tachas del original y las paredes crema;
+  - la entrada y el pasillo de tablas, con camino de alfombra;
+  - la cocina con damero y azulejos detrás de la mesada;
+  - los baños con baldosas de 15 cm en el piso y en las paredes;
+  - el dormitorio con empapelado a rayas, el comedor con uno de dibujito y el cuarto del nene con uno celeste;
+  - techo propio, moldura blanca arriba de cada pared y zócalo (blanco en los baños).
+- **Living**: la tele de tubo con antena contra la pared del fondo, el sillón de tres mirándola de espaldas a la ventana, la mesa
+  ratona con revistas y el control, un sillón individual, la biblioteca con libros, la radio en su mesita del rincón, lámpara de pie.
+- **Entrada**: felpudo, perchero con abrigos, consola con espejo y una planta.
+- **Cocina**: mesada de cuatro módulos con la pileta abajo de la ventana, cocina a gas con campana, alacenas, microondas, heladera
+  con imanes, mesa con mantel y dos sillas, el teléfono, el reloj y el tacho.
+- **Comedor**: mesa de seis con una vela, aparador con platos y el piano.
+- **Dormitorio**: cama de dos plazas, mesa de luz con velador, la cómoda de la linterna con su espejo y una silla con ropa encima.
+- **Baño y lavadero**: inodoro, lavatorio con espejo, toallero, el estante de la llave inglesa (que se esconde cuando la agarrás) y
+  el lavarropas.
+- **Arriba**: la cama del dormitorio grande con dos mesas de luz y la compu de las cámaras con su silla; la camita del nene con el
+  cajón de juguetes, el escritorio, el osito, los cubos y la pelota; la bañera con cortina; y en el depósito cajas, una estantería
+  de metal, muebles tapados con sábanas, un maniquí tapado y una bicicleta.
+- Seis cuadros (uno es la familia con las caras tachadas) y cortinas en las ventanas.
+- **Afuera**: zócalo de ladrillo, el alero de la entrada con sus postes, dos macetas y el felpudo, postigos verdes con tablillas,
+  jardineras con flores, canaletas con sus bajadas, la chimenea, el remate del techo y un alerito en la puerta de atrás.
+- **Luz**:
+  - plafones de vidrio con halo;
+  - la tele prendida alumbra el living de azul y titila;
+  - de noche, las ventanas de los cuartos con la luz prendida se ven cálidas desde afuera;
+  - las paredes se oscurecen en los rincones, hay una franja de sombra al pie de cada pared y bajo la moldura, y una mancha
+    difusa bajo cada mueble.
+
+**El orden se mide** (`banco/orden.js`, nuevo):
+- ningún mueble metido en una pared ni en otro;
+- nada en el barrido de una puerta, con la hoja muestreada de cerrada a abierta;
+- el vano de cada puerta libre medio metro de cada lado;
+- nada más alto que el alféizar a menos de 0,9 m de una ventana;
+- un lugar libre para clavar tablas al lado del de cada ventana;
+- cada llave de luz alcanzable.
+
+La primera pasada encontró 6 cosas: la biblioteca, la consola, un placard y una mesita metidos en la pared, la mesada tapando el
+paso de la puerta de la cocina y la cama del dormitorio grande delante de la ventana. Después, cero en todo. Además, el arreglo
+sacó tres errores de la casa vieja: la tele tapaba la ventana del frente del living, el lavarropas estaba delante de la puerta de
+atrás y la caja de fusibles, delante de la ventana del comedor.
+
+Lo que costó una vuelta:
+- **El material de cada tramo de pared salía del cuarto del medio del tramo**: el baño se quedaba con el empapelado del dormitorio
+  y el depósito con el del nene. Cada tramo se corta donde cambia el cuarto de cada lado.
+- **Un emisivo parejo levanta el negro**: los ojos de Larry salían color oliva (89 sobre 255). El emisivo usa la misma textura de
+  mapa, así lo negro queda negro.
+- **Las hojas se clavaban 57 cm en el piso** al caminar. Cada antebrazo gira hasta que la punta toca el piso, pero la altura de la
+  punta contra el codo es una curva con fondo: pasado el fondo, cerrar el codo la vuelve a subir. Con cuatro pasos a ojo quedaban
+  de 2 a 13 cm hundidas y con Newton se iban para el otro lado (62 cm). Va bisección en el tramo donde la curva es monótona: 0 cm.
+- Con las piernas dobladas los pies quedaban de 3 a 9 cm hundidos: la cadera se corre para que apoye el pie más bajo.
+- **La caja de `setFromObject` exagera con piezas giradas** (es la caja de la caja girada): daba el piso 12 cm abajo con los pies
+  apoyados. La sonda de Larry mide sobre los vértices.
+- **Una salpicadura en el medio de la cara se leía como una nariz de payaso**: las manchas esquivan la cara.
+- **En el susto se veía sólo el entrecejo con la boca cerrada**: se tira encima desde 1,5 m con la mandíbula abierta, y la cámara
+  mira 16 cm por debajo del centro de la cabeza.
+- **Las cortinas hasta el piso atravesaban camas y sillones**: van del alféizar para arriba y más adentro que el dintel.
+- **El espejo de la entrada estaba detrás de su marco** y se veía un panel oscuro.
+- En la sonda, los halos de los ojos salían de día: la hora se aplica en el dibujo, así que hay que dibujar antes de avanzar.
+- La wiki del juego no deja entrar con curl (Cloudflare). Se la leyó con el Chromium del banco, confiando sólo en el certificado del
+  proxy (`--ignore-certificate-errors-spki-list`), sin apagar la verificación.
+
+Medido:
+- `orden.js`: cero en las seis pruebas.
+- `alcance.js`: todo lo que se usa se alcanza caminando.
+- `prep.js`: la preparación entera con la mano da OK en cada paso (la radio dura 35,1 s y la nafta sube 20 → 54 → 88).
+- `noche.js` en normal: con la luz a los 2,5 s sobrevive 9 de 9, sólo escondiéndose 2 de 6 y quieto 0 de 4 (igual que antes).
+- Idiomas: `TR_FALTA` vacío en inglés (160 textos vistos) y en portugués (158).
+- Dedos de verdad: la palanca adelante camina 1,71 m, arrastrar gira −0,50 rad y sube 0,34, y los dos dedos y los botones andan.
+- Fuzz de 300 acciones en portugués y 120 en castellano sin errores, sin NaN y sin estados imposibles.
+- Llamadas de dibujo: 30 a 90 adentro y 114 a 139 afuera, con 24 a 35 mil triángulos. El HTML pesa 398 KB.
+

@@ -26,16 +26,16 @@ function objetivo(o, lista){ J.obj = o; J.lista = lista || []; UI.objCambio = tr
 function registrarTodo(){
   const P = MUNDO.puertas, V = MUNDO.ventanas;
   /* la radio del living */
-  registrar({id:'radio', pos:[-6.4, 0.85, -1.0], sel:[0.5, 0.3, 0.3], piso:0, et:() => !J.radioYa ? tr('PRENDER LA RADIO') : prepListo() && J.hora < 23 ? tr('ADELANTAR LA NOCHE') : tr('ESCUCHAR LA RADIO'),
+  registrar({id:'radio', pos:RADIO_POS, sel:[0.5, 0.3, 0.3], piso:0, et:() => !J.radioYa ? tr('PRENDER LA RADIO') : prepListo() && J.hora < 23 ? tr('ADELANTAR LA NOCHE') : tr('ESCUCHAR LA RADIO'),
     hacer:() => { if(!J.radioYa) empezarRadio(); else if(prepListo() && J.hora < 23){ J.hora = 23.4; SON.fx('radio_on'); pensar(tr('Mejor que esté todo listo...'), 3); } else repetirRadio(); }});
   /* la tele */
-  registrar({id:'tele', pos:[-4.5, 1.0, -4.5], sel:[1.1, 0.7, 0.3], piso:0, et:() => ELEC.tvOn ? tr('APAGAR LA TELE') : tr('PRENDER LA TELE'), ok:() => ELEC.hay, no:() => pensar(tr('No hay luz.')),
-    hacer:() => { ELEC.tvOn = !ELEC.tvOn; SON.fx(ELEC.tvOn ? 'tele_on' : 'interruptor', {pos:[-4.5, 1, -4.5]}); }});
+  registrar({id:'tele', pos:[TELE_POS.x, TELE_POS.y, TELE_POS.pantalla], sel:[1.1, 0.7, 0.3], piso:0, et:() => ELEC.tvOn ? tr('APAGAR LA TELE') : tr('PRENDER LA TELE'), ok:() => ELEC.hay, no:() => pensar(tr('No hay luz.')),
+    hacer:() => { ELEC.tvOn = !ELEC.tvOn; SON.fx(ELEC.tvOn ? 'tele_on' : 'interruptor', {pos:[TELE_POS.x, 1, TELE_POS.pantalla]}); }});
   /* el teléfono de la cocina */
   registrar({id:'telefono', pos:[2.18, 1.5, -1.6], sel:[0.12, 0.35, 0.3], piso:0, et:() => J.telSuena > 0 ? tr('ATENDER') : tr('TELÉFONO'), ok:() => J.telSuena > 0,
     hacer:() => atenderTelefono()});
   /* la linterna en la cómoda del dormitorio */
-  registrar({id:'comoda', pos:[-2.7, 0.62, 4.3], sel:[0.85, 0.5, 0.1], piso:0, et:() => JUG.linterna.tiene ? tr('CAJÓN VACÍO') : tr('BUSCAR EN EL CAJÓN'), ok:() => !JUG.linterna.tiene,
+  registrar({id:'comoda', pos:[-4.3, 0.62, 0.62], sel:[0.85, 0.5, 0.1], piso:0, et:() => JUG.linterna.tiene ? tr('CAJÓN VACÍO') : tr('BUSCAR EN EL CAJÓN'), ok:() => !JUG.linterna.tiene,
     hacer:() => { JUG.linterna.tiene = true; JUG.linterna.bat = 100; SON.fx('agarrar'); pensar(tr('Una linterna. Con esto me arreglo.'), 3); UI.barraCambio = true; }});
   /* pilas: el cajón de la cocina y el estante del galpón */
   const pila = (id, pos, sel, et) => { let hay = true; registrar({id, pos, sel, piso:0, et:() => hay ? tr(et) : tr('NO HAY NADA'), ok:() => hay,
@@ -167,10 +167,10 @@ const RADIO = [
 ];
 const RADIO_NOCHE = {23:'ÚLTIMO AVISO: TOQUE DE QUEDA. QUE NADIE SALGA A LA CALLE.', 25:'...REPETIMOS: NO SALGAN. NO ABRAN LA PUERTA, AUNQUE ESCUCHEN UNA VOZ CONOCIDA...',
   26.5:'...SE REPORTAN CORTES DE LUZ EN TODO EL BARRIO...', 29:'...FALTA POCO PARA EL AMANECER. LOS EQUIPOS LLEGAN CON EL SOL. AGUANTEN...'};
-function empezarRadio(){ J.radioYa = true; SON.fx('radio_on', {pos:[-6.4, 0.9, -1]}); let t = 0.8; J.cola = [];
+function empezarRadio(){ J.radioYa = true; SON.fx('radio_on', {pos:RADIO_POS}); let t = 0.8; J.cola = [];
   for(const [txt] of RADIO){ J.cola.push({t, txt, tipo:'radio'}); t += Math.max(3.2, txt.length*0.075) + 0.4; }
   J.cola.push({t, fin:() => { J.corre = true; objetivoPrep(); SON.musica('tarde'); SON.fx('objetivo'); }}); }
-function repetirRadio(){ SON.fx('radio_on', {pos:[-6.4, 0.9, -1]}); J.cola = [{t:0.6, txt:RADIO[2][0], tipo:'radio'}, {t:4.8, txt:RADIO[4][0], tipo:'radio'}]; }
+function repetirRadio(){ SON.fx('radio_on', {pos:RADIO_POS}); J.cola = [{t:0.6, txt:RADIO[2][0], tipo:'radio'}, {t:4.8, txt:RADIO[4][0], tipo:'radio'}]; }
 function objetivoPrep(){ J.fase = 'prep'; objetivo('Preparate para la noche', ['linterna', 'tabla', 'camara', 'generador']); }
 function atenderTelefono(){ if(J.telSuena <= 0) return; J.telSuena = 0; SON.bucleParar('telefono'); SON.fx('telefono_cuelga', {pos:[2.18, 1.5, -1.6], tono:1.3});
   const ev = J.telEvento; J.cola = J.cola || [];
@@ -181,9 +181,10 @@ function pasoCola(dt){ if(!J.cola) return; for(const e of J.cola){ e.t -= dt; if
 function decir(txt, tipo){ const s = tr(txt), dur = SON.voz(s, tipo) || Math.max(2.5, s.length*0.07); UI.subtitulo(s, dur + 0.8, tipo); }
 /* la pantalla de la tele: nieve, el noticiero de las 9 y, a las 2, la cara */
 function construirTele(){ const [cv, g] = lienzo(128, 96); TELE.cv = cv; TELE.g = g; TELE.tex = new THREE.CanvasTexture(cv); TELE.tex.encoding = THREE.sRGBEncoding;
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.62), new THREE.MeshBasicMaterial({map:TELE.tex, color:0x222222, fog:false})); m.position.set(-4.5, 0.97, -4.585); MUNDO.grupo.add(m); TELE.malla = m;
-  const marco = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.78, 0.36), MAT.plastico); conFuera(marco.geometry, 0); tintar(marco.geometry, 0x2a2a2e); marco.position.set(-4.5, 0.97, -4.42); MUNDO.grupo.add(marco);
-  const b = new THREE.Mesh(new THREE.CircleGeometry(0.05, 12), new THREE.MeshBasicMaterial({color:0xd82020})); b.position.set(-3.9, 0.8, -4.595); b.rotation.y = 0; MUNDO.grupo.add(b); }
+  /* la tele está contra la pared del fondo del living y mira al frente (−z) */
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.62), new THREE.MeshBasicMaterial({map:TELE.tex, color:0x222222, fog:false})); m.position.set(TELE_POS.x, TELE_POS.y, TELE_POS.pantalla); m.rotation.y = Math.PI; MUNDO.grupo.add(m); TELE.malla = m;
+  const marco = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.78, 0.36), MAT.plastico); conFuera(marco.geometry, 0); tintar(marco.geometry, 0x2a2a2e); marco.position.set(TELE_POS.x, TELE_POS.y, TELE_POS.z); MUNDO.grupo.add(marco);
+  const b = new THREE.Mesh(new THREE.CircleGeometry(0.02, 10), new THREE.MeshBasicMaterial({color:0xd82020})); b.position.set(TELE_POS.x - 0.44, TELE_POS.y - 0.33, TELE_POS.pantalla - 0.001); b.rotation.y = Math.PI; MUNDO.grupo.add(b); TELE.led = b; }
 function pasoTele(dt){ if(!TELE.g) return; TELE.t += dt; if(TELE.t < 1/15) return; TELE.t = 0; const g = TELE.g, w = 128, h = 96, m = TELE.malla.material;
   let modo = ELEC.tvOn ? 'nieve' : 'apagada'; if(ELEC.tvOn && J.hora >= 21 && J.hora < 22.3) modo = 'noticia'; if(J.caraTele > 0){ modo = 'cara'; J.caraTele -= 1/15; }
   if(modo === 'apagada'){ m.color.set(0x111111); g.fillStyle = '#050608'; g.fillRect(0, 0, w, h); TELE.tex.needsUpdate = true; return; }

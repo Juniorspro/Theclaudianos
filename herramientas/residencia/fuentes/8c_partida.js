@@ -53,7 +53,7 @@ function pasoReloj(dt){
   una('radio25', h >= 25.2, () => { if(Math.hypot(JUG.x + 6.4, JUG.z + 1) < 14) decir(RADIO_NOCHE[25], 'radio'); });
   una('llamada2', h >= 25.5, () => { J.telSuena = 12; J.telEvento = 'noche'; });
   una('pasos1', h >= 25.8, () => pasosArriba());
-  una('caraTele', h >= 26, () => { ELEC.tvOn = ELEC.hay; J.caraTele = 0.35; SON.fx('tele_on', {pos:[-4.5, 1, -4.5]}); if(JUG.sala && JUG.sala.id === 'living') SON.fx('susto_corto', {vol:0.7}); });
+  una('caraTele', h >= 26, () => { ELEC.tvOn = ELEC.hay; J.caraTele = 0.35; SON.fx('tele_on', {pos:[TELE_POS.x, 1, TELE_POS.pantalla]}); if(JUG.sala && JUG.sala.id === 'living') SON.fx('susto_corto', {vol:0.7}); });
   una('corte', h >= 26.5, () => { saltarFusibles(); if(Math.hypot(JUG.x + 6.4, JUG.z + 1) < 14) decir(RADIO_NOCHE[26.5], 'radio'); });
   una('pasos2', h >= 27.4, () => pasosArriba());
   una('radio29', h >= 29, () => decir(RADIO_NOCHE[29], 'radio'));

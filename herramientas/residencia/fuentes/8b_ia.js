@@ -89,8 +89,8 @@ function pasoMonstruo(dt){
       const v = MON.entrada.v; anim = MON.estado === 'respira' ? 'asoma' : 'ventana';
       /* la cara va en el vidrio: se mide dónde quedó la cabeza respecto de la raíz y se corre la raíz para que el centro de la
          cabeza quede a 0,6 m del vidrio y a la altura del medio de la ventana (abajo se agacha; arriba ya está trepado) */
-      let dn = 0.62, dy = MON.y; if(MODELO.cab && !v.piso){ const hw = new THREE.Vector3(); MODELO.cab.getWorldPosition(hw); hw.sub(MODELO.raiz.position);
-        dn = lim(0.6 - (hw.x*v.n[0] + hw.z*v.n[1]), 0.45, 1.6); dy = lim(v.pos[1] + 0.05 - hw.y, -0.7, 0); }
+      let dn = 0.62, dy = MON.y; if(MODELO.cab){ const hw = new THREE.Vector3(); MODELO.cab.getWorldPosition(hw); hw.sub(MODELO.raiz.position);
+        dn = lim(0.6 - (hw.x*v.n[0] + hw.z*v.n[1]), 0.45, 1.6); dy = v.piso ? lim(v.pos[1] + 0.05 - hw.y, PISO1 - 1.4, PISO1 + 0.8) : lim(v.pos[1] + 0.05 - hw.y, -0.7, 0); }
       MON.x += (v.pos[0] + v.n[0]*dn - MON.x)*Math.min(1, dt*4); MON.z += (v.pos[2] + v.n[1]*dn - MON.z)*Math.min(1, dt*4); MON.y += (dy - MON.y)*Math.min(1, dt*3);
       MON.yaw += angDif(MON.yaw, Math.atan2(-v.n[0], -v.n[1]))*Math.min(1, dt*6);
       SON.bucle('m_resp', 'm_respira_bucle', {pos:[v.pos[0] + v.n[0]*0.4, v.pos[1], v.pos[2] + v.n[1]*0.4], vol:1, adentro:false, ocluido:v.vidrio && v.tablas ? 0.3 : 0});
@@ -159,9 +159,10 @@ function pasoMonstruo(dt){
       seguir(dt, vel); if(d < 1.2) atrapar(); if(!veAlJugador()){ MON.vistoT += dt; if(MON.vistoT > 6){ MON.vistoT = 0; estado('merodea', 8); } } else MON.vistoT = 0; break; }
     case 'mata': { anim = 'agarra'; const c = RND.cam; if(!MON.frente){ const f = new THREE.Vector3(0, 0, -1).applyQuaternion(c.quaternion); f.y = 0; f.normalize(); MON.frente = [f.x, f.z]; }
       /* la cara se pone delante de los ojos: se mide dónde quedó la cabeza respecto de la raíz y se corre la raíz */
-      /* se tira encima: aparece a 1,9 m y en un cuarto de segundo tiene la cara entera delante de los ojos (1,05 m al centro de la cabeza) */
-      const f = MON.frente, dd = 1.05 + 0.85*lim((MON.t - 1.25)/0.25, 0, 1), hw = new THREE.Vector3(); MODELO.cab.getWorldPosition(hw); hw.sub(MODELO.raiz.position);
-      MON.yaw = Math.atan2(-f[0], -f[1]); MON.x = c.position.x + f[0]*dd - hw.x; MON.z = c.position.z + f[1]*dd - hw.z; MON.y = c.position.y - hw.y; J.temblor = 1.2;
+      /* se tira encima: aparece a 1,5 m y en un cuarto de segundo tiene la cara entera delante de los ojos (0,52 m al centro de la
+         cabeza, que a escala real mide 46 cm) */
+      const f = MON.frente, dd = 0.52 + 1.0*lim((MON.t - 1.25)/0.25, 0, 1), hw = new THREE.Vector3(); MODELO.cab.getWorldPosition(hw); hw.sub(MODELO.raiz.position);
+      MON.yaw = Math.atan2(-f[0], -f[1]); MON.x = c.position.x + f[0]*dd - hw.x; MON.z = c.position.z + f[1]*dd - hw.z; MON.y = c.position.y + 0.1 - hw.y; J.temblor = 1.2;
       if(MON.t <= 0){ morir(J.muerto || 'monstruo'); } break; }
   }
   /* pasos, cuerpo, respiración y el ritmo del corazón */

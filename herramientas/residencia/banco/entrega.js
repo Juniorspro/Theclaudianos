@@ -7,11 +7,11 @@ const {chromium} = require('/tmp/ui/node_modules/playwright');
   const pasos = process.env.SOLO ? [] : [
     ['titulo', `R.menuTitulo();`],
     ['tarde', `R.nuevaPartida('normal'); document.getElementById('menu').innerHTML = ''; R.J.hora = 16.2; poner(0.25, 0, -13.5, Math.PI, 0.06); correr(1);`],
-    ['radio', `poner(-5.2, 0, -1.2, Math.PI/2 - 0.2, -0.12); R.MUNDO.interactivos.find(o => o.id === 'radio').hacer(); correr(7);`],
+    ['radio', `poner(-5.5, 0, -3.5, 0.95, -0.3); R.MUNDO.interactivos.find(o => o.id === 'radio').hacer(); correr(7);`],
     ['radio_fin', `for(let i = 0; i < 30*32; i++) R.paso(1/30); correr(0.2);`],
-    ['tablas', `R.J.cola = []; R.J.hora = 17.5; R.JUG.inv.tablas = 3; poner(-4.2, 3.2, -2.2, 0.55, -0.35); correr(1);`],
+    ['tablas', `R.J.cola = []; R.J.hora = 17.5; R.JUG.inv.tablas = 3; poner(-4.3, 3.2, -2.0, -0.45, -0.5); correr(1);`],
     ['ventana', `R.J.hora = 19.1; const v = R.MUNDO.ventanas.v_cocina_f; R.JUG.inv.tablas = 3; for(let k = 0; k < 3; k++) R.clavarTabla(v); poner(4.5, 0, -2.3, 0, 0.05); correr(1);`],
-    ['galpon', `R.J.hora = 19.3; poner(-5.6, 0, 7.6, 0.75, -0.02); correr(1);`],
+    ['galpon', `R.J.hora = 19.3; poner(-5.6, 0, 7.6, 2.64, -0.02); correr(1);`],
     ['bicho', `R.J.hora = 25.2; R.J.corre = false; R.J.fase = 'noche'; R.MUNDO.ventanas.v_cocina_f.tablas = 0; const v = R.MUNDO.ventanas.v_living_f; v.tablas = 0; v.vidrio = true; v.mVidrio.visible = true;
       Object.assign(R.MON, {activo:true, estado:'respira', t:99, entrada:{tipo:'v', v}, x:v.afuera[0], z:v.afuera[1], y:0, piso:0, adentro:false, luzT:0, flashT:0, cool:0}); R.MODELO.raiz.visible = true;
       poner(-4.3, 0, -1.6, 0.05, 0.1); correr(4);`],

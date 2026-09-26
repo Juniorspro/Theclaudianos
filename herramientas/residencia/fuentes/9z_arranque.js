@@ -8,9 +8,9 @@ function sonidoCuadro(dt){
   if(GEN.andando) SON.bucle('gen', 'generador', {pos:gen, vol:1, tono:GEN.nafta < 15 ? 0.82 : 1, adentro:false, ocluido:JUG.adentro ? 0.8 : 0}); else SON.bucleParar('gen', 0.8);
   if(GEN.andando && JUG.adentro) SON.bucle('vent', 'ventilador', {vol:0.45}); else SON.bucleParar('vent', 0.6);
   if(ELEC.hay) SON.bucle('heladera', 'heladera', {pos:[6.5, 1, -0.55], vol:0.8, adentro:true, ocluido:JUG.adentro ? 0 : 0.7}); else SON.bucleParar('heladera', 0.4);
-  if(ELEC.tvOn) SON.bucle('tele', 'tele_estatica', {pos:[-4.5, 1, -4.5], vol:0.7, adentro:true}); else SON.bucleParar('tele');
+  if(ELEC.tvOn) SON.bucle('tele', 'tele_estatica', {pos:[TELE_POS.x, 1, TELE_POS.pantalla], vol:0.7, adentro:true}); else SON.bucleParar('tele');
   if(CAMV.abierta) SON.bucle('pc', 'pc_zumbido', {vol:0.5}); else SON.bucleParar('pc');
-  if(J.fase === 'radio' && !J.radioYa) SON.bucle('radioE', 'radio_estatica', {pos:[-6.4, 0.9, -1], vol:0.7, adentro:true, ocluido:JUG.adentro ? 0 : 0.7}); else SON.bucleParar('radioE', 0.2);
+  if(J.fase === 'radio' && !J.radioYa) SON.bucle('radioE', 'radio_estatica', {pos:RADIO_POS, vol:0.7, adentro:true, ocluido:JUG.adentro ? 0 : 0.7}); else SON.bucleParar('radioE', 0.2);
   if(!ELEC.hay && FUS.abierta === false && Math.hypot(JUG.x - FUSIBLES.x, JUG.z - FUSIBLES.z) < 8) SON.bucle('chispas', 'chispas', {pos:[FUSIBLES.x, FUSIBLES.y, FUSIBLES.z + 0.1], vol:0.8}); else SON.bucleParar('chispas');
   if(JUG.o2 < 40 && J.modo === 'juego') SON.bucle('jadeo', 'jadeo', {vol:lim((40 - JUG.o2)/30, 0.2, 1)}); else SON.bucleParar('jadeo');
   if(JUG.en === 'placard') SON.bucle('esc', 'respira_escondido', {vol:0.8}); else SON.bucleParar('esc');
@@ -26,7 +26,7 @@ function pasoCamaraJuego(dt){
   if(c.fov !== (MED.w/MED.h > 1.3 ? 66 : 74)){ c.fov = MED.w/MED.h > 1.3 ? 66 : 74; c.updateProjectionMatrix(); }
   if(JUG.en === 'placard'){ const q = JUG.placard, y = alturaPiso(q.piso) + 1.45; c.position.set(q.dentro[0], y, q.dentro[1]); c.rotation.order = 'YXZ';
     const yaw = Math.atan2(-(q.frente[0] - q.dentro[0]), -(q.frente[1] - q.dentro[1])); c.rotation.set(-0.05 + (Math.random() - 0.5)*J.temblor*0.03, yaw + (Math.random() - 0.5)*J.temblor*0.04, 0); return; }
-  if(J.modo === 'susto'){ const h = cabezaMon(); const m = new THREE.Matrix4().lookAt(c.position, new THREE.Vector3(h[0], h[1] - 0.05, h[2]), new THREE.Vector3(0, 1, 0)); const q = new THREE.Quaternion().setFromRotationMatrix(m);
+  if(J.modo === 'susto'){ const h = cabezaMon(); const m = new THREE.Matrix4().lookAt(c.position, new THREE.Vector3(h[0], h[1] - 0.16, h[2]), new THREE.Vector3(0, 1, 0)); const q = new THREE.Quaternion().setFromRotationMatrix(m);
     c.quaternion.slerp(q, Math.min(1, dt*22)); c.position.x += (Math.random() - 0.5)*0.03; c.position.y += (Math.random() - 0.5)*0.03; return; }
   ponerCamara(dt, J.temblor);
 }
@@ -37,6 +37,7 @@ function paso(dt){
   if(J.modo === 'juego'){
     pasoJugador(dt); pasoInteraccion(dt); pasoReloj(dt); pasoGenerador(dt); pasoElectricidad(dt); pasoLinterna(dt); pasoCamaras(dt); pasoQTE(dt);
     pasoAutos(dt); pasoMonstruo(dt); pasoCola(dt); pasoPuertas(dt); pasoRestos(dt); pasoTele(dt);
+    if(MUNDO.llaveInglesa) MUNDO.llaveInglesa.visible = !JUG.inv.llave;
     if(JUG.en === 'placard') J.stats.escondidoT = (J.stats.escondidoT || 0) + dt;
     if(J.hora >= 24 && JUG.adentro === false && MON.activo && Math.random() < dt*0.02) SON.fx('m_grito_lejos', {pos:[MON.x, 3, MON.z], vol:0.6});
   } else if(J.modo === 'susto'){ pasoMonstruo(dt); pasoCola(dt); }
