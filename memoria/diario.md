@@ -1,6 +1,13 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-26 — DUELO DE ARCOS, fútbol 1 contra 1 en 3D
+**Pedido textual:** «Quiero que me recrees un juego en 3D hazlo muy parecido y hasta si puedes mejóralo
+al 100% mejora su menú principal carteles texto mecánicas y movimientos etc el juego es soccer clash».
+Qué se hizo: `juegos-pc/Duelo.html` con three.js, tres arenas pintadas por Higgsfield, disparo con
+efecto, atajadas con el dedo, poderes, repetición, vestuario, camino de trofeos, idiomas. Detalle,
+números del equilibrio y trampas en [duelo](duelo.md).
+
 ### 2026-09-23 — ARRABAL a su carpeta sellada, con assets por streaming
 **Pedido textual:** «Mete lo de arrabal adentro de un repositorio adentro de este y sellalo para que
 otras sesiones no lo lean tipo pone no leer y un código que vos recuerdes y que ahí estén todos los

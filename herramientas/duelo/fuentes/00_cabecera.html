@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a2a6a">
+<title>DUELO DE ARCOS — fútbol 1 contra 1</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  html,body{width:100%;height:100%;background:#0e1a40;overflow:hidden;touch-action:none;overscroll-behavior:none}
+  #envase{position:fixed;inset:0;overflow:hidden;background:#0e1a40}
+  #gl,#ui{position:absolute;left:0;top:0;display:block;touch-action:none}
+  #cargando{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;font:900 16px "Arial Black",Arial,sans-serif;letter-spacing:2px;background:linear-gradient(#1a3a9a,#0e1a40);z-index:9}
+  #cargando b{width:46px;height:46px;border-radius:50%;border:6px solid #ffd23a;border-top-color:transparent;animation:g 0.8s linear infinite}
+  @keyframes g{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="envase"><canvas id="gl"></canvas><canvas id="ui"></canvas></div>
+<div id="cargando"><b></b>CALENTANDO EN LA CANCHA…</div>
+<script>window.__arranque=Date.now();</script>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+(function(){
+'use strict';
+/* ===========================================================================
+   DUELO DE ARCOS — fútbol 1 contra 1, en 3D, para el celular parado.
+   Pateás deslizando el dedo (curvalo para darle efecto) y atajás en tu arco
+   arrastrando y tirándote. Tres arenas, camino de trofeos, vestuario con
+   camisetas, pelotas y estelas. three.js desde jsDelivr; el arte es de
+   Higgsfield y los muñecos se arman y animan con código.
+   ========================================================================= */

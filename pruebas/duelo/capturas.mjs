@@ -1,0 +1,28 @@
+// Recorre las pantallas de DUELO DE ARCOS y juega tiros de prueba. Uso: node capturas.mjs
+import { chromium } from 'playwright-core';
+import { usarCDN } from './cdn.mjs';
+const nav=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
+const ctx=await nav.newContext({viewport:{width:412,height:892},deviceScaleFactor:1,hasTouch:true,isMobile:true});
+await usarCDN(ctx);
+await ctx.addInitScript(()=>{try{localStorage.setItem('duelo.idioma','es');}catch(e){}});
+const pg=await ctx.newPage();const err=[];pg.on('pageerror',e=>err.push('PAGEERROR '+e.message));pg.on('console',m=>{if(m.type()==='error')err.push(m.text().slice(0,200));});
+await pg.goto('file:///home/user/Theclaudianos/juegos-pc/Duelo.html');
+await pg.waitForFunction("window.__D&&__D.listo()",null,{timeout:90000});await pg.evaluate("__D.congelar(true)");
+const ev=s=>pg.evaluate(s);
+const cap=async n=>{await ev("__D.dibujarYa()");await pg.screenshot({path:n+'.png'});};
+await ev("__D.anda(90)");await cap('d01-portada');
+await ev("__D.ir('menu');__D.anda(60)");await cap('d02-menu');
+await ev("__D.ir('vestuario');__D.anda(60)");await cap('d03-vestuario');
+await ev("__D.ir('arenas');__D.anda(40)");await cap('d04-arenas');
+await ev("__D.jugar({dif:0.5,turno:0});__D.anda(60)");await cap('d05-intro');
+await ev("__D.anda(120)");await cap('d06-apunta');
+console.log('fase',JSON.stringify(await ev("__D.partido()")));
+await ev("__D.patear(1.5,1.4,0.9,0.25)");for(let i=0;i<5;i++){await ev("__D.anda(6)");}await cap('d07-vuelo');
+await ev("__D.anda(40)");await cap('d08-resultado');console.log('tiro 1',JSON.stringify(await ev("__D.partido()")));
+await ev("(()=>{let n=0;while(__D.partido().fase!=='carrera'&&n<900){__D.anda(1);n++;}})()");await ev("__D.anda(30)");await cap('d09-atajar');
+await ev("(()=>{let n=0;while(__D.partido().fase!=='vuelo'&&n<300){__D.anda(1);n++;}})()");await ev("__D.anda(4)");await cap('d10-tiro-rival');
+await ev("__D.anda(90)");console.log('tiro 2',JSON.stringify(await ev("__D.partido()")));
+await ev("__D.reloj(0.2)");await ev("(()=>{let n=0;while(__D.pant()!=='fin'&&n<3000){__D.anda(1);n++;}})()");await ev("__D.anda(80)");await cap('d11-fin');
+console.log('info',JSON.stringify(await ev("__D.info()")));
+console.log('ERRORES',err.length?err.slice(0,10).join('\n'):'ninguno');
+await nav.close();
