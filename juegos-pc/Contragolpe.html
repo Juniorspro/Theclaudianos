@@ -630,13 +630,26 @@ const MAT_SUBE = new THREE.ShaderMaterial({uniforms:{t:{value:null}, px:{value:n
       c += (texture2D(t, vUv + vec2(px.x,0.0)).rgb + texture2D(t, vUv - vec2(px.x,0.0)).rgb + texture2D(t, vUv + vec2(0.0,px.y)).rgb + texture2D(t, vUv - vec2(0.0,px.y)).rgb)*2.0;
       c += texture2D(t, vUv + px).rgb + texture2D(t, vUv - px).rgb + texture2D(t, vUv + vec2(px.x,-px.y)).rgb + texture2D(t, vUv + vec2(-px.x,px.y)).rgb;
       gl_FragColor = vec4(c/16.0, 1.0); }`});
+/* la trama de las sombras: líneas a 45° dibujadas a mano una vez (con temblor), repetida en pantalla */
+function texTrama(){ const N = 128, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, N, N);
+  const r = mulberry(33); g.strokeStyle = '#000'; g.lineCap = 'round';
+  /* líneas a 45° que empalman en los bordes (se dibujan corridas un lado para que la costura no se vea) */
+  for(let k=-N;k<N*2;k+=8){ const ancho = 0.7 + r()*0.6, a = 0.45 + r()*0.5, tr = (r() - 0.5)*1.2;
+    for(const dx of [-N, 0, N]){ g.lineWidth = ancho; g.globalAlpha = a; g.beginPath(); let x = k + dx, y = 0; g.moveTo(x, y); while(y < N){ y += 8; x += 8 + tr*0.3; g.lineTo(x, y); } g.stroke(); } }
+  g.globalAlpha = 1; const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; return t; }
 const MAT_FINAL = new THREE.ShaderMaterial({
-  uniforms:{tHdr:{value:null}, tProf:{value:null}, tBloom:{value:null}, tAdapt:{value:null}, clave:{value:0.3}, autoK:{value:0.6}, usaAuto:{value:0}, bloomK:{value:0.35}, expo:{value:1}, tiempo:{value:0}, res:{value:new THREE.Vector2(1,1)},
+  uniforms:{tHdr:{value:null}, tProf:{value:null}, tBloom:{value:null}, tTrama:{value:texTrama()}, qW:{value:3.05e-4}, qSim:{value:0}, viejo:{value:0}, escT:{value:1.2}, tAdapt:{value:null}, clave:{value:0.3}, autoK:{value:0.6}, usaAuto:{value:0}, bloomK:{value:0.35}, expo:{value:1}, tiempo:{value:0}, res:{value:new THREE.Vector2(1,1)},
     lift:{value:new THREE.Vector3()}, gam:{value:new THREE.Vector3(1,1,1)}, gain:{value:new THREE.Vector3(1,1,1)}, sat:{value:1}, contraste:{value:1},
     frio:{value:new THREE.Vector3(1,1,1)}, calido:{value:new THREE.Vector3(1,1,1)}, vineta:{value:0.3}, grano:{value:0.03},
     danio:{value:0}, cegado:{value:0}, muerto:{value:0}, usaBloom:{value:1}, tinta:{value:1}, grosor:{value:1}, cerca:{value:0.05}, lejos:{value:600}, vmRango:{value:0.5}},
   vertexShader:VERT_Q, depthTest:false, depthWrite:false,
-  fragmentShader:`uniform sampler2D tHdr, tProf, tBloom, tAdapt; uniform float clave, autoK, usaAuto, bloomK, expo, tiempo, sat, contraste, vineta, grano, danio, cegado, muerto, usaBloom, tinta, grosor, cerca, lejos, vmRango; uniform vec2 res;
+  fragmentShader:`uniform sampler2D tHdr, tBloom, tTrama, tAdapt;
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+      uniform highp sampler2D tProf;
+    #else
+      uniform mediump sampler2D tProf;
+    #endif
+    uniform float qW, qSim, viejo, escT, clave, autoK, usaAuto, bloomK, expo, tiempo, sat, contraste, vineta, grano, danio, cegado, muerto, usaBloom, tinta, grosor, cerca, lejos, vmRango; uniform vec2 res;
     uniform vec3 lift, gam, gain, frio, calido; varying vec2 vUv;
     vec3 aces(vec3 x){ const mat3 A = mat3(0.59719,0.07600,0.02840, 0.35458,0.90834,0.13383, 0.04823,0.01566,0.83777);
       const mat3 B = mat3(1.60475,-0.10208,-0.00327, -0.53108,1.10813,-0.07276, -0.07367,-0.00605,1.07602);
@@ -646,24 +659,40 @@ const MAT_FINAL = new THREE.ShaderMaterial({
     /* profundidad del búfer → metros; el arma en primera persona está comprimida en [0, vmRango] */
     float metros(float d){ float vm = step(d, vmRango - 1e-4); float dd = mix(d, d/vmRango, vm); float z = dd*2.0 - 1.0; return 2.0*cerca*lejos/(lejos + cerca - z*(lejos - cerca)); }
     float lum(vec3 c){ return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+    float prof(vec2 uv){ float d = texture2D(tProf, uv).r; return qSim > 0.0 ? floor(d/qSim + 0.5)*qSim : d; }
     float ok1(float x){ return (x > -1.0 && x < 60000.0) ? x : 0.0; }
     vec3 limpio(vec3 c){ return min(vec3(ok1(c.x), ok1(c.y), ok1(c.z)), vec3(60.0)); }
     void main(){
       vec2 d = vUv - 0.5; float r2 = dot(d, d);
       vec3 c = limpio(texture2D(tHdr, vUv).rgb);
-      float zc = metros(texture2D(tProf, vUv).r);
+      float zc = metros(prof(vUv));
       if(tinta > 0.5){
         vec2 p = grosor/res;
-        /* sólo siluetas: un salto grande de 1/z entre vecinos. Los pliegues (segunda diferencia) no: con una profundidad de
-           16 bits (hay teléfonos que no dan más) se disparan en cada escalón y pintan rayas y ruido en todo lo lejano */
+        /* 1/z es lineal en pantalla sobre un plano: su segunda diferencia marca pliegues y el salto, siluetas */
         float w0 = 1.0/zc;
-        float wl = 1.0/metros(texture2D(tProf, vUv - vec2(p.x, 0.0)).r), wr = 1.0/metros(texture2D(tProf, vUv + vec2(p.x, 0.0)).r);
-        float wd = 1.0/metros(texture2D(tProf, vUv - vec2(0.0, p.y)).r), wu = 1.0/metros(texture2D(tProf, vUv + vec2(0.0, p.y)).r);
+        float wl = 1.0/metros(prof(vUv - vec2(p.x, 0.0))), wr = 1.0/metros(prof(vUv + vec2(p.x, 0.0)));
+        float wd = 1.0/metros(prof(vUv - vec2(0.0, p.y))), wu = 1.0/metros(prof(vUv + vec2(0.0, p.y)));
+        float wa = 1.0/metros(prof(vUv + p)), wb = 1.0/metros(prof(vUv - p));
+        float wc = 1.0/metros(prof(vUv + vec2(p.x, -p.y))), we = 1.0/metros(prof(vUv + vec2(-p.x, p.y)));
+        float pl = abs(wl + wr - 2.0*w0) + abs(wd + wu - 2.0*w0) + 0.5*(abs(wa + wb - 2.0*w0) + abs(wc + we - 2.0*w0));
         float sil = max(max(abs(wl - w0), abs(wr - w0)), max(abs(wu - w0), abs(wd - w0)))/w0;
-        float borde = smoothstep(0.12, 0.3, sil);
-        float lejania = 1.0 - smoothstep(20.0, 60.0, zc);
-        float tin = clamp(borde*lejania, 0.0, 1.0);
-        c = mix(c, c*0.35, tin*0.6);
+        /* el escalón de la profundidad mete ruido en 1/z (qW por escalón; con 16 bits, 250 veces más que con 24): los umbrales nunca
+           bajan del ruido, así un teléfono de 16 bits dibuja los pliegues fuertes y no rayas en cada escalón */
+        float ruido = viejo > 0.5 ? 0.0 : qW*zc;
+        float u0 = max(0.012, 8.0*ruido), u1 = max(0.09, 3.0*ruido);
+        float borde = max(smoothstep(u0, u0*2.5, pl/w0), smoothstep(u1, u1*2.4, sil));
+        /* detalle: bordes de color (paneles, carteles, costuras) con línea más fina; sólo cerca, que lejos el grano de la foto es ruido */
+        vec3 cl = limpio(texture2D(tHdr, vUv - vec2(p.x, 0.0)).rgb), cr = limpio(texture2D(tHdr, vUv + vec2(p.x, 0.0)).rgb), cd = limpio(texture2D(tHdr, vUv - vec2(0.0, p.y)).rgb), cu = limpio(texture2D(tHdr, vUv + vec2(0.0, p.y)).rgb);
+        float gx = log(lum(cr) + 0.02) - log(lum(cl) + 0.02), gy = log(lum(cu) + 0.02) - log(lum(cd) + 0.02);
+        float det = smoothstep(0.65, 1.2, length(vec2(gx, gy)))*0.5*(1.0 - smoothstep(12.0, 35.0, zc));
+        float lejania = 1.0 - smoothstep(45.0, 140.0, zc);
+        float tin = clamp(max(borde, det)*lejania, 0.0, 1.0);
+        /* trama cruzada en lo oscuro */
+        float l = lum(c*expo);
+        float t1 = texture2D(tTrama, gl_FragCoord.xy/(96.0*escT)).r, t2 = texture2D(tTrama, vec2(gl_FragCoord.x, -gl_FragCoord.y)/(88.0*escT)).r;
+        float tr = (1.0 - t1)*smoothstep(0.1, 0.02, l)*0.22 + (1.0 - t2)*smoothstep(0.035, 0.006, l)*0.2;
+        c *= 1.0 - tr*lejania;
+        c = mix(c, vec3(0.012, 0.01, 0.012), tin*0.92);
       }
       if(usaBloom > 0.5) c += limpio(texture2D(tBloom, vUv).rgb)*bloomK;
       float ex = 1.0;
@@ -714,9 +743,9 @@ function uniformesFinal(rt, bloom, w, h, conBloom){
   U.tHdr.value = rt.texture; U.tProf.value = rt.depthTexture; U.tBloom.value = bloom; U.usaBloom.value = conBloom ? 1 : 0; U.tiempo.value = (POST.t += 0.0173);
   U.res.value.set(w, h); U.expo.value = G2.expo; U.lift.value.fromArray(G2.lift); U.gam.value.fromArray(G2.gamma); U.gain.value.fromArray(G2.gain);
   U.sat.value = G2.sat; U.contraste.value = G2.contraste; U.frio.value.fromArray(G2.frio); U.calido.value.fromArray(G2.calido); U.vineta.value = G2.vineta; U.grano.value = G2.grano*(CALIDAD >= 0.55 ? 1 : 0);
-  U.danio.value = POST.danio; U.cegado.value = POST.cegado; U.muerto.value = POST.muerto; U.tinta.value = POST.tinta ? 1 : 0;
+  U.danio.value = POST.danio; U.cegado.value = POST.cegado; U.muerto.value = POST.muerto; U.tinta.value = (POST.tinta === null ? G.estilo !== 'normal' : POST.tinta) ? 1 : 0; U.qW.value = POST.qW; U.qSim.value = POST.qSim; U.viejo.value = POST.viejo ? 1 : 0; U.escT.value = Math.max(1.2, h/360);
   U.tAdapt.value = POST.adapt ? POST.adapt.texture : null; U.usaAuto.value = POST.adapt ? 1 : 0; U.clave.value = G2.clave; U.autoK.value = G2.autoK;
-  U.grosor.value = Math.max(1, h/720); U.cerca.value = cam.near; U.lejos.value = cam.far; U.vmRango.value = POST.vmRango;
+  U.grosor.value = Math.max(1.2, h/360); U.cerca.value = cam.near; U.lejos.value = cam.far; U.vmRango.value = POST.vmRango;
 }
 /* dibujar directo: ACES y sRGB de three en cada material (hay que recompilarlos) */
 function sinRevelado(motivo){
@@ -724,11 +753,36 @@ function sinRevelado(motivo){
   for(const e of [escena, escVM]) e.traverse(o=>{ if(o.material) for(const m of [].concat(o.material)) m.needsUpdate = true; });
   if(POST.rt){ POST.rt.dispose(); POST.rt.depthTexture.dispose(); POST.rt = null; } for(const m of POST.mips) m.dispose(); POST.mips = [];
 }
-POST.tinta = /[?&]tinta/.test(location.search); POST.adaptYa = true;
+/* tinta: la elige ESTILO en AJUSTES; ?tinta / ?sintinta la fuerzan. ?profbits=16 (u 11: lo que da un sampler de baja precisión) simula una profundidad peor y ?tintavieja usa los
+   umbrales de antes (para ver las rayas en el banco) */
+{ const q = location.search; POST.tinta = /[?&]sintinta/.test(q) ? false : /[?&]tinta\b/.test(q) ? true : null; const pb = q.match(/[?&]profbits=(\d+)/); POST.qSim = pb ? Math.pow(2, -(+pb[1])) : 0; POST.viejo = /[?&]tintavieja/.test(q); }
+POST.adaptYa = true; POST.qW = Math.pow(2, -16)/cam.near;
 function leerAdaptacion(){ if(!POST.adapt) return null; const sal = new THREE.WebGLRenderTarget(1, 1, {type:THREE.UnsignedByteType, format:THREE.RGBAFormat, depthBuffer:false});
   MAT_LEER.uniforms.t.value = POST.adapt.texture; pasadaQ(MAT_LEER, sal); const px = new Uint8Array(4); ren.readRenderTargetPixels(sal, 0, 0, 1, 1, px); ren.setRenderTarget(null); sal.dispose();
   const La = Math.pow(2, px[0]/255*14 - 10); return {La:+La.toFixed(4), ex:+Math.min(2.1, Math.max(0.8, Math.pow(POST.grado.clave/La, POST.grado.autoK))).toFixed(3)}; }
+/* ¿con cuántos bits llega la profundidad al shader? (la del búfer: 16 o 24; y hay teléfonos que al leerla la bajan a ~11). Un plano que
+   sube 2^-k a lo ancho de 256 píxeles y se lee con la misma declaración que el revelado: los valores distintos dicen el escalón.
+   k = 16: 24 bits dan ~256 valores; k = 10: 16 bits dan 64 y 11 bits, 2. Si no se puede medir se asume lo peor (sin pliegues). */
+function probarProfundidad(){
+  let rt = null, sal = null, bits = 10;
+  try{
+    rt = rtNuevo(256, 4, THREE.HalfFloatType, true);
+    sal = new THREE.WebGLRenderTarget(256, 1, {type:THREE.UnsignedByteType, format:THREE.RGBAFormat, depthBuffer:false, stencilBuffer:false, generateMipmaps:false});
+    const cuenta = k=>{ const sube = Math.pow(2, 1 - k).toExponential(8);
+      const mq = new THREE.ShaderMaterial({vertexShader:'void main(){ gl_Position = vec4(position.xy, (position.x*0.5 + 0.5)*' + sube + ', 1.0); }', fragmentShader:'void main(){ gl_FragColor = vec4(0.0); }'});
+      QUAD.material = mq; ren.setRenderTarget(rt); ren.clear(true, true, false); ren.render(QESC, QCAM);
+      const ml = new THREE.ShaderMaterial({uniforms:{t:{value:rt.depthTexture}}, vertexShader:VERT_Q, depthTest:false, depthWrite:false,
+        fragmentShader:'#ifdef GL_FRAGMENT_PRECISION_HIGH\n uniform highp sampler2D t;\n#else\n uniform mediump sampler2D t;\n#endif\n varying vec2 vUv; void main(){ float v = clamp((texture2D(t, vec2(vUv.x, 0.5)).r - 0.5)*' + Math.pow(2, k).toFixed(1) + ', 0.0, 1.0); gl_FragColor = vec4(v, v, v, 1.0); }'});
+      pasadaQ(ml, sal); const px = new Uint8Array(256*4); ren.readRenderTargetPixels(sal, 0, 0, 256, 1, px);
+      const vistos = new Set(); for(let i=0;i<256;i++) vistos.add(px[i*4]); mq.dispose(); ml.dispose(); return vistos.size; };
+    const nA = cuenta(16), nB = cuenta(10); POST.valoresProf = [nA, nB];
+    bits = nA >= 24 ? 24 : nB >= 24 ? 16 : 10 + Math.log2(Math.max(1, nB));
+  }catch(e){ bits = 10; }
+  ren.setRenderTarget(null); for(const r of [rt, sal]) if(r){ if(r.depthTexture) r.depthTexture.dispose(); r.dispose(); }
+  return bits;
+}
 POST.ok = !/[?&]sinpost/.test(location.search) && probarHDR();
+if(POST.ok){ POST.bitsProf = probarProfundidad(); if(POST.qSim) POST.bitsProf = Math.min(POST.bitsProf, -Math.log2(POST.qSim)); POST.qW = Math.pow(2, -POST.bitsProf)/cam.near; }
 if(!POST.ok){ POST.motivo = 'prueba'; ren.toneMapping = THREE.ACESFilmicToneMapping; ren.toneMappingExposure = POST.grado.expo; }
 /* guardia: si la pantalla sale negra tres veces seguidas (cinco puntos; cada medio segundo al principio, después cada 2 s), se pasa a dibujar directo */
 const GUARDIA = {n:0, negros:0, px:new Uint8Array(4)};
@@ -4383,7 +4437,7 @@ function armarArsenal(){ const L = $('arsenalLista'); L.innerHTML = ''; for(cons
   const W = ARMAS[MENU.arsenalId], f = $('arsenalFicha'); const barra = (n, v)=> '<div class="barra"><span>' + n + '</span><i><b style="width:' + Math.round(lim(v, 0, 1)*100) + '%"></b></i></div>';
   f.innerHTML = '<h2 style="font-size:20px"><small>$' + W.precio + '</small>' + W.nom + '</h2>' + (W.dmg ? barra('DAÑO', W.dmg/115) + barra('CADENCIA', (W.rpm || 0)/900) + barra('PRECISIÓN', 1 - ((W.impr && W.impr.quieto) || 1)/5) + barra('MOVILIDAD', (W.vel/U - 180)/80) + (W.carg ? barra('CARGADOR ' + W.carg, W.carg/30) : '') : ''); }
 /* ---------- ajustes ---------- */
-function armarAjustes(){ const s = (id, t)=>{ $(id).querySelector('span').textContent = tr(t); };
+function armarAjustes(){ guardar(); const s = (id, t)=>{ $(id).querySelector('span').textContent = tr(t); };
   s('btSens', 'SENSIBILIDAD: ' + G.sens); s('btEstilo', 'ESTILO: ' + (G.estilo === 'tinta' ? 'HISTORIETA' : 'NORMAL')); s('btGraf', 'GRÁFICOS: ' + (G.graficos || 'auto').toUpperCase()); s('btSonido', 'SONIDO: ' + (G.sonido !== false ? 'SÍ' : 'NO')); s('btMiraCol', 'MIRA: ' + (G.mira || 'verde').toUpperCase()); }
 function menusIniciar(){
   const clic = (id, fn)=> $(id) && $(id).addEventListener('click', ()=>{ if(window.sonarUI) sonarUI('ui_toque'); fn(); });

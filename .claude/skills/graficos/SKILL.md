@@ -52,8 +52,11 @@ description: Reglas de render de three.js que ya costaron una vuelta cada una �
 - La cámara se mueve **en el paso de la simulación**, no al dibujar: si no, a pocos cuadros por segundo se queda atrás.
 
 ## Teléfonos
-- **Hay teléfonos con profundidad de 16 bits**: un detector de bordes por segunda diferencia de la profundidad pinta rayas en cada
-  escalón. Sólo siluetas (saltos grandes), apagadas con la distancia.
+- **Un `sampler2D` del fragmento es `lowp` por norma** y three r128 no lo cambia: los teléfonos lo respetan y una textura de
+  profundidad llega con ~11 bits (en PC se ignora: el banco no lo ve nunca). `uniform highp sampler2D` con
+  `#ifdef GL_FRAGMENT_PRECISION_HIGH`, medir los bits que llegan y que ningún umbral baje del escalón medido.
+- Un defecto de precisión se reproduce en el banco **cuantizando la lectura en el shader**; si la simulación no saca lo de la captura,
+  la hipótesis está mal (16 bits no daban las rayas; 11 sí).
 - `checkFramebufferStatus` no alcanza para aceptar un búfer de media precisión: hay que **dibujar un color conocido por todo el camino
   y leerlo** (puede no filtrarse y muestrear negro). Y una guardia que lea la pantalla y pase a dibujo directo.
 - «Versión de escritorio»: la página se arma a 980 px y se achica (`visualViewport.scale` ≈ 0,37). Se compensa escalando la pantalla

@@ -15,7 +15,7 @@ se prueba **en el celular, en vertical (412×892)**. EL TIPO se juega **acostado
 | `herramientas/brecha` | Partes del código de BRECHA 7, su armador y el banco (`banco/*.js`). |
 | `juegos-pc/Alas.html` | **ALAS · DUELO AÉREO.** Combate aéreo en tercera persona (o cabina) al estilo Modern Warplanes: archipiélago procedural con islas, costa, mar con reflejo y nubes; cañón, misiles con fijado, bengalas, turbo y freno; 5 misiones (duelo, cordillera con compañero, defensa de portaaviones, rasante contra destructores, El As en tormenta), hangar con 4 aviones y mejoras. three.js r128 y todo lo generado con Rezona adentro, sin red, acostado. Se arma con `herramientas/alas/armar.py`. |
 | `herramientas/alas` | Partes del código de ALAS, su armador y el banco (`banco/*.js`). |
-| `juegos-pc/Contragolpe.html` | **CONTRAGOLPE.** Tirador táctico a lo Counter-Strike (imagen limpia con exposición automática; la tinta tipo Borderlands quedó sólo con `?tinta`): bomba 5v5 con rondas y economía, deathmatch y carrera de armas; mapas NUCLEAR (dos pisos), DESIERTO y ALMACÉN con luz horneada; armas, manos, personajes y bots por código. three.js r128 adentro, sin red, acostado. Se arma con `herramientas/contragolpe/armar.py`. |
+| `juegos-pc/Contragolpe.html` | **CONTRAGOLPE.** Tirador táctico a lo Counter-Strike con tinta tipo Borderlands (el preset de CS2 en Nuke; ESTILO en AJUSTES la apaga) y exposición automática: bomba 5v5 con rondas y economía, deathmatch y carrera de armas; mapas NUCLEAR (dos pisos), DESIERTO y ALMACÉN con luz horneada; armas, manos, personajes y bots por código. three.js r128 adentro, sin red, acostado. Se arma con `herramientas/contragolpe/armar.py`. |
 | `herramientas/contragolpe` | Partes, armador, luz horneada (`luz/`) y banco (`banco/*.js`: partida, hornear, vmjuego, vm3). |
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. De otra línea de trabajo. |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
@@ -807,10 +807,8 @@ y los mandos diminutos) y «Sácale el ssao si es que agregaste, y arregla lo vi
 en ALMACÉN con rayas negras y ruido).
 
 SSAO no había: **las rayas y el ruido eran la tinta**. Tres defectos distintos, cada uno en un teléfono:
-- **Rayas y ruido**: la tinta buscaba pliegues con la segunda diferencia de 1/z. Con una profundidad de 16 bits (hay teléfonos que no dan
-  más) cada escalón de la profundidad es un pliegue: rayas paralelas en pisos y paredes y ruido en todo lo que está a más de unos metros,
-  y lo lejano, negro. En el banco (24 bits) no se ve nunca. La tinta ahora es sólo de siluetas, se apaga con la distancia y **viene
-  apagada** (`?tinta` la prende); la trama de las sombras se fue.
+- **Rayas y ruido**: salían de la tinta, que busca pliegues con la segunda diferencia de 1/z. En esta vuelta se le echó la culpa a una
+  profundidad de 16 bits y se apagó la tinta; **la causa de verdad está en la (24)** y la tinta volvió.
 - **Todo el 3D negro, también el arma, con el HUD bien**: el camino HDR se aceptaba con `checkFramebufferStatus`, que no dice si la
   placa **filtra** la media precisión ni si compila el revelado. `probarHDR()` ahora pasa un color conocido por todo el camino
   (búfer HDR → resplandor → tono) a 8 bits y lo lee; si no da, se dibuja directo con el ACES de three (el cielo lleva
@@ -843,4 +841,28 @@ Medido: prueba del camino HDR en el banco (226, 189, 143) = lo esperado; con `?s
 guardia pasa a directo sola a los 358 cuadros de negro forzado. Toques reales por CDP (palanca, mirar, fuego) iguales con y sin el
 defecto del `viewport`. Partidas simuladas: deathmatch en ALMACÉN con bajas, bomba en NUCLEAR 5 rondas con plantada. Sin red, idiomas y
 sin errores. HTML de 12 a 17 MB (texturas a 1024); banco sin GPU 11–18 cuadros por segundo.
+
+### 2026-09-26 (24) — CONTRAGOLPE: la tinta vuelve, y la causa de verdad de las rayas
+**Pedido textual:** «sale chico porque usé modo escritorio en google, no saques nada».
+
+La escala de interfaz para la «versión de escritorio» queda (sin ese modo no hace nada). Y **no se saca nada**: vuelven la tinta, la trama
+de las sombras y las líneas de detalle, y el botón ESTILO de AJUSTES (HISTORIETA / NORMAL), que en la (23) había quedado sin efecto.
+
+**La causa de verdad de las rayas y del 3D negro**: three.js r128 declara `precision highp float` pero **no la de los samplers**, y por norma
+un `sampler2D` del fragmento es `lowp`. En PC se ignora; los teléfonos lo respetan y la profundidad llega al revelado con ~11 bits. Cada
+escalón de esa profundidad es un pliegue para la tinta: rayas paralelas en pisos y paredes (el teléfono de la captura del ALMACÉN) o
+todo entintado, o sea negro (el otro). Con 16 bits simulados no se reproducía; **con 11 bits simulados el banco saca exactamente las rayas
+de la captura**, y así se confirmó.
+- `uniform highp sampler2D tProf` (con `#ifdef GL_FRAGMENT_PRECISION_HIGH`).
+- Al arrancar se mide con cuántos bits llega la profundidad, con la misma declaración: un plano que sube 2^-16 y otro que sube 2^-10 a lo
+  ancho de 256 píxeles; los valores distintos dan el escalón (24 bits → 256 y 256; 16 → 1–2 y 64; 11 → 1 y 2).
+- Los umbrales de pliegue y silueta **nunca bajan del ruido de ese escalón** (`qW = 2^-bits / cerca`, ruido relativo `qW·z`): con buena
+  precisión la tinta sale entera; con poca, se queda con las siluetas fuertes y sin rayas.
+- Banco: `?profbits=11` cuantiza la lectura en el shader como un teléfono; `?tintavieja` usa los umbrales viejos (para ver las rayas).
+- La guardia de pantalla negra mira cada medio segundo al principio: con negro forzado pasa a dibujo directo a los 88 cuadros.
+- AJUSTES guarda cada cambio al momento (antes, sólo al apretar VOLVER).
+
+Medido: con 11 bits simulados, umbrales viejos = las rayas de la captura; nuevos = limpio con siluetas; con 24 bits la tinta completa en
+los tres mapas. ESTILO cambia la tinta y queda guardado al recargar. Toques reales por CDP iguales con y sin el defecto del `viewport`,
+respaldo sin revelado y guardia, sin red, idiomas y partidas simuladas (deathmatch en ALMACÉN, bomba en DESIERTO) sin errores.
 

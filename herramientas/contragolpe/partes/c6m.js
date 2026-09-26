@@ -68,7 +68,7 @@ function armarArsenal(){ const L = $('arsenalLista'); L.innerHTML = ''; for(cons
   const W = ARMAS[MENU.arsenalId], f = $('arsenalFicha'); const barra = (n, v)=> '<div class="barra"><span>' + n + '</span><i><b style="width:' + Math.round(lim(v, 0, 1)*100) + '%"></b></i></div>';
   f.innerHTML = '<h2 style="font-size:20px"><small>$' + W.precio + '</small>' + W.nom + '</h2>' + (W.dmg ? barra('DAÑO', W.dmg/115) + barra('CADENCIA', (W.rpm || 0)/900) + barra('PRECISIÓN', 1 - ((W.impr && W.impr.quieto) || 1)/5) + barra('MOVILIDAD', (W.vel/U - 180)/80) + (W.carg ? barra('CARGADOR ' + W.carg, W.carg/30) : '') : ''); }
 /* ---------- ajustes ---------- */
-function armarAjustes(){ const s = (id, t)=>{ $(id).querySelector('span').textContent = tr(t); };
+function armarAjustes(){ guardar(); const s = (id, t)=>{ $(id).querySelector('span').textContent = tr(t); };
   s('btSens', 'SENSIBILIDAD: ' + G.sens); s('btEstilo', 'ESTILO: ' + (G.estilo === 'tinta' ? 'HISTORIETA' : 'NORMAL')); s('btGraf', 'GRÁFICOS: ' + (G.graficos || 'auto').toUpperCase()); s('btSonido', 'SONIDO: ' + (G.sonido !== false ? 'SÍ' : 'NO')); s('btMiraCol', 'MIRA: ' + (G.mira || 'verde').toUpperCase()); }
 function menusIniciar(){
   const clic = (id, fn)=> $(id) && $(id).addEventListener('click', ()=>{ if(window.sonarUI) sonarUI('ui_toque'); fn(); });
