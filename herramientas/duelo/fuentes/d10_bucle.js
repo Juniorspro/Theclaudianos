@@ -27,7 +27,7 @@ var Bucle={acum:0,ultimo:0,msCuadro:16,
     /* la resolución del 3D se adapta: si el cuadro tarda, baja; si sobra, sube */
     var ms=performance.now()-t0;this.msCuadro=this.msCuadro*0.95+(dtR*1000)*0.05;
     if(J.cuadro%120===0&&J.cuadro>240){var e=Pantalla.escala3D;
-      if(this.msCuadro>24&&e>0.6){Pantalla.escala3D=Math.max(0.6,e-0.1);Pantalla.pedir=true;Pantalla.S=0;}
+      if(this.msCuadro>24&&e>0.6){Pantalla.escala3D=Math.max(0.6,e-0.1);Pantalla.pedir=true;Pantalla.S=0;ajustarCapas();if(Pantalla.escala3D<0.75)R3.post=false;}
       else if(this.msCuadro<17&&e<1){Pantalla.escala3D=Math.min(1,e+0.1);Pantalla.pedir=true;Pantalla.S=0;}}
   },
   adelantar:function(n){for(var i=0;i<n;i++)this.pasar(CUADRO);},
@@ -41,7 +41,7 @@ var Bucle={acum:0,ultimo:0,msCuadro:16,
     manejarToques();
     if(J.trans){var T=J.trans;T.t+=dt;if(!T.hecho&&T.t>=TRANS/2){T.hecho=true;cambiarA(T.dest);}if(T.t>=TRANS)J.trans=null;}
     var Pp=PANT[J.pant];if(Pp.paso)Pp.paso(dt,J.t);
-    pasarCamara(dt);pasarRedes();pasarHinchada(dt);
+    pasarCamara(dt);pasarRedes();pasarHinchada(dt);pasarBanderas(J.t);
     R3.pelota.position.copy(B.p);R3.pelota.rotation.x-=B.v.z*dt/R_PELOTA;R3.pelota.rotation.z+=B.v.x*dt/R_PELOTA;
     var sp=R3.sombraPelota;sp.position.set(B.p.x,0.01,B.p.z);var al=Math.max(0.3,1-B.p.y/4);sp.scale.set(al,al,al);sp.material.opacity=0.35*al;
     if(J.pant!=='partido'&&Entrada.recien('Escape')&&PANT[J.pant].accion)PANT[J.pant].accion('nav-menu');
@@ -69,14 +69,14 @@ function arrancar(){
   Pantalla.iniciar(gl,ui);
   if(window.Idioma)Idioma.iniciar('duelo',function(x,y){return Pantalla.aMundo(x,y);},'255,154,42');
   Entrada.iniciar(ui);
-  cargarAssets(function(){
+  cargarAssets(function(){cargarModelos(function(){
     crearJugadores();vestirJugador(YO,KITS[Prog.kit]);vestirPelota(Prog.pelota);
     armarArena(arenaActual());
     cambiarA('portada');camaraYa();
     Bucle.iniciar();
     var c=document.getElementById('cargando');if(c)c.style.display='none';
     J.listo=true;
-  });
+  });});
   var SILENCIO='__SILENCIO__', mudo=null;
   var prender=function(){
     Sonido.iniciar();aplicarAjustes();
@@ -91,7 +91,7 @@ function arrancar(){
     else if(Sonido.ac&&Sonido.ac.resume)Sonido.ac.resume();
   });
   /* sondas para el banco de pruebas: el juego no las usa */
-  window.__D={J:J,UI:UI,Sonido:Sonido,E:Entrada,
+  window.__D={J:J,UI:UI,Sonido:Sonido,E:Entrada,yo:function(){return YO;},el:function(){return EL;},posar:function(Jx,dt){posar(Jx,dt);},cam:function(){return R3.cam;},render:function(){dibujar3D();},
     listo:function(){return !!J.listo;},
     congelar:function(v){J.congelado=v!==false;},
     prog:function(){return Prog;},pant:function(){return J.pant;},

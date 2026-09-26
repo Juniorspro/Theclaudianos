@@ -38,6 +38,9 @@ Fuente: `docs/GUIA-JUEGOS.md § 1. Preparar Rezona` y `§ 4`. Ver también: [jue
   ~2.500 (repetido) o ~20.000 (único y cercano). → `docs/GUIA-JUEGOS.md § 4.1`
 - Rig: `source_task_id` es el `gtask-…` del modelo propio; **comprobar los clips que llegaron**, no
   los que se pidieron (ya volvieron tres iguales). → `§ 4.3`
+- **Un rig = un clip** (26/09/2026): se pide un rig por animación (`preset:idle/run/walk/jump/hurt`;
+  un nombre inválido se ignora callado) y se juntan por nombre de hueso (el esqueleto sale idéntico).
+  Con `extra:{face_limit:30000}` el modelo sale de ~29 mil triángulos. Ver [duelo](duelo.md).
 - **Imágenes: andan bien.** 23/09/2026: 14 de 14 al primer intento, de 11 s a 160 s cada una.
   `transparent: true` recorta bien. `768x1664` pedido → llega `768x1376` (la proporción, no el número).
 - **Bajar lo generado sin `fetch_generated_asset`**: `check_generation_tasks` con `project_id` da el

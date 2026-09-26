@@ -21,22 +21,35 @@ function texImg(nombre,repetir){
 function iniciar3D(lienzo){
   var r=new THREE.WebGLRenderer({canvas:lienzo,antialias:true,powerPreference:'high-performance'});
   r.outputColorSpace=THREE.SRGBColorSpace;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.05;
-  r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFShadowMap;
+  r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;
   r.info.autoReset=false;
   R3.renderer=r;
   R3.escena=new THREE.Scene();
+  /* reflejos de entorno: sin esto lo PBR (los jugadores, los caños) sale plano */
+  var pm=new THREE.PMREMGenerator(r);R3.escena.environment=pm.fromScene(new RoomEnvironment(),0.04).texture;R3.escena.environmentIntensity=0.55;
+  /* el posproceso: brillo suave en lo que más ilumina, y un revelado con viñeta y un poco más de color */
+  R3.composer=new EffectComposer(r,new THREE.WebGLRenderTarget(4,4,{type:THREE.HalfFloatType,samples:4}));
   R3.cam=new THREE.PerspectiveCamera(62,0.46,0.1,400);
   R3.hemi=new THREE.HemisphereLight(0xbfe4ff,0x8a7a5a,0.9);R3.escena.add(R3.hemi);
-  var s=new THREE.DirectionalLight(0xfff0d8,2.6);s.position.set(-9,16,7);s.castShadow=true;
+  var s=new THREE.DirectionalLight(0xfff0d8,2.6);s.position.set(-11,13,5);s.castShadow=true;
   s.shadow.mapSize.set(2048,2048);var sc=s.shadow.camera;sc.left=-10;sc.right=10;sc.top=15;sc.bottom=-15;sc.near=1;sc.far=50;
-  s.shadow.bias=-0.0005;s.shadow.normalBias=0.03;
+  s.shadow.bias=-0.0004;s.shadow.normalBias=0.025;s.shadow.radius=3;
   R3.escena.add(s);R3.escena.add(s.target);R3.sol=s;
   crearPelota();crearEstela();
+  var C=R3.composer;C.addPass(new RenderPass(R3.escena,R3.cam));
+  R3.bloom=new UnrealBloomPass(new THREE.Vector2(256,256),0.32,0.5,0.92);C.addPass(R3.bloom);
+  R3.revelado=new ShaderPass({uniforms:{tDiffuse:{value:null},uVin:{value:0.28},uSat:{value:1.12}},
+    vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+    fragmentShader:'uniform sampler2D tDiffuse;uniform float uVin,uSat;varying vec2 vUv;void main(){vec4 c=texture2D(tDiffuse,vUv);'+
+      'float l=dot(c.rgb,vec3(0.2126,0.7152,0.0722));c.rgb=mix(vec3(l),c.rgb,uSat);vec2 d=vUv-0.5;c.rgb*=1.0-uVin*dot(d,d)*2.2;gl_FragColor=c;}'});
+  C.addPass(R3.revelado);C.addPass(new OutputPass());
+  R3.post=true;
 }
 function tamano3D(w,h,dpr){
   var r=R3.renderer;if(!r)return;
   r.setPixelRatio(dpr*Pantalla.escala3D);r.setSize(w,h,false);
   R3.cam.aspect=w/h;R3.cam.updateProjectionMatrix();
+  if(R3.composer){R3.composer.setPixelRatio(dpr*Pantalla.escala3D);R3.composer.setSize(w,h);R3.bloom.resolution.set(w*0.5,h*0.5);}
 }
 /* ---------------- texturas hechas con código ---------------- */
 function texPelota(estilo){
@@ -116,33 +129,122 @@ function armarArena(id){
   var piso=new THREE.Mesh(new THREE.PlaneGeometry(220,220),new THREE.MeshStandardMaterial({map:tp,roughness:0.9,color:A.noche?0x7a7a90:0xffffff}));
   piso.rotation.x=-Math.PI/2;piso.position.y=-0.02;piso.receiveShadow=true;G.add(piso);
   armarCancha(G,A);armarArcos(G);armarTableros(G,A);armarTribunas(G,A);armarDecorado(G,A,id);
+  banderines(G);bancos(G,A);techosTribunas(G,A);fotografos(G);ajustarCapas();
   if(A.noche)armarReflectores(G);
 }
-function armarCancha(G,A){
-  var tg=texImg('cesped',true)||lienzoTex(256,256,function(g,w,h){g.fillStyle='#3faa3a';g.fillRect(0,0,w,h);for(var i=0;i<4000;i++){g.fillStyle='rgba('+(20+Math.random()*60|0)+','+(120+Math.random()*80|0)+',30,0.5)';g.fillRect(Math.random()*w,Math.random()*h,1,3);}},true);
-  tg.repeat.set(3,3);
-  /* franjas de corte: 11 tiras, una sí y una no más oscura */
-  var n=11, lt=(LARGO+2)/n;
-  for(var i=0;i<n;i++){
-    var m=new THREE.Mesh(new THREE.PlaneGeometry(ANCHO_C+1.2,lt),new THREE.MeshStandardMaterial({map:tg,roughness:0.95,color:i%2?0xd8f0c8:0xffffff}));
-    m.rotation.x=-Math.PI/2;m.position.set(0,0,-(LARGO+2)/2+lt*(i+0.5));m.receiveShadow=true;G.add(m);
-  }
-  /* las líneas blancas */
-  var blanco=new THREE.MeshBasicMaterial({color:0xf4f8f0}), piezas=[], m4=new THREE.Matrix4();
-  var poner=function(geo,x,y,z){geo.rotateX(-Math.PI/2);geo.translate(x,y,z);piezas.push(geo);};
-  var linea=function(x,z,w,l){poner(new THREE.PlaneGeometry(w,l),x,0.006,z);};
-  var hw=ANCHO_C/2, hl=LARGO/2, e=0.08;
-  linea(-hw,0,e,LARGO);linea(hw,0,e,LARGO);linea(0,-hl,ANCHO_C,e);linea(0,hl,ANCHO_C,e);linea(0,0,ANCHO_C,e);
-  var anillo=function(r,z,a0,a1){poner(new THREE.RingGeometry(r-e/2,r+e/2,64,1,a0||0,a1||TAU),0,0.006,z);};
-  anillo(2.6,0);
-  var punto=function(z){poner(new THREE.CircleGeometry(0.12,16),0,0.007,z);};
-  punto(0);punto(hl-4.5);punto(-hl+4.5);
-  /* las áreas: semicírculos como en el fútbol de salón */
-  [1,-1].forEach(function(s){
-    poner(new THREE.RingGeometry(3.4-e/2,3.4+e/2,48,1,s>0?0:Math.PI,Math.PI),0,0.006,s*hl);
-    linea(0,s*(hl-1.2),4.6,e);linea(-2.3,s*(hl-0.6),e,1.2);linea(2.3,s*(hl-0.6),e,1.2);
+/* la cancha: una textura horneada (pasto + franjas de corte + líneas pintadas) y encima capas de
+   pasto (la técnica de "cáscaras"): cada capa deja ver menos hojas, y juntas dan el relieve. */
+var CAPAS_PASTO=6, W_TEX=13.2, L_TEX=24.2;
+function texCancha(A){
+  var cw=1024, ch=Math.round(1024*L_TEX/W_TEX), ppm=cw/W_TEX;
+  return lienzoTex(cw,ch,function(g,w,h){
+    var im=IMG.cesped;
+    if(im){var t=256;for(var y=0;y<h;y+=t)for(var x=0;x<w;x+=t)g.drawImage(im,x,y,t,t);}
+    else{g.fillStyle='#3faa3a';g.fillRect(0,0,w,h);}
+    /* el color de la arena: de día más amarillo, de noche más frío */
+    g.fillStyle=A.noche?'rgba(20,60,90,0.18)':'rgba(120,200,40,0.10)';g.fillRect(0,0,w,h);
+    /* franjas de corte, a lo largo y un poco a lo ancho (el damero suave de los estadios nuevos) */
+    var n=12;for(var i=0;i<n;i++){if(i%2)continue;g.fillStyle='rgba(255,255,230,0.10)';g.fillRect(0,i*h/n,w,h/n);}
+    for(var j=0;j<8;j++){if(j%2)continue;g.fillStyle='rgba(0,40,0,0.05)';g.fillRect(j*w/8,0,w/8,h);}
+    /* desgaste frente a los arcos y en el círculo central */
+    [[w/2,ppm*1.2],[w/2,h-ppm*1.2],[w/2,h/2]].forEach(function(p){g.fillStyle=rad(g,p[0],p[1],0,ppm*2.4,[[0,'rgba(150,130,60,0.22)'],[1,'rgba(150,130,60,0)']]);g.fillRect(p[0]-ppm*3,p[1]-ppm*3,ppm*6,ppm*6);});
+    /* las líneas, en metros (el centro de la textura es el centro de la cancha) */
+    var X=function(m){return w/2+m*ppm;}, Z=function(m){return h/2+m*ppm;};
+    g.strokeStyle='rgba(250,252,245,0.95)';g.lineWidth=0.09*ppm;g.lineCap='butt';
+    var hw=ANCHO_C/2, hl=LARGO/2;
+    g.strokeRect(X(-hw),Z(-hl),ANCHO_C*ppm,LARGO*ppm);
+    g.beginPath();g.moveTo(X(-hw),Z(0));g.lineTo(X(hw),Z(0));g.stroke();
+    g.beginPath();g.arc(X(0),Z(0),2.6*ppm,0,TAU);g.stroke();
+    g.fillStyle='rgba(250,252,245,0.95)';
+    [0,hl-4.5,-hl+4.5].forEach(function(z){g.beginPath();g.arc(X(0),Z(z),0.13*ppm,0,TAU);g.fill();});
+    [1,-1].forEach(function(sg){
+      g.beginPath();g.arc(X(0),Z(sg*hl),3.4*ppm,sg>0?Math.PI:0,sg>0?TAU:Math.PI);g.stroke();
+      g.strokeRect(X(-2.3),Z(sg>0?hl-1.2:-hl),4.6*ppm,1.2*ppm);
+      [[-hw,1],[hw,-1]].forEach(function(c){g.beginPath();g.arc(X(c[0]),Z(sg*hl),0.5*ppm,0,TAU);g.stroke();});
+    });
   });
-  var lineas=new THREE.Mesh(fundir(piezas),blanco);G.add(lineas);
+}
+function texHojas(){
+  /* cada pixel es una hoja con una altura al azar (en el alfa); los racimos le dan irregularidad */
+  var c=document.createElement('canvas');c.width=c.height=256;var g=c.getContext('2d'), d=g.createImageData(256,256);
+  for(var i=0;i<256*256;i++){var a=Math.random();a=a*a*(0.6+0.4*Math.random());var v=Math.floor(a*255);
+    d.data[i*4]=d.data[i*4+1]=d.data[i*4+2]=255;d.data[i*4+3]=v;}
+  g.putImageData(d,0,0);
+  var t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.magFilter=THREE.NearestFilter;return t;
+}
+function armarCancha(G,A){
+  var tc=texCancha(A);
+  var base=new THREE.Mesh(new THREE.PlaneGeometry(W_TEX,L_TEX),new THREE.MeshStandardMaterial({map:tc,roughness:0.92,color:0xb8c8b0}));
+  base.rotation.x=-Math.PI/2;base.receiveShadow=true;G.add(base);
+  var th=R3.texHojas||(R3.texHojas=texHojas());th.repeat.set(W_TEX*1.6,L_TEX*1.6);
+  R3.capas=[];
+  for(var i=1;i<=CAPAS_PASTO;i++){var f=i/CAPAS_PASTO;
+    var m=new THREE.Mesh(new THREE.PlaneGeometry(W_TEX,L_TEX),new THREE.MeshStandardMaterial({map:tc,alphaMap:th,alphaTest:0.12+f*0.62,roughness:0.9,
+      color:new THREE.Color().setRGB(0.72+f*0.34,0.8+f*0.26,0.7+f*0.22)}));
+    m.rotation.x=-Math.PI/2;m.position.y=f*0.028;m.receiveShadow=true;G.add(m);R3.capas.push(m);}
+  /* sombra de contacto al pie de los tableros: oscurece donde se junta la pared con el pasto */
+  var ao=lienzoTex(4,64,function(g,w,h){g.fillStyle=lin(g,0,0,0,h,[[0,'rgba(0,0,0,0.5)'],[1,'rgba(0,0,0,0)']]);g.fillRect(0,0,w,h);});
+  var mao=new THREE.MeshBasicMaterial({map:ao,transparent:true,depthWrite:false});
+  var hw=ANCHO_C/2+0.54, hl=LARGO/2+0.34;
+  [[-hw,0,Math.PI/2,LARGO+1],[hw,0,-Math.PI/2,LARGO+1]].forEach(function(p){var m=new THREE.Mesh(new THREE.PlaneGeometry(p[3],0.8),mao);m.rotation.set(-Math.PI/2,0,p[2]);m.position.set(p[0]+(p[0]<0?0.4:-0.4),0.031,p[1]);G.add(m);});
+}
+/* con la resolución baja (teléfono justo), menos capas de pasto */
+function ajustarCapas(){if(!R3.capas)return;var n=Pantalla.escala3D<0.8?3:CAPAS_PASTO;R3.capas.forEach(function(m,i){m.visible=i<n;});}
+/* ---------------- lo de alrededor: banderines, bancos, techos, fotógrafos ---------------- */
+function banderines(G){
+  R3.banderas=[];
+  var palo=new THREE.MeshStandardMaterial({color:0xf0f0f0,roughness:0.4}), tela=new THREE.MeshStandardMaterial({color:0xffd23a,side:THREE.DoubleSide,roughness:0.7});
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(function(c){
+    var x=c[0]*ANCHO_C/2, z=c[1]*LARGO/2;
+    var p=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,1.5,6),palo);p.position.set(x,0.75,z);p.castShadow=true;G.add(p);
+    var geo=new THREE.PlaneGeometry(0.42,0.3,6,1);geo.translate(0.21,0,0);
+    var f=new THREE.Mesh(geo,tela);f.position.set(x,1.35,z);f.castShadow=true;G.add(f);
+    R3.banderas.push({m:f,base:geo.attributes.position.array.slice(),fase:Math.random()*6});
+  });
+}
+function pasarBanderas(t){
+  if(!R3.banderas)return;
+  R3.banderas.forEach(function(b){var P=b.m.geometry.attributes.position.array, B=b.base;
+    for(var i=0;i<P.length;i+=3){var x=B[i];P[i+2]=Math.sin(t*6+x*9+b.fase)*x*0.35;P[i]=B[i]*(1-Math.abs(Math.sin(t*3+b.fase))*0.05);}
+    b.m.geometry.attributes.position.needsUpdate=true;b.m.rotation.y=Math.sin(t*0.7+b.fase)*0.4;});
+  if(R3.leds)R3.leds.forEach(function(tx){tx.offset.x=(t*0.035)%1;});
+}
+function bancos(G,A){
+  /* dos bancos de suplentes con techo de acrílico, en las esquinas de atrás de tu arco */
+  var acr=new THREE.MeshStandardMaterial({color:0x9ad8ff,transparent:true,opacity:0.35,roughness:0.1,metalness:0.1,side:THREE.DoubleSide});
+  var asiento=new THREE.MeshStandardMaterial({color:col(A.gradas[0]),roughness:0.5});
+  var estruct=new THREE.MeshStandardMaterial({color:0xd8dce8,metalness:0.6,roughness:0.35});
+  [-1,1].forEach(function(l){
+    var g=new THREE.Group();g.position.set(l*4.9,0,LARGO/2+1.1);g.rotation.y=Math.PI;G.add(g);
+    var fondo=new THREE.Mesh(new THREE.BoxGeometry(2.6,1.6,0.06),acr);fondo.position.set(0,0.8,-0.55);g.add(fondo);
+    var techo=new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.9,2.6,16,1,true,0,Math.PI*0.6),acr);techo.rotation.z=Math.PI/2;techo.rotation.y=0;techo.position.set(0,1.1,-0.1);g.add(techo);
+    for(var k=0;k<4;k++){var s2=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.08,0.45),asiento);s2.position.set(-0.9+k*0.6,0.45,-0.3);s2.castShadow=true;g.add(s2);
+      var r=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.45,0.06),asiento);r.position.set(-0.9+k*0.6,0.7,-0.5);g.add(r);}
+    [-1.25,1.25].forEach(function(x){var c=new THREE.Mesh(new THREE.BoxGeometry(0.06,1.8,0.06),estruct);c.position.set(x,0.9,-0.5);g.add(c);});
+  });
+}
+function techosTribunas(G,A){
+  var mat=new THREE.MeshStandardMaterial({color:0xf2f4f8,roughness:0.45,metalness:0.3,side:THREE.DoubleSide});
+  var col_=new THREE.MeshStandardMaterial({color:0x9098b0,roughness:0.4,metalness:0.6});
+  var x0=ANCHO_C/2+1.6, largo=LARGO-2;
+  [-1,1].forEach(function(l){
+    var t=new THREE.Mesh(new THREE.BoxGeometry(5.2,0.12,largo+0.6),mat);t.position.set(l*(x0+2.2),4.3,0);t.rotation.z=l*0.12;t.castShadow=true;t.receiveShadow=true;G.add(t);
+    /* el borde con luces */
+    var borde=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.3,largo+0.6),new THREE.MeshBasicMaterial({color:col(A.tablero[1]),toneMapped:false}));borde.position.set(l*(x0-0.35),4.0,0);G.add(borde);
+    for(var k=0;k<5;k++){var c=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,4.4,8),col_);c.position.set(l*(x0+4.4),2.2,-largo/2+k*largo/4);c.castShadow=true;G.add(c);}
+  });
+}
+function fotografos(G){
+  var ropa=new THREE.MeshStandardMaterial({color:0x2a3a5a,roughness:0.8}), chaleco=new THREE.MeshStandardMaterial({color:0xff8a1a,roughness:0.7}), cam=new THREE.MeshStandardMaterial({color:0x111116,roughness:0.3,metalness:0.4});
+  var piel=new THREE.MeshStandardMaterial({color:0xc08a60,roughness:0.6});
+  [-3.4,-2.6,2.8,3.6].forEach(function(x,i){
+    var g=new THREE.Group();g.position.set(x,0,-LARGO/2-1.0);g.rotation.y=(x<0?0.3:-0.3);G.add(g);
+    var cuerpo=new THREE.Mesh(new THREE.CapsuleGeometry(0.2,0.3,4,8),chaleco);cuerpo.position.y=0.55;cuerpo.castShadow=true;g.add(cuerpo);
+    var pier=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.2,0.5),ropa);pier.position.set(0,0.1,0.15);g.add(pier);
+    var cab=new THREE.Mesh(new THREE.SphereGeometry(0.12,10,8),piel);cab.position.y=0.95;g.add(cab);
+    var c=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.11,0.12),cam);c.position.set(0,0.92,0.17);g.add(c);
+    var lente=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.05,0.3,10),cam);lente.rotation.x=Math.PI/2;lente.position.set(0,0.92,0.36);g.add(lente);
+  });
 }
 /* ---------------- los arcos, con la red que se infla ---------------- */
 function armarArcos(G){
@@ -190,8 +292,9 @@ function armarTableros(G,A){
   var tc=texImg('carteles',true)||lienzoTex(512,64,function(g,w,h){g.fillStyle=lin(g,0,0,w,0,[[0,A.tablero[0]],[1,A.tablero[1]]]);g.fillRect(0,0,w,h);},true);
   var matT=new THREE.MeshStandardMaterial({map:tc,roughness:0.6,emissive:A.noche?0x222244:0x000000,emissiveMap:A.noche?tc:null});
   var alto=0.9, hw=ANCHO_C/2+0.6, hl=LARGO/2+0.4;
-  var tabla=function(x,z,l,giro){var t=tc.clone();t.needsUpdate=true;t.repeat.set(l/8,1);
-    var m=new THREE.Mesh(new THREE.BoxGeometry(l,alto,0.12),new THREE.MeshStandardMaterial({map:t,roughness:0.6,emissive:A.noche?0x333355:0x000000,emissiveMap:A.noche?t:null}));
+  R3.leds=[];
+  var tabla=function(x,z,l,giro){var t=tc.clone();t.needsUpdate=true;t.repeat.set(l/8,1);R3.leds.push(t);
+    var m=new THREE.Mesh(new THREE.BoxGeometry(l,alto,0.12),new THREE.MeshStandardMaterial({map:t,roughness:0.5,emissive:0xffffff,emissiveIntensity:A.noche?0.9:0.35,emissiveMap:t}));
     m.position.set(x,alto/2,z);m.rotation.y=giro;m.castShadow=true;m.receiveShadow=true;G.add(m);};
   tabla(-hw,0,LARGO+0.8,Math.PI/2);tabla(hw,0,LARGO+0.8,Math.PI/2);
   var lado=(hw*2-ARCO_W-0.4)/2;
@@ -368,5 +471,6 @@ function rayoAPlanoZ(sx,sy,z0){
   return new THREE.Vector3(o.x+d.x*t,o.y+d.y*t,z0);
 }
 function dibujar3D(){
-  var r=R3.renderer;r.info.reset();r.render(R3.escena,R3.cam);
+  var r=R3.renderer;r.info.reset();
+  if(R3.post&&R3.composer)R3.composer.render();else r.render(R3.escena,R3.cam);
 }

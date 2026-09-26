@@ -1,6 +1,11 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-26 — DUELO: futbolistas de verdad y cancha nueva
+Modelos con esqueleto de Rezona en lugar de los muñecos; césped en capas, post-proceso y decorado
+alrededor de la cancha. Trampas anotadas en [duelo](duelo.md) § Cómo está hecho (eje z arriba,
+mezclador que no reescribe, estirada que apunta las manos).
+
 ### 2026-09-26 — DUELO DE ARCOS, fútbol 1 contra 1 en 3D
 **Pedido textual:** «Quiero que me recrees un juego en 3D hazlo muy parecido y hasta si puedes mejóralo
 al 100% mejora su menú principal carteles texto mecánicas y movimientos etc el juego es soccer clash».

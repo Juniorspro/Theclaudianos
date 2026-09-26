@@ -5,16 +5,18 @@ var G_=9.81, KD=0.0055, KM=0.0052, DURACION=90;
 var P=null, YO=null, EL=null;
 var B={p:new THREE.Vector3(0,R_PELOTA,0),v:new THREE.Vector3(),w:new THREE.Vector3(),vuela:false,super:false};
 function crearJugadores(){
-  YO=crearJugador({cam:'#d8282a',short:'#ffffff',med:'#d8282a',piel:'#e0a878',pelo:'#e8c060',numero:9,guantes:'#2adf6a'});YO.num=9;
-  EL=crearJugador({cam:'#ffd23a',short:'#1a3a8a',med:'#ffd23a',piel:'#8a5a3a',pelo:'#1a1010',numero:1,guantes:'#ff4fa0'});EL.num=1;
+  YO=crearFutbolista('jugador-rojo',{numero:9,guantes:'#2adf6a',cam:'#d8282a'})||crearJugador({cam:'#d8282a',short:'#ffffff',med:'#d8282a',piel:'#e0a878',pelo:'#e8c060',numero:9,guantes:'#2adf6a'});YO.num=9;
+  EL=crearFutbolista('jugador-amarillo',{numero:1,guantes:'#ff4fa0',cam:'#ffd23a'})||crearJugador({cam:'#ffd23a',short:'#1a3a8a',med:'#ffd23a',piel:'#8a5a3a',pelo:'#1a1010',numero:1,guantes:'#ff4fa0'});EL.num=1;
 }
 function nuevoPartido(o){
   P={fase:'intro',tf:0,reloj:DURACION,goles:[0,0],pod:[0,0],turno:Math.random()<0.5?0:1,dif:o.dif,arena:o.arena,rival:o.rival,
     muerte:false,tirosRonda:0,tiros:[0,0],alArco:[0,0],atajadas:[0,0],cartel:null,res:null,tRes:0,lento:0,escLento:1,
     camino:[],flecha:null,superArmado:false,reflejos:0,rec:[],repe:null,dijo10:false,hist:[],quieto:0,practica:!!o.practica};
   vestirJugador(YO,KITS[Prog.kit]);vestirPelota(Prog.pelota);
-  var c=o.rival.cam;EL.mats.cam.color.set(c);EL.mats.short.color.set('#1a2a5a');EL.mats.med.color.set(c);
-  EL.numero.material.map=texNumero(1,c,'#1a1a2a');EL.numero.material.needsUpdate=true;
+  var c=o.rival.cam;
+  if(EL.glb)vestirFutbolista(EL,{cam:c,short:'#1a2a5a'},true);
+  else{EL.mats.cam.color.set(c);EL.mats.short.color.set('#1a2a5a');EL.mats.med.color.set(c);
+    EL.numero.material.map=texNumero(1,c,'#1a1a2a');EL.numero.material.needsUpdate=true;}
   YO.raiz.visible=EL.raiz.visible=true;R3.pelota.visible=true;
   prepararTiro();P.fase='intro';P.tf=0;
   Sonido.voz('listos',1,true);
@@ -32,7 +34,7 @@ function prepararTiro(){
   tirador.giro=Math.atan2(-dx,-dz);
   var atras=yoPatea?0.75:1.9;
   tirador.x=sx-dx/d*atras;tirador.z=sz-dz/d*atras;tirador.y=0;tirador.anim=yoPatea?'espera':'quieto';tirador.p=0;
-  arquero.x=0;arquero.y=0;arquero.z=zArco+(yoPatea?0.45:-0.45);arquero.giro=yoPatea?0:Math.PI;arquero.anim='arquero';arquero.p=0;arquero.vx=0;
+  arquero.x=0;arquero.y=0;arquero.z=zArco+(yoPatea?0.45:-0.45);arquero.giro=yoPatea?Math.PI:0;arquero.anim='arquero';arquero.p=0;arquero.vx=0;
   arquero.kx=0;arquero.volando=false;arquero.reac=0;arquero.previsto=false;
   P.tirador=tirador;P.arquero=arquero;P.zArco=zArco;
   /* la cámara: atrás de tu arco; si pateás, un poco más adelante para ver el arco de arriba */
@@ -171,6 +173,15 @@ function pasarArqueroRival(A,dt){
 function empezarVolada(A,dx,dy){A.volando=true;A.anim='volada';A.p=0;A.dx=dx;A.dy=dy;A.x0=A.x;Sonido.fx('salto');}
 function pasarVolada(A,dt){
   A.p+=dt;var e=ease(A.p/0.5);
+  if(A.glb){
+    /* el futbolista de verdad se acuesta hacia la pelota pivoteando en los pies: el ángulo apunta las manos al objetivo
+       y los pies sólo se corren lo que falta para llegar (más un paso) */
+    var L=Math.abs(A.dx)+0.1, H=Math.max(0.5,A.dy+0.8), th=lim(Math.atan2(L,H),0.15,1.4), sobra=Math.max(0,Math.hypot(L,H)-2.05);
+    A.rollo=th;A.x=A.x0+sig(A.dx)*(sobra*Math.sin(th)+0.3*L)*e;
+    A.y=(sobra*Math.cos(th)*0.6+Math.max(0,A.dy)*0.2)*Math.sin(Math.min(1,A.p/0.55)*Math.PI*0.5)*(A.p>0.8?Math.max(0,1-(A.p-0.8)/0.4):1);
+    if(A.p>1.3){A.volando=false;A.anim='arquero';A.y=0;A.p=0;}
+    return;
+  }
   A.x=A.x0+A.dx*e;A.y=Math.max(0,A.dy)*0.35*Math.sin(Math.min(1,A.p/0.55)*Math.PI*0.5)*(A.p>0.8?Math.max(0,1-(A.p-0.8)/0.4):1);
   if(A.p>1.3){A.volando=false;A.anim='arquero';A.y=0;A.p=0;}
 }
@@ -238,13 +249,15 @@ function pasarPartido(dtR){
     if(E.suelta&&P.camino.length){var T=leerTiro(P.camino);P.camino=[];if(T)patearYo(T);}
     if(P.tf>8&&P.fase==='apunta'){patearYo({tx:(Math.random()-0.5)*2,ty:0.4,pot:0.45,curva:0});}
   }
-  else if(F==='pateando'){YO.p+=dt*1.8;if(YO.p>=0.52&&!B.vuela){var T2=P.tiroYo;lanzar(T2.v,T2.spin,T2.sup);}}
+  else if(F==='pateando'){YO.p+=dt*1.8;
+    /* el paso de impulso: se arrima a la pelota mientras carga la pierna */
+    var ax=B.p.x-YO.x, az=B.p.z-YO.z, ad=Math.hypot(ax,az);if(!B.vuela&&ad>0.42){YO.x+=ax/ad*1.4*dt;YO.z+=az/ad*1.4*dt;}if(YO.p>=0.52&&!B.vuela){var T2=P.tiroYo;lanzar(T2.v,T2.spin,T2.sup);}}
   else if(F==='carrera'){
     correrReloj(dtR);
     /* el rival se acerca a la pelota y patea */
     var tir=EL, dx=B.p.x-tir.x, dz=B.p.z-tir.z, d=Math.hypot(dx,dz);
-    if(d>0.8){tir.anim='correr';tir.x+=dx/d*4.2*dt;tir.z+=dz/d*4.2*dt;}
-    else{if(tir.anim!=='patear'){tir.anim='patear';tir.p=0.3;}tir.p+=dt*2.2;
+    if(d>0.8){tir.anim='correr';tir.acelera=true;tir.x+=dx/d*4.2*dt;tir.z+=dz/d*4.2*dt;}
+    else{if(tir.anim!=='patear'){tir.anim='patear';tir.p=0.3;tir.acelera=false;}tir.p+=dt*2.2;
       if(tir.p>=0.52&&!B.vuela){var T3=P.tiroEl;lanzar(T3.v,T3.spin,T3.sup);P.lento=0.3;}}
     pasarArqueroYo(YO,dt);
   }

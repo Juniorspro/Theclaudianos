@@ -5,14 +5,14 @@ import base64, json, os, re, subprocess
 AQUI = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.join(AQUI, '..', '..')
 F = os.path.join(AQUI, 'fuentes')
-ORDEN = ['d0_base.js', 'd1_entrada.js', 'd2_sonido.js', 'd3_ui.js', 'd4_mundo.js', 'd5_datos.js', 'd6_jugador.js',
+ORDEN = ['d0_base.js', 'd1_entrada.js', 'd2_sonido.js', 'd3_ui.js', 'd4_mundo.js', 'd5_datos.js', 'd6_jugador.js', 'd6b_futbolista.js',
          'd7_partido.js', 'd8_hud.js', 'd9_menus.js', 'd10_bucle.js']
 cab = open(os.path.join(F, '00_cabecera.html'), encoding='utf-8').read()
 js = ''.join(open(os.path.join(F, f), encoding='utf-8').read() + '\n' for f in ORDEN)
 sil = open(os.path.join(AQUI, 'silencio.txt')).read().strip()
 js = js.replace('__SILENCIO__', sil)
 A = os.path.join(RAIZ, 'assets', 'duelo')
-TIPOS = {'.webp': 'image/webp', '.png': 'image/png', '.mp3': 'audio/mpeg'}
+TIPOS = {'.webp': 'image/webp', '.png': 'image/png', '.mp3': 'audio/mpeg', '.glb': 'model/gltf-binary'}
 arch = {}
 for n in sorted(os.listdir(A)):
     b, e = os.path.splitext(n)
