@@ -78,7 +78,8 @@ const FRASES = [
   ['TOTAL', 'TOTAL', 'TOTAL'], ['NOTA', 'GRADE', 'NOTA'], ['¡RÉCORD!', 'NEW RECORD!', 'RECORDE!'], ['CONTINUAR', 'CONTINUE', 'CONTINUAR'],
   ['BAJAS', 'KILLS', 'ABATES'], ['COMBO MÁXIMO', 'MAX COMBO', 'COMBO MÁXIMO'], ['ARMAS DISTINTAS', 'WEAPONS USED', 'ARMAS DIFERENTES'], ['TIEMPO', 'TIME', 'TEMPO'],
   ['PALANCA IZQUIERDA: CAMINÁ', 'LEFT STICK: WALK', 'ALAVANCA ESQUERDA: ANDE'],
-  ['DERECHA: APUNTÁ. HASTA EL FONDO: PIÑA', 'RIGHT: AIM. ALL THE WAY: PUNCH', 'DIREITA: MIRE. ATÉ O FIM: SOCO'],
+  ['APUNTÁ CON LA DERECHA Y PEGÁ CON GOLPEAR', 'AIM WITH THE RIGHT STICK, TAP HIT TO ATTACK', 'MIRE COM A DIREITA E TOQUE EM BATER'],
+  ['GOLPEAR', 'HIT', 'BATER'], ['DISPARAR', 'SHOOT', 'ATIRAR'],
   ['LA PIÑA VOLTEA. ¡REMATALO CON EL BOTÓN!', 'PUNCHES KNOCK DOWN. EXECUTE WITH THE BUTTON!', 'O SOCO DERRUBA. EXECUTE COM O BOTÃO!'],
   ['AGARRÁ UN ARMA DEL PISO CON EL BOTÓN', 'PICK UP A WEAPON WITH THE BUTTON', 'PEGUE UMA ARMA DO CHÃO COM O BOTÃO'],
   ['ABRÍ LAS PUERTAS DE GOLPE: VOLTEAN', 'SLAM DOORS OPEN: THEY KNOCK DOWN', 'ABRA AS PORTAS COM TUDO: ELAS DERRUBAM'],
@@ -1996,6 +1997,8 @@ const DEDOS = new Map();
 const R_PALO = 24, U_TIRO = 0.55;
 function centroPalo(k){ const m = R_PALO + 9; return k === 'mov' ? {x:m + 6, y:H - m} : {x:W - m - 6, y:H - m}; }
 function centroAccion(){ const c = centroPalo('palo'); return {x:c.x - 4, y:c.y - R_PALO - 24, r:12}; }
+/* GOLPEAR, a la izquierda de la palanca derecha: pega (o dispara) hacia donde mirás, y sostenido sigue pegando */
+function centroGolpe(){ const c = centroPalo('palo'); return {x:c.x - R_PALO - 27, y:c.y - 5, r:15}; }
 function aPx(ev){ const [sx, sy] = aStage(ev.clientX, ev.clientY); return aLienzo(sx, sy); }
 /* de la pantalla chica al mundo (deshace la cámara y el balanceo) */
 function aMundo(x, y){ const dx = x - W/2, dy = y - H/2, c = Math.cos(-CAMARA.bal), s = Math.sin(-CAMARA.bal); return {x:CAMARA.vx + dx*c - dy*s, y:CAMARA.vy + dx*s + dy*c}; }
@@ -2008,6 +2011,7 @@ stage.addEventListener('pointerdown', ev => {
   if(Math.abs(x - W/2) < 16 && y < 22){ pausar(); return; }
   if(JUG.muerto){ if(J.muerto > 0.45) reintentar(); return; }
   const a = centroAccion(); if(Math.hypot(x - a.x, y - a.y) < a.r + 5){ hacerAccion(); DEDOS.set(ev.pointerId, {tipo:'acc'}); return; }
+  const gp = centroGolpe(); if(Math.hypot(x - gp.x, y - gp.y) < gp.r + 6){ DEDOS.set(ev.pointerId, {tipo:'golpe'}); return; }
   const tiene = t => [...DEDOS.values()].some(d => d.tipo === t);
   for(const k of ['mov', 'palo']){ const c = centroPalo(k); if(!tiene(k) && Math.hypot(x - c.x, y - c.y) < R_PALO*2.3){ DEDOS.set(ev.pointerId, {tipo:k, x, y}); return; } }
   /* tocar a alguien lejos de las palancas: se le pega o se le tira una vez */
@@ -2043,6 +2047,12 @@ function pasoPalancas(dtR){
   if(CTRL.toque){ const q = CTRL.toque; q.t -= dtR; if(q.t <= 0 || q.e.muerto) CTRL.toque = null;
     else { palo = true; CTRL.apunta = true; CTRL.ax = q.e.x - JUG.x; CTRL.ay = q.e.y - JUG.y; CTRL.tira = true; } }
   if(!mov){ CTRL.mx = CTRL.my = 0; } if(!palo){ CTRL.apunta = false; }
+  /* el botón GOLPEAR (o la F): si no estás apuntando, busca solo al más cercano que se ve al alcance */
+  CTRL.golpe = [...DEDOS.values()].some(d => d.tipo === 'golpe') || !!T.KeyF;
+  if(CTRL.golpe){ CTRL.tira = true;
+    if(!CTRL.apunta){ const A = JUG.arma && ARMAS[JUG.arma], alc = !A ? 40 : A.melee ? A.alcance + 30 : 230; let mejor = null, md = alc;
+      for(const e of ENEM){ if(e.muerto) continue; const d = Math.hypot(e.x - JUG.x, e.y - JUG.y); if(d < md && seVe(JUG.x, JUG.y, e.x, e.y)){ md = d; mejor = e; } }
+      CTRL.apunta = true; if(mejor){ CTRL.ax = mejor.x - JUG.x; CTRL.ay = mejor.y - JUG.y; } else { CTRL.ax = Math.cos(JUG.ang); CTRL.ay = Math.sin(JUG.ang); } } }
   if(window.__BOT) window.__BOT(CTRL, dtR);
 }
 
@@ -2247,6 +2257,14 @@ function palancas(g){
     if(k === 'palo'){ rect(g, kx - 1, ky - 5, 2, 3, '#ffffff'); rect(g, kx - 1, ky + 3, 2, 3, '#ffffff'); rect(g, kx - 5, ky - 1, 3, 2, '#ffffff'); rect(g, kx + 3, ky - 1, 3, 2, '#ffffff'); }
     g.globalAlpha = 1; }
   const a = centroAccion(), acc = accionDisponible(), lab = acc ? {rematar:tr(AJ.censura ? 'ATAR' : 'REMATAR'), agarrar:tr('AGARRAR'), tirar:tr('TIRAR')}[acc.k] : '';
+  /* GOLPEAR */
+  const gp = centroGolpe(), ap = CTRL.golpe, Ag = JUG.arma && ARMAS[JUG.arma], dy = ap ? 1 : 0;
+  g.globalAlpha = ap ? 1 : 0.8;
+  disco(g, gp.x, gp.y + 1, gp.r + 1, K); disco(g, gp.x, gp.y + dy, gp.r, ap ? '#ff4a2a' : '#c8281a'); disco(g, gp.x - 2, gp.y - 3 + dy, gp.r - 6, ap ? '#ff9a6a' : '#ff5a3a');
+  if(Ag && !Ag.melee){ const cx = gp.x, cy = gp.y + dy; anillo(g, cx, cy, 5, '#ffffff'); rect(g, cx - 1, cy - 8, 2, 4, '#ffffff'); rect(g, cx - 1, cy + 5, 2, 4, '#ffffff'); rect(g, cx - 8, cy - 1, 4, 2, '#ffffff'); rect(g, cx + 5, cy - 1, 4, 2, '#ffffff'); }
+  else { const cx = gp.x - 4, cy = gp.y - 4 + dy; rect(g, cx, cy + 1, 8, 6, K); rect(g, cx + 1, cy, 7, 6, '#f4d8b8'); for(let i = 0; i < 3; i++) rect(g, cx + 3 + i*2, cy, 1, 3, '#c89878'); rect(g, cx - 1, cy + 2, 3, 3, '#f4d8b8'); }
+  g.globalAlpha = 1;
+  texto(g, Ag && !Ag.melee ? tr('DISPARAR') : tr('GOLPEAR'), gp.x, gp.y + gp.r + 3, 'blanco');
   g.globalAlpha = acc ? 0.95 : 0.35;
   disco(g, a.x, a.y, a.r + 1, K); disco(g, a.x, a.y, a.r, acc && acc.k === 'rematar' ? '#c81a4a' : '#3a2a5a'); disco(g, a.x - 2, a.y - 3, a.r - 5, acc && acc.k === 'rematar' ? '#ff4a7a' : '#5a4a8a');
   if(acc && acc.k === 'rematar' && Math.floor(J.tr*6) % 2) anillo(g, a.x, a.y, a.r + 3, '#ff5a8a');
@@ -2257,7 +2275,7 @@ function palancas(g){
 /* ================================================================ el tutorial del prólogo: se cumple haciendo la cosa */
 const PISTAS = [
   {txt:'PALANCA IZQUIERDA: CAMINÁ', hecho:() => J.pisteo.anda > 40},
-  {txt:'DERECHA: APUNTÁ. HASTA EL FONDO: PIÑA', hecho:() => J.pisteo.pego},
+  {txt:'APUNTÁ CON LA DERECHA Y PEGÁ CON GOLPEAR', hecho:() => J.pisteo.pego},
   {txt:'LA PIÑA VOLTEA. ¡REMATALO CON EL BOTÓN!', hecho:() => J.pisteo.remate || J.bajas >= 2},
   {txt:'AGARRÁ UN ARMA DEL PISO CON EL BOTÓN', hecho:() => !!JUG.arma},
   {txt:'ABRÍ LAS PUERTAS DE GOLPE: VOLTEAN', hecho:() => J.bajas >= 3},
@@ -2711,7 +2729,7 @@ document.getElementById('carga').style.display = 'none';
 J.modo = 'menu'; UI.p = 'idioma'; SON.cinta(0.25);
 /* las sondas del banco */
 window.__L = {J, JUG, CTRL, CAMARA, UI, PROG, AJ, POST, PISO, CAPITULOS, ARMAS, TR_FALTA, _AUD, get ENEM(){ return ENEM; }, get ITEMS(){ return ITEMS; }, get CUERPOS(){ return CUERPOS; }, get BALAS(){ return BALAS; },
-  empezarCap, jugarCap, cargarPiso, terminarCapitulo, reintentar, volverAlMenu, ponerIdioma, matar, hacerAccion, accionDisponible, seVe, campo, pasoCampo, chocaCirculo, irA, centroPalo, centroAccion, aMundo, textoLibre:() => [..._AUD], SON, sim:(n, dt) => { for(let i = 0; i < n; i++) paso(dt); }, get ESTADOS(){ return ESTADOS_PISO; }};
+  empezarCap, jugarCap, cargarPiso, terminarCapitulo, reintentar, volverAlMenu, ponerIdioma, matar, hacerAccion, accionDisponible, seVe, campo, pasoCampo, chocaCirculo, irA, centroPalo, centroAccion, centroGolpe, aMundo, textoLibre:() => [..._AUD], SON, sim:(n, dt) => { for(let i = 0; i < n; i++) paso(dt); }, get ESTADOS(){ return ESTADOS_PISO; }};
 requestAnimationFrame(lazo);
 })();
 </script>

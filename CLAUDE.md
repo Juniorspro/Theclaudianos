@@ -11,7 +11,7 @@ se prueba **en el celular, en vertical (412×892)**.
 | `juegos-pc/Alien.html` | **Alien Grid.** **Primera persona** móvil, **escenario girado 90°** (se juega apaisado): base militar de arranque, nave de dos cubiertas que se recorre por dentro, seis galaxias que se ganan, caminata espacial con soga, fotos que se venden y álbum de 21 especies. |
 | `juegos-pc/Saltos.html` | **A LOS SALTOS.** Gladiadores 2D pixel art con física de saltos (a la Gladihoppers): 7 clases, cortes y sangre, carrera con edad, fama, mercado y estatuas. Canvas 2D, sin red, **escenario girado 90°** (se juega apaisado), castellano, inglés y portugués. |
 | `juegos-pc/Mate.html` | **MATE AMARGO.** Pixel art 2.5D a lo *My Friend Pedro: Ripe for Revenge*: personajes 2D en planos, mundo 3D iluminado con rayos de dios, 9 niveles en 3 capítulos, jefe, cinemáticas, menús, música sintetizada, ES/EN/PT. Dos palancas fijas: la izquierda apunta el salto, la derecha tira (o arrastre, en OPCIONES). Se juega apaisado. |
-| `juegos-pc/Linea.html` | **LÍNEA CALIENTE.** Acción desde arriba en pixel art a lo *Hotline Miami*, Buenos Aires 1989: prólogo y 4 capítulos (9 pisos generados y verificados), jefe, contestador y viaje en auto, máscaras con ventajas, notas A+ a D, **modo censura** opcional, ES/EN/PT. Dos palancas fijas (caminar / apuntar y pegar) y botón de acción. Se juega apaisado. |
+| `juegos-pc/Linea.html` | **LÍNEA CALIENTE.** Acción desde arriba en pixel art a lo *Hotline Miami*, Buenos Aires 1989: prólogo y 4 capítulos (9 pisos generados y verificados), jefe, contestador y viaje en auto, máscaras con ventajas, notas A+ a D, **modo censura** opcional, ES/EN/PT. Dos palancas fijas (caminar / apuntar y pegar), botón GOLPEAR y botón de acción. Se juega apaisado. |
 | `herramientas/linea/` | Fuentes de `Linea.html` (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`: bot que juega solo, toques, idiomas, fuzz). **Se edita la fuente.** |
 | `.claude/skills/juego-topdown` | Receta de la acción desde arriba: choques en celdas, puertas, niveles con semilla verificados, IA, bot de banco, censura. |
 | `herramientas/mate/` | Fuentes de `Mate.html` por partes (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`). **Se edita la fuente, no el HTML.** |
@@ -1602,3 +1602,25 @@ Medido:
 
 Queda para decidir: el bot mortal muere muchísimo (corre derecho a los que tienen escopeta), y todavía no hay datos de un
 jugador de verdad para calibrar la dificultad y las notas.
+
+### 2026-09-26 (as) — LÍNEA CALIENTE: botón GOLPEAR
+**Pedido textual:** «Agrega un botón para golpear».
+
+Botón rojo **GOLPEAR** a la izquierda de la palanca derecha, con un puño dibujado. Con un arma de fuego en la mano cambia a una
+mira y dice **DISPARAR**. Un toque pega una vez; sostenido, sigue pegando al ritmo del arma.
+- Si no estás apuntando con la palanca, **busca solo** al más cercano que se ve y esté al alcance: con las manos 40 px, con
+  un arma blanca su alcance más 30, y con un arma de fuego 230. Si no hay nadie, pega hacia donde mirás.
+- La palanca derecha sigue igual: sirve para apuntar a mano y, llevada hasta el fondo, también pega.
+- En la compu es la tecla **F**.
+- La pista del tutorial ahora dice «APUNTÁ CON LA DERECHA Y PEGÁ CON GOLPEAR», traducida.
+
+Lo que costó una vuelta:
+- El botón quedaba **un píxel cortado abajo** con su etiqueta: subió 8 px.
+
+Medido con dedos de verdad en la pantalla girada (`banco/golpe.js`):
+- con las manos y un enemigo al costado, el pibe se da vuelta (1,57 rad) y lo voltea;
+- con el bate y el enemigo atrás, se da vuelta (3,14) y lo mata;
+- con la pistola mirando al revés y el enemigo a 90 px, se da vuelta y lo baja con dos tiros;
+- sin nadie cerca, pega al aire.
+Además el bot terminó los 5 capítulos, las palancas y el botón de acción siguen andando, `TR_FALTA` está vacío en los dos
+idiomas y el fuzz de 300 toques dio sin errores.
