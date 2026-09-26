@@ -14,6 +14,9 @@ se prueba **en el celular, en vertical (412×892)**.
 | `juegos-pc/Linea.html` | **LÍNEA CALIENTE.** Acción desde arriba en pixel art a lo *Hotline Miami*, Buenos Aires 1989: prólogo y 4 capítulos (9 pisos generados y verificados), jefe, contestador y viaje en auto, máscaras con ventajas, notas A+ a D, **modo censura** opcional, ES/EN/PT. Dos palancas fijas (caminar / apuntar y pegar), botón GOLPEAR y botón de acción. Se juega apaisado. |
 | `herramientas/linea/` | Fuentes de `Linea.html` (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`: bot que juega solo, toques, idiomas, fuzz). **Se edita la fuente.** |
 | `.claude/skills/juego-topdown` | Receta de la acción desde arriba: choques en celdas, puertas, niveles con semilla verificados, IA, bot de banco, censura. |
+| `juegos-pc/Sombra.html` | **SOMBRA.** Saltos verticales a lo *Ninja Tobu*, se juega **parado**: arrastrar para atrás y soltar, cámara lenta al apuntar, doble salto, enemigos que se matan atravesándolos, 3 mundos × 8 desafíos generados y verificados, modo infinito con tinta que sube, tienda de 7 ninjas y 7 efectos, cofre, ES/EN/PT. |
+| `herramientas/sombra/` | Fuentes de `Sombra.html` (`fuentes/`), `armar.sh` y el banco (`banco/`: bot que juega los 24 niveles y el infinito, dedo, fuzz, pantallas). **Se edita la fuente.** |
+| `.claude/skills/juego-vertical` | Receta de los saltos verticales: torre en anillo, tramos verificados con la física real, bot que sigue el plan. |
 | `herramientas/mate/` | Fuentes de `Mate.html` por partes (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`). **Se edita la fuente, no el HTML.** |
 | `.claude/skills/juego-25d` | Receta del 2.5D pixel art: render, sprites, niveles verificados, cinemáticas, menús, idiomas. |
 | `docs/GUIA_JUEGOS_2D_PIXEL.md` | Receta para juegos 2D pixel art (escala entera, piezas, banco). La usa `Saltos.html`. |
@@ -1684,3 +1687,73 @@ Lo que costó una vuelta:
 - **Sin el envión, piña contra bate seguía perdiendo 21 de 30**: el del bate se paraba justo afuera del alcance del puño.
 - **El bot quedó trabado en el sótano cambiando un fusil vacío por una pistola vacía**, una y otra vez. Era el bot, no el
   juego: ahora sólo agarra armas con balas o de mano.
+
+### 2026-09-26 (au) — SOMBRA, a lo Ninja Tobu
+**Pedido textual:** «Comencemos a hacer otro juego, haz un juego igual a este, utiliza tu 100% hazlo divertido y entretenido con
+buenas gráficas, confío en ti bro» (con la ficha de *Ninja Tobu*, de CerebralFix, en Play Store).
+
+**Lo que se sacó del original** (Play Store, la ficha de CerebralFix, reseñas de jugadores):
+- se apoya el dedo y se arrastra para cargar el salto, y al soltar se sale volando;
+- el ninja se pega a cualquier superficie sin pinchos;
+- hay doble salto y cámara lenta, y a los enemigos se los mata atravesándolos;
+- hay pinchos, tiradores que apuntan y disparan, y pinchos que suben;
+- hay desafíos con monedas, un modo infinito que se acelera, ninjas con ventajas, efectos y cofres;
+- el estilo es minimalista, de siluetas.
+
+`juegos-pc/Sombra.html` (193 KB, un archivo, sin librerías). **Se juega parado**, sin girar: es el único vertical del repo.
+- **Control**: tirar para atrás y soltar, con la trayectoria punteada y la marca de dónde se pega (o una cruz roja si
+  va a los pinchos).
+  - Apuntando, el tiempo va a 0,3 pegado y a 0,1 en el aire, con el revelado desaturado y más viñeta.
+  - Un salto más en el aire; cada baja lo devuelve.
+- **Enemigos en silueta**:
+  - tirador: un láser que avisa 1 s y queda fijo el último cuarto de segundo;
+  - samurái: levanta la katana si te pegás cerca;
+  - kunoichi: tira tres shurikens que se clavan;
+  - cometa: con un tipo colgado, va y viene.
+- **La torre**: piedra, pinchos que miran para afuera de lo que los sostiene, piedras que se desmoronan a los 0,45 s y
+  plataformas que van y vienen.
+- **Tres mundos, 8 desafíos cada uno** (bosque de bambú al atardecer, montaña de noche, castillo en llamas).
+  - Se abren de a uno.
+  - Tres estrellas: llegar al torii, todas las monedas y todas las bajas.
+  - Desde el castillo 3, la tinta sube también en los desafíos.
+- **Infinito**: tramos que se generan mientras subís, con la tinta que acelera; puntos por altura y bajas, y récord.
+- **Tienda**:
+  - **7 ninjas** con ventaja: Kage; Hana (más monedas); Kaze (cámara más lenta, con sombrero); Tetsu (una vida extra);
+    Neko (imán, con orejas); Ryu (triple salto); Oni (bajas que valen doble, con cuernos);
+  - **7 efectos** que son paletas enteras: atardecer, noche y fuego gratis; sakura, tinta, neón y otoño se compran;
+  - **cofre** de 150 monedas.
+- **El menú** tiene atrás una torre infinita con un ninja que salta solo. Primero se elige el idioma con banderas, y el
+  juego está en español, inglés y portugués.
+- **Sonido todo sintetizado** (79 KB, lo hizo un agente aparte):
+  - lo-fi japonés con escalas pentatónicas: koto por Karplus-Strong, shakuhachi, taikos, shime, rin y gong;
+  - 7 temas (el infinito suma capas con la altura), 4 ambientes y 32 efectos;
+  - la cámara lenta baja la música un tono y cierra el filtro en 0,1 s.
+
+**Cada nivel se verifica antes de jugarlo**: una búsqueda prueba saltos de verdad desde cada lugar donde el ninja queda
+pegado y, si no llega al torii, prueba otra semilla. Las **monedas van sobre los arcos del camino que encontró**, así
+guían y siempre se pueden agarrar.
+
+Lo que costó una vuelta cada uno:
+- **A lo ancho, la búsqueda agotaba 2.500 nodos** sin llegar arriba en las torres largas (0 de 6 en el castillo). Golosa
+  hacia arriba: 6 de 6, en 30 a 40 ms por nivel.
+- **La búsqueda con paso de 1/60 y el juego con 1/240 no hacen la misma curva**: el bot quedaba yendo y viniendo entre
+  dos esquinas (876 saltos sin subir). Con el mismo paso en los dos, se arregló.
+- **Re-planear en cada salto hacía oscilar al bot**; siguiendo el plan entero, gana.
+- **Con el ninja invencible, un pincho lo congela en el aire** (`morir()` vuelve sin moverlo): los «trabados» del bot
+  invencible eran eso. La medida buena es el bot mortal.
+- **El menú salía negro**: el fundido de entrada sólo bajaba en el paso del juego.
+- La cámara mostraba **un 38% de pantalla de piso macizo** al arrancar: está topada abajo.
+
+Medido:
+- Las 24 torres llegan al torii en la búsqueda.
+- Un bot mortal que sigue el camino y **no esquiva nada** gana **17 de 24**; los otros 7 los pierde contra shurikens,
+  balas y pinchos que se mueven, que una persona esquiva.
+- Con el dedo de verdad: tirar para atrás frena el tiempo a 0,3 y al soltar sale; en el aire, apuntar lo frena a 0,1 y
+  el doble salto sale. La pausa anda.
+- El infinito genera sin trabarse. El cuadro más lento, que es cuando se arma un tramo, tarda de 13 a 30 ms.
+- `TR_FALTA` vacío en inglés y portugués (90 textos) y sin palabras en castellano en inglés.
+- Fuzz de 400 toques en castellano y 300 en inglés sin errores, sin NaN y sin monedas negativas.
+- El audio tiene los 26 efectos que pide el juego.
+
+Queda para decidir: la dificultad de la montaña 5 a 8 y del castillo la tiene que probar una persona; los shurikens se
+aflojaron (135 px/s, cada 3 s) porque eran lo que más mataba al bot.

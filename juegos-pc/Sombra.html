@@ -1687,7 +1687,7 @@ function pasoEnemigos(dt){
       const nx = e.x + e.dir*14*dt, cAde = Math.floor((nx + e.dir*4)/CEL), rPie = Math.floor(e.y/CEL), rCab = Math.floor((e.y - 4)/CEL);
       if(tile(cAde, rPie) !== T_PIEDRA || tile(cAde, rCab) !== T_AIRE) e.dir *= -1; else e.x = nx; }
     else if(e.t === 'shuriken'){ e.cd -= dt; e.dir = dx >= 0 ? 1 : -1; if(e.carga > 0){ e.carga -= dt; if(e.carga <= 0){ const a = Math.atan2(dy, dx);
-        for(const k of [-0.22, 0, 0.22]) BALAS.push({x:e.x, y:e.y - 5, vx:Math.cos(a + k)*150, vy:Math.sin(a + k)*150, t:'shuriken', vida:2, giro:0}); sfx('shuriken', {x:pan(e.x)}); e.cd = 2.4; } }
+        for(const k of [-0.22, 0, 0.22]) BALAS.push({x:e.x, y:e.y - 5, vx:Math.cos(a + k)*135, vy:Math.sin(a + k)*135, t:'shuriken', vida:2, giro:0}); sfx('shuriken', {x:pan(e.x)}); e.cd = 3; } }
       else if(vivo && e.cd <= 0 && d < 160 && hayVista(e.x, e.y - 5, N.x, N.y)) e.carga = 0.35; }
     else if(e.t === 'cometa'){ e.x += e.vx*dt; if(e.x < 20 || e.x > ANCHO - 20) e.vx *= -1; e.dir = e.vx > 0 ? 1 : -1; e.y += Math.sin(J.t*1.3 + e.fase)*6*dt; }
   }
