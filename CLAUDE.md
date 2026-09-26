@@ -15,7 +15,7 @@ se prueba **en el celular, en vertical (412×892)**. EL TIPO se juega **acostado
 | `herramientas/brecha` | Partes del código de BRECHA 7, su armador y el banco (`banco/*.js`). |
 | `juegos-pc/Alas.html` | **ALAS · DUELO AÉREO.** Combate aéreo en tercera persona (o cabina) al estilo Modern Warplanes: archipiélago procedural con islas, costa, mar con reflejo y nubes; cañón, misiles con fijado, bengalas, turbo y freno; 5 misiones (duelo, cordillera con compañero, defensa de portaaviones, rasante contra destructores, El As en tormenta), hangar con 4 aviones y mejoras. three.js r128 y todo lo generado con Rezona adentro, sin red, acostado. Se arma con `herramientas/alas/armar.py`. |
 | `herramientas/alas` | Partes del código de ALAS, su armador y el banco (`banco/*.js`). |
-| `juegos-pc/Contragolpe.html` | **CONTRAGOLPE.** Tirador táctico a lo Counter-Strike con tinta tipo Borderlands (el preset de CS2 en Nuke): bomba 5v5 con rondas y economía, deathmatch y carrera de armas; mapas NUCLEAR (dos pisos), DESIERTO y ALMACÉN con luz horneada; armas, manos, personajes y bots por código. three.js r128 adentro, sin red, acostado. Se arma con `herramientas/contragolpe/armar.py`. |
+| `juegos-pc/Contragolpe.html` | **CONTRAGOLPE.** Tirador táctico a lo Counter-Strike (imagen limpia con exposición automática; la tinta tipo Borderlands quedó sólo con `?tinta`): bomba 5v5 con rondas y economía, deathmatch y carrera de armas; mapas NUCLEAR (dos pisos), DESIERTO y ALMACÉN con luz horneada; armas, manos, personajes y bots por código. three.js r128 adentro, sin red, acostado. Se arma con `herramientas/contragolpe/armar.py`. |
 | `herramientas/contragolpe` | Partes, armador, luz horneada (`luz/`) y banco (`banco/*.js`: partida, hornear, vmjuego, vm3). |
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. De otra línea de trabajo. |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
@@ -800,3 +800,47 @@ a los dos sitios y a todos los spawn de DM en los tres mapas. Toques reales por 
 Sin red: 0 pedidos, carga en 0,9 s, luz horneada, idiomas es/en/pt, sin errores. Banco sin GPU: 14–20 cuadros por segundo.
 **Pendiente** (los agentes se cortaron por el límite de gasto): muñeco de trapo de verdad (hoy cae de una pieza hacia el empuje y
 respeta paredes), mocap en los personajes (hoy caminata procedural) y afinar el agarre del resto de las armas.
+
+### 2026-09-26 (23) — CONTRAGOLPE: pantalla negra, rayas y HUD diminuto en el celular
+**Pedido textual:** «arregla esos errores, primero fijate y mira el error» (dos capturas: el 3D negro en el menú y en la partida, el HUD
+y los mandos diminutos) y «Sácale el ssao si es que agregaste, y arregla lo visual y haz que sea de buena calidad y textura etc» (captura
+en ALMACÉN con rayas negras y ruido).
+
+SSAO no había: **las rayas y el ruido eran la tinta**. Tres defectos distintos, cada uno en un teléfono:
+- **Rayas y ruido**: la tinta buscaba pliegues con la segunda diferencia de 1/z. Con una profundidad de 16 bits (hay teléfonos que no dan
+  más) cada escalón de la profundidad es un pliegue: rayas paralelas en pisos y paredes y ruido en todo lo que está a más de unos metros,
+  y lo lejano, negro. En el banco (24 bits) no se ve nunca. La tinta ahora es sólo de siluetas, se apaga con la distancia y **viene
+  apagada** (`?tinta` la prende); la trama de las sombras se fue.
+- **Todo el 3D negro, también el arma, con el HUD bien**: el camino HDR se aceptaba con `checkFramebufferStatus`, que no dice si la
+  placa **filtra** la media precisión ni si compila el revelado. `probarHDR()` ahora pasa un color conocido por todo el camino
+  (búfer HDR → resplandor → tono) a 8 bits y lo lee; si no da, se dibuja directo con el ACES de three (el cielo lleva
+  `tonemapping_fragment` y `encodings_fragment` para ese caso). Y una guardia lee cinco puntos de la pantalla (cada medio segundo al
+  principio, después cada 2 s): tres veces negro seguido → dibujo directo. Además el revelado limpia NaN e infinitos.
+- **HUD y mandos a un tercio**: ese navegador ignoraba el `viewport` («versión de escritorio»): arma la página a 980 px y la muestra
+  achicada. Con `visualViewport.scale < 0,8` la pantalla del juego se arma al tamaño del teléfono y se agranda con `scale(--u)`;
+  `aJuego` divide por `u` y los tamaños con `vw`/`vh` pasaron a `--uw`/`--uh` (el lado del juego, no el del visor). Probado sacando el
+  `viewport` del HTML: escala 0,367, la pantalla del juego mide lo mismo (740×360) y los toques dan lo mismo que sin el defecto.
+
+Lo visual:
+- **Exposición automática en la GPU**: la primera bajada del resplandor guarda el logaritmo de la luminancia en el alfa, la cadena lo
+  promedia y un búfer de 1×1 lo funde con el de antes (mezcla por alfa: nada vuelve a la CPU). Adaptación parcial (exponente 0,6, entre
+  ×0,8 y ×2,1), con más peso al centro. Se reinicia al cargar el mapa y al reaparecer. `leerAdaptacion()` la mide.
+- Paredes y pisos blancos con `tono` (0,78–0,86): la foto era más clara que lo horneado y al sol se quemaban.
+- ALMACÉN: los pasillos donde nacen los dos bandos no los alcanzaba ninguna lámpara (negros). Campanas colgadas de verdad, tubos abajo de
+  las pasarelas y en las oficinas, y un piso de luz por mapa (`ambiente`). Horneado de nuevo.
+- Texturas de color a 1024 (relieve 512, ORM 256), anisotrópico ×8; con `deviceMemory ≤ 3` se achican a 512 al decodificar.
+
+Trampas que costaron una vuelta:
+- **El achicador de texturas achicó también los mapas de luz** (2048 → 1024): la sonda de luz del arma leía fuera del arreglo, daba NaN
+  y el arma salía negra sólo en DESIERTO. Sólo se achica lo que empieza con `tex/`, y la sonda ya no lee fuera de rango.
+- **Dos cielos pedidos seguidos: ganaba el último que terminaba de decodificar**, no el último pedido. DESIERTO tuvo siempre el cielo de
+  NUCLEAR. Gana el último pedido.
+- `window.hg` era `undefined` (es `const`): el HUD de la partida quedaba pintado detrás del menú.
+- `viga()` recibía vectores en vez de arreglos: cuatro columnas de NUCLEAR con todos los vértices en NaN (el aviso de
+  `computeBoundingSphere`).
+
+Medido: prueba del camino HDR en el banco (226, 189, 143) = lo esperado; con `?sinpost` el brillo da 129 contra 124 con revelado; la
+guardia pasa a directo sola a los 358 cuadros de negro forzado. Toques reales por CDP (palanca, mirar, fuego) iguales con y sin el
+defecto del `viewport`. Partidas simuladas: deathmatch en ALMACÉN con bajas, bomba en NUCLEAR 5 rondas con plantada. Sin red, idiomas y
+sin errores. HTML de 12 a 17 MB (texturas a 1024); banco sin GPU 11–18 cuadros por segundo.
+

@@ -9,12 +9,12 @@ const ESCALA_LM = 4;        /* el mapa de luz guarda E/4 en sRGB */
 const TEXEL = 0.25;
 const MATS = {
   /* planta nuclear */
-  piso_ext:{tex:'hormigon_piso', gen:'hormigon', color:'#96928a', metros:4, juntas:1, paso:'hormigon', spec:0.05, brillo:10, albedo:0.42},
+  piso_ext:{tex:'hormigon_piso', gen:'hormigon', tono:0.86, color:'#96928a', metros:4, juntas:1, paso:'hormigon', spec:0.05, brillo:10, albedo:0.42},
   asfalto:{tex:'asfalto', gen:'asfalto', color:'#5a5a5e', metros:6, paso:'hormigon', albedo:0.16},
-  chapa_blanca:{tex:'chapa_blanca', gen:'chapa', color:'#e6e4dc', metros:3, ondas:14, bala:'chapa', paso:'metal', spec:0.15, brillo:20, albedo:0.62},
-  chapa_azul:{tex:'chapa_azul', gen:'chapa', color:'#5d93cc', metros:3, ondas:14, bala:'chapa', paso:'metal', spec:0.15, brillo:20, albedo:0.32},
+  chapa_blanca:{tex:'chapa_blanca', gen:'chapa', tono:0.78, color:'#e6e4dc', metros:3, ondas:14, bala:'chapa', paso:'metal', spec:0.15, brillo:20, albedo:0.62},
+  chapa_azul:{tex:'chapa_azul', tono:0.78, gen:'chapa', color:'#5d93cc', metros:3, ondas:14, bala:'chapa', paso:'metal', spec:0.15, brillo:20, albedo:0.32},
   pared_verde:{tex:'pared_verde', gen:'pintado', color:'#4e8a57', metros:3, paneles:3, spec:0.1, brillo:18, albedo:0.26},
-  piso_int:{tex:'piso_interior', gen:'hormigon', color:'#a2a7aa', metros:4, juntas:2, spec:0.35, brillo:60, albedo:0.45},
+  piso_int:{tex:'piso_interior', gen:'hormigon', tono:0.84, color:'#a2a7aa', metros:4, juntas:2, spec:0.35, brillo:60, albedo:0.45},
   acero_naranja:{tex:'acero_naranja', gen:'pintado', color:'#e48b1d', metros:1.5, paneles:1, bala:'metal', paso:'metal', spec:0.2, brillo:25, albedo:0.4},
   semilla:{tex:'chapa_semilla', gen:'semilla', color:'#8f9398', metros:1.5, bala:'metal', paso:'metal', spec:0.35, brillo:40, albedo:0.3},
   hormigon_pared:{tex:'hormigon_pared', gen:'hormigon', color:'#b6b3ab', metros:3, albedo:0.45},
@@ -184,14 +184,15 @@ function mallasDeCaras(){
 /* ---------- materiales del mundo: Phong con mapa de luz; el alfa del mapa de luz apaga el sol donde hay sombra horneada ---------- */
 const MAT_MUNDO = {};
 const LUZ = {tex:null, texSol:null, datos:null, sol:null, w:0, h:0, lista:false};
-const U_SOLMAP = {value:null};
+const U_SOLMAP = {value:null}, U_AMB = {value:0.02};   /* piso de luz: ningún rincón queda negro del todo */
 function parcheLuz(m){
   m.onBeforeCompile = sh=>{
-    sh.uniforms.solMap = U_SOLMAP;
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D solMap;').replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+    sh.uniforms.solMap = U_SOLMAP; sh.uniforms.ambMin = U_AMB;
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D solMap; uniform float ambMin;').replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
       #ifdef USE_LIGHTMAP
         float solLM = texture2D(solMap, vUv2).r;
         reflectedLight.directDiffuse *= solLM; reflectedLight.directSpecular *= solLM;
+        reflectedLight.indirectDiffuse += diffuseColor.rgb*ambMin;
       #endif`);
   };
   m.customProgramCacheKey = ()=> 'mundoLM';
@@ -207,7 +208,8 @@ function texMaterial(mat){
 function matMundo(mat){
   if(MAT_MUNDO[mat]) return MAT_MUNDO[mat];
   const M = MATS[mat] || MATS.gris, t = texMaterial(mat);
-  const m = new THREE.MeshPhongMaterial({map:t.map, normalMap:t.normal, normalScale:new THREE.Vector2(t.ns*0.8, t.ns*0.8), vertexColors:true,
+  /* tono: las fotos más claras que lo que se horneó (paredes blancas al sol) se bajan para que no se quemen */
+  const m = new THREE.MeshPhongMaterial({map:t.map, color:new THREE.Color().setScalar(M.tono || 1), normalMap:t.normal, normalScale:new THREE.Vector2(t.ns*0.8, t.ns*0.8), vertexColors:true,
     specular:new THREE.Color(M.spec || 0.04, M.spec || 0.04, M.spec || 0.04), shininess:M.brillo || 12, lightMap:LUZ.tex, lightMapIntensity:ESCALA_LM});
   if(M.cara && t.map){ t.map.wrapS = t.map.wrapT = THREE.ClampToEdgeWrapping; }
   parcheLuz(m); return MAT_MUNDO[mat] = m;
@@ -319,7 +321,7 @@ const MAT_PROP = {};
 function matProp(mat, o){ const clave = mat + (o.doble ? '|d' : '') + (o.alfa ? '|a' + o.alfa : '') + (o.emisivo ? '|e' : '');
   if(MAT_PROP[clave]) return MAT_PROP[clave];
   const t = o.emisivo ? {map:null} : texMaterial(mat);
-  const m = new THREE.MeshBasicMaterial({map:t.map || null, vertexColors:true, side:o.doble ? THREE.DoubleSide : THREE.FrontSide, transparent:!!o.alfa, opacity:o.alfa || 1, depthWrite:!o.alfa});
+  const m = new THREE.MeshBasicMaterial({map:t.map || null, color:new THREE.Color().setScalar((MATS[mat] && MATS[mat].tono) || 1), vertexColors:true, side:o.doble ? THREE.DoubleSide : THREE.FrontSide, transparent:!!o.alfa, opacity:o.alfa || 1, depthWrite:!o.alfa});
   if(t.map && !(MATS[mat] && MATS[mat].cara)){ t.map.wrapS = t.map.wrapT = THREE.RepeatWrapping; }
   return MAT_PROP[clave] = m; }
 function luzVertices(g, tinte, emisivo, fuerzaEm){
@@ -375,7 +377,7 @@ function luzEn(x, y, z, out){
   if(t >= 0 && LUZ.datos && RAYO.eje === 1){ const f = 2 + (RAYO.ny > 0 ? 0 : 1), fi = CARAS.deCaja[RAYO.caja*6 + f];
     if(fi >= 0){ const c = CARAS.lista[fi], [a, b] = enCara(c, x, y - t + 0.05, z), i = Math.min(c.tw - 1, Math.max(0, Math.floor(a*c.tw))), j = Math.min(c.th - 1, Math.max(0, Math.floor(b*c.th))), k = ((c.ay + j)*LUZ.w + (c.ax + i))*4;
       const dS = v=>{ v /= 255; return (v <= 0.04045 ? v/12.92 : Math.pow((v + 0.055)/1.055, 2.4))*ESCALA_LM; };
-      out.r = dS(LUZ.datos[k]); out.g = dS(LUZ.datos[k+1]); out.b = dS(LUZ.datos[k+2]); out.sol = LUZ.sol[k]/255; return out; } }
+      if(k >= 0 && k + 2 < LUZ.datos.length){ out.r = dS(LUZ.datos[k]); out.g = dS(LUZ.datos[k+1]); out.b = dS(LUZ.datos[k+2]); out.sol = LUZ.sol[k]/255; return out; } } }
   out.sol = rayo(x, y + 1.2, z, SOLDIR.x, SOLDIR.y, SOLDIR.z, 200, F_BALA, true, -1) < 0 ? 1 : 0; out.r = out.g = out.b = 0.45; return out;
 }
 </script>

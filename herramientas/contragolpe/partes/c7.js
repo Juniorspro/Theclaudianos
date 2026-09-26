@@ -4,6 +4,8 @@ const J = {modo:'carga', t:0, tt:0, jug:null, mapa:null};
 const GRUPO_MAPA = new THREE.Group(); escena.add(GRUPO_MAPA);
 function limpiarGrupo(g){ while(g.children.length){ const o = g.children.pop(); o.traverse(x=>{ if(x.geometry) x.geometry.dispose(); }); } }
 async function montarMapa(id, construir, op, avance){
+  if(typeof POST !== 'undefined') POST.adaptYa = true;
+  U_AMB.value = (MAPAS[id] && MAPAS[id].ambiente) || 0.02;
   op = op || {};
   nuevaObra(id); construir(OBRA);
   mundoDesde(OBRA.cajas); armarCaras(); empaquetarAtlas();

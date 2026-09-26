@@ -82,6 +82,7 @@ function cambiarLados(){
 function terminarPartida(){ PARTIDA.fase = 'terminada'; PARTIDA.fin = true; if(window.alTerminarPartida) alTerminarPartida(); }
 /* ---------- deathmatch y carrera de armas ---------- */
 function reaparecer(a, primera){
+  if(a.esJugador && typeof POST !== 'undefined') POST.adaptYa = true;
   const S = OBRA.spawns.dm.length ? OBRA.spawns.dm : spawnsDe(a.bando === 't' ? 't' : 'ct'); let mejor = S[0], md = -1;
   for(let i=0;i<8;i++){ const s = S[Math.floor(PARTIDA.rnd()*S.length)]; let dmin = 1e9; for(const o of ACTORES) if(o.vivo && o !== a) dmin = Math.min(dmin, Math.hypot(o.c.pos.x - s.x, o.c.pos.z - s.z)); if(dmin > md){ md = dmin; mejor = s; } }
   a.vivo = true; a.vida = 100; a.blindaje = 100; a.casco = true; a.cegado = 0; a.recarga = 0; a.inv = {1:null, 2:null, 3:'cuchillo', 4:[], 5:null}; a.mun = {}; ubicar(a, mejor); personajeDe(a);

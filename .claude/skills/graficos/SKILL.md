@@ -51,6 +51,15 @@ description: Reglas de render de three.js que ya costaron una vuelta cada una �
 - Con la pantalla girada por CSS, **`vh` mide el lado largo físico**: los altos van con flex, no con `vh`.
 - La cámara se mueve **en el paso de la simulación**, no al dibujar: si no, a pocos cuadros por segundo se queda atrás.
 
+## Teléfonos
+- **Hay teléfonos con profundidad de 16 bits**: un detector de bordes por segunda diferencia de la profundidad pinta rayas en cada
+  escalón. Sólo siluetas (saltos grandes), apagadas con la distancia.
+- `checkFramebufferStatus` no alcanza para aceptar un búfer de media precisión: hay que **dibujar un color conocido por todo el camino
+  y leerlo** (puede no filtrarse y muestrear negro). Y una guardia que lea la pantalla y pase a dibujo directo.
+- «Versión de escritorio»: la página se arma a 980 px y se achica (`visualViewport.scale` ≈ 0,37). Se compensa escalando la pantalla
+  del juego, no con `zoom`.
+- Dos imágenes pedidas seguidas para el mismo lugar: gana el **último pedido**, no la última que decodifica.
+
 ## Rendimiento
 - Lo que siempre se paga es el **relleno de píxeles**: dibujar a un destino reducido y estirar.
 - `renderer.info.render` se pone a cero al empezar **cada** `render()`, y la sombra es otra pasada:

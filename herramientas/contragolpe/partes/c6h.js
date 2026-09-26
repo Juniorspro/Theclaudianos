@@ -141,7 +141,7 @@ window.alFinRonda = function(ganador, motivo){ const j = PARTIDA.jugador, m = {b
 const TACTIL = {stick:null, mira:null, fuego:null, fuegoI:null, activo:false, sens:1};
 function giroPantalla(){ return matchMedia('(orientation: portrait)').matches ? 90 : 0; }
 /* un dedo en coordenadas del juego (la pantalla puede estar girada por CSS) */
-function aJuego(t){ const r = $('pantalla').getBoundingClientRect(); if(giroPantalla() === 90) return {x:t.clientY - r.top, y:r.right - t.clientX}; return {x:t.clientX - r.left, y:t.clientY - r.top}; }
+function aJuego(t){ const r = $('pantalla').getBoundingClientRect(), u = UI.u; if(giroPantalla() === 90) return {x:(t.clientY - r.top)/u, y:(r.right - t.clientX)/u}; return {x:(t.clientX - r.left)/u, y:(t.clientY - r.top)/u}; }
 function mandosIniciar(){
   if(TACTIL.listo) return; TACTIL.listo = true; const zm = $('zonaMover'), zv = $('zonaMirar'), st = $('stick'), bola = st.querySelector('i');
   const mover = (id, p)=>{ const s = TACTIL.stick; if(!s || s.id !== id) return; let dx = p.x - s.x0, dy = p.y - s.y0; const L = Math.hypot(dx, dy), R = 52; if(L > R){ dx *= R/L; dy *= R/L; }

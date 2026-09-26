@@ -10,6 +10,10 @@ const manDe = (lista, id)=> (MAN[lista]||[]).find(m=> m.id===id) || null;
 function b64Bytes(d){ const i = d.indexOf(','), s = atob(d.slice(i + 1)), n = s.length, u = new Uint8Array(n); for(let k=0;k<n;k++) u[k] = s.charCodeAt(k); return u; }
 const mimeDe = d => d.slice(5, d.indexOf(';'));
 function porImg(d){ return new Promise((ok, mal)=>{ const im = new Image(); im.onload = ()=> ok(im); im.onerror = mal; im.src = d; }); }
+/* en un aparato con poca memoria las texturas de materiales (sólo tex/: los mapas de luz se leen por texel y no se tocan) bajan a 512 (una de 1024 son 5 MB de placa con sus mips) */
+const TEX_MAX = ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (typeof ren !== 'undefined' && ren.capabilities.maxTextureSize < 4096)) ? 512 : 1024;
+function achicar(im){ if(!im || Math.max(im.width, im.height) <= TEX_MAX || !im.close) return im; const f = TEX_MAX/Math.max(im.width, im.height);
+  return createImageBitmap(im, {resizeWidth:Math.round(im.width*f), resizeHeight:Math.round(im.height*f), resizeQuality:'high'}).then(r=>{ im.close(); return r; }, ()=> im); }
 /* voltear = las texturas que se repiten (convención de three: la fila de arriba en v=1); las de un GLB van sin voltear */
 function decImagen(id, voltear){
   if(ASSET.img[id]) return ASSET.img[id];
@@ -20,7 +24,7 @@ function decImagen(id, voltear){
   let p;
   if(window.createImageBitmap){
     try{ const b = new Blob([b64Bytes(d)], {type:mimeDe(d)});
-      p = createImageBitmap(b, voltear ? {imageOrientation:'flipY'} : {}).then(listo, ()=> porImg(d).then(listo, falla)); }
+      p = createImageBitmap(b, voltear ? {imageOrientation:'flipY'} : {}).then(im=> id.startsWith('tex/') ? achicar(im) : im, ()=> null).then(im=> im ? listo(im) : porImg(d).then(listo, falla)); }
     catch(e){ p = porImg(d).then(listo, falla); }
   } else p = porImg(d).then(listo, falla);
   return ASSET.img[id] = p;
@@ -32,7 +36,7 @@ function texAsset(id, o){
   const c = document.createElement('canvas'); c.width = c.height = 4; const g = c.getContext('2d'); g.fillStyle = o.color || (o.srgb ? '#808080' : (o.normal ? '#8080ff' : '#ffffff')); g.fillRect(0, 0, 4, 4);
   const t = new THREE.CanvasTexture(c); t.encoding = o.srgb ? THREE.sRGBEncoding : THREE.LinearEncoding;
   if(o.repetir !== false){ t.wrapS = t.wrapT = o.espejo ? THREE.MirroredRepeatWrapping : THREE.RepeatWrapping; }
-  t.anisotropy = Math.min(4, ren.capabilities.getMaxAnisotropy()); t.flipY = o.voltear !== false;
+  t.anisotropy = Math.min(8, ren.capabilities.getMaxAnisotropy()); t.flipY = o.voltear !== false;
   if(o.sinMips){ t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; }
   const voltear = o.voltear !== false;
   decImagen(id, voltear).then(im=>{ if(!im) return; t.image = im; t.flipY = voltear && !im.__volteada; t.needsUpdate = true; t.__asset = id; });

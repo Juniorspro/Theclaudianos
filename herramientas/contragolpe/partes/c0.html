@@ -14,6 +14,13 @@ html,body{margin:0;height:100%;overflow:hidden;background:#0b0c10;touch-action:n
   #pantalla{inset:auto;top:0;left:0;width:100vh;height:100vw;transform-origin:0 0;transform:translateX(100vw) rotate(90deg)}
   @supports (width:100dvh){ #pantalla{width:100dvh;height:100dvw;transform:translateX(100dvw) rotate(90deg)} }
 }
+/* navegador en «versión de escritorio»: arma la página a 980 px y el teléfono la muestra achicada. La pantalla del juego se
+   arma al tamaño del teléfono y se agranda con la escala de la vista (--u); si no, el HUD y los mandos salen a un tercio */
+html.escala #pantalla{inset:auto;top:0;left:0;width:calc(100vw/var(--u));height:calc(100vh/var(--u));transform-origin:0 0;transform:scale(var(--u))}
+@media (orientation: portrait){
+  html.escala #pantalla{width:calc(100vh/var(--u));height:calc(100vw/var(--u));transform:translateX(100vw) rotate(90deg) scale(var(--u))}
+  @supports (width:100dvh){ html.escala #pantalla{width:calc(100dvh/var(--u));height:calc(100dvw/var(--u));transform:translateX(100dvw) rotate(90deg) scale(var(--u))} }
+}
 #lienzo3d,#hud{position:absolute;inset:0;width:100%;height:100%;display:block}
 #hud{pointer-events:none}
 /* ---------- mandos ---------- */
@@ -72,7 +79,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#0b0c10;touch-action:n
 .titulo .rafaga{position:absolute;left:50%;top:50%;width:150%;height:260%;transform:translate(-50%,-50%);z-index:0;pointer-events:none}
 .titulo .rafaga svg{width:100%;height:100%;animation:gira 60s linear infinite}
 .titulo b{position:relative;z-index:1;display:block;font-family:'Arial Black','Roboto','Bahnschrift',sans-serif;font-weight:900;font-style:italic;letter-spacing:-1px;
-  font-size:min(12.5vw,19vh,112px);color:#fff;-webkit-text-stroke:5px var(--tinta);paint-order:stroke fill;
+  font-size:min(calc(12.5*var(--uw,1vw)),calc(19*var(--uh,1vh)),112px);color:#fff;-webkit-text-stroke:5px var(--tinta);paint-order:stroke fill;
   text-shadow:6px 6px 0 var(--tinta),7px 7px 0 var(--tinta),10px 10px 0 rgba(0,0,0,.35);transform:rotate(-2deg);animation:tiembla 5s ease-in-out infinite}
 .titulo b span{display:inline-block;animation:estalla .6s cubic-bezier(.2,1.5,.4,1) both}
 .titulo i{position:relative;z-index:1;display:inline-block;font-style:normal;font-weight:900;font-size:13px;letter-spacing:9px;color:var(--tinta);background:var(--amarillo);
@@ -154,7 +161,7 @@ h2 small{display:block;font-family:inherit;font-size:11px;letter-spacing:6px;col
 @keyframes barrido{from{transform:translateX(-110%)}to{transform:translateX(110%)}}
 #carga{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0b0c10;z-index:30}
 #carga .txt{font-size:12px;letter-spacing:8px;color:#bfc3cc}
-#carga .barra2{width:min(60vmin,300px);height:6px;background:rgba(255,255,255,.08);border:2px solid var(--tinta);box-shadow:3px 3px 0 #000}
+#carga .barra2{width:min(calc(60*var(--umin,1vmin)),300px);height:6px;background:rgba(255,255,255,.08);border:2px solid var(--tinta);box-shadow:3px 3px 0 #000}
 #carga .barra2 i{display:block;height:100%;width:0;background:var(--amarillo);transition:width .2s}
 #carga .consejo{font-size:11px;letter-spacing:1px;color:#8d93a0;max-width:420px;text-align:center}
 .texto{font-size:12.5px;line-height:1.5;text-align:left;columns:2;column-gap:22px}
@@ -248,5 +255,5 @@ h2 small{display:block;font-family:inherit;font-size:11px;letter-spacing:6px;col
     <div class="botones"><button class="boton amarillo" id="btFinOtra"><span>OTRA PARTIDA</span></button><button class="boton gris" id="btFinMenu"><span>MENÚ</span></button></div>
   </div>
   <div id="barrido"></div>
-  <div id="carga"><div class="titulo"><b style="font-size:min(9vw,15vh,72px)">CONTRAGOLPE</b></div><div class="txt">CARGANDO…</div><div class="barra2"><i></i></div><div class="consejo" id="consejo"></div></div>
+  <div id="carga"><div class="titulo"><b style="font-size:min(calc(9*var(--uw,1vw)),calc(15*var(--uh,1vh)),72px)">CONTRAGOLPE</b></div><div class="txt">CARGANDO…</div><div class="barra2"><i></i></div><div class="consejo" id="consejo"></div></div>
 </div>

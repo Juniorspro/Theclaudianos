@@ -68,7 +68,8 @@ def armar(solo=None, sin=False, salida=SALIDA):
             return False
         partes = clave.split('/')
         if cat == 'tex':
-            ruta = presupuesto(ruta, 256 if partes[-1] == 'orm' else 512, 84 if partes[-1] == 'normal' else 80)
+            # el color a 1024 (es lo que se mira de cerca: pisos, paredes, el arma); relieve a 512 y ORM a 256
+            ruta = presupuesto(ruta, {'orm': 256, 'albedo': 1024}.get(partes[-1], 512), {'normal': 84, 'albedo': 78}.get(partes[-1], 80))
         elif cat == 'arte':
             ruta = presupuesto(ruta, 1280, 78)
         elif cat == 'cielo':

@@ -14,7 +14,14 @@ const camVM = new THREE.PerspectiveCamera(54, 2, 0.05, 600);   /* mismos cortes 
 escena.add(cam);
 let DPR = Math.min(window.devicePixelRatio || 1, 2.5), CALIDAD = 0.8, RH = 1;
 const hg = cvH.getContext('2d');
+/* escala de la interfaz: 1 salvo en la «versión de escritorio» de un teléfono (vista achicada a menos de 0,8) */
+const UI = {u:1};
+function escalaUI(){ const vv = window.visualViewport, e = vv && vv.scale > 0 ? vv.scale : 1, u = e < 0.8 ? 1/e : 1;
+  if(Math.abs(u - UI.u) < 0.01) return false; UI.u = u; const de = document.documentElement; de.style.setProperty('--u', u.toFixed(4)); de.classList.toggle('escala', u > 1); return true; }
+escalaUI();
+if(window.visualViewport) visualViewport.addEventListener('resize', ()=>{ if(escalaUI()) setTimeout(medir, 60); });
 function medir(){
+  const pa = $('pantalla'), de = document.documentElement; de.style.setProperty('--uw', pa.clientWidth/100 + 'px'); de.style.setProperty('--uh', pa.clientHeight/100 + 'px'); de.style.setProperty('--umin', Math.min(pa.clientWidth, pa.clientHeight)/100 + 'px');
   const w = Math.max(2, cv3.clientWidth || innerWidth), h = Math.max(2, cv3.clientHeight || innerHeight);
   const pr = Math.max(0.5, DPR*lim(CALIDAD, 0.35, 1)*0.85);
   ren.setPixelRatio(pr); ren.setSize(w, h, false);
@@ -22,7 +29,7 @@ function medir(){
   RH = Math.min(DPR, 2)*(CALIDAD >= 0.55 ? 1 : 0.8); cvH.width = Math.round(w*RH); cvH.height = Math.round(h*RH);
   if(typeof postMedir === 'function') postMedir();
 }
-addEventListener('resize', ()=> setTimeout(medir, 60));
+addEventListener('resize', ()=>{ escalaUI(); setTimeout(medir, 60); });
 /* calidad automática por el intervalo real entre cuadros (lo que cuesta es pintar píxeles, no el JS) */
 const COSTO = {s:0, n:0, ult:0, desde:0};
 const CALIDAD_FIJA = {altos:1, medios:0.7, bajos:0.45};
@@ -61,7 +68,10 @@ const matCielo = new THREE.ShaderMaterial({uniforms:U_CIELO, side:THREE.BackSide
       else { c = mix(horiz, cenit, pow(max(y, 0.0), 0.55)); c = mix(c, suelo, smoothstep(0.0, -0.12, y)); }
       float s = max(dot(d, solDir), 0.0);
       c += solCol*(pow(s, 900.0)*30.0 + pow(s, 60.0)*0.35 + pow(s, 6.0)*0.08);
-      gl_FragColor = vec4(c*expo, 1.0); }`});
+      gl_FragColor = vec4(c*expo, 1.0);
+      #include <tonemapping_fragment>
+      #include <encodings_fragment>
+    }`});
 const cieloMalla = new THREE.Mesh(new THREE.SphereGeometry(400, 32, 16), matCielo); cieloMalla.frustumCulled = false; cieloMalla.renderOrder = -10; escena.add(cieloMalla);
 function ponerCielo(id, def){
   const m = manDe('cielo', id); def = def || {};
@@ -70,9 +80,9 @@ function ponerCielo(id, def){
   if(m){ if(m.cenit) CIELO.cenit.copy(lin(m.cenit)); if(m.horizonte){ const hz = typeof m.horizonte === 'string' ? m.horizonte : (m.horizonte.color || m.horizonte.color_opuesto); if(hz) CIELO.horiz.copy(lin(hz)); } }
   const a = az*GRAD, e = el*GRAD; SOLDIR.set(Math.sin(a)*Math.cos(e), Math.sin(e), -Math.cos(a)*Math.cos(e)).normalize();
   U_CIELO.cenit.value.copy(CIELO.cenit); U_CIELO.horiz.value.copy(CIELO.horiz); U_CIELO.suelo.value.copy(CIELO.suelo); U_CIELO.solCol.value.copy(CIELO.solCol);
-  U_CIELO.usaTex.value = 0;
+  U_CIELO.usaTex.value = 0; CIELO.pedido = null;   /* si dos cielos se piden seguidos, gana el último pedido, no el último que decodifica */
   if(m && ARCH['cielo/' + id]){ const azP = m.sol && m.sol.az !== undefined ? m.sol.az : az; const uSol = Math.atan2(SOLDIR.z, SOLDIR.x)/TAU + 0.5; U_CIELO.rot.value = azP/360 - uSol;
-    decImagen('cielo/' + id, false).then(im=>{ if(!im) return; if(CIELO.tex) CIELO.tex.dispose(); const t = new THREE.Texture(im); t.flipY = false; t.wrapS = THREE.RepeatWrapping; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; t.needsUpdate = true;
+    CIELO.pedido = id; decImagen('cielo/' + id, false).then(im=>{ if(!im || CIELO.pedido !== id) return; if(CIELO.tex) CIELO.tex.dispose(); const t = new THREE.Texture(im); t.flipY = false; t.wrapS = THREE.RepeatWrapping; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; t.needsUpdate = true;
       CIELO.tex = t; U_CIELO.tCielo.value = t; U_CIELO.usaTex.value = 1; }); }
   sol.color.copy(CIELO.solCol); solVM.color.copy(CIELO.solCol);
   hemi.color.copy(CIELO.cenit).lerp(new THREE.Color(1,1,1), 0.35); hemi.groundColor.copy(CIELO.suelo); hemiVM.color.copy(hemi.color); hemiVM.groundColor.copy(hemi.groundColor);
@@ -81,16 +91,34 @@ function ponerCielo(id, def){
 
 /* ====================== revelado: HDR → tinta → resplandor → tono → pantalla ====================== */
 const POST = {ok:false, rt:null, mips:[], w:0, h:0, t:0, danio:0, cegado:0, flashRes:0, muerto:0, vmRango:0.5,
-  grado:{lift:[0,0,0], gamma:[1,1,1], gain:[1,1,1], sat:1.14, contraste:1.06, frio:[0.94,0.98,1.06], calido:[1.05,1,0.94], vineta:0.28, grano:0.03, expo:0.72}};
+  grado:{lift:[0,0,0], gamma:[1,1,1], gain:[1,1,1], sat:1.08, contraste:1.04, frio:[0.96,0.99,1.04], calido:[1.04,1,0.96], vineta:0.18, grano:0.012, expo:0.84, clave:0.26, autoK:0.6}};
 const QUAD = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)), QESC = new THREE.Scene(), QCAM = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 QUAD.frustumCulled = false; QESC.add(QUAD);
 const VERT_Q = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
 const MAT_BAJA = new THREE.ShaderMaterial({uniforms:{t:{value:null}, px:{value:new THREE.Vector2()}, umbral:{value:1.4}, rodilla:{value:0.5}, primera:{value:0}},
   vertexShader:VERT_Q, depthTest:false, depthWrite:false,
   fragmentShader:`uniform sampler2D t; uniform vec2 px; uniform float umbral, rodilla, primera; varying vec2 vUv;
-    void main(){ vec3 c = texture2D(t, vUv + px*vec2(-1.0,-1.0)).rgb + texture2D(t, vUv + px*vec2(1.0,-1.0)).rgb + texture2D(t, vUv + px*vec2(-1.0,1.0)).rgb + texture2D(t, vUv + px*vec2(1.0,1.0)).rgb; c *= 0.25;
-      if(primera > 0.5){ float b = max(c.r, max(c.g, c.b)); float k = umbral*rodilla + 1e-4; float s = clamp(b - umbral + k, 0.0, 2.0*k); s = s*s/(4.0*k); c *= max(s, b - umbral)/max(b, 1e-4); c = min(c, vec3(30.0)); }
-      gl_FragColor = vec4(c, 1.0); }`});
+    float ok1(float x){ return (x > -1.0 && x < 60000.0) ? x : 0.0; }
+    vec3 limpio(vec3 c){ return min(vec3(ok1(c.x), ok1(c.y), ok1(c.z)), vec3(60.0)); }
+    float lg(vec3 c){ return log(max(dot(c, vec3(0.2126, 0.7152, 0.0722)), 0.002)); }
+    float okA(float x){ return (x > -9.0 && x < 9.0) ? x : -2.0; }
+    void main(){ vec4 s1 = texture2D(t, vUv + px*vec2(-1.0,-1.0)), s2 = texture2D(t, vUv + px*vec2(1.0,-1.0)), s3 = texture2D(t, vUv + px*vec2(-1.0,1.0)), s4 = texture2D(t, vUv + px*vec2(1.0,1.0));
+      vec3 a = limpio(s1.rgb), b = limpio(s2.rgb), e = limpio(s3.rgb), d = limpio(s4.rgb); vec3 c = (a + b + e + d)*0.25; float la;
+      if(primera > 0.5){ la = 0.25*(lg(a) + lg(b) + lg(e) + lg(d));
+        float br = max(c.r, max(c.g, c.b)); float k = umbral*rodilla + 1e-4; float s = clamp(br - umbral + k, 0.0, 2.0*k); s = s*s/(4.0*k); c *= max(s, br - umbral)/max(br, 1e-4); c = min(c, vec3(30.0)); }
+      else la = 0.25*(okA(s1.a) + okA(s2.a) + okA(s3.a) + okA(s4.a));
+      gl_FragColor = vec4(c, la); }`});
+/* exposición automática: la luminancia media (con más peso al centro, como el ojo) se funde con la de antes en un búfer de 1×1 */
+const MAT_ADAPTA = new THREE.ShaderMaterial({uniforms:{t:{value:null}, k:{value:1}}, vertexShader:VERT_Q, depthTest:false, depthWrite:false, transparent:true,
+  blending:THREE.CustomBlending, blendSrc:THREE.SrcAlphaFactor, blendDst:THREE.OneMinusSrcAlphaFactor, blendEquation:THREE.AddEquation,
+  fragmentShader:`uniform sampler2D t; uniform float k; varying vec2 vUv;
+    void main(){ float s = 0.0, w = 0.0;
+      for(int j=0;j<4;j++) for(int i=0;i<6;i++){ vec2 uv = vec2((float(i) + 0.5)/6.0, (float(j) + 0.5)/4.0); float d = length((uv - 0.5)*vec2(1.0, 0.8));
+        float ww = 1.0 - 0.65*smoothstep(0.08, 0.55, d); float a = texture2D(t, uv).a; if(a > -9.0 && a < 9.0){ s += a*ww; w += ww; } }
+      float L = exp(s/max(w, 1e-3)); gl_FragColor = vec4(L, L, L, k); }`});
+/* para medir desde el banco: la luminancia adaptada en logaritmo, a 8 bits */
+const MAT_LEER = new THREE.ShaderMaterial({uniforms:{t:{value:null}}, vertexShader:VERT_Q, depthTest:false, depthWrite:false,
+  fragmentShader:`uniform sampler2D t; varying vec2 vUv; void main(){ float v = clamp((log2(max(texture2D(t, vec2(0.5)).r, 1e-4)) + 10.0)/14.0, 0.0, 1.0); gl_FragColor = vec4(v, v, v, 1.0); }`});
 const MAT_SUBE = new THREE.ShaderMaterial({uniforms:{t:{value:null}, px:{value:new THREE.Vector2()}}, vertexShader:VERT_Q, depthTest:false, depthWrite:false,
   blending:THREE.AdditiveBlending, transparent:true,
   fragmentShader:`uniform sampler2D t; uniform vec2 px; varying vec2 vUv;
@@ -98,20 +126,13 @@ const MAT_SUBE = new THREE.ShaderMaterial({uniforms:{t:{value:null}, px:{value:n
       c += (texture2D(t, vUv + vec2(px.x,0.0)).rgb + texture2D(t, vUv - vec2(px.x,0.0)).rgb + texture2D(t, vUv + vec2(0.0,px.y)).rgb + texture2D(t, vUv - vec2(0.0,px.y)).rgb)*2.0;
       c += texture2D(t, vUv + px).rgb + texture2D(t, vUv - px).rgb + texture2D(t, vUv + vec2(px.x,-px.y)).rgb + texture2D(t, vUv + vec2(-px.x,px.y)).rgb;
       gl_FragColor = vec4(c/16.0, 1.0); }`});
-/* la trama de las sombras: líneas a 45° dibujadas a mano una vez (con temblor), repetida en pantalla */
-function texTrama(){ const N = 128, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, N, N);
-  const r = mulberry(33); g.strokeStyle = '#000'; g.lineCap = 'round';
-  /* líneas a 45° que empalman en los bordes (se dibujan corridas un lado para que la costura no se vea) */
-  for(let k=-N;k<N*2;k+=8){ const ancho = 0.7 + r()*0.6, a = 0.45 + r()*0.5, tr = (r() - 0.5)*1.2;
-    for(const dx of [-N, 0, N]){ g.lineWidth = ancho; g.globalAlpha = a; g.beginPath(); let x = k + dx, y = 0; g.moveTo(x, y); while(y < N){ y += 8; x += 8 + tr*0.3; g.lineTo(x, y); } g.stroke(); } }
-  g.globalAlpha = 1; const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; return t; }
 const MAT_FINAL = new THREE.ShaderMaterial({
-  uniforms:{tHdr:{value:null}, tProf:{value:null}, tBloom:{value:null}, tTrama:{value:texTrama()}, bloomK:{value:0.35}, expo:{value:1}, tiempo:{value:0}, res:{value:new THREE.Vector2(1,1)},
+  uniforms:{tHdr:{value:null}, tProf:{value:null}, tBloom:{value:null}, tAdapt:{value:null}, clave:{value:0.3}, autoK:{value:0.6}, usaAuto:{value:0}, bloomK:{value:0.35}, expo:{value:1}, tiempo:{value:0}, res:{value:new THREE.Vector2(1,1)},
     lift:{value:new THREE.Vector3()}, gam:{value:new THREE.Vector3(1,1,1)}, gain:{value:new THREE.Vector3(1,1,1)}, sat:{value:1}, contraste:{value:1},
     frio:{value:new THREE.Vector3(1,1,1)}, calido:{value:new THREE.Vector3(1,1,1)}, vineta:{value:0.3}, grano:{value:0.03},
     danio:{value:0}, cegado:{value:0}, muerto:{value:0}, usaBloom:{value:1}, tinta:{value:1}, grosor:{value:1}, cerca:{value:0.05}, lejos:{value:600}, vmRango:{value:0.5}},
   vertexShader:VERT_Q, depthTest:false, depthWrite:false,
-  fragmentShader:`uniform sampler2D tHdr, tProf, tBloom, tTrama; uniform float bloomK, expo, tiempo, sat, contraste, vineta, grano, danio, cegado, muerto, usaBloom, tinta, grosor, cerca, lejos, vmRango; uniform vec2 res;
+  fragmentShader:`uniform sampler2D tHdr, tProf, tBloom, tAdapt; uniform float clave, autoK, usaAuto, bloomK, expo, tiempo, sat, contraste, vineta, grano, danio, cegado, muerto, usaBloom, tinta, grosor, cerca, lejos, vmRango; uniform vec2 res;
     uniform vec3 lift, gam, gain, frio, calido; varying vec2 vUv;
     vec3 aces(vec3 x){ const mat3 A = mat3(0.59719,0.07600,0.02840, 0.35458,0.90834,0.13383, 0.04823,0.01566,0.83777);
       const mat3 B = mat3(1.60475,-0.10208,-0.00327, -0.53108,1.10813,-0.07276, -0.07367,-0.00605,1.07602);
@@ -121,36 +142,29 @@ const MAT_FINAL = new THREE.ShaderMaterial({
     /* profundidad del búfer → metros; el arma en primera persona está comprimida en [0, vmRango] */
     float metros(float d){ float vm = step(d, vmRango - 1e-4); float dd = mix(d, d/vmRango, vm); float z = dd*2.0 - 1.0; return 2.0*cerca*lejos/(lejos + cerca - z*(lejos - cerca)); }
     float lum(vec3 c){ return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+    float ok1(float x){ return (x > -1.0 && x < 60000.0) ? x : 0.0; }
+    vec3 limpio(vec3 c){ return min(vec3(ok1(c.x), ok1(c.y), ok1(c.z)), vec3(60.0)); }
     void main(){
       vec2 d = vUv - 0.5; float r2 = dot(d, d);
-      vec3 c = texture2D(tHdr, vUv).rgb;
+      vec3 c = limpio(texture2D(tHdr, vUv).rgb);
       float zc = metros(texture2D(tProf, vUv).r);
       if(tinta > 0.5){
         vec2 p = grosor/res;
-        /* 1/z es lineal en pantalla sobre un plano: su segunda diferencia marca pliegues y siluetas */
+        /* sólo siluetas: un salto grande de 1/z entre vecinos. Los pliegues (segunda diferencia) no: con una profundidad de
+           16 bits (hay teléfonos que no dan más) se disparan en cada escalón y pintan rayas y ruido en todo lo lejano */
         float w0 = 1.0/zc;
         float wl = 1.0/metros(texture2D(tProf, vUv - vec2(p.x, 0.0)).r), wr = 1.0/metros(texture2D(tProf, vUv + vec2(p.x, 0.0)).r);
         float wd = 1.0/metros(texture2D(tProf, vUv - vec2(0.0, p.y)).r), wu = 1.0/metros(texture2D(tProf, vUv + vec2(0.0, p.y)).r);
-        float wa = 1.0/metros(texture2D(tProf, vUv + p).r), wb = 1.0/metros(texture2D(tProf, vUv - p).r);
-        float wc = 1.0/metros(texture2D(tProf, vUv + vec2(p.x, -p.y)).r), we = 1.0/metros(texture2D(tProf, vUv + vec2(-p.x, p.y)).r);
-        float pl = abs(wl + wr - 2.0*w0) + abs(wd + wu - 2.0*w0) + 0.5*(abs(wa + wb - 2.0*w0) + abs(wc + we - 2.0*w0));
         float sil = max(max(abs(wl - w0), abs(wr - w0)), max(abs(wu - w0), abs(wd - w0)))/w0;
-        float borde = max(smoothstep(0.012, 0.03, pl/w0), smoothstep(0.09, 0.22, sil));
-        /* detalle: bordes de color (paneles, carteles, costuras) con línea más fina */
-        vec3 cl = texture2D(tHdr, vUv - vec2(p.x, 0.0)).rgb, cr = texture2D(tHdr, vUv + vec2(p.x, 0.0)).rgb, cd = texture2D(tHdr, vUv - vec2(0.0, p.y)).rgb, cu = texture2D(tHdr, vUv + vec2(0.0, p.y)).rgb;
-        float lc = log(lum(c) + 0.02); float gx = log(lum(cr) + 0.02) - log(lum(cl) + 0.02), gy = log(lum(cu) + 0.02) - log(lum(cd) + 0.02);
-        float det = smoothstep(0.55, 1.1, length(vec2(gx, gy)))*0.55;
-        float lejania = 1.0 - smoothstep(45.0, 140.0, zc);
-        float tin = clamp(max(borde, det)*lejania, 0.0, 1.0);
-        /* trama cruzada en lo oscuro */
-        float l = lum(c*expo);
-        float t1 = texture2D(tTrama, gl_FragCoord.xy/(96.0*grosor)).r, t2 = texture2D(tTrama, vec2(gl_FragCoord.x, -gl_FragCoord.y)/(88.0*grosor)).r;
-        float tr = (1.0 - t1)*smoothstep(0.1, 0.02, l)*0.22 + (1.0 - t2)*smoothstep(0.035, 0.006, l)*0.2;
-        c *= 1.0 - tr*lejania;
-        c = mix(c, vec3(0.012, 0.01, 0.012), tin*0.92);
+        float borde = smoothstep(0.12, 0.3, sil);
+        float lejania = 1.0 - smoothstep(20.0, 60.0, zc);
+        float tin = clamp(borde*lejania, 0.0, 1.0);
+        c = mix(c, c*0.35, tin*0.6);
       }
-      if(usaBloom > 0.5) c += texture2D(tBloom, vUv).rgb*bloomK;
-      c *= expo/0.6;
+      if(usaBloom > 0.5) c += limpio(texture2D(tBloom, vUv).rgb)*bloomK;
+      float ex = 1.0;
+      if(usaAuto > 0.5){ float La = texture2D(tAdapt, vec2(0.5)).r; if(!(La > 1e-4 && La < 1e4)) La = clave; ex = clamp(pow(clave/La, autoK), 0.8, 2.1); }
+      c *= expo/0.6*ex;
       c = aces(c);
       float l = lum(c);
       c *= mix(frio, calido, smoothstep(0.08, 0.7, l));
@@ -167,23 +181,67 @@ const MAT_FINAL = new THREE.ShaderMaterial({
 function rtNuevo(w, h, tipo, conProf){ const rt = new THREE.WebGLRenderTarget(w, h, {type:tipo, format:THREE.RGBAFormat, minFilter:THREE.LinearFilter, magFilter:THREE.LinearFilter, depthBuffer:!!conProf, stencilBuffer:false, generateMipmaps:false});
   if(conProf){ rt.depthTexture = new THREE.DepthTexture(w, h); rt.depthTexture.type = THREE.UnsignedIntType; rt.depthTexture.minFilter = rt.depthTexture.magFilter = THREE.NearestFilter; }
   return rt; }
+/* ¿el camino HDR anda de verdad? Que el búfer esté «completo» no alcanza: hay placas que no filtran la media precisión (se
+   muestrea negro), que no compilan el revelado o que devuelven basura, y la pantalla queda negra con el HUD encima. Se pasa un
+   color conocido por todo el camino (búfer HDR → resplandor → tono) a un búfer de 8 bits y se lee. Si no da, se dibuja directo
+   con el ACES de three, que anda en cualquier placa. */
 function probarHDR(){
+  let rt = null, mip = null, sal = null, ok = false;
   try{
-    const gl = ren.getContext(), w2 = ren.capabilities.isWebGL2;
+    const w2 = ren.capabilities.isWebGL2, gl = ren.getContext();
     if(w2 ? !ren.extensions.get('EXT_color_buffer_float') && !ren.extensions.get('EXT_color_buffer_half_float') : !(ren.extensions.get('OES_texture_half_float') && ren.extensions.get('EXT_color_buffer_half_float'))) return false;
-    if(!w2 && !ren.extensions.get('WEBGL_depth_texture')) return false;
-    const rt = rtNuevo(8, 8, THREE.HalfFloatType, true); ren.setRenderTarget(rt); ren.clear();
-    const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE; ren.setRenderTarget(null); rt.dispose(); return ok;
-  }catch(e){ return false; }
+    if(!w2 && !(ren.extensions.get('WEBGL_depth_texture') && ren.extensions.get('OES_texture_half_float_linear'))) return false;
+    rt = rtNuevo(16, 16, THREE.HalfFloatType, true); mip = rtNuevo(8, 8, THREE.HalfFloatType, false);
+    sal = new THREE.WebGLRenderTarget(16, 16, {type:THREE.UnsignedByteType, format:THREE.RGBAFormat, depthBuffer:false, stencilBuffer:false, generateMipmaps:false});
+    ren.setRenderTarget(rt); if(gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw 0;
+    const cc = ren.getClearColor(new THREE.Color()), ca = ren.getClearAlpha();
+    ren.setClearColor(new THREE.Color(0.9, 0.5, 0.25), 1); ren.clear(true, true, false); ren.setClearColor(cc, ca);
+    MAT_BAJA.uniforms.t.value = rt.texture; MAT_BAJA.uniforms.px.value.set(1/16, 1/16); MAT_BAJA.uniforms.primera.value = 1; pasadaQ(MAT_BAJA, mip);
+    uniformesFinal(rt, mip.texture, 16, 16, true); pasadaQ(MAT_FINAL, sal);
+    const px = new Uint8Array(4); ren.readRenderTargetPixels(sal, 8, 8, 1, 1, px);
+    POST.prueba = Array.from(px.slice(0, 3));
+    ok = px[0] > 120 && px[1] > 60 && px[0] > px[2] + 20 && px[0] < 255;
+  }catch(e){ ok = false; }
+  ren.setRenderTarget(null); for(const r of [rt, mip, sal]) if(r){ if(r.depthTexture) r.depthTexture.dispose(); r.dispose(); }
+  return ok;
 }
-POST.ok = probarHDR() && !/[?&]sinpost/.test(location.search);
-if(!POST.ok){ ren.toneMapping = THREE.ACESFilmicToneMapping; ren.toneMappingExposure = 1.0; }
+function uniformesFinal(rt, bloom, w, h, conBloom){
+  const U = MAT_FINAL.uniforms, G2 = POST.grado;
+  U.tHdr.value = rt.texture; U.tProf.value = rt.depthTexture; U.tBloom.value = bloom; U.usaBloom.value = conBloom ? 1 : 0; U.tiempo.value = (POST.t += 0.0173);
+  U.res.value.set(w, h); U.expo.value = G2.expo; U.lift.value.fromArray(G2.lift); U.gam.value.fromArray(G2.gamma); U.gain.value.fromArray(G2.gain);
+  U.sat.value = G2.sat; U.contraste.value = G2.contraste; U.frio.value.fromArray(G2.frio); U.calido.value.fromArray(G2.calido); U.vineta.value = G2.vineta; U.grano.value = G2.grano*(CALIDAD >= 0.55 ? 1 : 0);
+  U.danio.value = POST.danio; U.cegado.value = POST.cegado; U.muerto.value = POST.muerto; U.tinta.value = POST.tinta ? 1 : 0;
+  U.tAdapt.value = POST.adapt ? POST.adapt.texture : null; U.usaAuto.value = POST.adapt ? 1 : 0; U.clave.value = G2.clave; U.autoK.value = G2.autoK;
+  U.grosor.value = Math.max(1, h/720); U.cerca.value = cam.near; U.lejos.value = cam.far; U.vmRango.value = POST.vmRango;
+}
+/* dibujar directo: ACES y sRGB de three en cada material (hay que recompilarlos) */
+function sinRevelado(motivo){
+  POST.ok = false; POST.motivo = motivo; ren.toneMapping = THREE.ACESFilmicToneMapping; ren.toneMappingExposure = POST.grado.expo;
+  for(const e of [escena, escVM]) e.traverse(o=>{ if(o.material) for(const m of [].concat(o.material)) m.needsUpdate = true; });
+  if(POST.rt){ POST.rt.dispose(); POST.rt.depthTexture.dispose(); POST.rt = null; } for(const m of POST.mips) m.dispose(); POST.mips = [];
+}
+POST.tinta = /[?&]tinta/.test(location.search); POST.adaptYa = true;
+function leerAdaptacion(){ if(!POST.adapt) return null; const sal = new THREE.WebGLRenderTarget(1, 1, {type:THREE.UnsignedByteType, format:THREE.RGBAFormat, depthBuffer:false});
+  MAT_LEER.uniforms.t.value = POST.adapt.texture; pasadaQ(MAT_LEER, sal); const px = new Uint8Array(4); ren.readRenderTargetPixels(sal, 0, 0, 1, 1, px); ren.setRenderTarget(null); sal.dispose();
+  const La = Math.pow(2, px[0]/255*14 - 10); return {La:+La.toFixed(4), ex:+Math.min(2.1, Math.max(0.8, Math.pow(POST.grado.clave/La, POST.grado.autoK))).toFixed(3)}; }
+POST.ok = !/[?&]sinpost/.test(location.search) && probarHDR();
+if(!POST.ok){ POST.motivo = 'prueba'; ren.toneMapping = THREE.ACESFilmicToneMapping; ren.toneMappingExposure = POST.grado.expo; }
+/* guardia: si la pantalla sale negra tres veces seguidas (cinco puntos; cada medio segundo al principio, después cada 2 s), se pasa a dibujar directo */
+const GUARDIA = {n:0, negros:0, px:new Uint8Array(4)};
+function vigilarNegro(){
+  if(++GUARDIA.n % (GUARDIA.n < 900 ? 30 : 120)) return;   /* al principio más seguido: que una pantalla negra dure poco */ const gl = ren.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight; let negros = 0;
+  for(const [fx, fy] of [[0.5, 0.5], [0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]]){ gl.readPixels(Math.floor(w*fx), Math.floor(h*fy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, GUARDIA.px);
+    if(GUARDIA.px[0] + GUARDIA.px[1] + GUARDIA.px[2] < 8) negros++; }
+  GUARDIA.negros = negros === 5 ? GUARDIA.negros + 1 : 0;
+  if(GUARDIA.negros >= 3){ console.warn('revelado: pantalla negra, dibujo directo'); sinRevelado('negro'); }
+}
 function postMedir(){
   if(!POST.ok) return;
   const s = ren.getDrawingBufferSize(new THREE.Vector2()), w = Math.max(2, s.x), h = Math.max(2, s.y);
   if(POST.rt && POST.w === w && POST.h === h) return;
   if(POST.rt){ POST.rt.dispose(); POST.rt.depthTexture.dispose(); } for(const m of POST.mips) m.dispose(); POST.mips = [];
   POST.rt = rtNuevo(w, h, THREE.HalfFloatType, true); POST.w = w; POST.h = h;
+  if(!POST.adapt){ POST.adapt = rtNuevo(1, 1, THREE.HalfFloatType, false); POST.adaptT = 0; }
   let mw = w, mh = h; for(let i=0;i<5;i++){ mw = Math.max(2, mw >> 1); mh = Math.max(2, mh >> 1); POST.mips.push(rtNuevo(mw, mh, THREE.HalfFloatType, false)); }
 }
 function pasadaQ(mat, destino){ QUAD.material = mat; ren.setRenderTarget(destino); ren.render(QESC, QCAM); }
@@ -204,12 +262,11 @@ function revelar(conVM){
     for(let i=nb-1;i>0;i--){ const m = POST.mips[i]; MAT_SUBE.uniforms.t.value = m.texture; MAT_SUBE.uniforms.px.value.set(1/m.width, 1/m.height);
       ren.autoClear = false; pasadaQ(MAT_SUBE, POST.mips[i-1]); ren.autoClear = true; }
   }
-  const U = MAT_FINAL.uniforms, G2 = POST.grado;
-  U.tHdr.value = POST.rt.texture; U.tProf.value = POST.rt.depthTexture; U.tBloom.value = POST.mips[0].texture; U.usaBloom.value = nb ? 1 : 0; U.tiempo.value = (POST.t += 0.0173);
-  U.res.value.set(POST.w, POST.h); U.expo.value = G2.expo; U.lift.value.fromArray(G2.lift); U.gam.value.fromArray(G2.gamma); U.gain.value.fromArray(G2.gain);
-  U.sat.value = G2.sat; U.contraste.value = G2.contraste; U.frio.value.fromArray(G2.frio); U.calido.value.fromArray(G2.calido); U.vineta.value = G2.vineta; U.grano.value = G2.grano*(CALIDAD >= 0.55 ? 1 : 0);
-  U.danio.value = POST.danio; U.cegado.value = POST.cegado; U.muerto.value = POST.muerto; U.tinta.value = G.estilo === 'tinta' ? 1 : 0;
-  U.grosor.value = Math.max(1.2, POST.h/360); U.cerca.value = cam.near; U.lejos.value = cam.far; U.vmRango.value = POST.vmRango;
+  if(nb){ const ahora = performance.now(), dt = POST.adaptT ? Math.min(0.25, (ahora - POST.adaptT)/1000) : 1; POST.adaptT = ahora;
+    MAT_ADAPTA.uniforms.t.value = POST.mips[nb - 1].texture; MAT_ADAPTA.uniforms.k.value = POST.adaptYa ? 1 : 1 - Math.exp(-dt/0.55); POST.adaptYa = false;
+    ren.autoClear = false; pasadaQ(MAT_ADAPTA, POST.adapt); ren.autoClear = true; }
+  uniformesFinal(POST.rt, POST.mips[0].texture, POST.w, POST.h, nb > 0);
   pasadaQ(MAT_FINAL, null);
+  if(POST.cegado < 0.5 && POST.muerto < 0.5) vigilarNegro();
 }
 </script>

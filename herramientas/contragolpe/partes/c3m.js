@@ -126,7 +126,7 @@ function mapaNuclear(){
   bloque(-18, 4.2, -20, 18, 4.5, -17, 'acero_naranja'); bloque(15, 4.2, -17, 18, 4.5, 10, 'acero_naranja');     /* pasarela en L */
   U_.baranda(-18, -17, 15, -17, 4.5, {mat:'amarillo'}); U_.baranda(15, -17, 15, 10, 4.5, {mat:'amarillo'});
   escalera(15, 4, 18, 10, 0, 4.2, 'z-', 'acero_naranja');
-  for(const x of [-18, -6, 6, 18]) U_.viga(V3(x, 0, 10), V3(x, 9.5, 10), {mat:'acero_naranja'});
+  for(const x of [-18, -6, 6, 18]) U_.viga([x, 0, 10], [x, 9.5, 10], {mat:'acero_naranja'});
   for(let x=-12;x<=12;x+=8) for(const z of [-14, 0]) lampara(x, 9, z, '#eef3ff', 34, 16);
   U_.cartel('A', 0, 3.5, 9.7, 'z-', 1.4);
   /* SITIO B: cajones, tambores, caños */
@@ -169,8 +169,12 @@ function mapaAlmacen(){
   U_.montacargas(-12, 0, 12, {}); U_.montacargas(12, 0, -12, {giro:2});
   /* oficinas en las cabeceras */
   for(const s of [-1, 1]){ bloque(s*24 - (s > 0 ? 6 : 0), 0, -5, s*24 + (s > 0 ? 0 : 6), 3.2, -4.7, 'revoque'); bloque(s*24 - (s > 0 ? 6 : 0), 0, 4.7, s*24 + (s > 0 ? 0 : 6), 3.2, 5, 'revoque'); bloque(s*24 - (s > 0 ? 6 : 0), 3.2, -5, s*24 + (s > 0 ? 0 : 6), 3.5, 5, 'techo'); }
-  for(let x=-18;x<=18;x+=9) for(const z of [-9, 0, 9]) lampara(x, 9, z, '#eef3ff', 30, 14);
-  for(const s of [-1, 1]) lampara(s*21, 3, 0, '#ffe9c8', 10, 7);
+  /* campanas colgadas del techo; los pasillos de afuera de las escaleras (donde nacen los dos bandos) y lo de abajo de las
+     pasarelas no los alcanzaba ninguna lámpara y quedaban negros: campanas y tubos propios */
+  for(let x=-18;x<=18;x+=9) for(const z of [-9, 0, 9]) U_.luminaria('campana', x, 8.2, z, {colgar:1.2, fuerza:30, radio:14});
+  for(const s of [-1, 1]){ for(const z of [-10.5, 10.5]) U_.luminaria('campana', s*22, 8.2, z, {colgar:1.2, fuerza:20, radio:11});
+    for(const x of [-16, 0, 16]) U_.luminaria('tubo', x, 3.9, s*14.9, {fuerza:9, radio:8});
+    U_.luminaria('tubo', s*21, 3.1, 0, {fuerza:10, radio:7, eje:'z'}); }
   calco(0, 0.02, 0, 0, 1, 0, 2.4, 2.4, 'mancha_aceite'); calco(-23.9, 2, -10, 1, 0, 0, 2, 0.7, 'franjas_peligro'); calco(23.9, 2, 10, -1, 0, 0, 1.6, 1.6, 'grafiti_2');
   for(const [x, z, y] of [[-22.5, -12, 0], [22.5, 12, 0], [-20, 12, 0], [20, -12, 0], [0, -14, 0], [0, 14, 0], [-12, 0, 0], [12, 0, 0], [-21, 0, 0], [21, 0, 0], [-8, -15, 4.3], [8, 15, 4.3], [-16, 15, 4.3], [16, -15, 4.3]]) spawn('dm', x, y, z, Math.atan2(x, z));
   for(const z of [-13, -9, -1, 2, 10]){ spawn('t', -22.5, 0, z, -Math.PI/2); spawn('ct', 22.5, 0, z, Math.PI/2); }
@@ -178,7 +182,7 @@ function mapaAlmacen(){
 const MAPAS = {
   nuclear:{id:'nuclear', nombre:'NUCLEAR', cielo:'cielo_nuclear', sol:{az:130.7, elev:44.5}, modos:['bomba', 'dm', 'armas'], construir:mapaNuclear},
   desierto:{id:'desierto', nombre:'DESIERTO', cielo:'cielo_desierto', sol:{az:120.4, elev:42.5}, modos:['bomba', 'dm', 'armas'], construir:mapaDesierto},
-  almacen:{id:'almacen', nombre:'ALMACÉN', cielo:'cielo_nuclear', sol:{az:130.7, elev:44.5}, modos:['dm', 'armas'], construir:mapaAlmacen},
+  almacen:{id:'almacen', nombre:'ALMACÉN', cielo:'cielo_nuclear', sol:{az:130.7, elev:44.5}, modos:['dm', 'armas'], construir:mapaAlmacen, ambiente:0.035},
 };
 window.MAPAS = MAPAS;
 </script>

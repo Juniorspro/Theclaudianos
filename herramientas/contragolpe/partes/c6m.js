@@ -21,7 +21,7 @@ const TXT = {
     'SENSIBILIDAD':'SENSIBILIDADE', 'ESTILO':'ESTILO', 'HISTORIETA':'QUADRINHOS', 'GRÁFICOS':'GRÁFICOS', 'SONIDO':'SOM', 'MIRA':'MIRA', 'SÍ':'SIM', 'NO':'NÃO', 'CARGANDO':'CARREGANDO'}};
 function tr(s){ const l = G.idioma || 'es', D = TXT[l]; if(!D || l === 'es') return s; if(D[s]) return D[s]; let out = s; for(const k of Object.keys(D).sort((a, b)=> b.length - a.length)) if(k.length > 3 && out.includes(k)) out = out.split(k).join(D[k]); return out; }
 function traducirDOM(){ document.querySelectorAll('.capa button span, .capa h2, .capa h2 small').forEach(el=>{ if(!el.dataset.es) el.dataset.es = el.childNodes[el.childNodes.length - 1].textContent; const n = el.childNodes[el.childNodes.length - 1]; if(n.nodeType === 3) n.textContent = tr(el.dataset.es); }); }
-function mostrar(id){ if(id && window.hg) hg.clearRect(0, 0, cvH.width, cvH.height); for(const c of document.querySelectorAll('.capa')) c.classList.remove('ver'); if(id){ $(id).classList.add('ver'); } MENU.capa = id; traducirDOM();
+function mostrar(id){ if(id && typeof hg !== 'undefined'){ hg.setTransform(1, 0, 0, 1, 0, 0); hg.clearRect(0, 0, cvH.width, cvH.height); } for(const c of document.querySelectorAll('.capa')) c.classList.remove('ver'); if(id){ $(id).classList.add('ver'); } MENU.capa = id; traducirDOM();
   $('mandos').classList.toggle('ver', !id && J.partida && TACTIL_DISP); if(id && document.exitPointerLock) document.exitPointerLock(); }
 /* ---------- fondo de los menús: paneo lento por el mapa montado ---------- */
 function pasarMenu(dt){ MENU.t += dt; const O = OBRA, S = (O.spawns.dm.length ? O.spawns.dm : O.spawns.ct), n = S.length || 1, k = Math.floor(MENU.t/9) % n, u = (MENU.t % 9)/9, s = S[k] || {x:0, y:0, z:0};
