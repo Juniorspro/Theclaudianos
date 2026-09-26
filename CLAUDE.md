@@ -901,3 +901,36 @@ Medido: toques reales por CDP (normal y con el defecto del `viewport`), respaldo
 en los tres modos (deathmatch 66 bajas por minuto en ALMACÉN, bomba en NUCLEAR con plantada, carrera de armas terminada) y alcance de la
 navegación en los tres mapas, sin errores.
 
+### 2026-09-26 (26) — CONTRAGOLPE: personajes con piel, mocap del CS2 y GRÁFICOS que anda
+**Pedido textual:** «Las piernas y modelos 3D debes recrearlos súper bien, literalmente busca fotos del counter strike sobre soldados y
+terroristas y replicalos proceduralmente y las animaciones con deepmotion real, también no me deja cambiar de gráficos».
+
+- **GRÁFICOS**: el botón le pasaba el texto `'altos'` a `fijarCalidad`, que espera un número (la calidad quedaba en NaN), y lo guardado
+  nunca se aplicaba al arrancar. `aplicarGraficos()` traduce con `CALIDAD_FIJA` y corre al tocar y al arrancar. Medido por toque: tres
+  toques dejan BAJOS (lienzo 758 → 530 → 446 px) y al recargar arranca en BAJOS.
+- **Personajes**: antes, un cilindro o una caja rígidos por hueso (se abrían y se metían en rodillas y codos). Ahora un `SkinnedMesh` por
+  personaje con 13 huesos en jerarquía plana (hijos del grupo): cada pieza se modela en el marco de su hueso y los tubos del cuerpo
+  mezclan dos huesos en las puntas (cadera, rodilla, hombro, codo). Perfiles de sección elíptica: muslo que se afina, rodilla,
+  pantorrilla que sale atrás, tobillo adentro del borceguí con suela y taco. Equipo sobre el de CS2 (referencia: el agente del video
+  de abajo): CT con casco con rieles y protectores de oído, máscara antigás con filtro / antiparras / cara con barba, portaplacas con
+  tres cargadores, radio, parche y rodilleras; T con pasamontañas, pañuelo o bandana y gorro, chaleco de pecho, campera o buzo, jeans
+  y zapatillas. ~2.500–3.100 triángulos por personaje.
+- **Mocap («deepmotion»)**: la sesión anterior había dejado la cadena entera (MediaPipe con el modelo pesado, `bucle.py`, `entregar.py`
+  en `/tmp/claude-0/cs/gen/crudo/C`) y el video «CS2全动作演示（第三人称）» (bilibili BV1WvER6kErG) ya pasado por MediaPipe. Se sacaron
+  **correr** (cuadros 240–395) y **caminar agachado** (510–690) de las animaciones del propio CS2; con los que había (caminar táctico,
+  atrás, quieto, salto) son 6 clips en el juego. **Ninguno entraba al HTML**: el índice es `{clips:{…}}` y el armador esperaba una
+  lista. Las piernas y la cadera salen del clip (reubicado al largo de pierna, girado hacia donde camina, zancada estirada con la
+  velocidad y rodilla por IK con el polo del clip); el tronco mezcla la inclinación del clip con el apunte; los brazos siguen al arma.
+- Trampas del mocap: MediaPipe **cambió izquierda y derecha** en agachado (la cadera izquierda del lado derecho) y la carrera tenía las
+  piernas **corridas 21 cm** de costado: al cargar se cambian los nombres y se centran rodillas y tobillos. `quieto` estaba marcado
+  «no bueno» por el rifle cruzado; sus piernas sirven (sin él, el parado caía al respaldo con los pies juntos). Con la zancada estirada
+  ×2,3 la carrera parecía un split: ×1,55 y más cadencia.
+- **Muerte**: el cuerpo caía hacia el que disparaba (signo del giro) y quedaba medio hundido en el piso: +ang y se levanta el grosor de
+  la espalda.
+- Trampa: dos `const` globales con el mismo nombre en dos partes (`_mA` ya estaba en c4x) rompen el script entero sin más aviso que un
+  `pageerror`.
+
+Medido: capturas de los seis personajes y de caminar, correr, agachado, atrás, de costado, en el aire y muriendo; partidas simuladas
+(deathmatch en ALMACÉN, bomba en DESIERTO) sin errores; toques, ESTILO, menús en 360×680, respaldo y guardia, sin red e idiomas como
+antes. Banco sin GPU: 12–16 cuadros por segundo, como antes.
+

@@ -54,7 +54,12 @@ def leer(nombre):
         return []
     with open(p) as f:
         d = json.load(f)
-    return d if isinstance(d, list) else d.get('items', [])
+    if isinstance(d, list):
+        return d
+    # el índice del mocap es {clips: {id: {...}}}: se pasa a lista (antes no entraba ningún clip al HTML)
+    if isinstance(d.get('clips'), dict):
+        return [dict(v, id=k, bueno=str(v.get('bueno', True)) != 'False') for k, v in d['clips'].items()]
+    return d.get('items', [])
 
 
 def armar(solo=None, sin=False, salida=SALIDA):

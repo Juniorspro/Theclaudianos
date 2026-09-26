@@ -33,6 +33,8 @@ addEventListener('resize', ()=>{ escalaUI(); setTimeout(medir, 60); });
 /* calidad automática por el intervalo real entre cuadros (lo que cuesta es pintar píxeles, no el JS) */
 const COSTO = {s:0, n:0, ult:0, desde:0};
 const CALIDAD_FIJA = {altos:1, medios:0.7, bajos:0.45};
+/* GRÁFICOS de AJUSTES: auto (lo aprendido) o un valor fijo; se aplica al arrancar y al tocar el botón */
+function aplicarGraficos(){ const g = G.graficos || 'auto'; CALIDAD = g === 'auto' ? (G.calAuto || 0.8) : (CALIDAD_FIJA[g] || 0.8); COSTO.s = COSTO.n = 0; medir(); }
 function fijarCalidad(c, aprendida){ CALIDAD = c; medir(); if(aprendida){ G.calAuto = +c.toFixed(2); guardar(); } }
 function costoDeNuevo(){ COSTO.s = COSTO.n = 0; COSTO.ult = 0; COSTO.desde = performance.now() + 1200; }
 function medirCosto(ts){

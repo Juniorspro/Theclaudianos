@@ -88,7 +88,7 @@ function menusIniciar(){
   clic('btAjustes', ()=>{ armarAjustes(); MENU.volverAj = 'capaTitulo'; mostrar('capaAjustes'); }); clic('btPausaAjustes', ()=>{ armarAjustes(); MENU.volverAj = 'capaPausa'; mostrar('capaAjustes'); });
   clic('btAjVolver', ()=>{ guardar(); mostrar(MENU.volverAj || 'capaTitulo'); });
   clic('btSens', ()=>{ G.sens = G.sens >= 10 ? 1 : G.sens + 1; armarAjustes(); }); clic('btEstilo', ()=>{ G.estilo = G.estilo === 'tinta' ? 'normal' : 'tinta'; armarAjustes(); });
-  clic('btGraf', ()=>{ const o = ['auto', 'altos', 'medios', 'bajos'], i = o.indexOf(G.graficos || 'auto'); G.graficos = o[(i + 1) % 4]; if(window.fijarCalidad) fijarCalidad(G.graficos); armarAjustes(); });
+  clic('btGraf', ()=>{ const o = ['auto', 'altos', 'medios', 'bajos'], i = o.indexOf(G.graficos || 'auto'); G.graficos = o[(i + 1) % 4]; aplicarGraficos(); armarAjustes(); });
   clic('btSonido', ()=>{ volumenGeneral(G.sonido === false); armarAjustes(); }); clic('btMiraCol', ()=>{ const o = ['verde', 'amarillo', 'blanco', 'cian', 'rosa'], i = o.indexOf(G.mira || 'verde'); G.mira = o[(i + 1) % o.length]; armarAjustes(); });
   clic('btSeguir', ()=>{ J.pausa = false; mostrar(null); }); clic('btSalir', ()=>{ J.partida = false; J.pausa = false; for(const a of ACTORES.slice()) quitarActor(a); mostrar('capaTitulo'); if(window.musica) musica('mus_menu'); });
   clic('btFinOtra', ()=>{ armarJugar(); mostrar('capaJugar'); }); clic('btFinMenu', ()=>{ for(const a of ACTORES.slice()) quitarActor(a); mostrar('capaTitulo'); if(window.musica) musica('mus_menu'); });

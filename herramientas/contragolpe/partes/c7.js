@@ -169,7 +169,7 @@ window.__C = {J, MUNDO, CARAS, OBRA:()=> OBRA, LUZ, MATS, cam, escena, ren,
   autopiloto(v){ J.autopiloto = v; },
   listo:false};
 (async ()=>{
-  medir(); ponerCielo('cielo_nuclear', {az:40, elev:55});
+  aplicarGraficos(); ponerCielo('cielo_nuclear', {az:40, elev:55});
   const t0 = performance.now();
   /* ?mapa=<id> monta uno de MAPAS (c3m.js); ?vitrina=<nombre> llama a window['vitrina_' + nombre]; ?partida=<modo> arranca con bots;
      sin nada: portada con el mapa de fondo */
