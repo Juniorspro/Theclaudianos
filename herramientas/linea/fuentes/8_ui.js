@@ -153,8 +153,9 @@ function dibujarPiso(g){
   for(const e of ENEM){ if(e.muerto) continue; g.drawImage(SOMBRA, Math.round(e.x) - 6, Math.round(e.y) - 5);
     if(e.derribado > 0){ if(!e.imgCaido) e.imgCaido = hacerCadaver(e.T.ropa, e.T.cabeza || 'pelo', 'golpe', Math.floor(e.x*3 + e.y));
       g.save(); g.translate(Math.round(e.x), Math.round(e.y)); g.rotate(q64(e.caeAng || 0)); g.drawImage(e.imgCaido, -15, -13); g.restore(); estrellitas(g, e.x, e.y - 3, t*1.4 + e.x); continue; }
-    if(e.T.perro){ const fr = e.moviendo ? Math.floor(e.anim*12) % 4 : 0; g.save(); g.translate(Math.round(e.x), Math.round(e.y)); g.rotate(q64(e.ang)); g.drawImage(ARTE.perro[fr], -12, -8); g.restore(); continue; }
-    persona(g, e.x, e.y, e.ang, e.ang, e.T.ropa, e.T.cabeza, e.arma, e.moviendo ? 1 + Math.floor(e.anim*8) % 4 : 0, e.golpeT, e.lado || 1);
+    if(e.T.perro){ if(e.carga > 0 && Math.floor(J.tr*16) % 2) texto(g, '!', e.x, e.y - 16, 'rojo'); const fr = e.moviendo ? Math.floor(e.anim*12) % 4 : 0; g.save(); g.translate(Math.round(e.x), Math.round(e.y)); g.rotate(q64(e.ang)); g.drawImage(ARTE.perro[fr], -12, -8); g.restore(); continue; }
+    persona(g, e.x, e.y, e.ang, e.ang, e.T.ropa, e.T.cabeza, e.arma, e.moviendo ? 1 + Math.floor(e.anim*8) % 4 : 0, e.golpeT, e.lado || 1, e.carga > 0);
+    if(e.carga > 0 && Math.floor(J.tr*16) % 2) texto(g, '!', e.x, e.y - 20, 'rojo');
     /* el aviso de que te vio: un signo que late arriba */
     if(e.estado === 'alerta' && e.reac < 0.5 && !JUG.muerto){ texto(g, '!', e.x, e.y - 20, 'rojo'); } }
   if(!JUG.muerto){ g.drawImage(SOMBRA, Math.round(JUG.x) - 6, Math.round(JUG.y) - 5);
@@ -181,15 +182,15 @@ function dibujarPiso(g){
   g.setTransform(1, 0, 0, 1, 0, 0);
   if(J.fundido > 0){ g.fillStyle = 'rgba(8,2,14,' + J.fundido.toFixed(2) + ')'; g.fillRect(0, 0, W, H); }
 }
-function persona(g, x, y, angP, ang, ropa, cabeza, arma, fr, golpeT, lado){
+function persona(g, x, y, angP, ang, ropa, cabeza, arma, fr, golpeT, lado, carga){
   const X = Math.round(x), Y = Math.round(y), A = arma && ARMAS[arma];
   g.save(); g.translate(X, Y); g.rotate(q64(angP)); g.drawImage(ARTE.piernas[ropa][fr], -10, -10); g.restore();
   g.save(); g.translate(X, Y); g.rotate(q64(ang));
-  const pose = !A ? (golpeT > 0 ? 'golpe' : 'puno') : (arma === 'escopeta' || arma === 'fusil') ? 'dos' : 'uno';
+  const pose = !A ? (golpeT > 0 || carga ? 'golpe' : 'puno') : (arma === 'escopeta' || arma === 'fusil') ? 'dos' : 'uno';
   if(pose === 'golpe' && lado < 0) g.scale(1, -1);
   g.drawImage(ARTE.torso[ropa][pose], -11, -12);
   if(A){ const im = ARTE.arma[arma], hx = pose === 'dos' ? 7 : 6, hy = pose === 'dos' ? 1 : 3.5;
-    let ga = 0; if(A.melee) ga = golpeT > 0 ? lerp(-1.5, 1.2, 1 - golpeT/0.2)*lado : -0.6;
+    let ga = 0; if(A.melee) ga = carga ? -2.1 : golpeT > 0 ? lerp(-1.5, 1.2, 1 - golpeT/0.2)*lado : -0.6;
     g.save(); g.translate(hx, hy); g.rotate(ga); g.drawImage(im, -2, -4); g.restore(); }
   g.drawImage(ARTE.cabeza[cabeza] || ARTE.cabeza.pelo, -7, -7);
   g.restore();
@@ -218,6 +219,7 @@ function dibujarHUD(g){
   textoOnda(g, sp, 8 + lienzoTexto(sp, 'rosa').width, 6, 'rosa', 2, 1, t*3);
   if(J.combo > 1){ const cs = tr('{0}× COMBO', J.combo); textoOnda(g, cs, 8 + lienzoTexto(cs, 'cian').width/2, 26, 'cian', 1, 1.5, t*6);
     g.fillStyle = K; g.fillRect(8, 38, 52, 3); g.fillStyle = '#5ae8ff'; g.fillRect(8, 38, Math.round(52*lim(J.comboT/3.2, 0, 1)), 3); }
+  const vm = vidaMax(); if(vm > 1) for(let i = 0; i < vm; i++){ const x = 8 + i*10, y = J.combo > 1 ? 44 : 28, c = i < JUG.vida ? '#ff3a5a' : '#3a1a24'; rect(g, x, y + 1, 7, 3, K); rect(g, x + 1, y, 2, 1, c); rect(g, x + 4, y, 2, 1, c); rect(g, x, y + 1, 7, 2, c); rect(g, x + 1, y + 3, 5, 1, c); rect(g, x + 2, y + 4, 3, 1, c); px(g, x + 3, y + 5, c); }
   /* el arma y las balas arriba a la derecha */
   const A = JUG.arma && ARMAS[JUG.arma], nom = A ? tr(A.nombre) : tr('MANOS');
   texto(g, nom, W - 8, 6, 'blanco', {der:true});

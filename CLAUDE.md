@@ -1624,3 +1624,63 @@ Medido con dedos de verdad en la pantalla girada (`banco/golpe.js`):
 - sin nadie cerca, pega al aire.
 Además el bot terminó los 5 capítulos, las palancas y el botón de acción siguen andando, `TR_FALTA` está vacío en los dos
 idiomas y el fuzz de 300 toques dio sin errores.
+
+### 2026-09-26 (at) — LÍNEA CALIENTE: quién pega primero, como en el original, y modo fácil
+**Pedido textual:** «Porfavor agrega un modo fácil, lo enemigos pegan antes que el jugador, no es tal como en el juego original,
+investiga un poco mas».
+
+**Lo que hace el original** (análisis de la IA de *Hotline Miami*, reseña de CritPoints, wiki y foros de Steam):
+- el jugador gana si **pega en la ventana antes de que el enemigo reaccione**;
+- los que ven al jugador de lejos, de costado o de espaldas tardan más en darse cuenta;
+- los de fuego tiran un rato después de verte, y los de mano atacan «poco después de entrar en rango», no al llegar;
+- las armas cuerpo a cuerpo del jugador tienen un barrido ancho;
+- **al caído no se lo mata a tiros**: se lo remata.
+
+**Lo que pasaba acá, medido antes de tocar nada** (`banco/duelo.js`, 30 duelos por fila, el pibe quieto que pega con
+0,2 s de reflejo humano cuando lo tiene al alcance):
+- piña contra piña: el pibe **perdía 22 de 30**, porque la patota pegaba en el mismo cuadro en que llegaba;
+- bate contra bate perdía 13 de 30, y contra cuchillo, 19 de 30;
+- los de pistola tiraban a los 0,50 s siempre, vieran como vieran.
+
+**Qué se cambió:**
+- **La patota carga el golpe**: llega, se para, levanta el arma (se ve atrás y titila un «!» rojo) y recién a los 0,3 s
+  baja el golpe (el perro, 0,22 s). Si en ese rato la voltean o la matan, no pega.
+- **El alcance del enemigo es el 85% del arma**, y **el pibe se tira 6 px** hacia el que golpea, así llega un poco más
+  lejos que ellos.
+- **La reacción depende de cómo te ven**: de 0,3 a 0,8 s, según la distancia, si estás en el borde del cono y un poco
+  de azar. El Patrón reacciona al 60%.
+- **Las balas pasan por arriba del que está en el piso**: al caído hay que rematarlo.
+
+**MODO FÁCIL** (OPCIONES → DIFICULTAD, o el botón arriba a la derecha del menú principal; queda guardado):
+- la patota reacciona 1,8 veces más lento y carga el golpe 1,7 veces más;
+- ve 160 px en vez de 210, con un cono de 0,85 rad en vez de 1,05;
+- sus balas van a 300 en vez de 430 y salen más torcidas;
+- **el pibe aguanta un golpe más**, con corazones en el HUD;
+- la nota del resultado dice «MODO FÁCIL».
+Todo lo que cambia está junto en `DIF()`.
+
+Medido después con `duelo.js`:
+
+| duelo | normal | fácil |
+|---|---|---|
+| piña contra piña, reflejo 0,2 s | 30/30 | 30/30 |
+| piña contra bate, reflejo 0,2 s | 30/30 | 30/30 |
+| bate contra bate, reflejo 0,25 s | 30/30 | 30/30 |
+| bate contra cuchillo, reflejo 0,3 s | 30/30 | 30/30 |
+| piña contra piña, **reflejo lento 0,45 s** | 5/30 | 30/30 |
+| bate contra bate, **reflejo lento 0,45 s** | 10/30 | 30/30 |
+| primer tiro de pistola (mín / mediana / máx) | 0,47 / 0,58 / 0,67 s | 0,88 / 1,00 / 1,17 s |
+
+En normal gana el que reacciona rápido y pierde el que duda, como en el original; en fácil hay margen.
+
+Además:
+- el bot mortal **terminó el prólogo y los capítulos 1 y 2 en fácil sin morir ni una vez**; en normal, del 1 y el 2 no salió
+  en 8 minutos;
+- el bot invencible termina los 5 capítulos;
+- GOLPEAR, las palancas y el botón de acción siguen andando;
+- `TR_FALTA` está vacío en inglés y portugués, y el fuzz de 300 toques dio sin errores.
+
+Lo que costó una vuelta:
+- **Sin el envión, piña contra bate seguía perdiendo 21 de 30**: el del bate se paraba justo afuera del alcance del puño.
+- **El bot quedó trabado en el sótano cambiando un fusil vacío por una pistola vacía**, una y otra vez. Era el bot, no el
+  juego: ahora sólo agarra armas con balas o de mano.

@@ -14,9 +14,9 @@ function guardar(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catc
 const K = '#0a0610';
 
 /* ================================================================ ajustes */
-const AJ = Object.assign({idioma:null, visual:'alta', musica:0.8, efectos:1, vibrar:true, censura:false, balanceo:true, visto:false}, leer('linea.ajustes', {}));
+const AJ = Object.assign({idioma:null, visual:'alta', musica:0.8, efectos:1, vibrar:true, censura:false, balanceo:true, visto:false, dificultad:'normal'}, leer('linea.ajustes', {}));
 if(!['es', 'en', 'pt'].includes(AJ.idioma)){ const l = (navigator.language || 'es').slice(0, 2).toLowerCase(); AJ.idioma = l === 'pt' ? 'pt' : l === 'en' ? 'en' : 'es'; }
-if(!['alta', 'baja'].includes(AJ.visual)) AJ.visual = 'alta'; AJ.censura = !!AJ.censura; AJ.balanceo = AJ.balanceo !== false;
+if(!['alta', 'baja'].includes(AJ.visual)) AJ.visual = 'alta'; AJ.censura = !!AJ.censura; if(!['normal', 'facil'].includes(AJ.dificultad)) AJ.dificultad = 'normal'; AJ.balanceo = AJ.balanceo !== false;
 AJ.musica = lim(+AJ.musica || 0, 0, 1); AJ.efectos = lim(+AJ.efectos || 0, 0, 1);
 function vibrar(ms){ if(AJ.vibrar && navigator.vibrate) try { navigator.vibrate(ms); } catch(e){} }
 

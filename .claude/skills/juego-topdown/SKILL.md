@@ -43,6 +43,15 @@ vive en `/tmp/ui/linea/` (bot.js, pal.js, idi.js, fuzz.js, fotos.js, cine.js, qu
 - Un campo de distancias hacia el jugador cada 0,2 s, compartido; los tiros hacen ruido y mandan a buscar con su campo.
 - La patota abre puertas despacio; **sólo la puerta que empujó el jugador voltea** (`deJug`).
 
+## Quién pega primero (como en el original)
+- En *Hotline Miami* el jugador gana si reacciona en la ventana antes de que el enemigo pegue: los de lejos, de costado
+  o de espaldas tardan más en darse cuenta, los de fuego tiran un rato después de verte y los de mano **llegan, se paran
+  y recién ahí bajan el golpe**. Las balas pasan por arriba del que está en el piso: al caído se lo remata.
+- La primera versión pegaba en el mismo cuadro en que el enemigo llegaba: con 0,2 s de reflejo el jugador perdía 22 de
+  30 duelos a puño limpio. Con carga de 0,3 s visible (arma levantada y «!»), alcance enemigo 0,85 del arma y envión del
+  jugador de 6 px, gana 30 de 30 con 0,2 s y pierde con 0,45 s. Se mide con `banco/duelo.js`, no a ojo.
+- `DIF()` junta todo lo que cambia la dificultad (reacción, carga, vista, cono, bala, dispersión, vida extra).
+
 ## Controles
 - Izquierda fija: camina. Derecha fija: apunta (la mira se engancha al de menor ángulo que se ve) y **pasada la raya
   de adentro pega o tira**. Botón arriba de la derecha: rematar / agarrar / tirar según lo que haya. Tocar a alguien

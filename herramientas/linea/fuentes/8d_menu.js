@@ -122,6 +122,9 @@ const PANTALLAS = {
     boton(g, 'masc', x, y, w, 21, tr('MÁSCARAS'), {fn:() => { UI.elegir = null; irA('mascaras'); }}); y += dy;
     boton(g, 'opc', x, y, w, 21, tr('OPCIONES'), {fn:() => { UI.desde = 'principal'; irA('opciones'); }});
     if(AJ.censura) texto(g, tr('MODO CENSURA'), W - 8, H - 14, 'cian', {der:true});
+    /* la dificultad se cambia desde acá con un toque */
+    boton(g, 'dif', W - 96, 6, 88, 18, AJ.dificultad === 'facil' ? tr('FÁCIL') : tr('NORMAL'), {color:AJ.dificultad === 'facil' ? '#1a6a48' : '#2a1a48', fn:() => { AJ.dificultad = AJ.dificultad === 'facil' ? 'normal' : 'facil'; guardar('linea.ajustes', AJ); }});
+    texto(g, tr('DIFICULTAD'), W - 52, 27, 'gris');
     texto(g, 'BETA 0.9', 8, H - 14, 'gris', {izq:true});
   },
   capitulos(g){
@@ -166,6 +169,7 @@ const PANTALLAS = {
       [tr('IDIOMA'), nIdi[IDIOMA], d => { ponerIdioma(dist[(dist.indexOf(IDIOMA) + d + 3) % 3]); _LOGO = null; }],
       [tr('MÚSICA'), Math.round(AJ.musica*10) + '/10', d => { AJ.musica = lim(Math.round(AJ.musica*10 + d)/10, 0, 1); SON.volumen(); }],
       [tr('EFECTOS'), Math.round(AJ.efectos*10) + '/10', d => { AJ.efectos = lim(Math.round(AJ.efectos*10 + d)/10, 0, 1); SON.volumen(); SON.fx('pina'); }],
+      [tr('DIFICULTAD'), AJ.dificultad === 'facil' ? tr('FÁCIL') : tr('NORMAL'), () => { AJ.dificultad = AJ.dificultad === 'facil' ? 'normal' : 'facil'; if(J.modo === 'juego' && !JUG.muerto) JUG.vida = Math.min(JUG.vida, vidaMax()); }],
       [tr('MODO CENSURA'), onoff(AJ.censura), () => { AJ.censura = !AJ.censura; }],
       [tr('BALANCEO DE CÁMARA'), onoff(AJ.balanceo), () => { AJ.balanceo = !AJ.balanceo; }],
       [tr('EFECTOS VISUALES'), AJ.visual === 'alta' ? tr('ALTOS') : tr('BAJOS'), () => { AJ.visual = AJ.visual === 'alta' ? 'baja' : 'alta'; }],
@@ -189,7 +193,7 @@ const PANTALLAS = {
   },
   resultado(g){
     const R2 = UI.res, t = UI.t; g.fillStyle = 'rgba(6,2,12,0.78)'; g.fillRect(0, 0, W, H);
-    const M = META_CAP[J.cap.id]; textoOnda(g, tr(M.nombre), W/2, 6, 'rosa', 2, 1, J.tr*4);
+    const M = META_CAP[J.cap.id]; textoOnda(g, tr(M.nombre), W/2, 6, 'rosa', 2, 1, J.tr*4); if(R2.facil) texto(g, tr('MODO FÁCIL'), W - 8, 8, 'verde', {der:true});
     const x = Math.round(W*0.12), w = Math.round(W*0.5);
     R2.filas.forEach(([nom, val, pts], i) => { const ti = 0.5 + i*0.45; if(t < ti) return; if(!R2.son[i]){ R2.son[i] = true; SON.fx('puntos', {n:i}); }
       const y = 34 + i*15; texto(g, nom, x, y, 'blanco', {izq:true}); texto(g, val, x + w - 60, y, 'cian', {der:true}); texto(g, pts, x + w, y, 'oro', {der:true}); });
@@ -245,7 +249,7 @@ function terminarCapitulo(){
   PROG.caps[J.cap.id] = {puntos:Math.max(suma, ant ? ant.puntos : 0), nota:ant && orden.indexOf(ant.nota) > orden.indexOf(nota) ? ant.nota : nota};
   PROG.abierto = Math.max(PROG.abierto, Math.min(CAPITULOS.length - 1, J.capIdx + 1)); guardarProg();
   UI.res = {filas:[[tr('BAJAS'), String(J.bajas), String(J.puntos)], [tr('COMBO MÁXIMO'), '×' + J.maxCombo, '+' + bCombo], [tr('ARMAS DISTINTAS'), String(J.armasUsadas.size), '+' + bVar], [tr('TIEMPO'), mm + ':' + ss, '+' + bTiempo]],
-    total:suma, nota, record, son:[], sello:false};
+    total:suma, nota, record, son:[], sello:false, facil:AJ.dificultad === 'facil'};
   SON.musica('puntaje'); SON.ambiente(null); SON.intensidad(0); J.pausa = false; UI.p = 'resultado'; UI.t = 0;
 }
 function seguirTrasResultado(){

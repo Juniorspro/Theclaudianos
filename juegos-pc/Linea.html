@@ -79,7 +79,8 @@ const FRASES = [
   ['BAJAS', 'KILLS', 'ABATES'], ['COMBO MÁXIMO', 'MAX COMBO', 'COMBO MÁXIMO'], ['ARMAS DISTINTAS', 'WEAPONS USED', 'ARMAS DIFERENTES'], ['TIEMPO', 'TIME', 'TEMPO'],
   ['PALANCA IZQUIERDA: CAMINÁ', 'LEFT STICK: WALK', 'ALAVANCA ESQUERDA: ANDE'],
   ['APUNTÁ CON LA DERECHA Y PEGÁ CON GOLPEAR', 'AIM WITH THE RIGHT STICK, TAP HIT TO ATTACK', 'MIRE COM A DIREITA E TOQUE EM BATER'],
-  ['GOLPEAR', 'HIT', 'BATER'], ['DISPARAR', 'SHOOT', 'ATIRAR'],
+  ['GOLPEAR', 'HIT', 'BATER'], ['DIFICULTAD', 'DIFFICULTY', 'DIFICULDADE'], ['NORMAL', 'NORMAL', 'NORMAL'], ['FÁCIL', 'EASY', 'FÁCIL'],
+  ['MODO FÁCIL', 'EASY MODE', 'MODO FÁCIL'], ['¡AGUANTASTE!', 'YOU TOOK IT!', 'VOCÊ AGUENTOU!'], ['DISPARAR', 'SHOOT', 'ATIRAR'],
   ['LA PIÑA VOLTEA. ¡REMATALO CON EL BOTÓN!', 'PUNCHES KNOCK DOWN. EXECUTE WITH THE BUTTON!', 'O SOCO DERRUBA. EXECUTE COM O BOTÃO!'],
   ['AGARRÁ UN ARMA DEL PISO CON EL BOTÓN', 'PICK UP A WEAPON WITH THE BUTTON', 'PEGUE UMA ARMA DO CHÃO COM O BOTÃO'],
   ['ABRÍ LAS PUERTAS DE GOLPE: VOLTEAN', 'SLAM DOORS OPEN: THEY KNOCK DOWN', 'ABRA AS PORTAS COM TUDO: ELAS DERRUBAM'],
@@ -137,9 +138,9 @@ function guardar(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catc
 const K = '#0a0610';
 
 /* ================================================================ ajustes */
-const AJ = Object.assign({idioma:null, visual:'alta', musica:0.8, efectos:1, vibrar:true, censura:false, balanceo:true, visto:false}, leer('linea.ajustes', {}));
+const AJ = Object.assign({idioma:null, visual:'alta', musica:0.8, efectos:1, vibrar:true, censura:false, balanceo:true, visto:false, dificultad:'normal'}, leer('linea.ajustes', {}));
 if(!['es', 'en', 'pt'].includes(AJ.idioma)){ const l = (navigator.language || 'es').slice(0, 2).toLowerCase(); AJ.idioma = l === 'pt' ? 'pt' : l === 'en' ? 'en' : 'es'; }
-if(!['alta', 'baja'].includes(AJ.visual)) AJ.visual = 'alta'; AJ.censura = !!AJ.censura; AJ.balanceo = AJ.balanceo !== false;
+if(!['alta', 'baja'].includes(AJ.visual)) AJ.visual = 'alta'; AJ.censura = !!AJ.censura; if(!['normal', 'facil'].includes(AJ.dificultad)) AJ.dificultad = 'normal'; AJ.balanceo = AJ.balanceo !== false;
 AJ.musica = lim(+AJ.musica || 0, 0, 1); AJ.efectos = lim(+AJ.efectos || 0, 0, 1);
 function vibrar(ms){ if(AJ.vibrar && navigator.vibrate) try { navigator.vibrate(ms); } catch(e){} }
 
@@ -1730,6 +1731,9 @@ const TIPOS = {
   perro:  {vel:150, ronda:50, ropa:'perro', vida:1, puntos:300, perro:true}
 };
 /* lo que suena, con la censura puesta suena a dibujito */
+/* la dificultad: en fácil la patota tarda más en reaccionar y en pegar, ve menos, tira más lento y torcido, y el pibe aguanta un golpe */
+function DIF(){ return AJ.dificultad === 'facil' ? {reac:1.8, carga:1.7, bala:300, disp:2.2, vista:160, cono:0.85, vida:1} : {reac:1, carga:1, bala:430, disp:1.3, vista:210, cono:1.05, vida:0}; }
+function vidaMax(){ return (PERKS[JUG.mascara].vida || 1) + DIF().vida; }
 function fx(nom, o){ if(AJ.censura){ nom = {golpe:'bonk', muere:'pop', rematar:'boing', derribo:'noqueado', grito:'estrellitas', perro_muere:'pop', jugador_muere:'noqueado'}[nom] || nom; } SON.fx(nom, o); }
 function pan(x){ return lim((x - JUG.x)/200, -1, 1); }
 
@@ -1741,7 +1745,7 @@ function cargarPiso(i, desde){
   BALAS = []; PARTS = []; RUIDOS = []; J.textos = [];
   const p = desde === 'baja' ? def.llegaBaja || def.inicio : desde === 'sube' ? def.llegaSube || def.inicio : def.inicio;
   Object.assign(JUG, {x:p[0]*CEL + 4, y:p[1]*CEL + 4, vx:0, vy:0, muerto:false, remate:null, invul:0.6, golpeT:0, cd:0});
-  JUG.vida = (PERKS[JUG.mascara].vida || 1);
+  JUG.vida = vidaMax();
   J.limpio = ENEM.every(e => e.muerto); J.muerto = 0; SON.filtroMuerte(false);
   CAMARA.x = JUG.x; CAMARA.y = JUG.y; J.campoT = 0;
 }
@@ -1799,9 +1803,10 @@ function blancoDir(ax, ay){
 function atacar(){
   const A = JUG.arma ? ARMAS[JUG.arma] : null;
   if(!A || A.melee){ JUG.cd = A ? A.cad : 0.32; JUG.golpeT = 0.2; JUG.lado = -(JUG.lado || 1); fx(A ? A.sonido : 'pina', {x:0});
-    const alc = (A ? A.alcance : 11) + R_ENEM, arco = A ? A.arco*0.5 : 0.7;
+    const alc = (A ? A.alcance : 11) + R_ENEM + 4, arco = A ? A.arco*0.5 : 0.7;
     const vict = ENEM.filter(e => !e.muerto && Math.hypot(e.x - JUG.x, e.y - JUG.y) < alc + (e.t === 'perro' ? 3 : 0)).filter(e => { let da = Math.abs(Math.atan2(e.y - JUG.y, e.x - JUG.x) - JUG.ang) % 6.2832; if(da > Math.PI) da = 6.2832 - da; return da < arco + 0.35 || Math.hypot(e.x - JUG.x, e.y - JUG.y) < R_ENEM*2 + 2; })
       .filter(e => seVe(JUG.x, JUG.y, e.x, e.y));
+    if(vict[0]){ const v = vict[0], dd = Math.hypot(v.x - JUG.x, v.y - JUG.y); if(dd > R_ENEM + R_JUG + 1) moverCirculo(JUG, (v.x - JUG.x)/dd*Math.min(6, dd - R_ENEM - R_JUG), (v.y - JUG.y)/dd*Math.min(6, dd - R_ENEM - R_JUG), R_JUG); }
     for(const e of vict.slice(0, A && A.corta ? 3 : 1)){
       const dir = Math.atan2(e.y - JUG.y, e.x - JUG.x);
       if(e.derribado > 0 && !A){ continue; }
@@ -1852,7 +1857,7 @@ function derribar(e, puerta, dir){
   if(puerta && PERKS[JUG.mascara].puertaMata){ matar(e, 'puerta', Math.atan2(e.y - puerta.hy, e.x - puerta.hx)); return; }
   if(e.T.perro){ matar(e, puerta ? 'puerta' : 'pina', dir || 0); return; }
   if(e.T.jefe){ empujar(e, dir || 0, 40); return; }
-  e.derribado = 2.8; e.estado = 'alerta'; e.reac = 0; fx(puerta ? 'puerta_golpe' : 'derribo', {x:pan(e.x)}); CAMARA.sacude = Math.max(CAMARA.sacude, 0.6);
+  e.derribado = 2.8; e.estado = 'alerta'; e.reac = 0; e.carga = 0; fx(puerta ? 'puerta_golpe' : 'derribo', {x:pan(e.x)}); CAMARA.sacude = Math.max(CAMARA.sacude, 0.6);
   if(e.arma){ ITEMS.push({k:e.arma, x:e.x, y:e.y, ang:rv(0, 6.28), balas:Math.min(e.balas, ARMAS[e.arma].balas || 0), vx:Math.cos(dir || 0)*80, vy:Math.sin(dir || 0)*80, vuela:0.25}); e.arma = null; }
   if(puerta){ puntos(e, 300, tr('¡PORTAZO!')); }
   e.caeAng = (dir || 0);
@@ -1894,20 +1899,25 @@ function pasoEnemigos(dt){
     if(e.derribado > 0){ e.derribado -= dt; if(e.derribado <= 0 && !e.rematado){ e.estado = 'alerta'; e.reac = 0.2; } continue; }
     const dx = JUG.x - e.x, dy = JUG.y - e.y, d = Math.hypot(dx, dy), aJ = Math.atan2(dy, dx);
     let da = Math.abs(aJ - e.ang) % 6.2832; if(da > Math.PI) da = 6.2832 - da;
-    const ve = !JUG.muerto && d < 210 && (da < 1.05 || d < 30 || e.estado === 'alerta') && seVe(e.x, e.y, JUG.x, JUG.y);
-    if(ve){ if(e.estado !== 'alerta'){ e.estado = 'alerta'; e.reac = 0; fx(e.T.perro ? 'perro' : 'alerta', {x:pan(e.x), vol:0.7}); } e.perdido = 0; e.reac += dt; e.visto = {x:JUG.x, y:JUG.y}; }
+    const D = DIF(), ve = !JUG.muerto && d < D.vista && (da < D.cono || d < 30 || e.estado === 'alerta') && seVe(e.x, e.y, JUG.x, JUG.y);
+    /* como en el original: el que te ve de lejos, de costado o de espaldas tarda más en reaccionar */
+    if(ve){ if(e.estado !== 'alerta'){ e.estado = 'alerta'; e.reac = 0; e.reacNec = D.reac*(e.T.jefe ? 0.6 : 1)*(0.3 + d/210*0.35 + (da > 0.6 ? 0.2 : 0) + rv(0, 0.15)); fx(e.T.perro ? 'perro' : 'alerta', {x:pan(e.x), vol:0.7}); } e.perdido = 0; e.reac += dt; e.visto = {x:JUG.x, y:JUG.y}; }
     else if(e.estado === 'alerta'){ e.perdido += dt; }
     const vel = e.estado === 'alerta' ? e.T.vel : e.T.ronda;
     let obj = null;
     if(e.estado === 'alerta'){
       const A = e.arma && ARMAS[e.arma], armado = A && !A.melee;
       if(armado && ve){ girarHacia(e, aJ, dt*9);
-        if(e.reac > (e.T.jefe ? 0.35 : 0.5) && e.cd <= 0 && Math.abs(angDif(e.ang, aJ)) < 0.25){ dispararEnemigo(e, A); }
+        if(e.reac > (e.reacNec || 0.5) && e.cd <= 0 && Math.abs(angDif(e.ang, aJ)) < 0.25){ dispararEnemigo(e, A); }
         if(d > 70) obj = pasoCampo(CAMPO_J, e.x, e.y); }
       else { obj = ve && d < 40 ? {x:JUG.x, y:JUG.y} : pasoCampo(CAMPO_J, e.x, e.y); if(ve) girarHacia(e, aJ, dt*10);
-        const alc = (A ? A.alcance : 10) + R_JUG + (e.T.perro ? 2 : 0);
-        if(ve && d < alc && e.cd <= 0){ e.cd = A ? A.cad + 0.25 : 0.5; e.golpeT = 0.2; fx(A ? A.sonido : e.T.perro ? 'perro' : 'pina', {x:pan(e.x)});
-          if(Math.abs(angDif(e.ang, aJ)) < 0.9) golpearJugador(aJ); } }
+        /* como en el original: llegar no es pegar. Se para, levanta (la carga se ve) y recién ahí baja el golpe;
+           su alcance es más corto que el del pibe, así el que reacciona a tiempo pega primero */
+        const alc = (A ? A.alcance*0.85 : 8) + R_JUG + (e.T.perro ? 2 : 0);
+        if(e.carga > 0){ obj = null; e.carga -= dt;
+          if(e.carga <= 0){ e.carga = 0; e.cd = (A ? A.cad : 0.5) + 0.35; e.golpeT = 0.2; fx(A ? A.sonido : e.T.perro ? 'perro' : 'pina', {x:pan(e.x)});
+            if(d < alc + 3 && Math.abs(angDif(e.ang, aJ)) < 0.8) golpearJugador(aJ); } }
+        else if(ve && d < alc + 2 && e.cd <= 0 && e.reac > 0.12*D.reac){ e.carga = e.cargaT = (e.T.perro ? 0.22 : A ? 0.34 : 0.3)*D.carga; obj = null; } }
       if(!ve && e.perdido > 7){ e.estado = 'busca'; e.busca = {x:e.visto ? e.visto.x : e.x, y:e.visto ? e.visto.y : e.y, f:campo(e.visto ? e.visto.x : e.x, e.visto ? e.visto.y : e.y), t:0}; } }
     else if(e.estado === 'busca' && e.busca){ const b = e.busca; obj = pasoCampo(b.f, e.x, e.y); if(!obj || Math.hypot(b.x - e.x, b.y - e.y) < 12){ b.t += dt; obj = null; e.ang += dt*1.4; if(b.t > 3){ e.estado = 'quieto'; e.ang0 = e.ang; } } }
     else if(e.estado === 'ronda' && e.ruta){ const q = e.ruta[e.ri]; if(Math.hypot(q.x - e.x, q.y - e.y) < 6){ e.ri = (e.ri + 1) % e.ruta.length; } obj = q; }
@@ -1933,11 +1943,11 @@ function girarHacia(e, a, k){ e.ang += angDif(e.ang, a)*Math.min(1, k); }
 function dispararEnemigo(e, A){
   if(e.balas <= 0){ e.arma = null; return; }
   e.cd = A.cad*(A.auto ? 1.6 : 2.2) + rv(0.05, 0.25); e.balas--;
-  for(let i = 0; i < A.perd; i++){ const a = e.ang + rv(-A.dispersion, A.dispersion)*1.3; BALAS.push({x:e.x, y:e.y, px:e.x, py:e.y, vx:Math.cos(a)*430, vy:Math.sin(a)*430, de:'ene', vida:0.8}); }
+  for(let i = 0; i < A.perd; i++){ const D = DIF(), a = e.ang + rv(-A.dispersion, A.dispersion)*D.disp; BALAS.push({x:e.x, y:e.y, px:e.x, py:e.y, vx:Math.cos(a)*D.bala, vy:Math.sin(a)*D.bala, de:'ene', vida:0.8}); }
   fx(A.sonido, {x:pan(e.x), vol:0.8}); fogonazo(e.x + Math.cos(e.ang)*9, e.y + Math.sin(e.ang)*9, e.ang);
 }
 function golpearJugador(dir){ if(JUG.invul > 0 || JUG.muerto || J.fin) return;
-  if(--JUG.vida > 0){ JUG.invul = 1.2; CAMARA.sacude = 1.6; POST.destello = 0.3; fx('golpe'); aviso(tr('¡LA MULITA AGUANTÓ!'), 1.5); return; }
+  if(--JUG.vida > 0){ JUG.invul = 1.2; CAMARA.sacude = 1.6; POST.destello = 0.3; fx('golpe'); aviso(JUG.mascara === 'mulita' ? tr('¡LA MULITA AGUANTÓ!') : tr('¡AGUANTASTE!'), 1.5); return; }
   morirJugador(dir); }
 function morirJugador(dir){
   JUG.muerto = true; J.muerto = 0.001; J.combo = 0; fx('jugador_muere'); SON.filtroMuerte(true); CAMARA.sacude = 2; POST.aber = 3; vibrar(80);
@@ -1954,7 +1964,7 @@ function pasoBalas(dt){
       else if(c === '#' || c === ' '){ muere = true; chispas(b.x - b.vx*0.004, b.y - b.vy*0.004, 4); fx('rebote', {x:pan(b.x), vol:0.3}); break; }
       for(const p of PISO.puertas){ const q = puntaPuerta(p); if(distSeg(b.x, b.y, p.hx, p.hy, q.x, q.y).d < 1.2){ muere = true; chispas(b.x, b.y, 3); break; } }
       if(muere) break;
-      if(b.de === 'jug'){ for(const e of ENEM){ if(e.muerto || e.derribado > 0 && e.T.perro) continue; if(Math.hypot(e.x - b.x, e.y - b.y) < R_ENEM + 2.2){ muere = true; const dir = Math.atan2(b.vy, b.vx); if(e.derribado > 0 || !e.T.gordo || --e.vida <= 0) matar(e, 'bala', dir); else { sangre(e.x, e.y, dir, 6); empujar(e, dir, 50); } break; } } }
+      if(b.de === 'jug'){ for(const e of ENEM){ if(e.muerto || e.derribado > 0) continue; if(Math.hypot(e.x - b.x, e.y - b.y) < R_ENEM + 2.2){ muere = true; const dir = Math.atan2(b.vy, b.vx); if(e.derribado > 0 || !e.T.gordo || --e.vida <= 0) matar(e, 'bala', dir); else { sangre(e.x, e.y, dir, 6); empujar(e, dir, 50); } break; } } }
       else if(!JUG.muerto && Math.hypot(JUG.x - b.x, JUG.y - b.y) < R_JUG){ muere = true; golpearJugador(Math.atan2(b.vy, b.vx)); } }
     if(muere) BALAS.splice(i, 1); }
   /* las armas tiradas vuelan, giran, voltean y caen */
@@ -2143,8 +2153,9 @@ function dibujarPiso(g){
   for(const e of ENEM){ if(e.muerto) continue; g.drawImage(SOMBRA, Math.round(e.x) - 6, Math.round(e.y) - 5);
     if(e.derribado > 0){ if(!e.imgCaido) e.imgCaido = hacerCadaver(e.T.ropa, e.T.cabeza || 'pelo', 'golpe', Math.floor(e.x*3 + e.y));
       g.save(); g.translate(Math.round(e.x), Math.round(e.y)); g.rotate(q64(e.caeAng || 0)); g.drawImage(e.imgCaido, -15, -13); g.restore(); estrellitas(g, e.x, e.y - 3, t*1.4 + e.x); continue; }
-    if(e.T.perro){ const fr = e.moviendo ? Math.floor(e.anim*12) % 4 : 0; g.save(); g.translate(Math.round(e.x), Math.round(e.y)); g.rotate(q64(e.ang)); g.drawImage(ARTE.perro[fr], -12, -8); g.restore(); continue; }
-    persona(g, e.x, e.y, e.ang, e.ang, e.T.ropa, e.T.cabeza, e.arma, e.moviendo ? 1 + Math.floor(e.anim*8) % 4 : 0, e.golpeT, e.lado || 1);
+    if(e.T.perro){ if(e.carga > 0 && Math.floor(J.tr*16) % 2) texto(g, '!', e.x, e.y - 16, 'rojo'); const fr = e.moviendo ? Math.floor(e.anim*12) % 4 : 0; g.save(); g.translate(Math.round(e.x), Math.round(e.y)); g.rotate(q64(e.ang)); g.drawImage(ARTE.perro[fr], -12, -8); g.restore(); continue; }
+    persona(g, e.x, e.y, e.ang, e.ang, e.T.ropa, e.T.cabeza, e.arma, e.moviendo ? 1 + Math.floor(e.anim*8) % 4 : 0, e.golpeT, e.lado || 1, e.carga > 0);
+    if(e.carga > 0 && Math.floor(J.tr*16) % 2) texto(g, '!', e.x, e.y - 20, 'rojo');
     /* el aviso de que te vio: un signo que late arriba */
     if(e.estado === 'alerta' && e.reac < 0.5 && !JUG.muerto){ texto(g, '!', e.x, e.y - 20, 'rojo'); } }
   if(!JUG.muerto){ g.drawImage(SOMBRA, Math.round(JUG.x) - 6, Math.round(JUG.y) - 5);
@@ -2171,15 +2182,15 @@ function dibujarPiso(g){
   g.setTransform(1, 0, 0, 1, 0, 0);
   if(J.fundido > 0){ g.fillStyle = 'rgba(8,2,14,' + J.fundido.toFixed(2) + ')'; g.fillRect(0, 0, W, H); }
 }
-function persona(g, x, y, angP, ang, ropa, cabeza, arma, fr, golpeT, lado){
+function persona(g, x, y, angP, ang, ropa, cabeza, arma, fr, golpeT, lado, carga){
   const X = Math.round(x), Y = Math.round(y), A = arma && ARMAS[arma];
   g.save(); g.translate(X, Y); g.rotate(q64(angP)); g.drawImage(ARTE.piernas[ropa][fr], -10, -10); g.restore();
   g.save(); g.translate(X, Y); g.rotate(q64(ang));
-  const pose = !A ? (golpeT > 0 ? 'golpe' : 'puno') : (arma === 'escopeta' || arma === 'fusil') ? 'dos' : 'uno';
+  const pose = !A ? (golpeT > 0 || carga ? 'golpe' : 'puno') : (arma === 'escopeta' || arma === 'fusil') ? 'dos' : 'uno';
   if(pose === 'golpe' && lado < 0) g.scale(1, -1);
   g.drawImage(ARTE.torso[ropa][pose], -11, -12);
   if(A){ const im = ARTE.arma[arma], hx = pose === 'dos' ? 7 : 6, hy = pose === 'dos' ? 1 : 3.5;
-    let ga = 0; if(A.melee) ga = golpeT > 0 ? lerp(-1.5, 1.2, 1 - golpeT/0.2)*lado : -0.6;
+    let ga = 0; if(A.melee) ga = carga ? -2.1 : golpeT > 0 ? lerp(-1.5, 1.2, 1 - golpeT/0.2)*lado : -0.6;
     g.save(); g.translate(hx, hy); g.rotate(ga); g.drawImage(im, -2, -4); g.restore(); }
   g.drawImage(ARTE.cabeza[cabeza] || ARTE.cabeza.pelo, -7, -7);
   g.restore();
@@ -2208,6 +2219,7 @@ function dibujarHUD(g){
   textoOnda(g, sp, 8 + lienzoTexto(sp, 'rosa').width, 6, 'rosa', 2, 1, t*3);
   if(J.combo > 1){ const cs = tr('{0}× COMBO', J.combo); textoOnda(g, cs, 8 + lienzoTexto(cs, 'cian').width/2, 26, 'cian', 1, 1.5, t*6);
     g.fillStyle = K; g.fillRect(8, 38, 52, 3); g.fillStyle = '#5ae8ff'; g.fillRect(8, 38, Math.round(52*lim(J.comboT/3.2, 0, 1)), 3); }
+  const vm = vidaMax(); if(vm > 1) for(let i = 0; i < vm; i++){ const x = 8 + i*10, y = J.combo > 1 ? 44 : 28, c = i < JUG.vida ? '#ff3a5a' : '#3a1a24'; rect(g, x, y + 1, 7, 3, K); rect(g, x + 1, y, 2, 1, c); rect(g, x + 4, y, 2, 1, c); rect(g, x, y + 1, 7, 2, c); rect(g, x + 1, y + 3, 5, 1, c); rect(g, x + 2, y + 4, 3, 1, c); px(g, x + 3, y + 5, c); }
   /* el arma y las balas arriba a la derecha */
   const A = JUG.arma && ARMAS[JUG.arma], nom = A ? tr(A.nombre) : tr('MANOS');
   texto(g, nom, W - 8, 6, 'blanco', {der:true});
@@ -2591,6 +2603,9 @@ const PANTALLAS = {
     boton(g, 'masc', x, y, w, 21, tr('MÁSCARAS'), {fn:() => { UI.elegir = null; irA('mascaras'); }}); y += dy;
     boton(g, 'opc', x, y, w, 21, tr('OPCIONES'), {fn:() => { UI.desde = 'principal'; irA('opciones'); }});
     if(AJ.censura) texto(g, tr('MODO CENSURA'), W - 8, H - 14, 'cian', {der:true});
+    /* la dificultad se cambia desde acá con un toque */
+    boton(g, 'dif', W - 96, 6, 88, 18, AJ.dificultad === 'facil' ? tr('FÁCIL') : tr('NORMAL'), {color:AJ.dificultad === 'facil' ? '#1a6a48' : '#2a1a48', fn:() => { AJ.dificultad = AJ.dificultad === 'facil' ? 'normal' : 'facil'; guardar('linea.ajustes', AJ); }});
+    texto(g, tr('DIFICULTAD'), W - 52, 27, 'gris');
     texto(g, 'BETA 0.9', 8, H - 14, 'gris', {izq:true});
   },
   capitulos(g){
@@ -2635,6 +2650,7 @@ const PANTALLAS = {
       [tr('IDIOMA'), nIdi[IDIOMA], d => { ponerIdioma(dist[(dist.indexOf(IDIOMA) + d + 3) % 3]); _LOGO = null; }],
       [tr('MÚSICA'), Math.round(AJ.musica*10) + '/10', d => { AJ.musica = lim(Math.round(AJ.musica*10 + d)/10, 0, 1); SON.volumen(); }],
       [tr('EFECTOS'), Math.round(AJ.efectos*10) + '/10', d => { AJ.efectos = lim(Math.round(AJ.efectos*10 + d)/10, 0, 1); SON.volumen(); SON.fx('pina'); }],
+      [tr('DIFICULTAD'), AJ.dificultad === 'facil' ? tr('FÁCIL') : tr('NORMAL'), () => { AJ.dificultad = AJ.dificultad === 'facil' ? 'normal' : 'facil'; if(J.modo === 'juego' && !JUG.muerto) JUG.vida = Math.min(JUG.vida, vidaMax()); }],
       [tr('MODO CENSURA'), onoff(AJ.censura), () => { AJ.censura = !AJ.censura; }],
       [tr('BALANCEO DE CÁMARA'), onoff(AJ.balanceo), () => { AJ.balanceo = !AJ.balanceo; }],
       [tr('EFECTOS VISUALES'), AJ.visual === 'alta' ? tr('ALTOS') : tr('BAJOS'), () => { AJ.visual = AJ.visual === 'alta' ? 'baja' : 'alta'; }],
@@ -2658,7 +2674,7 @@ const PANTALLAS = {
   },
   resultado(g){
     const R2 = UI.res, t = UI.t; g.fillStyle = 'rgba(6,2,12,0.78)'; g.fillRect(0, 0, W, H);
-    const M = META_CAP[J.cap.id]; textoOnda(g, tr(M.nombre), W/2, 6, 'rosa', 2, 1, J.tr*4);
+    const M = META_CAP[J.cap.id]; textoOnda(g, tr(M.nombre), W/2, 6, 'rosa', 2, 1, J.tr*4); if(R2.facil) texto(g, tr('MODO FÁCIL'), W - 8, 8, 'verde', {der:true});
     const x = Math.round(W*0.12), w = Math.round(W*0.5);
     R2.filas.forEach(([nom, val, pts], i) => { const ti = 0.5 + i*0.45; if(t < ti) return; if(!R2.son[i]){ R2.son[i] = true; SON.fx('puntos', {n:i}); }
       const y = 34 + i*15; texto(g, nom, x, y, 'blanco', {izq:true}); texto(g, val, x + w - 60, y, 'cian', {der:true}); texto(g, pts, x + w, y, 'oro', {der:true}); });
@@ -2714,7 +2730,7 @@ function terminarCapitulo(){
   PROG.caps[J.cap.id] = {puntos:Math.max(suma, ant ? ant.puntos : 0), nota:ant && orden.indexOf(ant.nota) > orden.indexOf(nota) ? ant.nota : nota};
   PROG.abierto = Math.max(PROG.abierto, Math.min(CAPITULOS.length - 1, J.capIdx + 1)); guardarProg();
   UI.res = {filas:[[tr('BAJAS'), String(J.bajas), String(J.puntos)], [tr('COMBO MÁXIMO'), '×' + J.maxCombo, '+' + bCombo], [tr('ARMAS DISTINTAS'), String(J.armasUsadas.size), '+' + bVar], [tr('TIEMPO'), mm + ':' + ss, '+' + bTiempo]],
-    total:suma, nota, record, son:[], sello:false};
+    total:suma, nota, record, son:[], sello:false, facil:AJ.dificultad === 'facil'};
   SON.musica('puntaje'); SON.ambiente(null); SON.intensidad(0); J.pausa = false; UI.p = 'resultado'; UI.t = 0;
 }
 function seguirTrasResultado(){
@@ -2729,7 +2745,7 @@ document.getElementById('carga').style.display = 'none';
 J.modo = 'menu'; UI.p = 'idioma'; SON.cinta(0.25);
 /* las sondas del banco */
 window.__L = {J, JUG, CTRL, CAMARA, UI, PROG, AJ, POST, PISO, CAPITULOS, ARMAS, TR_FALTA, _AUD, get ENEM(){ return ENEM; }, get ITEMS(){ return ITEMS; }, get CUERPOS(){ return CUERPOS; }, get BALAS(){ return BALAS; },
-  empezarCap, jugarCap, cargarPiso, terminarCapitulo, reintentar, volverAlMenu, ponerIdioma, matar, hacerAccion, accionDisponible, seVe, campo, pasoCampo, chocaCirculo, irA, centroPalo, centroAccion, centroGolpe, aMundo, textoLibre:() => [..._AUD], SON, sim:(n, dt) => { for(let i = 0; i < n; i++) paso(dt); }, get ESTADOS(){ return ESTADOS_PISO; }};
+  empezarCap, jugarCap, cargarPiso, terminarCapitulo, reintentar, volverAlMenu, ponerIdioma, matar, hacerAccion, accionDisponible, tirarArma, seVe, campo, pasoCampo, chocaCirculo, irA, centroPalo, centroAccion, centroGolpe, aMundo, textoLibre:() => [..._AUD], SON, sim:(n, dt) => { for(let i = 0; i < n; i++) paso(dt); }, get ESTADOS(){ return ESTADOS_PISO; }};
 requestAnimationFrame(lazo);
 })();
 </script>
