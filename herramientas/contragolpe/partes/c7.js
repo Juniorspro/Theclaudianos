@@ -8,7 +8,7 @@ async function montarMapa(id, construir, op, avance){
   U_AMB.value = (MAPAS[id] && MAPAS[id].ambiente) || 0.02;
   op = op || {};
   nuevaObra(id); construir(OBRA);
-  mundoDesde(OBRA.cajas); armarCaras(); empaquetarAtlas();
+  mundoDesde(OBRA.cajas); orientarSpawns(); armarCaras(); empaquetarAtlas();
   limpiarGrupo(GRUPO_MAPA);
   for(const m of mallasDeCaras()){ const me = new THREE.Mesh(m.geo, matMundo(m.mat)); me.receiveShadow = true; me.castShadow = false; me.matrixAutoUpdate = false; GRUPO_MAPA.add(me); }
   const huella = huellaMapa(), hecho = manDe('luz', id);
@@ -18,6 +18,26 @@ async function montarMapa(id, construir, op, avance){
   /* utilería y calcomanías: después de la luz, porque la toman del mapa de luz */
   for(const m of mallasDeProps()) GRUPO_MAPA.add(m); for(const m of mallasDeCalcos()) GRUPO_MAPA.add(m);
   return OBRA;
+}
+/* un punto de aparición que mira a una pared o a una pila de cajones (se empuja el stick y no se avanza) se gira hacia donde hay
+   más lugar, con preferencia por el centro del mapa; si ya tiene 8 m libres adelante queda como lo puso el mapa */
+function libreEn(x, y, z, yaw){ const dx = -Math.sin(yaw), dz = -Math.cos(yaw); let m = 30;
+  for(const h of [0.35, 0.9, 1.5]){ const t = rayo(x, y + h, z, dx, 0, dz, 30, F_SOLIDA, false, -1); if(t >= 0) m = Math.min(m, t); } return m; }
+/* ¿el cuerpo parado en (x, y, z) se mete en algo sólido? (lo que queda debajo de un escalón no cuenta: se sube solo) */
+function chocaEn(x, y, z){ const r = 0.42, M = MUNDO; for(let i=0;i<M.n;i++){ if(!(M.flags[i] & F_SOLIDA)) continue; const o = i*3;
+    if(M.mx[o+1] <= y + 0.46 || M.mn[o+1] >= y + 1.75) continue; if(M.mn[o] < x + r && M.mx[o] > x - r && M.mn[o+2] < z + r && M.mx[o+2] > z - r) return true; } return false; }
+/* un punto de aparición metido en algo (un cajón puesto encima) se corre al lugar libre más cercano del mismo piso */
+function liberarSpawn(s){ if(!chocaEn(s.x, s.y, s.z)) return;
+  for(let r=0.25;r<=3.01;r+=0.25) for(let i=0;i<16;i++){ const a = i/16*TAU, x = s.x + Math.cos(a)*r, z = s.z + Math.sin(a)*r; if(chocaEn(x, s.y, z)) continue;
+    const t = rayo(x, s.y + 0.5, z, 0, -1, 0, 1.2, F_SOLIDA, false, -1); if(t < 0 || Math.abs(s.y + 0.5 - t - s.y) > 0.5) continue; s.x = x; s.z = z; s.y = s.y + 0.5 - t; return; } }
+function orientarSpawns(){
+  for(const b of ['ct', 't', 'dm']) for(const s of OBRA.spawns[b]) liberarSpawn(s);
+  let cx = 0, cz = 0, n = 0; for(const b of ['ct', 't', 'dm']) for(const s of OBRA.spawns[b]){ cx += s.x; cz += s.z; n++; } if(!n) return; cx /= n; cz /= n;
+  for(const b of ['ct', 't', 'dm']) for(const s of OBRA.spawns[b]){
+    if(libreEn(s.x, s.y, s.z, s.yaw || 0) >= 8) continue;
+    const alCentro = Math.atan2(-(cx - s.x), -(cz - s.z)); let mejor = s.yaw || 0, pm = -1e9;
+    for(let i=0;i<32;i++){ const yaw = i/32*TAU, p = Math.min(libreEn(s.x, s.y, s.z, yaw), 20) + 3*Math.cos(yaw - alCentro); if(p > pm){ pm = p; mejor = yaw; } }
+    s.yaw = mejor; }
 }
 function mapaPrueba(){
   piso(-20, -20, 20, 20, 0, 'piso_ext', {texel:0.4});

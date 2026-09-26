@@ -21,7 +21,9 @@ const MANO_EN = {
   rifle_d:{pc:[0.031, 0.005, 0.02], y:[-0.15, 0.42, -0.9], z:[0.8, 0.25, 0.55], pose:'pistola'},
   guardamano_i:{pc:[0.004, -0.022, 0.0], y:[0.8, 0.35, -0.3], z:[-0.3, -0.95, 0.1], pose:'guardamano'},
   vertical_i:{pc:[-0.03, 0.0, 0.02], y:[0, 0.05, -1], z:[-0.93, 0.3, 0.1], pose:'puno'},
-  cuchillo_d:{eje:{r:[0, 0, 1], z0:[1, 0, 0], a:40, c:[0, 0, 0], rad:0.013}, pose:'puno'},
+  /* el cuchillo: con a = 40 el antebrazo salía para arriba y a la izquierda (−0,15 contra la dirección del hombro) y el brazo tapaba
+     media pantalla; a = 90 con el reposo de abajo lo manda al hombro (0,81) y la hoja queda en diagonal, arriba a la izquierda */
+  cuchillo_d:{eje:{r:[0, 0, 1], z0:[1, 0, 0], a:90, c:[0, 0, 0], rad:0.013}, pose:'puno'},
   granada_d:{eje:{r:[0, -1, 0], z0:[1, 0, 0], a:-30, c:[0, 0, 0], rad:0.024}, pose:'granada'},
   c4_d:{pc:[0.0, -0.022, -0.02], y:[0, 0, -1], z:[0.3, -0.95, 0], pose:'guardamano'}, c4_i:{pc:[0.0, -0.022, -0.02], y:[0, 0, -1], z:[-0.3, -0.95, 0], pose:'guardamano'},
   /* manos de la recarga y del cerrojo */
@@ -45,7 +47,7 @@ const VM_REPOSO = {
   glock:{p:[0.07, -0.074, -0.34], r:[0, 3, 0]}, usps:{p:[0.07, -0.074, -0.34], r:[0, 3, 0]}, deagle:{p:[0.07, -0.078, -0.35], r:[0, 3, 0]},
   mac10:{p:[0.105, -0.08, -0.34], r:[0, 5, 0]}, mp9:{p:[0.105, -0.08, -0.34], r:[0, 5, 0]},
   ak47:{p:[0.12, -0.08, -0.36], r:[0, 5, 0]}, m4s:{p:[0.12, -0.078, -0.36], r:[0, 5, 0]}, awp:{p:[0.12, -0.09, -0.33], r:[0, 4, 0]},
-  cuchillo:{p:[0.15, -0.13, -0.33], r:[-18, 38, 16]}, cuchillo_t:{p:[0.15, -0.13, -0.33], r:[-18, 38, 16]},
+  cuchillo:{p:[0.14, -0.12, -0.3], r:[30, 70, 0]}, cuchillo_t:{p:[0.14, -0.12, -0.3], r:[30, 70, 0]},
   he:{p:[0.14, -0.12, -0.3], r:[0, 0, 0]}, flash:{p:[0.14, -0.12, -0.3], r:[0, 0, 0]}, humo:{p:[0.14, -0.12, -0.3], r:[0, 0, 0]}, c4:{p:[0.0, -0.17, -0.36], r:[30, 0, 0]},
 };
 /* hombros lejos atrás y abajo (fuera de cuadro) para que el brazo llegue casi estirado, como en los juegos */

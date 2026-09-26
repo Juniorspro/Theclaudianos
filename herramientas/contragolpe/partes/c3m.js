@@ -162,7 +162,8 @@ function mapaAlmacen(){
     {x0:-24, z0:-16, x1:24, z1:16, mat:'piso_int', techo:9.5, matTecho:'techo'}]});
   /* pasarela perimetral a 4 m */
   for(const s of [-1, 1]){ bloque(-24, 4, s*16 - (s > 0 ? 2.2 : -0), 24, 4.3, s*16 + (s > 0 ? 0 : 2.2), 'acero_naranja'); for(const [a0, a1] of s > 0 ? [[-22, 15.8], [20.2, 22]] : [[-22, -20.2], [-15.8, 22]]) U_.baranda(a0, s*(16 - 2.2), a1, s*(16 - 2.2), 4.3, {mat:'amarillo'});
-    escalera(s*18 - 2, -s*1, s*18 + 2, s*(16 - 2.2) - (s > 0 ? 0 : 0), 0, 4, s > 0 ? 'z+' : 'z-', 'acero_naranja'); }
+    /* la escalera arranca después de la oficina (antes empezaba en z = ∓1 y la pared y el techo de la oficina la cortaban por la mitad) */
+    escalera(s*18 - 2, s*5.5, s*18 + 2, s*(16 - 2.2), 0, 4, s > 0 ? 'z+' : 'z-', 'acero_naranja'); }
   /* estanterías en filas y cajones */
   for(const z of [-8, 8]) for(const x of [-10, 10]) U_.estanteria(x, 0, z, 3, {giro:0});
   for(const [x, z, n] of [[-3, 0, 4], [3, 0, 3], [-22, -3, 2], [22, 3, 2], [0, -12, 2], [0, 12, 2], [-10, 0, 1], [10, 0, 1]]) cajas(x, z, 0, n, (x + z) % 2 ? 'caja_madera' : 'caja_roja', 1.3);

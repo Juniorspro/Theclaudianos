@@ -866,3 +866,38 @@ Medido: con 11 bits simulados, umbrales viejos = las rayas de la captura; nuevos
 los tres mapas. ESTILO cambia la tinta y queda guardado al recargar. Toques reales por CDP iguales con y sin el defecto del `viewport`,
 respaldo sin revelado y guardia, sin red, idiomas y partidas simuladas (deathmatch en ALMACÉN, bomba en DESIERTO) sin errores.
 
+### 2026-09-26 (25) — CONTRAGOLPE: cuchillo, «no me puedo mover» y EMPEZAR fuera de pantalla
+**Pedido textual:** «Hay muchos errores en cuchillo, en no poder moverte, etc» y «no aparece el botón para iniciar la partida, sería no
+se vé completo» (captura: la pantalla de modo de juego sin EMPEZAR).
+
+- **EMPEZAR afuera**: en un teléfono de 360 de alto (el juego girado mide 680×360) la capa de partida medía 417–455 px y `touch-action:none`
+  no deja deslizar. Ahora va en dos columnas (a la izquierda lo que se elige y EMPEZAR/VOLVER, a la derecha las tarjetas con
+  `aspect-ratio`), las pantallas de menos de 430 de alto llevan `.bajo` (todo más apretado, AJUSTES en dos columnas) y cualquier capa que
+  igual no entre se desliza con el dedo en coordenadas del juego (un arrastre no aprieta el botón donde empezó). Medido en 360×680,
+  412×820 y 892×412: las 8 capas entran y ningún botón queda afuera.
+- **Cuchillo**: el agarre giraba la mano de modo que el antebrazo salía para arriba y a la izquierda (−0,15 contra la dirección del
+  hombro): el brazo cruzaba media pantalla como una mancha negra en reposo y en casi todos los cuadros. Búsqueda en grilla de reposo y
+  giro de la mano sobre el mango: reposo `[30, 70, 0]` y `a = 90` dan 0,81 y la hoja en diagonal hacia arriba a la izquierda, como en
+  el CS. Granada y C4 dan 0,73 (bien). El daño andaba: de espaldas 90 de un toque y manteniendo el fuego mata.
+- **«No me puedo mover»**: **19 de los 76 puntos de aparición miraban a una pared o a una pila de cajones** (en ALMACÉN los de combate a
+  muerte tenían cajones a menos de un metro; los CT y T, el costado de la escalera; uno de los CT nacía adentro de los cajones de la
+  oficina). Al montar el mapa, `liberarSpawn` corre al lugar libre más cercano el punto que choca con algo, y `orientarSpawns` gira el que
+  tiene menos de 8 m libres hacia donde hay más lugar, con preferencia por el centro. Medido empujando adelante 2 s desde cada punto:
+  19 → **0** que avanzan menos de 4 m.
+- **La escalera de ALMACÉN pasaba por adentro de la oficina**: la pared y el techo la cortaban por la mitad (pared invisible a mitad de
+  subida). Arranca después de la oficina; horneado de nuevo. Con el código viejo, en la partida simulada un bot quedó 60 s trabado ahí
+  (0 bajas, 0 muertes); ahora no. Prueba de trabas al azar (811 lugares, empujar 1,5 s donde adelante está libre): sólo baranda y
+  esquina de estantería, que frenan de verdad.
+- El stick sigue apretado aunque se toquen salto, fuego, recargar o agachar. El congelado de la bomba dura 6,5 s (como el «PREPARATE»
+  del CS) y después se corre a 5,3 m/s.
+
+Trampas del banco que costaron una vuelta:
+- **CDP: `touchEnd` suelta todos los dedos** (no lleva puntos); para soltar uno y dejar otro va un `touchMove` con los que quedan. Con
+  `touchEnd` y el stick en la lista parecía que tocar un botón soltaba el stick.
+- Teletransportar un bot justo antes del cuchillazo da falso «no pega»: las cápsulas salen de la pose del cuadro anterior. Hay que dejar
+  asentar unos cuadros.
+
+Medido: toques reales por CDP (normal y con el defecto del `viewport`), respaldo y guardia, sin red e idiomas, ESTILO, partidas simuladas
+en los tres modos (deathmatch 66 bajas por minuto en ALMACÉN, bomba en NUCLEAR con plantada, carrera de armas terminada) y alcance de la
+navegación en los tres mapas, sin errores.
+

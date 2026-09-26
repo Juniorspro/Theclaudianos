@@ -23,6 +23,14 @@ function tr(s){ const l = G.idioma || 'es', D = TXT[l]; if(!D || l === 'es') ret
 function traducirDOM(){ document.querySelectorAll('.capa button span, .capa h2, .capa h2 small').forEach(el=>{ if(!el.dataset.es) el.dataset.es = el.childNodes[el.childNodes.length - 1].textContent; const n = el.childNodes[el.childNodes.length - 1]; if(n.nodeType === 3) n.textContent = tr(el.dataset.es); }); }
 function mostrar(id){ if(id && typeof hg !== 'undefined'){ hg.setTransform(1, 0, 0, 1, 0, 0); hg.clearRect(0, 0, cvH.width, cvH.height); } for(const c of document.querySelectorAll('.capa')) c.classList.remove('ver'); if(id){ $(id).classList.add('ver'); } MENU.capa = id; traducirDOM();
   $('mandos').classList.toggle('ver', !id && J.partida && TACTIL_DISP); if(id && document.exitPointerLock) document.exitPointerLock(); }
+/* deslizar las capas con el dedo si no entran: con la pantalla girada por CSS el desplazamiento nativo va para el otro lado (y
+   touch-action:none lo apaga). Se mide en coordenadas del juego; un arrastre no aprieta el botón donde empezó */
+(function(){ let c = null, y0 = 0, s0 = 0, movio = false;
+  addEventListener('touchstart', ev=>{ c = null; if(ev.touches.length !== 1 || !ev.target.closest) return; const cp = ev.target.closest('.capa.ver'); if(!cp || cp.scrollHeight <= cp.clientHeight + 2) return;
+    c = cp; y0 = aJuego(ev.touches[0]).y; s0 = cp.scrollTop; movio = false; }, {passive:true});
+  addEventListener('touchmove', ev=>{ if(!c || !ev.touches[0]) return; const dy = aJuego(ev.touches[0]).y - y0; if(Math.abs(dy) > 8) movio = true; if(movio) c.scrollTop = s0 - dy; }, {passive:true});
+  addEventListener('touchend', ()=>{ if(c && movio) MENU.arrastreT = performance.now(); c = null; }, {passive:true});
+  addEventListener('click', ev=>{ if(performance.now() - (MENU.arrastreT || -1e9) < 400){ ev.stopPropagation(); ev.preventDefault(); } }, true); })();
 /* ---------- fondo de los menús: paneo lento por el mapa montado ---------- */
 function pasarMenu(dt){ MENU.t += dt; const O = OBRA, S = (O.spawns.dm.length ? O.spawns.dm : O.spawns.ct), n = S.length || 1, k = Math.floor(MENU.t/9) % n, u = (MENU.t % 9)/9, s = S[k] || {x:0, y:0, z:0};
   cam.position.set(s.x + Math.sin(MENU.t*0.1)*2, s.y + 2.2 + u*0.6, s.z + Math.cos(MENU.t*0.1)*2); cam.rotation.set(-0.08, MENU.t*0.06 + k*1.3, 0, 'YXZ'); if(cam.fov !== 74){ cam.fov = 74; cam.updateProjectionMatrix(); } cam.updateMatrixWorld();

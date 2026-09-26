@@ -21,7 +21,7 @@ function escalaUI(){ const vv = window.visualViewport, e = vv && vv.scale > 0 ? 
 escalaUI();
 if(window.visualViewport) visualViewport.addEventListener('resize', ()=>{ if(escalaUI()) setTimeout(medir, 60); });
 function medir(){
-  const pa = $('pantalla'), de = document.documentElement; de.style.setProperty('--uw', pa.clientWidth/100 + 'px'); de.style.setProperty('--uh', pa.clientHeight/100 + 'px'); de.style.setProperty('--umin', Math.min(pa.clientWidth, pa.clientHeight)/100 + 'px');
+  const pa = $('pantalla'), de = document.documentElement; pa.classList.toggle('bajo', pa.clientHeight < 430); de.style.setProperty('--uw', pa.clientWidth/100 + 'px'); de.style.setProperty('--uh', pa.clientHeight/100 + 'px'); de.style.setProperty('--umin', Math.min(pa.clientWidth, pa.clientHeight)/100 + 'px');
   const w = Math.max(2, cv3.clientWidth || innerWidth), h = Math.max(2, cv3.clientHeight || innerHeight);
   const pr = Math.max(0.5, DPR*lim(CALIDAD, 0.35, 1)*0.85);
   ren.setPixelRatio(pr); ren.setSize(w, h, false);

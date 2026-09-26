@@ -117,8 +117,28 @@ h2 small{display:block;font-family:inherit;font-size:11px;letter-spacing:6px;col
 .tarjeta small{position:absolute;left:8px;top:6px;font-size:9.5px;letter-spacing:2px;color:var(--tinta);background:var(--amarillo);padding:1px 6px;font-weight:bold}
 .tarjeta.ya{outline:3px solid var(--amarillo);outline-offset:2px;transform:rotate(var(--r,0deg)) scale(1.04)}
 .tarjeta:active{transform:rotate(var(--r,0deg)) scale(.97)}
-#elecciones{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
-#elecciones .grupo{display:flex;gap:4px;align-items:center;font-size:11px;letter-spacing:2px;color:#cfd3dc}
+/* jugar en dos columnas: a la izquierda lo que se elige y EMPEZAR (siempre a la vista), a la derecha las tarjetas, que se achican */
+#capaJugar{flex-direction:row;align-items:center;justify-content:center;gap:18px}
+#capaJugar .jLado{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:10px;flex:0 1 auto;max-width:32%;min-width:170px;text-align:left}
+#capaJugar .jLado h2{text-align:left}
+#capaJugar .jLado .botones{justify-content:flex-start;flex-direction:column;align-items:stretch;width:100%;gap:7px}
+#capaJugar .jLado .boton{min-width:0}
+#capaJugar .jTarjetas{flex:1 1 0;min-width:0;max-width:640px;display:flex;flex-direction:column;justify-content:center;gap:12px}
+#capaJugar .fila{flex-wrap:nowrap;justify-content:flex-start;gap:9px}
+#capaJugar .tarjeta{flex:1 1 0;min-width:0;width:auto;height:auto;aspect-ratio:16/10;max-width:200px}
+#capaJugar .tarjeta b{font-size:clamp(11px,calc(4.4*var(--uh,1vh)),17px)}
+#elecciones{display:flex;flex-direction:column;gap:7px;align-items:flex-start}
+#elecciones .grupo{display:flex;gap:4px;align-items:center;flex-wrap:wrap;font-size:11px;letter-spacing:2px;color:#cfd3dc}
+#elecciones .grupo > span{width:100%;text-align:left}
+/* pantallas bajas (un teléfono de 360 de alto): todo más apretado para que entre sin deslizar */
+#pantalla.bajo .capa{gap:7px;padding:8px 18px}
+#pantalla.bajo .boton{padding:7px 18px;font-size:14px}
+#pantalla.bajo .boton.chico{padding:5px 11px;font-size:11px}
+#pantalla.bajo h2{font-size:23px}
+#pantalla.bajo #capaTitulo > .botones{gap:6px}
+#pantalla.bajo .titulo b{font-size:min(calc(11*var(--uw,1vw)),calc(15*var(--uh,1vh)),112px)}
+#pantalla.bajo #capaAjustes > .botones{display:grid;grid-template-columns:1fr 1fr;min-width:0!important;width:min(600px,100%);gap:7px}
+#pantalla.bajo #capaJugar .jLado{gap:8px}
 /* arsenal */
 #capaArsenal{justify-content:space-between;background:linear-gradient(180deg,rgba(6,6,9,.6),transparent 28%,transparent 64%,rgba(6,6,9,.88))}
 #arsenalLista{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:860px}
@@ -211,11 +231,15 @@ h2 small{display:block;font-family:inherit;font-size:11px;letter-spacing:6px;col
     <div id="idiomas" class="botones"><button class="boton chico" data-l="es"><span>ESPAÑOL</span></button><button class="boton chico" data-l="en"><span>ENGLISH</span></button><button class="boton chico" data-l="pt"><span>PORTUGUÊS</span></button></div>
   </div>
   <div class="capa velo" id="capaJugar">
-    <h2><small>ELEGÍ CÓMO</small>MODO DE JUEGO</h2>
-    <div class="fila" id="filaModos"></div>
-    <div class="fila" id="filaMapas"></div>
-    <div id="elecciones"></div>
-    <div class="botones"><button class="boton amarillo" id="btEmpezar"><span>EMPEZAR</span></button><button class="boton gris" id="btJugarVolver"><span>VOLVER</span></button></div>
+    <div class="jLado">
+      <h2><small>ELEGÍ CÓMO</small>MODO DE JUEGO</h2>
+      <div id="elecciones"></div>
+      <div class="botones"><button class="boton amarillo" id="btEmpezar"><span>EMPEZAR</span></button><button class="boton gris" id="btJugarVolver"><span>VOLVER</span></button></div>
+    </div>
+    <div class="jTarjetas">
+      <div class="fila" id="filaModos"></div>
+      <div class="fila" id="filaMapas"></div>
+    </div>
   </div>
   <div class="capa" id="capaArsenal">
     <div style="width:100%;display:flex;justify-content:space-between;align-items:flex-start"><h2 style="text-align:left"><small>MIRALAS DE CERCA</small>ARSENAL</h2><div id="arsenalLista"></div></div>
