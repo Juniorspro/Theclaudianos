@@ -15,6 +15,8 @@ se prueba **en el celular, en vertical (412×892)**. EL TIPO se juega **acostado
 | `herramientas/brecha` | Partes del código de BRECHA 7, su armador y el banco (`banco/*.js`). |
 | `juegos-pc/Alas.html` | **ALAS · DUELO AÉREO.** Combate aéreo en tercera persona (o cabina) al estilo Modern Warplanes: archipiélago procedural con islas, costa, mar con reflejo y nubes; cañón, misiles con fijado, bengalas, turbo y freno; 5 misiones (duelo, cordillera con compañero, defensa de portaaviones, rasante contra destructores, El As en tormenta), hangar con 4 aviones y mejoras. three.js r128 y todo lo generado con Rezona adentro, sin red, acostado. Se arma con `herramientas/alas/armar.py`. |
 | `herramientas/alas` | Partes del código de ALAS, su armador y el banco (`banco/*.js`). |
+| `juegos-pc/Contragolpe.html` | **CONTRAGOLPE.** Tirador táctico a lo Counter-Strike con tinta tipo Borderlands (el preset de CS2 en Nuke): bomba 5v5 con rondas y economía, deathmatch y carrera de armas; mapas NUCLEAR (dos pisos), DESIERTO y ALMACÉN con luz horneada; armas, manos, personajes y bots por código. three.js r128 adentro, sin red, acostado. Se arma con `herramientas/contragolpe/armar.py`. |
+| `herramientas/contragolpe` | Partes, armador, luz horneada (`luz/`) y banco (`banco/*.js`: partida, hornear, vmjuego, vm3). |
 | `juegos-pc/Bosque.html` | **El juego VHS.** Terror en primera persona, three.js r128 (script clásico), escenario girado 90°. De otra línea de trabajo. |
 | `.claude/skills/graficos` | Reglas de render que ya costaron una vuelta cada una. |
 | `.claude/skills/assets-ia` | Generar con Rezona Lab / Higgsfield y hornear lo generado. |
@@ -756,3 +758,45 @@ Medido (`banco/giro.js`, stick a fondo): vuelta del F-14 **21,9 → 5,9 s**, con
 apuntando a ese lado (producto con el eje 0,95 / −0,99 / 0,95), vuelve sola, doble toque centra, stick y mirar con dos dedos a la vez,
 en la cabina, y FUEGO encima de la zona sigue andando. Bot con invencibilidad 15/15, sin invencibilidad **12/15** (antes 10/15).
 Toques, menús en dos tamaños, idiomas y sin red como antes; sin errores.
+
+### 2026-09-26 (22) — CONTRAGOLPE, a lo Counter-Strike
+**Pedido textual:** «GENERAME un juego mejor que brecha en un 500% haz que el juego sea súper goty y súper parecido a counter strike,
+necesito que diseñes los personajes no de bloques … que sea lowpoly pero súper buenos gráficos … 3 modos de juegos … buenos mapas
+construidos bien desde cero … hagas vos proceduralmente las armas … con sus animaciones de recarga e inspección … cuando mueren radgoll
+… las manos hazlas bien realistas como el vídeo y las armas también y el agarre …» (con un TikTok de CS2 en Nuke con el preset
+Borderlands) y después «intentá terminarlo rápido».
+
+`juegos-pc/Contragolpe.html` (12 MB, sin red), armado por `herramientas/contragolpe/armar.py` desde `partes/*`. De Rezona: texturas PBR,
+dos cielos con el sol medido, calcomanías, 9 ilustraciones de menú y ~90 audios (disparos, mecánica de armas, pasos por piso, voces de
+radio en tres idiomas, música). Todo lo demás es código.
+- **Render**: HDR, tinta en post (segunda diferencia de 1/z para pliegues y siluetas, Sobel de luminancia, trama en lo oscuro), bloom,
+  ACES. El mundo son cajas con **luz horneada por cara** (sol con penumbra, cielo, lámparas, un rebote) en un atlas; se hornea sin
+  conexión con `banco/hornear.js <mapa>` y el mapa carga en <1 s. Utilería y calcomanías toman la luz del mapa por vértice.
+- **Armas y manos**: 13 armas en medidas reales con piezas que se mueven; manos con piel sobre 16 huesos y **dedos que se cierran hasta
+  tocar el arma** (volúmenes de choque por arma: perfil extruido, caja y cápsula; la palma se apoya sola). Clips de sacar, disparo,
+  recarga (el cargador sale y la mano izquierda lo trae), recarga en vacío, inspección, cerrojo del AWP, cuchillo, granadas y C4, más
+  capas de balanceo, paso, retroceso con resorte y aterrizaje. La Glock va a dos manos como en CS2.
+- **Juego**: movimiento Source, imprecisión por estado + patrón por bala con golpe de vista, penetración por grosor y material, daño por
+  zona con blindaje y casco, caída con la distancia; HE, flash (con ángulo y distancia), humo que tapa la vista; bomba con plantar,
+  desactivar (kit) y explosión; economía de CS; cambio de lado; deathmatch; carrera de armas.
+- **Bots**: navegación por grilla en capas (dos pisos, escalones, bajadas, saltos agachados), A*, campo visual y oídos, reacción por
+  blanco, error que se asienta, control del retroceso, contraparada, ráfagas; T eligen sitio y plantan, CT se reparten y retoman.
+- **Mapas**: armados por grilla (se declaran los lugares caminables y los edificios salen solos) + utilería procedural.
+
+Trampas que costaron una vuelta:
+- **Horneado con los mismos rayos en todos los texeles**: cada rayo proyectaba la silueta de la escena sobre las paredes grandes
+  (parecían nubes). Giro al azar por texel + desenfoque 3×3 por cara.
+- **`angDif(a, b)` devuelve b − a**: los bots giraban alejándose del blanco y nadie mataba a nadie.
+- **La reacción se reiniciaba con cualquier enemigo nuevo a la vista**: con varios, el bot no disparaba nunca. Va por blanco.
+- **`const` globales no cuelgan de `window`**: `window.VM`, `window.FABRICA` daban falso y el arma no se veía ni caían armas al piso.
+- Funciones globales con el mismo nombre en dos partes (`caja` del HUD pisaba a la de modelado): una sola gana, sin aviso.
+- Mano: la orientación va en el marco del arma, no del enchufe inclinado; el antebrazo que apunta a la cámara se ve desde adentro de
+  la manga: la manga termina en un tramo alineado con la mano y el codo se tuerce hacia la esquina.
+- Pisos sobre un nivel de abajo necesitan cara inferior (desde B se veía el cielo).
+
+Medido: partidas simuladas (jugador en piloto): deathmatch 10 bots ~100 bajas/min en la sala de prueba, bomba en NUCLEAR 7 rondas en
+5 min, DESIERTO 5–0 con bomba plantada, carrera de armas termina sola; 0,5 ms por paso con 10 bots. Alcance: desde cada spawn se llega
+a los dos sitios y a todos los spawn de DM en los tres mapas. Toques reales por CDP con la pantalla parada: palanca, mirar y fuego.
+Sin red: 0 pedidos, carga en 0,9 s, luz horneada, idiomas es/en/pt, sin errores. Banco sin GPU: 14–20 cuadros por segundo.
+**Pendiente** (los agentes se cortaron por el límite de gasto): muñeco de trapo de verdad (hoy cae de una pieza hacia el empuje y
+respeta paredes), mocap en los personajes (hoy caminata procedural) y afinar el agarre del resto de las armas.
