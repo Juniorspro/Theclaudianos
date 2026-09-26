@@ -3,14 +3,14 @@
    filas: en el infinito lo que quedó muy abajo se pisa con lo nuevo de arriba. 0 aire, 1 piedra, 2 pinchos,
    3 piedra que se desmorona. Las dos columnas de afuera son pared, salvo que se diga otra cosa. */
 const CEL = 8, COLS = 22, ANCHO = COLS*CEL, ANILLO = 2048;
-const T_AIRE = 0, T_PIEDRA = 1, T_PINCHO = 2, T_DESM = 3;
-const MAPA = {cel:new Uint8Array(COLS*ANILLO), rMin:0, rMax:0, piso:4, meta:null, plats:[], desm:new Map(), gen:0, ver:0};
+const T_AIRE = 0, T_PIEDRA = 1, T_PINCHO = 2, T_DESM = 3, T_REJA = 4;
+const MAPA = {cel:new Uint8Array(COLS*ANILLO), rMin:0, rMax:0, piso:4, meta:null, plats:[], desm:new Map(), gen:0, ver:0, deco:[]};
 const idx = (c, r) => (((r % ANILLO) + ANILLO) % ANILLO)*COLS + c;
 function tile(c, r){ if(c < 0 || c >= COLS) return T_PIEDRA; if(r > MAPA.piso) return T_PIEDRA; if(r < MAPA.rMin) return (c === 0 || c === COLS - 1) ? T_PIEDRA : T_AIRE; return MAPA.cel[idx(c, r)]; }
 function poner(c, r, v){ if(c < 0 || c >= COLS || r < MAPA.rMin || r > MAPA.piso) return; MAPA.cel[idx(c, r)] = v; MAPA.ver++; }
 /* abrir filas nuevas arriba (con las paredes de afuera puestas) */
 function abrirFilas(hasta){ while(MAPA.rMin > hasta){ MAPA.rMin--; const i = idx(0, MAPA.rMin); MAPA.cel.fill(0, i, i + COLS); MAPA.cel[i] = MAPA.cel[i + COLS - 1] = T_PIEDRA; } MAPA.ver++; }
-function nuevoMapa(){ MAPA.cel.fill(0); MAPA.rMin = MAPA.piso + 1; MAPA.plats = []; MAPA.desm.clear(); MAPA.meta = null; MAPA.ver++; MAPA.gen++;
+function nuevoMapa(){ MAPA.cel.fill(0); MAPA.rMin = MAPA.piso + 1; MAPA.plats = []; MAPA.deco = []; MAPA.desm.clear(); MAPA.meta = null; MAPA.ver++; MAPA.gen++;
   abrirFilas(0); for(let r = 1; r <= MAPA.piso; r++) for(let c = 0; c < COLS; c++) MAPA.cel[idx(c, r)] = T_PIEDRA; }
 const rect2 = (c0, r0, c1, r1, v) => { for(let r = Math.min(r0, r1); r <= Math.max(r0, r1); r++) for(let c = Math.min(c0, c1); c <= Math.max(c0, c1); c++) poner(c, r, v); };
 
@@ -75,7 +75,9 @@ const TRAMOS = {
 const MEZCLAS = {bambu:['repisas', 'islas', 'repisas', 'columna', 'desmorona', 'islas'], montana:['repisas', 'embudo', 'columna', 'desmorona', 'movil', 'islas', 'pinchera'],
   castillo:['pinchera', 'embudo', 'movil', 'columna', 'repisas', 'desmorona', 'islas'], infinito:['repisas', 'islas', 'columna', 'embudo', 'desmorona', 'movil', 'pinchera']};
 /* un descanso ancho entre tramos: una repisa que cruza casi toda la torre con un hueco */
-function descanso(base, r){ const hueco = 3 + Math.floor(r()*14); for(let c = 1; c < COLS - 1; c++) if(c < hueco || c > hueco + 3) poner(c, base - 1, T_PIEDRA); return 3; }
+function descanso(base, r){ const hueco = 3 + Math.floor(r()*14); for(let c = 1; c < COLS - 1; c++) if(c < hueco || c > hueco + 3) poner(c, base - 1, T_PIEDRA);
+  /* una cuerda con papeles y faroles que cruza la torre un poco más arriba (sin tocar el azar del nivel) */
+  const h = ((base*2654435761) >>> 0) % 1000; if(h < 800) MAPA.deco.push({t:'cuerda', y:(base - 7)*CEL + 2, f:h*0.006}); return 3; }
 
 /* ================================================================ la física del ninja (la misma para jugar y para verificar) */
 const G = 560, V_MAX = 345, V_CAIDA = 430, HW = 2.8, HH = 4;

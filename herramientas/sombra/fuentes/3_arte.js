@@ -116,3 +116,69 @@ function dibujarEnemigo(g, e, E, t){
     for(let i = 0; i < 5; i++) px(g, bx - 2 - i*2, by + 7 + Math.sin(t*6 + i)*1.5, col);
     linea(g, bx, by + 6, x + o, y - 3, col, 1); disco(g, x + o, y - 3, 1.8, col); rect(g, x + o - 1, y - 1, 3, 4, col); }
 }
+
+/* ================================================================ las capas de atrás, que se repiten para arriba (así la torre nunca queda vacía)
+   lejos: nubes, pagodas y torii flotando (0,15 de la cámara); medio: bambú, pinos o murallas del castillo (0,45). */
+const CAPAS = {k:null, lejos:null, medio:null};
+const MEDIO_ALTO = 512, LEJOS_ALTO = 720;
+function hornearCapas(E, mundo){
+  const k = E.nombre + mundo; if(CAPAS.k === k) return; CAPAS.k = k;
+  const r = mulberry(mundo.length*31 + 7), c1 = E.montes[1], c0 = E.montes[0];
+  /* lejos */
+  const [L, gl] = lienzo(ANCHO, LEJOS_ALTO);
+  for(let i = 0; i < 9; i++){ const y = Math.floor(r()*LEJOS_ALTO), x = Math.floor(r()*ANCHO) - 30, w = 40 + Math.floor(r()*60); gl.fillStyle = 'rgba(255,255,255,0.13)';
+    gl.fillRect(x, y, w, 4); gl.fillRect(x + 6, y - 3, w - 18, 3); gl.fillRect(x + 14, y - 5, w - 34, 2); gl.fillStyle = 'rgba(255,255,255,0.07)'; gl.fillRect(x + 4, y + 4, w - 6, 2); }
+  for(let i = 0; i < 4; i++){ const y = 80 + i*170 + Math.floor(r()*60), x = 20 + Math.floor(r()*120), s = 0.6 + r()*0.5; gl.fillStyle = tono(c0, 0.95);
+    if(i % 2 === 0){ /* una pagoda sobre una roca que flota */
+      elipse(gl, x, y + 16*s, 14*s, 5*s, tono(c0, 0.9)); for(let p = 0; p < 4; p++){ const ww = (18 - p*3)*s, yy = y + 12*s - p*7*s; gl.fillStyle = tono(c0, 0.85); gl.fillRect(Math.round(x - ww), Math.round(yy), Math.round(ww*2), Math.max(1, Math.round(2*s))); gl.fillRect(Math.round(x - ww + 3*s), Math.round(yy - 4*s), Math.round(ww*2 - 6*s), Math.round(4*s)); }
+      gl.fillRect(Math.round(x), Math.round(y - 20*s), 1, Math.round(6*s)); }
+    else { /* un torii perdido entre nubes */ gl.fillStyle = tono(c0, 0.85); gl.fillRect(Math.round(x - 12*s), y, Math.round(24*s), 2); gl.fillRect(Math.round(x - 10*s), y + 4, Math.round(20*s), 1); gl.fillRect(Math.round(x - 8*s), y + 2, 2, Math.round(14*s)); gl.fillRect(Math.round(x + 7*s), y + 2, 2, Math.round(14*s)); } }
+  CAPAS.lejos = L;
+  /* medio */
+  const base = mundo === 'bambu' ? mezcla([c1, E.torre], 0.45) : c1, [M, gm] = lienzo(ANCHO, MEDIO_ALTO), osc = tono(base, 0.8), cla = tono(base, 1.18);
+  if(mundo === 'montana'){
+    for(let i = 0; i < 7; i++){ const x = 8 + i*25 + Math.floor(r()*10); for(let yb = Math.floor(r()*100); yb < MEDIO_ALTO + 80; yb += 90 + Math.floor(r()*60)){ const hh = 40 + Math.floor(r()*30);
+      gm.fillStyle = osc; gm.fillRect(x - 1, yb, 3, 12);
+      for(let p = 0; p < 4; p++){ const w = 11 - p*2.5, y0 = yb - p*9; for(let k = 0; k < 10; k++){ gm.fillStyle = k < 2 ? '#dde6ff' : (k % 3 ? osc : c1); gm.fillRect(Math.round(x - w*k/10), y0 - 10 + k, Math.max(1, Math.round(w*2*k/10)), 1); } } } }
+    for(let i = 0; i < 40; i++){ gm.fillStyle = 'rgba(255,255,255,0.5)'; gm.fillRect(Math.floor(r()*ANCHO), Math.floor(r()*MEDIO_ALTO), 1, 1); }
+  } else if(mundo === 'castillo'){
+    for(let yb = 40; yb < MEDIO_ALTO; yb += 128){ const x = 20 + Math.floor(r()*100), w = 40 + Math.floor(r()*30);
+      for(let p = 0; p < 3; p++){ const ww = w - p*10, y0 = yb + p*26; gm.fillStyle = osc; gm.fillRect(x - ww/2, y0, ww, 22);
+        gm.fillStyle = c1; for(let k = 0; k < 5; k++) gm.fillRect(x - ww/2 - 6 + k, y0 - 2 + (k > 2 ? 0 : 2 - k), ww + 12 - k*2, 1);
+        for(let v = 0; v < ww/9 - 1; v++){ gm.fillStyle = (v + p) % 3 ? '#ff9a3a' : '#ffd070'; gm.fillRect(Math.round(x - ww/2 + 5 + v*9), y0 + 8, 3, 5); } } }
+    for(let i = 0; i < 12; i++){ const x = Math.floor(r()*ANCHO), y = Math.floor(r()*MEDIO_ALTO); gm.fillStyle = osc; gm.fillRect(x, y, 1, 14); gm.fillStyle = E.acento; gm.fillRect(x + 1, y, 4, 6); }
+  } else {
+    /* bambú: cañas de distinto grueso, con nudos y hojas en diagonal */
+    for(let i = 0; i < 9; i++){ const x = 4 + i*20 + Math.floor(r()*8), w = 2 + Math.floor(r()*3), col = i % 2 ? osc : base;
+      gm.fillStyle = col; gm.fillRect(x, 0, w, MEDIO_ALTO); gm.fillStyle = cla; gm.fillRect(x, 0, 1, MEDIO_ALTO);
+      for(let y = Math.floor(r()*20); y < MEDIO_ALTO; y += 22 + Math.floor(r()*10)){ gm.fillStyle = tono(col, 0.7); gm.fillRect(x - 1, y, w + 2, 1);
+        if(r() < 0.28){ const lado = r() < 0.5 ? -1 : 1; for(let h = 0; h < 3; h++){ const hx = x + (lado > 0 ? w : 0), hy = y + h*3; for(let k = 0; k < 7 - h; k++){ gm.fillStyle = k < 2 ? cla : col; gm.fillRect(hx + lado*k, hy + Math.round(k*0.6) - 1, 1, 2); } } } } }
+  }
+  CAPAS.medio = M;
+}
+
+/* ================================================================ adornos de la torre (se hornean con los bloques) */
+/* lo que crece arriba de cada piedra según el mundo */
+function adornoArriba(g, x, y, h, mundo, E){
+  if(mundo === 'montana'){ g.fillStyle = '#e8eeff'; g.fillRect(x, y, 8, 2); g.fillStyle = '#b8c8f0'; g.fillRect(x, y + 2, 8, 1); if(h & 1) g.fillRect(x + (h & 7), y + 3, 1, 1 + (h & 1)); if(h % 5 === 0){ g.fillStyle = '#ffffff'; g.fillRect(x + 2, y - 1, 3, 1); } return; }
+  if(mundo === 'castillo'){ g.fillStyle = '#2a0a06'; g.fillRect(x, y, 8, 1); if(h % 3 === 0){ g.fillStyle = h & 4 ? '#ff8a2a' : '#ffc040'; g.fillRect(x + (h & 7), y, 1, 1); } return; }
+  /* bambú: pasto y alguna flor */
+  const pasto = ['#4a7a34', '#6a9a3a', '#8ab84a'];
+  for(let i = 0; i < 3; i++){ const px2 = x + ((h >> i) + i*3) % 8, alto = 1 + ((h >> (i + 2)) & 1) + (i === 1 ? 1 : 0); g.fillStyle = pasto[i]; g.fillRect(px2, y - alto, 1, alto); }
+  if(h % 11 === 0){ g.fillStyle = '#f4a8c8'; g.fillRect(x + 4, y - 3, 1, 1); }
+}
+/* lo que cuelga abajo */
+function adornoAbajo(g, x, y, h, mundo){
+  if(mundo === 'montana'){ if(h % 3) return; g.fillStyle = '#d8e4ff'; const l = 2 + (h & 3); for(let k = 0; k < l; k++) g.fillRect(x + 3, y + k, k < l - 1 ? 2 : 1, 1); return; }
+  if(mundo === 'castillo'){ if(h % 4) return; g.fillStyle = '#3a2a2a'; for(let k = 0; k < 4 + (h & 3); k++) g.fillRect(x + 4, y + k, 1, 1); return; }
+  if(h % 3) return; g.fillStyle = '#3a6a2a'; const l = 3 + (h & 7); for(let k = 0; k < l; k++) g.fillRect(x + 2 + ((k >> 2) & 1), y + k, 1, 1); g.fillStyle = '#6a9a3a'; g.fillRect(x + 3, y + l - 1, 2, 1);
+}
+/* un farol de piedra (tōrō) o, en el castillo, un banderín; devuelve lo que se anima por cuadro */
+function adornoCosa(g, x, y, h, mundo, E){
+  const osc = tono(E.torre, 1.35);
+  if(mundo === 'castillo' && h % 2){ g.fillStyle = osc; g.fillRect(x + 1, y - 16, 1, 16); return {t:'bandera', x:x + 2, y:y - 16}; }
+  if(mundo === 'montana' && h % 2){ /* un santuario chiquito con nieve */ g.fillStyle = osc; g.fillRect(x, y - 6, 7, 6); g.fillStyle = '#e8eeff'; g.fillRect(x - 1, y - 8, 9, 2); g.fillStyle = '#1a0a10'; g.fillRect(x + 2, y - 4, 3, 4); return {t:'luz', x:x + 3, y:y - 3, r:5}; }
+  g.fillStyle = osc; g.fillRect(x + 2, y - 2, 3, 2); g.fillRect(x + 3, y - 5, 1, 3); g.fillRect(x + 1, y - 8, 5, 3); g.fillRect(x, y - 9, 7, 1); g.fillRect(x + 2, y - 10, 3, 1);
+  g.fillStyle = '#ffd890'; g.fillRect(x + 2, y - 7, 3, 1);
+  return {t:'luz', x:x + 3, y:y - 7, r:6};
+}

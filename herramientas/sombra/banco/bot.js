@@ -4,7 +4,7 @@ const {chromium} = require('/tmp/ui/node_modules/playwright');
   const p = await (await b.newContext({viewport:{width:412, height:892}, deviceScaleFactor:2.625})).newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message + ' ' + e.stack.split('\n')[1]));
   await p.goto('file:///tmp/ui/sombra_b.html'); await p.waitForTimeout(500);
   const inv = process.argv[2] !== 'mortal', lista = (process.argv[3] || '0-23').split('-').map(Number);
-  for(let i = lista[0]; i <= lista[1]; i++){
+  for(let i = lista[0]; i <= lista[1]; i++){ if(i % 8 === 7) continue;   /* los niveles con jefe los prueba jefes.js */
     const r = await p.evaluate(([i, inv]) => { const S = __S, N = S.NIN; S.empezarNivel(i); let saltos = 0, muertes = 0, t = 0, espera = 0, fallos = 0; const hist = []; let plan = null; const causas = {};
       const clave = q => Math.round(q.x/4) + ',' + Math.round(q.y/4) + ',' + q.nx + ',' + q.ny;
       for(let k = 0; k < 60*240 && S.J.modo === 'juego'; k++){ if(inv) N.invul = 1; S.sim(1, 1/60); t += 1/60;

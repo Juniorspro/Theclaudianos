@@ -65,7 +65,7 @@ function logo(g, cx, y){
 function monedero(g){ const x = W - 8; texto(g, String(PROG.monedas), x - 8, 5, 'oro', {der:true}); disco(g, x - 3, 10, 3, '#8a5a08'); disco(g, x - 3, 10, 2, '#ffd040'); }
 function estrellita(g, x, y, llena, e){ const E2 = ['...#...', '..###..', '#######', '.#####.', '..###..', '.##.##.', '.#...#.']; e = e || 1;
   E2.forEach((f, j) => { for(let i = 0; i < 7; i++) if(f[i] === '#'){ g.fillStyle = llena ? (j < 3 && i < 4 ? '#fff4a0' : '#ffc830') : '#4a3a52'; g.fillRect(Math.round(x + i*e), Math.round(y + j*e), e, e); } }); }
-const CAUSA = {pinchos:'TE CLAVASTE', tinta:'TE TRAGÓ LA TINTA', samurai:'TE CORTARON', bala:'TE DIERON', shuriken:'UNA ESTRELLA NINJA', cae:'TE CAÍSTE'};
+const CAUSA = {jefe:'EL JEFE TE ALCANZÓ', pinchos:'TE CLAVASTE', tinta:'TE TRAGÓ LA TINTA', samurai:'TE CORTARON', bala:'TE DIERON', shuriken:'UNA ESTRELLA NINJA', cae:'TE CAÍSTE'};
 
 const PANTALLAS = {
   idioma(g){
@@ -93,7 +93,7 @@ const PANTALLAS = {
     const bw = 64, bh = 40, x0 = Math.round(W/2 - bw - 4);
     NIVELES.filter(n => n.mi === UI.mundo).forEach((n, i) => { const x = x0 + (i % 2)*(bw + 8), y = 60 + Math.floor(i/2)*(bh + 8), gi = NIVELES.indexOf(n), ab = gi <= PROG.abierto, e = PROG.niveles[n.id] || 0;
       boton(g, 'n' + gi, x, y, bw, bh, '', {apagado:!ab, fn:() => { J.pausa = false; SON.fx('titulo'); empezarNivel(gi); }});
-      if(ab){ texto(g, String(n.n + 1), x + bw/2, y + 7, 'blanco'); for(let k = 0; k < 3; k++) estrellita(g, x + bw/2 - 19 + k*13, y + 22, k < e); }
+      if(ab){ texto(g, n.n === 7 ? tr('JEFE') : String(n.n + 1), x + bw/2, y + 7, n.n === 7 ? 'rojo' : 'blanco'); for(let k = 0; k < 3; k++) estrellita(g, x + bw/2 - 19 + k*13, y + 22, k < e); }
       else { rect(g, x + bw/2 - 4, y + 14, 8, 7, '#6a5a72'); rect(g, x + bw/2 - 3, y + 10, 1, 4, '#6a5a72'); rect(g, x + bw/2 + 2, y + 10, 1, 4, '#6a5a72'); rect(g, x + bw/2 - 3, y + 10, 6, 1, '#6a5a72'); } });
     boton(g, 'vol', 8, H - 30, 70, 22, tr('VOLVER'), {fn:() => irA('principal')});
   },
@@ -204,7 +204,13 @@ function abrirCofre(){
 /* ---------- el flujo ---------- */
 function volverAlMenu(){ J.modo = 'menu'; J.pausa = false; J.gen++; UI.p = 'principal'; UI.t = 0; SON.musica('menu'); SON.ambiente('templo'); SON.filtroMuerte(false); SON.lento(0); SON.cinta(0.3);
   POST.satur = 1.15; POST.vin = 0.3; J.ts = 1; prepararFondoMenu(); }
-function reintentar(){ if(J.infinito) empezarInfinito(); else empezarNivel(J.idx); }
+function reintentar(){
+  if(J.infinito){ empezarInfinito(); return; }
+  /* si caíste peleando con el jefe, se vuelve a la arena y no a subir la torre entera */
+  const enJefe = J.jefe && J.jefe.activo && !J.jefe.fuera; empezarNivel(J.idx);
+  if(enJefe){ const A = J.arena; Object.assign(NIN, {x:20, y:A.pisoY - 48 - HH - 0.01, nx:0, ny:-1, est:'pegado', vx:0, vy:0}); NIN.ultimo = {x:NIN.x, y:NIN.y, nx:0, ny:-1};
+    for(const b of NIN.bufanda){ b.x = b.px = NIN.x; b.y = b.py = NIN.y; } CAM.y = (A.techoY + A.pisoY)/2 - H*0.52; if(J.tinta) J.tinta.y = A.pisoY + 60; J.reloj = 2; }
+}
 function pausar(){ if(J.modo !== 'juego' || NIN.est === 'muerto') return; J.pausa = !J.pausa; UI.p = 'pausa'; UI.t = 0; J.apunta = null; DEDO = null; SON.fx('boton'); SON.lento(0); }
 /* ---------- el fondo del menú: una torre infinita con un ninja que salta solo ---------- */
 function prepararFondoMenu(){ J.nivel = {id:'menu', mundo:'bambu', mi:0, n:0}; J.infinito = false; armarInfinito(); arrancarCorrida(0); J.modo = 'menu'; J.tinta = null; NIN.quieto = 0; }

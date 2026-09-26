@@ -14,8 +14,8 @@ se prueba **en el celular, en vertical (412×892)**.
 | `juegos-pc/Linea.html` | **LÍNEA CALIENTE.** Acción desde arriba en pixel art a lo *Hotline Miami*, Buenos Aires 1989: prólogo y 4 capítulos (9 pisos generados y verificados), jefe, contestador y viaje en auto, máscaras con ventajas, notas A+ a D, **modo censura** opcional, ES/EN/PT. Dos palancas fijas (caminar / apuntar y pegar), botón GOLPEAR y botón de acción. Se juega apaisado. |
 | `herramientas/linea/` | Fuentes de `Linea.html` (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`: bot que juega solo, toques, idiomas, fuzz). **Se edita la fuente.** |
 | `.claude/skills/juego-topdown` | Receta de la acción desde arriba: choques en celdas, puertas, niveles con semilla verificados, IA, bot de banco, censura. |
-| `juegos-pc/Sombra.html` | **SOMBRA.** Saltos verticales a lo *Ninja Tobu*, se juega **parado**: arrastrar para atrás y soltar, cámara lenta al apuntar, doble salto, enemigos que se matan atravesándolos, 3 mundos × 8 desafíos generados y verificados, modo infinito con tinta que sube, tienda de 7 ninjas y 7 efectos, cofre, ES/EN/PT. |
-| `herramientas/sombra/` | Fuentes de `Sombra.html` (`fuentes/`), `armar.sh` y el banco (`banco/`: bot que juega los 24 niveles y el infinito, dedo, fuzz, pantallas). **Se edita la fuente.** |
+| `juegos-pc/Sombra.html` | **SOMBRA.** Saltos verticales a lo *Ninja Tobu*, se juega **parado**: arrastrar para atrás y soltar, cámara lenta al apuntar, doble salto, enemigos que se matan atravesándolos, 3 mundos × 8 desafíos generados y verificados con **un jefe al final de cada mundo** (Gran Tengu, Yuki-onna, Shogun), modo infinito que pasa por los tres mundos con tinta que sube, tienda de 7 ninjas y 7 efectos, cofre, ES/EN/PT. |
+| `herramientas/sombra/` | Fuentes de `Sombra.html` (`fuentes/`), `armar.sh` y el banco (`banco/`: bot que juega los 24 niveles y el infinito, bot de jefes, dedo, fuzz, pantallas). **Se edita la fuente.** |
 | `.claude/skills/juego-vertical` | Receta de los saltos verticales: torre en anillo, tramos verificados con la física real, bot que sigue el plan. |
 | `herramientas/mate/` | Fuentes de `Mate.html` por partes (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`). **Se edita la fuente, no el HTML.** |
 | `.claude/skills/juego-25d` | Receta del 2.5D pixel art: render, sprites, niveles verificados, cinemáticas, menús, idiomas. |
@@ -1757,3 +1757,45 @@ Medido:
 
 Queda para decidir: la dificultad de la montaña 5 a 8 y del castillo la tiene que probar una persona; los shurikens se
 aflojaron (135 px/s, cada 3 s) porque eran lo que más mataba al bot.
+
+### 2026-09-26 (av) — SOMBRA: un jefe por mundo y la torre llena
+**Pedido textual:** «Agrega un jefe al final de cada mundo y mejora el pixel art, se ve muy vacio».
+
+**Jefes** (`6b_jefes.js`). El desafío 8 de cada mundo termina en una **arena cerrada**: al subir del piso, una reja
+tapa el hueco de abajo, sale el cartel «¡JEFE!» con el nombre y la barra de vida arriba, y la tinta espera abajo. Al
+jefe se le pega atravesándolo en el aire, como a los enemigos, pero cada uno tiene su regla. Muerto, se abre la reja del
+techo, caen 12 monedas y se sigue al torii.
+- **El Gran Tengu** (bambú, 5 golpes): vuela entre anclas, se para, avisa con «!» y tira un abanico de plumas (3, y 5
+  con poca vida); con poca vida también **apunta y se tira en picada**.
+- **Yuki-onna** (montaña, 6): flota y se vuelve niebla. Sólo se le pega cuando está entera; cada golpe la hace
+  desaparecer y volver en otro lado. Marca en el techo dónde van a caer los carámbanos y a la mitad de vida sopla un
+  abanico de esquirlas.
+- **El Shogun** (castillo, 7): camina hacia vos con la katana. **De frente rebota** («¡CLANG!»): hay que caerle de
+  arriba o pegarle por la espalda, que le brilla. Marca una línea roja y larga una onda a tu altura; con menos vida salta
+  y al caer manda olas por el piso, y al final llueven bolas de fuego del techo. Si te quedás pegado al lado, te corta.
+- Morir contra el jefe **vuelve a la arena**, no al principio del nivel.
+
+**Pixel art.** La torre era piedra lisa sobre un cielo:
+- dos capas de fondo con paralaje por mundo: pagodas y torii flotando entre nubes lejos; más cerca bambú, pinos
+  nevados o el castillo con ventanas encendidas y estandartes;
+- rayos de sol y bandadas de pájaros;
+- sillería en la piedra (juntas y cantos con luz);
+- arriba de cada repisa pasto y flores, nieve o brasas; abajo lianas, carámbanos o cadenas;
+- faroles de piedra con luz que titila, altarcitos nevados y banderas que flamean;
+- cuerdas shimenawa con papeles en zigzag y faroles de papel que se hamacan, que cruzan la torre en los descansos.
+El infinito ahora **pasa de mundo cada 150 m**, con cartel, fundido y ambiente nuevos.
+
+Medido:
+- Bot de jefes (`banco/jefes.js`), invencible: los tres jefes caen y el nivel se gana (tengu 60 s, yuki 83 s, shogun
+  22 s).
+- Bot de jefes mortal, que no esquiva: tengu 4 de 6, yuki 1 de 3, shogun 3 de 3 (con reintentos desde la arena).
+- Los 21 niveles sin jefe, bot mortal: 14 de 21. Los que pierde son contra shurikens y pinchos que no esquiva, como en (au).
+- Infinito sin errores y pasando de mundo, `TR_FALTA` vacío en los tres idiomas, fuzz de 500 y dedo sin errores.
+
+Lo que costó una vuelta:
+- **La cuerda de adorno gastaba el azar del nivel**: todos los niveles cambiaban y había que volver a medirlos. Sale
+  de un hash de la fila.
+- **El nivel no se ganaba nunca con el jefe muerto**: se miraba `muerto` y no `fuera` (el que ya terminó de caer).
+- **El tengu mataba al bot en todas las pasadas**: bajó a 72 px/s, carga 1 s con aviso y plumas a 100 px/s.
+- **El bambú de fondo salía rosa y ruidoso**: la base se mezcla con el color de la torre y lleva menos hojas.
+

@@ -50,3 +50,17 @@ Fuentes en `herramientas/sombra/fuentes/`, se arma con `herramientas/sombra/arma
   lado. Re-planeando en cada salto quedaba oscilando entre dos esquinas. Si un tirador está cargando, salta ya.
 - `inf.js`: el mismo bot con la meta 300 px más arriba; mide altura, causa de muerte y el cuadro más lento (la
   generación de un tramo nuevo).
+- `jefes.js`: arranca en la repisa izquierda de la arena (el jefe se activa al subir 14 px del piso) y apunta
+  prediciendo la velocidad del jefe.
+
+## Jefes
+- Arena cerrada al final del desafío 8: piso con hueco, repisas, techo doble con hueco; la verificación llega hasta el
+  techo y **recién después** se ponen las rejas (`T_REJA`, sólida para ninja y balas).
+- Se le pega atravesándolo en el aire con una regla por jefe (entera, de arriba o por la espalda); de otro modo rebota.
+  Todo ataque se avisa antes («!», marcas, línea roja).
+- Ganar mira que el jefe **terminó de caer** (`fuera`), no que murió. Morir contra el jefe vuelve a la arena.
+
+## Adornos
+- Todo lo que sea sólo visual **no puede usar el azar del nivel**: cambia todos los niveles ya verificados. Va con un
+  hash de la fila.
+

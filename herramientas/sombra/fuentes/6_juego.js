@@ -19,7 +19,9 @@ const PROG = Object.assign({monedas:0, ninjas:['kage'], efectos:['auto'], ninja:
 function guardarProg(){ guardar('sombra.progreso', PROG); }
 const NJ = () => NINJAS[PROG.ninja] || NINJAS.kage;
 /* el efecto que se ve: el del mundo, o el que se puso el jugador */
-function efecto(){ if(PROG.efecto !== 'auto' && EFECTOS[PROG.efecto]) return EFECTOS[PROG.efecto]; const m = J.nivel ? J.nivel.mundo : 'bambu'; return EFECTOS[{bambu:'atardecer', montana:'noche', castillo:'fuego', infinito:'atardecer'}[m] || 'atardecer']; }
+/* el mundo que se ve: el del nivel; en el infinito cambia cada 150 m (bambú, montaña, castillo, y vuelta) */
+function mundoActual(){ if(!J.nivel) return 'bambu'; if(J.nivel.mundo === 'infinito') return ['bambu', 'montana', 'castillo'][Math.floor(J.alturaMax/150) % 3]; return J.nivel.mundo === 'menu' ? 'bambu' : J.nivel.mundo; }
+function efecto(){ if(PROG.efecto !== 'auto' && EFECTOS[PROG.efecto]) return EFECTOS[PROG.efecto]; const m = mundoActual(); return EFECTOS[{bambu:'atardecer', montana:'noche', castillo:'fuego', infinito:'atardecer'}[m] || 'atardecer']; }
 
 /* ================================================================ los niveles: 3 mundos × 8, generados con semilla y verificados */
 const MUNDOS = [{id:'bambu', nombre:'BOSQUE DE BAMBÚ', musica:'bambu', amb:'bambu'}, {id:'montana', nombre:'LA MONTAÑA', musica:'montana', amb:'montana'}, {id:'castillo', nombre:'EL CASTILLO', musica:'castillo', amb:'castillo'}];
@@ -33,13 +35,17 @@ function armarNivel(def){
     const mezcla = MEZCLAS[def.mundo] || MEZCLAS.bambu;
     for(let k = 0; k < def.tramos; k++){ abrirFilas(base - 40); const tipo = k === 0 ? 'repisas' : mezcla[Math.floor(r()*mezcla.length)];
       base -= TRAMOS[tipo](base, r, def.d, o); abrirFilas(base - 6); base -= descanso(base, r); }
+    /* el último nivel de cada mundo termina con el jefe */
+    let A = null; if(def.n === 7 && JEFE_DE[def.mundo]){ abrirFilas(base - 40); A = arena(base); base -= A.h; }
     abrirFilas(base - 14);
     /* el techo con el torii: se gana al pasar por debajo */
     rect2(1, base - 11, COLS - 2, base - 12, T_PIEDRA); MAPA.meta = {y:(base - 4)*CEL, r:base - 4};
     const desde = {x:ANCHO/2, y:CEL - HH - 0.01, nx:0, ny:-1};
     const a = alcance(desde, MAPA.meta.y, 2500, true);
     if(a.llega){ def.semillaBuena = semilla; const P = poblar(o, a, r); ENEM = P.enem; MONEDAS = P.mon; MAPA.plats = P.plats; BALAS = []; PARTS = []; MANCHAS = [];
-      J.totMonedas = MONEDAS.length; J.totEnem = ENEM.length; return true; }
+      J.totMonedas = MONEDAS.length; J.totEnem = ENEM.length; J.jefe = null; J.arena = A; J.marcas = [];
+      if(A){ for(let c = A.reja.c0; c <= A.reja.c1; c++){ poner(c, A.reja.r0, T_REJA); poner(c, A.reja.r1, T_REJA); } J.jefe = crearJefe(JEFE_DE[def.mundo], A); J.totEnem++; }
+      return true; }
   }
   console.warn('nivel sin camino', def.id); return false;
 }
@@ -64,7 +70,7 @@ function crearEnemigo(t, x, y, r){ return {t, x, y, x0:x, dir:r() < 0.5 ? -1 : 1
 /* ================================================================ el infinito: se va generando de a tramos, verificados desde lo que ya se alcanzó */
 const INF = {base:0, desde:null, r:null, n:0};
 function armarInfinito(){
-  nuevoMapa(); ENEM = []; MONEDAS = []; BALAS = []; PARTS = []; MANCHAS = []; MAPA.meta = null;
+  nuevoMapa(); ENEM = []; MONEDAS = []; BALAS = []; PARTS = []; MANCHAS = []; MAPA.meta = null; J.jefe = null; J.arena = null; J.marcas = [];
   INF.base = 0; INF.n = 0; INF.r = mulberry(Math.floor(Math.random()*1e9)); INF.desde = {x:ANCHO/2, y:CEL - HH - 0.01, nx:0, ny:-1};
   for(let i = 0; i < 3; i++) tramoInfinito();
 }
@@ -98,7 +104,7 @@ function arrancarCorrida(tinta){
   NIN.bufanda = []; for(let i = 0; i < 6; i++) NIN.bufanda.push({x:NIN.x, y:NIN.y, px:NIN.x, py:NIN.y});
   NIN.ultimo = {x:NIN.x, y:NIN.y, nx:0, ny:-1};
   Object.assign(J, {modo:'juego', t:0, reloj:0, puntos:0, monedas:0, bajas:0, combo:0, hitstop:0, textos:[], fin:null, pausa:false, apunta:null, ts:1, tsObj:1, muerto:0, altura:0, alturaMax:0, fundido:1});
-  J.tinta = tinta ? {y:(MAPA.piso + 3)*CEL, v:tinta, t:0} : null;
+  J.tinta = tinta ? {y:(MAPA.piso + 3)*CEL, v:tinta, t:0} : null; J.mundoInf = null; J.cartel = null;
   CAM.y = Math.min(NIN.y - H*0.6, CEL - H*0.86); CAM.objY = CAM.y;
 }
 function morir(causa){
@@ -142,6 +148,7 @@ function pasoJuego(dt, dtR){
   for(const p of MAPA.plats){ const u = (Math.sin(J.t*p.v*2 + p.f) + 1)/2, nx = lerp(p.xa, p.xb, u); p.dx = nx - p.x; p.x = nx; }
   pasoNinja(dt);
   pasoEnemigos(dt);
+  pasoJefe(dt);
   pasoBalas(dt);
   pasoMonedas(dt);
   pasoDesm(dt);
@@ -154,7 +161,9 @@ function pasoJuego(dt, dtR){
   J.altura = Math.max(0, Math.round(-NIN.y/CEL)); if(J.altura > J.alturaMax){ J.puntos += (J.altura - J.alturaMax)*10; J.alturaMax = J.altura; }
   if(J.infinito){ while(MAPA.rMin > Math.floor((CAM.y - H)/CEL) - 10) tramoInfinito();
     const abajo = (J.tinta ? J.tinta.y : CAM.y + H*2) + 120; ENEM = ENEM.filter(e => e.y < abajo); MONEDAS = MONEDAS.filter(m => m.y < abajo); MAPA.plats = MAPA.plats.filter(p => p.y < abajo); MANCHAS = MANCHAS.filter(m => m.y < abajo); }
-  if(MAPA.meta && NIN.est !== 'muerto' && NIN.y < MAPA.meta.y) ganar();
+  if(J.infinito){ const m = mundoActual(); if(m !== J.mundoInf){ if(J.mundoInf){ J.fundido = 0.6; J.cartel = {txt:MUNDOS.find(q => q.id === m).nombre, t:2.2}; SON.ambiente(m); sfx('titulo', {vol:0.5}); } J.mundoInf = m; } }
+  if(J.cartel){ J.cartel.t -= dtR; if(J.cartel.t <= 0) J.cartel = null; }
+  if(MAPA.meta && NIN.est !== 'muerto' && NIN.y < MAPA.meta.y && !(J.jefe && !J.jefe.fuera)) ganar();
   for(const t of J.textos){ t.t -= dtR; t.y -= dtR*18; } J.textos = J.textos.filter(t => t.t > 0);
   pasoParticulas(dt);
 }
@@ -236,9 +245,9 @@ function matar(e){
   for(const s of [-1, 1]) PARTS.push({x:e.x, y:e.y - 5, vx:NIN.vx*0.2 + s*30, vy:-60 + rv(-20, 20), vida:1.4, col:efecto().silueta, tam:3, g:1, gira:true});
 }
 function pasoBalas(dt){
-  for(const b of BALAS){ if(b.clavada){ b.vida -= dt; continue; } b.vida -= dt; b.x += b.vx*dt; b.y += b.vy*dt; if(b.giro !== undefined) b.giro += dt*20;
-    const t = tile(Math.floor(b.x/CEL), Math.floor(b.y/CEL)); if(t === T_PIEDRA || t === T_DESM){ if(b.t === 'shuriken'){ b.clavada = true; b.vida = 1.2; sfx('shuriken_clava', {x:pan(b.x), vol:0.4}); } else { b.vida = 0; polvo(b.x, b.y, 3, '#ffe0a0'); } continue; }
-    if(NIN.est !== 'muerto' && NIN.est !== 'meta' && Math.abs(b.x - NIN.x) < HW + 1.5 && Math.abs(b.y - NIN.y) < HH + 1.5){ b.vida = 0; morir(b.t); } }
+  for(const b of BALAS){ if(b.clavada){ b.vida -= dt; continue; } b.vida -= dt; if(b.grav) b.vy += 420*dt; b.x += b.vx*dt; b.y += b.vy*dt; if(b.giro !== undefined) b.giro += dt*20;
+    const t = tile(Math.floor(b.x/CEL), Math.floor(b.y/CEL)); if(t === T_PIEDRA || t === T_DESM || t === T_REJA){ if(b.t === 'hielo' || b.t === 'fuego'){ b.vida = 0; for(let i = 0; i < 5; i++) PARTS.push({x:b.x, y:b.y - 2, vx:rv(-40, 40), vy:rv(-60, -10), vida:0.4, col:b.t === 'hielo' ? '#e8f4ff' : '#ffb040', tam:1, g:1}); continue; } if(b.t === 'shuriken'){ b.clavada = true; b.vida = 1.2; sfx('shuriken_clava', {x:pan(b.x), vol:0.4}); } else { b.vida = 0; polvo(b.x, b.y, 3, '#ffe0a0'); } continue; }
+    if(NIN.est !== 'muerto' && NIN.est !== 'meta' && Math.abs(b.x - NIN.x) < HW + (b.w || 1.5) && Math.abs(b.y - NIN.y) < HH + (b.h || 1.5)){ b.vida = 0; morir(b.t === 'bala' || b.t === 'shuriken' ? b.t : 'jefe'); } }
   BALAS = BALAS.filter(b => b.vida > 0);
 }
 function pasoMonedas(dt){
