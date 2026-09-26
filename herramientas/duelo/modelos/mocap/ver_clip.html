@@ -1,0 +1,28 @@
+<!doctype html><meta charset=utf-8><body style="margin:0;background:#888">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+// Renderiza un GLB animado en varias poses (hoja de contacto) y mide si los huesos caen dentro de la malla deformada
+import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {ARGS,cargarGLB,mallaConPiel} from './comun.js';
+const W=ARGS.w||200,H=ARGS.h||300,N=ARGS.n||8;
+const r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});r.setSize(W*N,H);document.body.appendChild(r.domElement);
+const g=await cargarGLB(THREE,GLTFLoader,'http://local/'+ARGS.src);const esc=new THREE.Scene();esc.add(g.scene);
+esc.add(new THREE.HemisphereLight(0xffffff,0x444444,2.5));const dl=new THREE.DirectionalLight(0xffffff,2);dl.position.set(2,3,4);esc.add(dl);
+let m=mallaConPiel(g);if(!m)g.scene.traverse(o=>{if(o.isMesh&&!m)m=o;});m.frustumCulled=false;
+const mix=new THREE.AnimationMixer(g.scene);const clip=(ARGS.nombre?g.animations.find(a=>a.name===ARGS.nombre):g.animations[ARGS.clip||0])||new THREE.AnimationClip('nada',1,[]);const a=mix.clipAction(clip);a.play();
+const cam=new THREE.PerspectiveCamera(30,W/H,0.01,100);
+r.setScissorTest(true);
+const info=[];
+for(let i=0;i<N;i++){
+  mix.setTime(clip.duration*i/(N-1));g.scene.updateMatrixWorld(true);
+  // caja de la malla deformada (en mundo)
+  if(m.isSkinnedMesh)m.computeBoundingBox();else m.geometry.computeBoundingBox(),m.boundingBox=m.geometry.boundingBox;const bb=m.boundingBox.clone().applyMatrix4(m.matrixWorld);
+  const c=bb.getCenter(new THREE.Vector3()), s=bb.getSize(new THREE.Vector3());const alto=Math.max(s.x,s.y,s.z);
+  const ang=ARGS.ang||0;cam.position.set(c.x+Math.sin(ang)*alto*2.6,c.y+alto*0.1,c.z+Math.cos(ang)*alto*2.6);cam.lookAt(c);cam.near=alto*0.05;cam.far=alto*20;cam.updateProjectionMatrix();
+  r.setViewport(i*W,0,W,H);r.setScissor(i*W,0,W,H);r.render(esc,cam);
+  if(i===0&&m.skeleton){const hs={};m.skeleton.bones.forEach(b=>{hs[b.name]=b.getWorldPosition(new THREE.Vector3()).toArray().map(x=>+x.toFixed(3));});info.push({bb:[bb.min.toArray().map(x=>+x.toFixed(3)),bb.max.toArray().map(x=>+x.toFixed(3))],huesos:hs});}
+}
+console.log(clip.name,clip.duration.toFixed(2),JSON.stringify(info[0]||{}).slice(0,1500));
+await window.guardar('ver/'+(ARGS.out||'clip')+'.png',r.domElement.toDataURL('image/png').split(',')[1],true);
+window.LISTO=true;
+</script>

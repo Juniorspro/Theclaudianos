@@ -1,0 +1,43 @@
+<!doctype html><meta charset=utf-8><body>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+// Retarget esqueleto→esqueleto (mismos nombres, misma pose de reposo porque es la misma malla):
+// delta de rotación en mundo respecto del reposo. Salida: pistas locales del esqueleto destino + posición de la cadera.
+import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {ARGS,cargarGLB,mallaConPiel} from './comun.js';
+const log=(...a)=>console.log(a.map(x=>typeof x==='string'?x:JSON.stringify(x)).join(' '));
+const V3=THREE.Vector3,Q=THREE.Quaternion;
+async function esqueleto(url){const g=await cargarGLB(THREE,GLTFLoader,url);const m=mallaConPiel(g);const H={};m.skeleton.bones.forEach(b=>H[b.name]=b);g.scene.updateMatrixWorld(true);
+  const rest={};m.skeleton.bones.forEach(b=>rest[b.name]={q:b.quaternion.clone(),p:b.position.clone(),wq:b.getWorldQuaternion(new Q()),wp:b.getWorldPosition(new V3())});return {g,H,bones:m.skeleton.bones,rest};}
+const T=await esqueleto('http://local/'+ARGS.destino);
+const ORDEN=T.bones.map(b=>b.name); // los huesos vienen de padre a hijo
+const hipsAlto=T.rest.Hips.wp.y;
+for(const src of ARGS.fuentes){
+  const S=await esqueleto('http://local/'+src.archivo);
+  const clip=S.g.animations[0];const mix=new THREE.AnimationMixer(S.g.scene);mix.clipAction(clip).play();
+  const fps=ARGS.fps||30, n=Math.max(2,Math.round(clip.duration*fps)+1);
+  const escala=hipsAlto/S.rest.Hips.wp.y;
+  const pistas={};ORDEN.forEach(k=>pistas[k]=[]);const pos=[],raiz=[];
+  for(let i=0;i<n;i++){
+    mix.setTime(Math.min(clip.duration,i/fps));S.g.scene.updateMatrixWorld(true);
+    for(const k of ORDEN){
+      const b=T.H[k];const sb=S.H[k];
+      let wq;
+      if(sb){const d=sb.getWorldQuaternion(new Q()).multiply(S.rest[k].wq.clone().invert());wq=d.multiply(T.rest[k].wq.clone());}
+      else{wq=null;}
+      if(wq){const pq=b.parent.getWorldQuaternion(new Q());b.quaternion.copy(pq.invert().multiply(wq));}else b.quaternion.copy(T.rest[k].q);
+      b.updateMatrixWorld(true);
+    }
+    // cadera: desplazamiento en mundo desde el reposo, escalado por la altura de la cadera
+    const dp=S.H.Hips.getWorldPosition(new V3()).sub(S.rest.Hips.wp).multiplyScalar(escala);
+    const w=T.rest.Hips.wp.clone().add(dp);
+    raiz.push([dp.x,w.y,dp.z]);
+    const loc=T.H.Hips.parent.worldToLocal(w.clone());T.H.Hips.position.copy(loc);pos.push(loc.x,loc.y,loc.z);
+    for(const k of ORDEN){const q=T.H[k].quaternion;pistas[k].push(q.x,q.y,q.z,q.w);}
+  }
+  await window.guardar('clips/'+src.nombre+'.json',JSON.stringify({nombre:src.nombre,fps,n,raiz,pistas,pos,origen:clip.name}));
+  log('clip',src.nombre,'cuadros',n,clip.name);
+  S.g.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();});
+}
+window.LISTO=true;
+</script>

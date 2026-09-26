@@ -1,0 +1,28 @@
+<!doctype html><meta charset=utf-8><body style="margin:0;background:#888">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+// Muestra un clip JSON (pistas por hueso + raíz) sobre el modelo, en varios cuadros, con cámara fija de frente
+import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {ARGS,cargarGLB,mallaConPiel} from './comun.js';
+const W=ARGS.w||240,H=ARGS.h||200;
+const clip=await (await fetch('http://local/clips/'+ARGS.clip+'.json')).json();
+const idx=ARGS.cuadros||[0,Math.floor(clip.n/4),Math.floor(clip.n/2),Math.floor(clip.n*3/4),clip.n-1];
+const r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});r.setSize(W*idx.length,H*(ARGS.vistas||1));document.body.appendChild(r.domElement);
+const g=await cargarGLB(THREE,GLTFLoader,'http://local/'+ARGS.modelo);const esc=new THREE.Scene();esc.add(g.scene);
+esc.add(new THREE.HemisphereLight(0xffffff,0x444444,2.5));const dl=new THREE.DirectionalLight(0xffffff,2);dl.position.set(2,3,4);esc.add(dl);
+const piso=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({color:0x3a7a3a}));piso.rotation.x=-Math.PI/2;esc.add(piso);
+const m=mallaConPiel(g);m.frustumCulled=false;const sk=m.skeleton;const Hb={};sk.bones.forEach(b=>Hb[b.name]=b);
+const hips=Hb.Hips, p0=hips.position.clone(), arm=hips.parent; arm.updateMatrixWorld(true);
+const s=arm.getWorldScale(new THREE.Vector3()).x;const y0=hips.getWorldPosition(new THREE.Vector3()).y;
+const cam=new THREE.PerspectiveCamera(ARGS.fov||40,W/H,0.05,100);
+r.setScissorTest(true);
+for(let v=0;v<(ARGS.vistas||1);v++)idx.forEach((f,k)=>{
+  for(const [n,arr] of Object.entries(clip.pistas)){if(!Hb[n])continue;Hb[n].quaternion.fromArray(arr,f*4);}
+  const rz=clip.raiz[f];hips.position.set(p0.x+rz[0]/s,p0.y+(rz[1]-y0)/s,p0.z+rz[2]/s);
+  g.scene.updateMatrixWorld(true);
+  const ang=v===0?0:Math.PI/2;cam.position.set((ARGS.cx||1.0)+Math.sin(ang)*6,1.1,Math.cos(ang)*6);cam.lookAt(ARGS.cx||1.0,0.8,0);cam.updateProjectionMatrix();
+  r.setViewport(k*W,v*H,W,H);r.setScissor(k*W,v*H,W,H);r.render(esc,cam);
+});
+await window.guardar('ver/'+ARGS.clip+'.png',r.domElement.toDataURL('image/png').split(',')[1],true);
+window.LISTO=true;
+</script>

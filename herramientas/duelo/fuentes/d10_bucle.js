@@ -91,7 +91,7 @@ function arrancar(){
     else if(Sonido.ac&&Sonido.ac.resume)Sonido.ac.resume();
   });
   /* sondas para el banco de pruebas: el juego no las usa */
-  window.__D={J:J,UI:UI,Sonido:Sonido,E:Entrada,yo:function(){return YO;},el:function(){return EL;},posar:function(Jx,dt){posar(Jx,dt);},cam:function(){return R3.cam;},render:function(){dibujar3D();},
+  window.__D={J:J,UI:UI,Sonido:Sonido,E:Entrada,yo:function(){return YO;},el:function(){return EL;},evalua:function(s){return eval(s);},posar:function(Jx,dt){posar(Jx,dt);},cam:function(){return R3.cam;},render:function(){dibujar3D();},vestirYo:function(k){vestirJugador(YO,KITS[k]);},vestirRival:function(c){if(EL.glb)vestirFutbolista(EL,{cam:c,short:"#1a2a5a"},true);},
     listo:function(){return !!J.listo;},
     congelar:function(v){J.congelado=v!==false;},
     prog:function(){return Prog;},pant:function(){return J.pant;},

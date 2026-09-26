@@ -37,6 +37,13 @@ Trampas, todas pagadas:
 MCP a nivel de cuenta: `generate_image`, `generate_video`, `generate_audio`, `generate_3d`,
 `media_upload` (devuelve URL pública permanente → sirve como `source_url` de un modelo 3D).
 Conviene generar con los dos y **comparar dentro del juego**, no en la hoja de contactos.
+- **Animaciones de verdad**: `generate_3d` con `model:'3d_rigging'` (Meshy) rigea un GLB por URL pública y le
+  aplica UNO de 678 clips de mocap (`animation_actions` para buscar: patada, festejos, lamentos, idles,
+  carreras…), 8 créditos. La malla tiene que **mirar a +Z** (si no, el rig sale roto) y cada pedido
+  ajusta el esqueleto un poco distinto: se retargetea contra un esqueleto base. Ver [duelo](../../../memoria/duelo.md).
+- Lo que la biblioteca no tiene (estirada de arquero) sale de **video + MediaPipe** (un «DeepMotion»
+  casero): Kling 3.0 `pro` sin sonido, 7,5 créditos, cámara fija y cuerpo entero en cuadro.
+- Un GLB/archivo propio se sube con `media_upload` (PUT al presigned + `media_confirm` tipo `file`).
 
 ## Horneado — cada regla costó una vuelta
 1. **Pedir `face_limit` AL GENERAR** (`extra:{face_limit:6000}`): Tripo devuelve un millón de

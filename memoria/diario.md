@@ -1,6 +1,12 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-26 — DUELO: animaciones de mocap y rig nuevo
+Los futbolistas pasaron al esqueleto de Meshy con 14 clips de su biblioteca de mocap (vía Higgsfield) y
+8 sacados de videos de referencia con MediaPipe (estiradas y postura del arquero). Arreglados: guantes
+(ahora pintados en la mano), número (pintado en la textura), cuerpo corrido 23 cm, rig roto de Meshy
+(la malla miraba a +X), pie que pasaba por arriba de la pelota. Equilibrio re-medido. Ver [duelo](duelo.md).
+
 ### 2026-09-26 — DUELO: futbolistas de verdad y cancha nueva
 Modelos con esqueleto de Rezona en lugar de los muñecos; césped en capas, post-proceso y decorado
 alrededor de la cancha. Trampas anotadas en [duelo](duelo.md) § Cómo está hecho (eje z arriba,

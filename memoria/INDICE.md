@@ -28,7 +28,7 @@
 | [juegos](juegos.md) | hagas **3D**: render, luz, niebla, vegetación, personaje, post-proceso |
 | [pixel2d](pixel2d.md) | hagas **2D pixel art**: escala, sprites, luz, mundo procedural, sonido |
 | ⛔ `arrabal/` | **SELLADA**: ARRABAL (pelea con cartas) vive ahí, con su memoria adentro. No se lee sin el código del usuario: ver `arrabal/SELLADO.md` |
-| [duelo](duelo.md) | toques `juegos-pc/Duelo.html`, el fútbol 1 contra 1 en **3D** (patear deslizando, atajar tirándose) |
+| [duelo](duelo.md) | toques `juegos-pc/Duelo.html`, el fútbol 1 contra 1 en **3D** (patear deslizando, atajar tirándose); animaciones de mocap (Meshy + MediaPipe) |
 | [cabezones](cabezones.md) | toques `juegos-pc/Cabezones.html`, el fútbol de cabezas (el último 2D: **el próximo lo tiene que superar**) |
 | [chicharra](chicharra.md) | toques `juegos-pc/Chicharra.html`, el juego de esta línea |
 | [idiomas](idiomas.md) | toques textos de un juego o hagas uno nuevo: **todos llevan selector de idioma** (es/en/pt/fr) |

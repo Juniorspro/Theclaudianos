@@ -5,7 +5,7 @@ function menu3D(modo){
   var C=R3.camObj;
   YO.raiz.visible=true;EL.raiz.visible=false;R3.pelota.visible=true;R3.estela.pts.length=0;
   YO.x=0;YO.z=2;YO.y=0;YO.giro=0;
-  if(modo==='vestuario'){YO.anim='quieto';YO.giro=Math.PI;C.pos.set(0,1.6,8.6);C.mira.set(0,0.15,2);C.fov=40;}
+  if(modo==='vestuario'){YO.anim=YO.glb?'parado':'quieto';YO.giro=Math.PI;C.pos.set(0,1.6,8.6);C.mira.set(0,0.15,2);C.fov=40;}
   else{YO.anim='malabares';YO.giro=Math.PI*0.85;}
 }
 function orbitarMenu(t){
@@ -14,10 +14,11 @@ function orbitarMenu(t){
 }
 /* la pelota del jueguito sigue al pie que la toca */
 function pelotaJueguito(){
-  var c=(YO.t*2.2)%2, der=c<1, q=c%1;
-  var lado=der?0.1:-0.1, s=Math.sin(YO.giro), co=Math.cos(YO.giro);
+  /* la pelota va de un pie al otro: toca abajo (q=0) y sube; el pie que toca sube a buscarla (piernaJueguito) */
+  var c=(YO.t*2.2)%2, q=c%1;
+  var lado=0.1*Math.cos(Math.PI*c), s=Math.sin(YO.giro), co=Math.cos(YO.giro);
   var fx=YO.x+(lado*co)-0.28*s, fz=YO.z-(lado*-s)-0.28*co;
-  B.p.set(fx,0.35+Math.sin(q*Math.PI)*1.15,fz);
+  B.p.set(fx,0.32+Math.sin(q*Math.PI)*1.15,fz);
 }
 function pasarMenu3D(t,dt){
   if(YO.anim==='malabares'){posar(YO,dt);pelotaJueguito();}

@@ -1,0 +1,37 @@
+<!doctype html><meta charset=utf-8><body>
+<script type="module">
+// «DeepMotion casero»: pose 3D por cuadro con MediaPipe Pose Landmarker (heavy), con recorte que sigue al jugador.
+import {FilesetResolver,PoseLandmarker} from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs';
+import {ARGS} from './comun.js';
+const log=(...a)=>console.log(a.join(' '));
+const fs=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+const pl=await PoseLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:'http://local/modelos/pose_landmarker_heavy.task',delegate:'CPU'},runningMode:'IMAGE',numPoses:1,minPoseDetectionConfidence:0.3,minPosePresenceConfidence:0.3});
+log('modelo listo');
+const R=512, cv=document.createElement('canvas');cv.width=cv.height=R;const g=cv.getContext('2d');
+const cargar=src=>new Promise((ok,mal)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=mal;im.src=src;});
+let cx=ARGS.cx, cy=ARGS.cy, lado=ARGS.lado;const salida=[];
+for(let i=ARGS.desde;i<=ARGS.hasta;i++){
+  const im=await cargar(`http://local/${ARGS.carpeta}/${String(i).padStart(3,'0')}.jpg`);
+  let mejor=null;
+  // se prueban el recorte actual y uno más grande si falla
+  for(const f of [1,1.5,2.2]){
+    const L=lado*f, x0=cx-L/2, y0=cy-L/2;
+    g.fillStyle='#000';g.fillRect(0,0,R,R);g.drawImage(im,x0,y0,L,L,0,0,R,R);
+    const r=pl.detect(cv);
+    if(r.landmarks&&r.landmarks.length){mejor={r,x0,y0,L};break;}
+  }
+  if(!mejor){salida.push({i,ok:false});log(i,'sin pose');continue;}
+  const {r,x0,y0,L}=mejor;
+  const p2=r.landmarks[0].map(p=>[x0+p.x*L,y0+p.y*L,p.z*L,p.visibility]);
+  const pw=r.worldLandmarks[0].map(p=>[p.x,p.y,p.z,p.visibility]);
+  salida.push({i,ok:true,p2,pw});
+  // el recorte sigue al cuerpo
+  const vis=p2.filter(p=>p[3]>0.3);const xs=vis.map(p=>p[0]), ys=vis.map(p=>p[1]);
+  const mx=(Math.min(...xs)+Math.max(...xs))/2, my=(Math.min(...ys)+Math.max(...ys))/2, ext=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
+  cx=cx*0.3+mx*0.7;cy=cy*0.3+my*0.7;lado=Math.max(ARGS.minimo||380,ext*1.7);
+  if(i%10===0)log(i,'ok cadera',((p2[23][0]+p2[24][0])/2).toFixed(0),((p2[23][1]+p2[24][1])/2).toFixed(0),'lado',lado.toFixed(0));
+}
+await window.guardar(ARGS.out,JSON.stringify(salida));
+log('guardado',salida.filter(s=>s.ok).length,'de',salida.length);
+window.LISTO=true;
+</script>

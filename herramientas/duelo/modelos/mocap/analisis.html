@@ -1,0 +1,21 @@
+<!doctype html><meta charset=utf-8><body>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {ARGS,cargarGLB,mallaConPiel} from './comun.js';
+const log=(...a)=>console.log(a.map(x=>typeof x==='string'?x:JSON.stringify(x)).join(' '));
+const g=await cargarGLB(THREE,GLTFLoader,'http://local/'+ARGS.src);const m=mallaConPiel(g);const H={};m.skeleton.bones.forEach(b=>H[b.name]=b);
+const mix=new THREE.AnimationMixer(g.scene);
+const P=n=>H[n].getWorldPosition(new THREE.Vector3());
+for(const nom of ARGS.clips){
+  const c=g.animations.find(a=>a.name===nom);mix.stopAllAction();const a=mix.clipAction(c);a.reset().play();
+  const fps=30,n=Math.round(c.duration*fps)+1,fil=[];
+  for(let i=0;i<n;i++){mix.setTime(i/fps);g.scene.updateMatrixWorld(true);
+    const rt=P('RightToeBase'),lt=P('LeftToeBase'),hp=P('Hips'),lh=P('LeftHand'),rh=P('RightHand'),hd=P('Head');
+    fil.push({t:+(i/fps).toFixed(3),rt:rt.toArray().map(v=>+v.toFixed(3)),lt:lt.toArray().map(v=>+v.toFixed(3)),hp:hp.toArray().map(v=>+v.toFixed(3)),lh:lh.toArray().map(v=>+v.toFixed(2)),rh:rh.toArray().map(v=>+v.toFixed(2)),hd:+hd.y.toFixed(2)});}
+  if(nom==='patada'){let best=null;for(let i=1;i<n;i++){const v=(fil[i].rt[2]-fil[i-1].rt[2])*fps;if(fil[i].rt[1]<0.3&&(!best||v>best.v))best={i,v,t:fil[i].t,rt:fil[i].rt,hp:fil[i].hp};}log('patada contacto',best);
+    log('pie derecho z por cuadro',fil.map(f=>f.rt[2]).join(' '));log('pie derecho y',fil.map(f=>f.rt[1]).join(' '));}
+  else log(nom,'dur',c.duration.toFixed(2),'cadera y',fil.filter((f,i)=>i%3===0).map(f=>f.hp[1]).join(' '),'| pies min y',fil.filter((f,i)=>i%3===0).map(f=>Math.min(f.rt[1],f.lt[1]).toFixed(2)).join(' '),'| manos x',fil.filter((f,i)=>i%3===0).map(f=>Math.max(Math.abs(f.lh[0]),Math.abs(f.rh[0])).toFixed(2)).join(' '));
+}
+window.LISTO=true;
+</script>

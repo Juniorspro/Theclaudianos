@@ -1,0 +1,126 @@
+<!doctype html><meta charset=utf-8><body style="margin:0;background:#666">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+// Retarget de puntos de MediaPipe (33 marcas 3D) al esqueleto de Meshy (24 huesos). Salida: pistas por hueso.
+import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {ARGS,cargarGLB,mallaConPiel} from './comun.js';
+const log=(...a)=>console.log(a.map(x=>typeof x==='string'?x:JSON.stringify(x)).join(' '));
+const V3=THREE.Vector3, Q=THREE.Quaternion, M4=THREE.Matrix4;
+const g=await cargarGLB(THREE,GLTFLoader,'http://local/'+ARGS.modelo);
+const malla=mallaConPiel(g);const sk=malla.skeleton;const H={};sk.bones.forEach(b=>H[b.name]=b);
+g.scene.updateMatrixWorld(true);
+// reposo (TRS de los nodos tal como vienen)
+const REPOSO={};sk.bones.forEach(b=>REPOSO[b.name]={q:b.quaternion.clone(),p:b.position.clone()});
+const wpos=n=>H[n].getWorldPosition(new V3());
+const wrot=n=>H[n].getWorldQuaternion(new Q());
+// ---------- marcas de MediaPipe ----------
+const datos=await (await fetch('http://local/'+ARGS.pose)).json();
+const cuadros=datos.filter(f=>f.i>=ARGS.desde&&f.i<=ARGS.hasta);
+const ESPEJO=!!ARGS.espejo;
+const PAR=[[11,12],[13,14],[15,16],[17,18],[19,20],[21,22],[23,24],[25,26],[27,28],[29,30],[31,32],[1,4],[2,5],[3,6],[7,8],[9,10]];
+const swap=i=>{if(!ESPEJO)return i;for(const [a,b] of PAR){if(i===a)return b;if(i===b)return a;}return i;};
+// y abajo→arriba, z lejos→cerca; con espejo se niega X y se cambian izquierda/derecha
+let W=cuadros.map(f=>{const o=[];for(let k=0;k<33;k++){const p=f.pw[swap(k)];o.push(new V3(ESPEJO?-p[0]:p[0],-p[1],-p[2]));}return o;});
+let P2=cuadros.map(f=>{const o=[];for(let k=0;k<33;k++){const p=f.p2[swap(k)];o.push(new V3(p[0],p[1],0));}return o;});
+const suavizar=(arr,sig)=>{const n=arr.length, R=Math.ceil(sig*3), w=[];for(let d=-R;d<=R;d++)w.push(Math.exp(-d*d/(2*sig*sig)));
+  return arr.map((_,i)=>arr[0].map((__,k)=>{const s=new V3();let t=0;for(let d=-R;d<=R;d++){const j=Math.min(n-1,Math.max(0,i+d));s.addScaledVector(arr[j][k],w[d+R]);t+=w[d+R];}return s.multiplyScalar(1/t);}));};
+W=suavizar(W,ARGS.sigma||1.0);P2=suavizar(P2,ARGS.sigmaRaiz||1.5);
+const mid=(a,b)=>a.clone().add(b).multiplyScalar(0.5);
+// ---------- marcos del esqueleto en reposo ----------
+function marco(x,y){ // x: izquierda del sujeto, y: arriba aproximado → base ortonormal (x,y,z adelante)
+  const X=x.clone().normalize(), Y=y.clone().addScaledVector(X,-y.dot(X)).normalize(), Z=new V3().crossVectors(X,Y);
+  return new Q().setFromRotationMatrix(new M4().makeBasis(X,Y,Z));}
+const R_=REPOSO_MARCOS();
+function REPOSO_MARCOS(){
+  const lh=wpos('LeftUpLeg'), rh=wpos('RightUpLeg'), hip=wpos('Hips'), sp=wpos('Spine'), ls=wpos('LeftArm'), rs=wpos('RightArm'), hd=wpos('Head'), hf=wpos('headfront'), he=wpos('head_end');
+  return {cadera:marco(lh.clone().sub(rh),sp.clone().sub(hip)), pecho:marco(ls.clone().sub(rs),mid(ls,rs).sub(hip)),
+    cabeza:marco(ls.clone().sub(rs),he.clone().sub(hd)), rot:{}};
+}
+sk.bones.forEach(b=>R_.rot[b.name]=wrot(b.name));
+// dirección de reposo de cada segmento, en el espacio local del hueso
+const HIJO={LeftUpLeg:'LeftLeg',LeftLeg:'LeftFoot',LeftFoot:'LeftToeBase',RightUpLeg:'RightLeg',RightLeg:'RightFoot',RightFoot:'RightToeBase',
+  LeftArm:'LeftForeArm',LeftForeArm:'LeftHand',RightArm:'RightForeArm',RightForeArm:'RightHand'};
+const DIRL={};for(const [b,c] of Object.entries(HIJO)){DIRL[b]=H[c].position.clone().normalize();}
+const DIR_MANO=new V3(0,1,0); // la mano apunta por +Y local (como todos los huesos de Meshy)
+// segmento → marcas de MediaPipe
+const SEG={LeftUpLeg:[23,25],LeftLeg:[25,27],LeftFoot:[27,31],RightUpLeg:[24,26],RightLeg:[26,28],RightFoot:[28,32],
+  LeftArm:[11,13],LeftForeArm:[13,15],RightArm:[12,14],RightForeArm:[14,16]};
+const ORDEN=['Hips','Spine02','Spine01','Spine','neck','Head','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot','LeftArm','LeftForeArm','LeftHand','RightArm','RightForeArm','RightHand'];
+function ponerMundo(n,qw){const b=H[n];const pq=b.parent.getWorldQuaternion(new Q());b.quaternion.copy(pq.invert().multiply(qw));b.updateMatrixWorld(true);}
+// ---------- raíz desde la trayectoria 2D (cámara fija) ----------
+const h0=W[0];const pie0=Math.min(h0[27].y,h0[28].y,h0[31].y,h0[32].y,h0[29].y,h0[30].y);
+const altCadera0=-pie0; // altura de la cadera sobre el piso en el primer cuadro (m)
+// metros por píxel: largo de piernas+torso en mundo vs en imagen, promediado en los primeros cuadros
+let mpp=0;{let s=0,n=0;for(let i=0;i<Math.min(12,W.length);i++){const w=W[i],p=P2[i];
+  const lw=w[11].distanceTo(w[23])+w[23].distanceTo(w[25])+w[25].distanceTo(w[27])+w[12].distanceTo(w[24])+w[24].distanceTo(w[26])+w[26].distanceTo(w[28]);
+  const lp=p[11].distanceTo(p[23])+p[23].distanceTo(p[25])+p[25].distanceTo(p[27])+p[12].distanceTo(p[24])+p[24].distanceTo(p[26])+p[26].distanceTo(p[28]);s+=lw/lp;n++;}mpp=s/n;}
+const cad2=i=>mid(P2[i][23],P2[i][24]);
+const c0=cad2(0);
+const altReposo=wpos('Hips').y; // altura de la cadera del modelo en reposo (mundo)
+const largoModelo=wpos('LeftUpLeg').distanceTo(wpos('LeftLeg'))+wpos('LeftLeg').distanceTo(wpos('LeftFoot'));
+let largoMP=0;for(const w of W)largoMP+=(w[23].distanceTo(w[25])+w[25].distanceTo(w[27])+w[24].distanceTo(w[26])+w[26].distanceTo(w[28]))/2;largoMP/=W.length;
+const escalaCuerpo=largoModelo/largoMP;
+log('mpp',mpp.toFixed(5),'altCadera0',altCadera0.toFixed(3),'altReposo',altReposo.toFixed(3),'escala',escalaCuerpo.toFixed(3));
+// ---------- cuadro a cuadro ----------
+const fps=ARGS.fps||24, pistas={}, raiz=[], pos=[];const REPOSO_HIPS=wpos('Hips');
+sk.bones.forEach(b=>pistas[b.name]=[]);
+const prevSec={};
+for(let i=0;i<W.length;i++){
+  const w=W[i];
+  sk.bones.forEach(b=>{b.quaternion.copy(REPOSO[b.name].q);b.position.copy(REPOSO[b.name].p);});g.scene.updateMatrixWorld(true);
+  const lhip=w[23], rhip=w[24], mh=mid(lhip,rhip), ls=w[11], rs=w[12], msh=mid(ls,rs);
+  const Fc=marco(lhip.clone().sub(rhip),msh.clone().sub(mh)), Fp=marco(ls.clone().sub(rs),msh.clone().sub(mh));
+  const Dc=Fc.clone().multiply(R_.cadera.clone().invert()), Dp=Fp.clone().multiply(R_.pecho.clone().invert());
+  // cabeza: orejas y nariz
+  const le=w[7], re=w[8], me=mid(le,re), nar=w[0];
+  const xh=le.clone().sub(re), fw=nar.clone().sub(me), yh=new V3().crossVectors(fw,xh);
+  const Fh=marco(xh,yh), Dh=Fh.clone().multiply(R_.cabeza.clone().invert());
+  ponerMundo('Hips',Dc.clone().multiply(R_.rot.Hips));
+  ponerMundo('Spine02',Dc.clone().slerp(Dp,0.34).multiply(R_.rot.Spine02));
+  ponerMundo('Spine01',Dc.clone().slerp(Dp,0.67).multiply(R_.rot.Spine01));
+  ponerMundo('Spine',Dp.clone().multiply(R_.rot.Spine));
+  ponerMundo('neck',Dp.clone().slerp(Dh,0.5).multiply(R_.rot.neck));
+  ponerMundo('Head',Dh.clone().multiply(R_.rot.Head));
+  // extremidades: rotación mínima de la dirección actual a la deseada
+  for(const n of ['LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot','LeftArm','LeftForeArm','RightArm','RightForeArm']){
+    const [a,b]=SEG[n];const des=w[b].clone().sub(w[a]).normalize();
+    const qw=H[n].getWorldQuaternion(new Q());const cur=DIRL[n].clone().applyQuaternion(qw);
+    // giro de la rodilla / codo: el plano de flexión manda cuando la articulación está doblada
+    let r=new Q().setFromUnitVectors(cur,des);
+    ponerMundo(n,r.multiply(qw));
+    if(n.endsWith('UpLeg')||n.endsWith('Arm')&&!n.endsWith('ForeArm')){
+      const hijo=n.endsWith('UpLeg')?[SEG[n.replace('UpLeg','Leg')]]:[SEG[n.replace('Arm','ForeArm')]];
+      const [c,d]=hijo[0];const inf=w[d].clone().sub(w[c]).normalize();
+      const flex=Math.acos(Math.min(1,Math.max(-1,inf.dot(des))));
+      if(flex>0.25){ // gira el segmento sobre su eje para que el hijo quede en el plano correcto
+        const qw2=H[n].getWorldQuaternion(new Q());const eje=des;
+        // dirección del hijo con el giro actual
+        const hijoN=n.endsWith('UpLeg')?n.replace('UpLeg','Leg'):n.replace('Arm','ForeArm');
+        const dirHijoLocal=DIRL[hijoN].clone().applyQuaternion(REPOSO[hijoN].q);
+        const actual=dirHijoLocal.clone().applyQuaternion(qw2);
+        const pa=actual.clone().addScaledVector(eje,-actual.dot(eje)), pd=inf.clone().addScaledVector(eje,-inf.dot(eje));
+        if(pa.lengthSq()>1e-6&&pd.lengthSq()>1e-6){pa.normalize();pd.normalize();
+          let ang=Math.acos(Math.min(1,Math.max(-1,pa.dot(pd))));if(new V3().crossVectors(pa,pd).dot(eje)<0)ang=-ang;
+          const peso=Math.min(1,(flex-0.25)/0.35);
+          ponerMundo(n,new Q().setFromAxisAngle(eje,ang*peso).multiply(qw2));}
+      }
+    }
+  }
+  // manos: muñeca → medio entre índice y meñique
+  for(const [n,wi,ix,pk] of [['LeftHand',15,19,17],['RightHand',16,20,18]]){
+    const des=mid(w[ix],w[pk]).sub(w[wi]).normalize();const qw=H[n].getWorldQuaternion(new Q());const cur=DIR_MANO.clone().applyQuaternion(qw);
+    ponerMundo(n,new Q().setFromUnitVectors(cur,des).multiply(qw));
+  }
+  // raíz
+  const c=cad2(i), dx=ARGS.sinRaizX?0:(c.x-c0.x)*mpp*(ESPEJO?-1:1), dy=-(c.y-c0.y)*mpp;
+  const minY=Math.min(...w.map(q=>q.y)); // ninguna parte del cuerpo bajo el piso
+  const altCad=Math.max(altCadera0+dy,-minY+0.03);
+  raiz.push([dx*escalaCuerpo, altCad*escalaCuerpo, 0]);
+  { const w0=REPOSO_HIPS.clone();w0.y=altCad*escalaCuerpo;const loc=H.Hips.parent.worldToLocal(w0);H.Hips.position.copy(loc);pos.push(loc.x,loc.y,loc.z); }
+  sk.bones.forEach(b=>{const q=b.quaternion;pistas[b.name].push(q.x,q.y,q.z,q.w);});
+}
+const salida={nombre:ARGS.nombre,fps,n:W.length,raiz,pistas,pos};
+await window.guardar('clips/'+(ARGS.carpeta||'')+ARGS.nombre+'.json',JSON.stringify(salida));
+log('clip',ARGS.nombre,'cuadros',W.length,'raiz final',raiz[raiz.length-1].map(x=>+x.toFixed(2)));
+window.LISTO=true;
+</script>

@@ -34,6 +34,7 @@ function prepararTiro(){
   tirador.giro=Math.atan2(-dx,-dz);
   var atras=yoPatea?0.75:1.9;
   tirador.x=sx-dx/d*atras;tirador.z=sz-dz/d*atras;tirador.y=0;tirador.anim=yoPatea?'espera':'quieto';tirador.p=0;
+  if(yoPatea&&tirador.glb){var pp=puntoDePatada(tirador,sx,sz,tirador.giro);if(pp){tirador.x=pp.x;tirador.z=pp.z;}}
   arquero.x=0;arquero.y=0;arquero.z=zArco+(yoPatea?0.45:-0.45);arquero.giro=yoPatea?Math.PI:0;arquero.anim='arquero';arquero.p=0;arquero.vx=0;
   arquero.kx=0;arquero.volando=false;arquero.reac=0;arquero.previsto=false;
   P.tirador=tirador;P.arquero=arquero;P.zArco=zArco;
@@ -154,13 +155,13 @@ function pasarArqueroRival(A,dt){
   if(A.volando){pasarVolada(A,dt);return;}
   if(P.fase==='vuelo'&&!P.res){
     A.reac+=dt;
-    var demora=0.36-0.18*P.dif+(B.super?0.12:0)+Math.abs(B.w.y)*0.004;
+    var demora=0.39-0.18*P.dif+(B.super?0.12:0)+Math.abs(B.w.y)*0.004;
     if(A.reac>demora){
       /* predice en línea recta (no lee el efecto): por eso el chanfle lo engaña */
       var vz=B.v.z;if(Math.abs(vz)<0.5)return;
       var t=(A.z-B.p.z)/vz;if(t<0)return;
       var px=B.p.x+B.v.x*t, py=B.p.y+B.v.y*t-0.5*G_*t*t;
-      if(!A.ruido)A.ruido=(Math.random()-0.5)*(1.2*(1-P.dif)+0.25);
+      if(!A.ruido)A.ruido=(Math.random()-0.5)*(1.35*(1-P.dif)+0.3);
       px+=A.ruido;
       var dx=px-A.x;
       if(Math.abs(dx)<0.5&&py<1.4){A.x+=lim(dx,-4*dt,4*dt);A.vx=dx;}
@@ -172,16 +173,10 @@ function pasarArqueroRival(A,dt){
 }
 function empezarVolada(A,dx,dy){A.volando=true;A.anim='volada';A.p=0;A.dx=dx;A.dy=dy;A.x0=A.x;Sonido.fx('salto');}
 function pasarVolada(A,dt){
-  A.p+=dt;var e=ease(A.p/0.5);
-  if(A.glb){
-    /* el futbolista de verdad se acuesta hacia la pelota pivoteando en los pies: el ángulo apunta las manos al objetivo
-       y los pies sólo se corren lo que falta para llegar (más un paso) */
-    var L=Math.abs(A.dx)+0.1, H=Math.max(0.5,A.dy+0.8), th=lim(Math.atan2(L,H),0.15,1.4), sobra=Math.max(0,Math.hypot(L,H)-2.05);
-    A.rollo=th;A.x=A.x0+sig(A.dx)*(sobra*Math.sin(th)+0.3*L)*e;
-    A.y=(sobra*Math.cos(th)*0.6+Math.max(0,A.dy)*0.2)*Math.sin(Math.min(1,A.p/0.55)*Math.PI*0.5)*(A.p>0.8?Math.max(0,1-(A.p-0.8)/0.4):1);
-    if(A.p>1.3){A.volando=false;A.anim='arquero';A.y=0;A.p=0;}
-    return;
-  }
+  A.p+=dt;
+  /* el futbolista con esqueleto: el clip de la estirada lleva la cadera (d6b); acá sólo se ve cuándo terminó */
+  if(A.glb){if(A.p>finVolada(A)){A.volando=false;A.anim='arquero';A.y=0;A.p=0;}return;}
+  var e=ease(A.p/0.5);
   A.x=A.x0+A.dx*e;A.y=Math.max(0,A.dy)*0.35*Math.sin(Math.min(1,A.p/0.55)*Math.PI*0.5)*(A.p>0.8?Math.max(0,1-(A.p-0.8)/0.4):1);
   if(A.p>1.3){A.volando=false;A.anim='arquero';A.y=0;A.p=0;}
 }
@@ -250,23 +245,26 @@ function pasarPartido(dtR){
     if(P.tf>8&&P.fase==='apunta'){patearYo({tx:(Math.random()-0.5)*2,ty:0.4,pot:0.45,curva:0});}
   }
   else if(F==='pateando'){YO.p+=dt*1.8;
-    /* el paso de impulso: se arrima a la pelota mientras carga la pierna */
-    var ax=B.p.x-YO.x, az=B.p.z-YO.z, ad=Math.hypot(ax,az);if(!B.vuela&&ad>0.42){YO.x+=ax/ad*1.4*dt;YO.z+=az/ad*1.4*dt;}if(YO.p>=0.52&&!B.vuela){var T2=P.tiroYo;lanzar(T2.v,T2.spin,T2.sup);}}
+    if(!YO.glb){/* el muñeco: se arrima a la pelota mientras carga la pierna */
+      var ax=B.p.x-YO.x, az=B.p.z-YO.z, ad=Math.hypot(ax,az);if(!B.vuela&&ad>0.42){YO.x+=ax/ad*1.4*dt;YO.z+=az/ad*1.4*dt;}}
+    /* sale en el contacto del pie (el futbolista) o a mitad del gesto (el muñeco) */
+    if((YO.glb?YO.contacto:YO.p>=0.52)&&!B.vuela){var T2=P.tiroYo;lanzar(T2.v,T2.spin,T2.sup);}}
   else if(F==='carrera'){
     correrReloj(dtR);
     /* el rival se acerca a la pelota y patea */
-    var tir=EL, dx=B.p.x-tir.x, dz=B.p.z-tir.z, d=Math.hypot(dx,dz);
-    if(d>0.8){tir.anim='correr';tir.acelera=true;tir.x+=dx/d*4.2*dt;tir.z+=dz/d*4.2*dt;}
+    var tir=EL, pp=tir.glb?puntoDePatada(tir,B.p.x,B.p.z,tir.giro):null;
+    var ox=pp?pp.x:B.p.x, oz=pp?pp.z:B.p.z, dx=ox-tir.x, dz=oz-tir.z, d=Math.hypot(dx,dz), cerca=pp?0.06:0.8;
+    if(d>cerca&&tir.anim!=='patear'){tir.anim='correr';tir.acelera=true;var pasoR=Math.min(d,(pp?Math.min(4.2,1.2+d*2.2):4.2)*dt);tir.x+=dx/d*pasoR;tir.z+=dz/d*pasoR;}
     else{if(tir.anim!=='patear'){tir.anim='patear';tir.p=0.3;tir.acelera=false;}tir.p+=dt*2.2;
-      if(tir.p>=0.52&&!B.vuela){var T3=P.tiroEl;lanzar(T3.v,T3.spin,T3.sup);P.lento=0.3;}}
+      if((tir.glb?tir.contacto:tir.p>=0.52)&&!B.vuela){var T3=P.tiroEl;lanzar(T3.v,T3.spin,T3.sup);P.lento=0.3;}}
     pasarArqueroYo(YO,dt);
   }
   if(P.fase==='vuelo'){
     correrReloj(dtR);
     var A=P.arquero;
     if(A===EL)pasarArqueroRival(A,dt);else pasarArqueroYo(A,dt);
-    if(P.turno===0&&YO.anim==='patear'){YO.p=Math.min(1,YO.p+dt*1.4);if(YO.p>=1)YO.anim='espera';}
-    if(P.turno===1&&EL.anim==='patear'){EL.p=Math.min(1,EL.p+dt*1.4);if(EL.p>=1)EL.anim='quieto';}
+    if(P.turno===0&&YO.anim==='patear'){YO.p=Math.min(1,YO.p+dt*1.4);if(patadaTerminada(YO))YO.anim='espera';}
+    if(P.turno===1&&EL.anim==='patear'){EL.p=Math.min(1,EL.p+dt*1.4);if(patadaTerminada(EL))EL.anim='quieto';}
     posar(A,0);partesArquero(A,_partes);
     var n=4;for(var k=0;k<n;k++)pasoPelota(dt/n,_partes);
     grabar();
@@ -320,11 +318,11 @@ function terminarPartido(){
   irA('fin');
 }
 /* ---------------- la grabación para la repetición ---------------- */
-function foto(J){return [J.x,J.y||0,J.z,J.giro,J.anim,J.p,J.dx||0,J.dy||0,J.t];}
+function foto(J){return [J.x,J.y||0,J.z,J.giro,J.anim,J.p,J.dx||0,J.dy||0,J.t,J.te||0,J.var||0];}
 function grabar(){P.rec.push({b:[B.p.x,B.p.y,B.p.z],yo:foto(YO),el:foto(EL)});if(P.rec.length>240)P.rec.shift();}
 function aplicarFoto(f){
   B.p.set(f.b[0],f.b[1],f.b[2]);
-  [[YO,f.yo],[EL,f.el]].forEach(function(q){var J=q[0],s=q[1];J.x=s[0];J.y=s[1];J.z=s[2];J.giro=s[3];J.anim=s[4];J.p=s[5];J.dx=s[6];J.dy=s[7];J.t=s[8];});
+  [[YO,f.yo],[EL,f.el]].forEach(function(q){var J=q[0],s=q[1];J.x=s[0];J.y=s[1];J.z=s[2];J.giro=s[3];J.anim=s[4];J.p=s[5];J.dx=s[6];J.dy=s[7];J.t=s[8];J.te=s[9];J.var=s[10];J.repe=true;});
 }
 /* ---------------- los poderes ---------------- */
 function usarPoder(){
