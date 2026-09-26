@@ -71,3 +71,8 @@ Fuentes en `herramientas/sombra/fuentes/`, se arma con `herramientas/sombra/arma
 - La `y` de un enemigo es la **superficie**: los pies van en la fila de arriba (dy −1). El dibujo viejo los hundía.
 - Lo que se dibuja con trazos (jefes) pasa por `conLuz`: se pinta aparte y se leen los píxeles opacos y oscuros.
 
+## Sonido de los jefes
+- Un tema por jefe con capas; `SON.intensidad` sale de la vida que le queda, así la música crece con cada golpe.
+- `banco/jefes.js` con `SONIDO=1` envuelve `SON.fx` y `SON.musica` y anota qué pide cada pelea: sirve para ver que no
+  falte ningún efecto (`_faltan`) y que la música vaya y vuelva en orden. `banco/audio_jefes.js` mide pico y RMS a la salida.
+

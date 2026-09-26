@@ -156,7 +156,7 @@ function pasoJuego(dt, dtR){
   if(J.tinta && NIN.est !== 'meta'){ const T = J.tinta; T.t += dt; const v = J.infinito ? Math.min(55, 6 + T.t*0.45) : T.v;
     T.y -= v*dt; if(T.y > NIN.y + H*0.9) T.y = NIN.y + H*0.9;                                  /* nunca queda demasiado lejos */
     if(NIN.est !== 'muerto' && NIN.y + HH > T.y) morir('tinta');
-    const cerca = lim(1 - (T.y - NIN.y)/140, 0, 1); if(cerca > 0.5 && Math.random() < dt*3) sfx('tinta', {vol:cerca*0.5}); J.sacude = Math.max(J.sacude, cerca*0.35); }
+    const cerca = J.jefe && J.jefe.activo && !J.jefe.fuera ? 0 : lim(1 - (T.y - NIN.y)/140, 0, 1);          /* en la arena la tinta espera callada */ if(cerca > 0.5 && Math.random() < dt*3) sfx('tinta', {vol:cerca*0.5}); J.sacude = Math.max(J.sacude, cerca*0.35); }
   /* la altura y los puntos del infinito */
   J.altura = Math.max(0, Math.round(-NIN.y/CEL)); if(J.altura > J.alturaMax){ J.puntos += (J.altura - J.alturaMax)*10; J.alturaMax = J.altura; }
   if(J.infinito){ while(MAPA.rMin > Math.floor((CAM.y - H)/CEL) - 10) tramoInfinito();
@@ -250,7 +250,7 @@ function matar(e){
 }
 function pasoBalas(dt){
   for(const b of BALAS){ if(b.clavada){ b.vida -= dt; continue; } b.vida -= dt; if(b.grav) b.vy += 420*dt; b.x += b.vx*dt; b.y += b.vy*dt; if(b.giro !== undefined) b.giro += dt*20;
-    const t = tile(Math.floor(b.x/CEL), Math.floor(b.y/CEL)); if(t === T_PIEDRA || t === T_DESM || t === T_REJA){ if(b.t === 'hielo' || b.t === 'fuego'){ b.vida = 0; for(let i = 0; i < 5; i++) PARTS.push({x:b.x, y:b.y - 2, vx:rv(-40, 40), vy:rv(-60, -10), vida:0.4, col:b.t === 'hielo' ? '#e8f4ff' : '#ffb040', tam:1, g:1}); continue; } if(b.t === 'shuriken'){ b.clavada = true; b.vida = 1.2; sfx('shuriken_clava', {x:pan(b.x), vol:0.4}); } else { b.vida = 0; polvo(b.x, b.y, 3, '#ffe0a0'); } continue; }
+    const t = tile(Math.floor(b.x/CEL), Math.floor(b.y/CEL)); if(t === T_PIEDRA || t === T_DESM || t === T_REJA){ if(b.t === 'hielo' || b.t === 'fuego'){ b.vida = 0; sfx(b.t === 'hielo' ? 'hielo_rompe' : 'fuego', {x:pan(b.x), vol:b.t === 'hielo' ? 0.6 : 0.3}); for(let i = 0; i < 5; i++) PARTS.push({x:b.x, y:b.y - 2, vx:rv(-40, 40), vy:rv(-60, -10), vida:0.4, col:b.t === 'hielo' ? '#e8f4ff' : '#ffb040', tam:1, g:1}); continue; } if(b.t === 'shuriken'){ b.clavada = true; b.vida = 1.2; sfx('shuriken_clava', {x:pan(b.x), vol:0.4}); } else { b.vida = 0; polvo(b.x, b.y, 3, '#ffe0a0'); } continue; }
     if(NIN.est !== 'muerto' && NIN.est !== 'meta' && Math.abs(b.x - NIN.x) < HW + (b.w || 1.5) && Math.abs(b.y - NIN.y) < HH + (b.h || 1.5)){ b.vida = 0; morir(b.t === 'bala' || b.t === 'shuriken' ? b.t : 'jefe'); } }
   BALAS = BALAS.filter(b => b.vida > 0);
 }

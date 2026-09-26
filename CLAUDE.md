@@ -1839,3 +1839,36 @@ Lo que costó una vuelta:
 - **La mira del tengu mide 200 px** y se cortaba al pasar al jefe por un lienzo aparte de 96: va dibujada afuera.
 - **Ryu perdía su hoja verde**: con la katana en la vaina no se ve la hoja, así que el color va en la empuñadura.
 
+### 2026-09-26 (ax) — SOMBRA: los jefes suenan
+**Pedido textual:** «Agrega efectos de sonido y música nueva a los jefes».
+
+**Un tema por jefe** (`2_audio.js`, sintetizado como todo lo demás). Arranca cuando se cierra la reja. **La intensidad es
+la vida que le sacaste** (0,35 al entrar, 1 en el último golpe), así que las capas entran a medida que el jefe cae:
+- **El Gran Tengu** — la in, 136: o-daiko que galopa y bajo con la segunda bemol. Después entran batería, shakuhachi que
+  chilla, koto en trémolo y redobles.
+- **Yuki-onna** — mi in, 70: casi nada. Un latido de taiko, cuencos de vidrio, viento y una flauta con vibrato ancho. Herida,
+  aparecen el pulso del shime, un racimo que desafina y el gong.
+- **El Shogun** — do in, 144: la guerra. O-daiko con redobles, riff en quintas rasgueado en el koto, y **la caracola de
+  guerra** (horagai, instrumento nuevo) turnándose con la melodía.
+- Cuando el jefe muere se corta la música, suena su muerte, y al abrirse la reja vuelve el tema del mundo hasta el torii.
+
+**20 efectos nuevos**:
+- **Los tres**: la entrada (redoble que acelera, zumbido que crece, taiko y gong, y el grito de cada uno), la reja que se
+  cierra con cadena y golpe y que se abre chirriando, el golpe (con el quejido de cada uno) y la muerte de cada uno.
+- **Tengu**: aleteo mientras vuela, graznido antes de atacar, abanico de plumas, silbido de la picada y el golpe al frenar.
+- **Yuki-onna**: los carámbanos que se forman (tonos de vidrio que suben), el crujido al soltarse, el hielo que se rompe
+  contra la piedra, el susurro al desvanecerse y volver, y el aliento helado.
+- **Shogun**: pasos de armadura, el kiai antes de cortar o saltar, la onda de la katana, el aterrizaje que hace temblar, el
+  fuego que se carga y cae, y **¡CLANG!** de metal cuando le pegás de frente.
+
+Arreglado de paso: **en la arena, la tinta que espera abajo burbujeaba y sacudía la cámara toda la pelea** (188 veces
+contra Yuki-onna). Ahora espera callada.
+
+Medido (`banco/audio_jefes.js` y `banco/jefes.js` con `SONIDO=1`):
+- Cada efecto solo da señal a la salida: picos de 0,06 a 0,81.
+- Los temas, a intensidad 0,35 y a 1, en RMS: tengu 0,123 → 0,142, yuki 0,065 → 0,129, shogun 0,138 → 0,168 (bambú, de
+  referencia, 0,089 → 0,125). Tengu y Shogun salían más fuertes que el mundo y se bajaron a 0,85 y 0,78.
+- Las tres peleas con el audio prendido piden `mundo → jefe → nada → mundo → victoria`, con cero efectos faltantes y cero
+  errores de audio.
+- Idiomas, fuzz de 500, dedo e infinito sin errores.
+

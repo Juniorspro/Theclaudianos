@@ -1,9 +1,12 @@
 // pelea contra los tres jefes: el pibe arranca parado en el piso de la arena; en cada lugar pegado prueba 90 saltos y elige
 // el que pasa más rápido por el cuerpo del jefe (y, con el shogun, de arriba o por la espalda). Mide golpes, muertes y tiempo.
 const {chromium} = require('/tmp/ui/node_modules/playwright');
-(async () => { const b = await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox']});
+(async () => { const b = await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox', '--autoplay-policy=no-user-gesture-required']});
   const p = await (await b.newContext({viewport:{width:412, height:892}, deviceScaleFactor:2.625})).newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message + ' ' + e.stack.split('\n')[1]));
   await p.goto('file:///tmp/ui/sombra_b.html'); await p.waitForTimeout(500);
+  /* con SONIDO=1 se prende el audio y se anota qué efectos y qué temas pide la pelea */
+  if(process.env.SONIDO) await p.evaluate(() => { const S = __S.SON; S.arrancar(); const fx = S.fx, mu = S.musica; window.__LOG = {fx:{}, musica:[]};
+    S.fx = (n, o) => { window.__LOG.fx[n] = (window.__LOG.fx[n] || 0) + 1; return fx(n, o); }; S.musica = m => { window.__LOG.musica.push(m); return mu(m); }; });
   const inv = process.argv[2] !== 'mortal';
   for(const i of [7, 15, 23]){ for(let corrida = 0; corrida < (inv ? 1 : 3); corrida++){
     const r = await p.evaluate(([i, inv]) => { const S = __S, N = S.NIN; S.empezarNivel(i); const A = S.J.arena; let t = 0, espera = 0, saltos = 0, muertes = 0, causas = {};
@@ -25,5 +28,6 @@ const {chromium} = require('/tmp/ui/node_modules/playwright');
           const o = {x:N.x, y:N.y, vx:v.vx, vy:v.vy}; for(let s = 0; s < 400; s++){ const res = S.pasoCuerpo(o, 1/240, true); if(res){ if(res.pega) mejor = {dx, dy}; break; } } } }
         if(mejor && S.saltar(mejor.dx, mejor.dy)) saltos++; }
       const j = S.J.jefe; return {nivel:S.NIVELES[i].id, jefe:j.tipo, gano:S.J.modo === 'resultado' && S.UI.p === 'gana', vida:j.hp + '/' + j.D.hp, cayo:j.fuera, t:Math.round(t), saltos, muertes, causas}; }, [i, inv]);
-    console.log(JSON.stringify(r)); } }
+    console.log(JSON.stringify(r));
+    if(process.env.SONIDO){ const L = await p.evaluate(() => { const L = window.__LOG, o = {fx:L.fx, musica:L.musica, faltan:[...__S.SON._faltan], err:__S.SON._err.length || 0}; window.__LOG = {fx:{}, musica:[]}; return o; }); console.log('  sonido', JSON.stringify(L)); } } }
   console.log(errs.slice(0, 5).join('\n') || 'sin errores'); await b.close(); })();

@@ -281,6 +281,10 @@ const SON = (() => {
     g.connect(dest); adsr(g.gain, t, a, 1, 0.9, fin, rel, v*0.1/Math.sqrt(notas.length));
     envio(g, dest, 0, o.sala === undefined ? 0.3 : o.sala);
   }
+  /* horagai: la caracola de guerra. Una sierra por la vocal «o», que entra de abajo, tiembla y se quiebra al final */
+  function horagai(dest, t, m, dur, v){ const f = mtof(m), out = G(1, dest);
+    vox(t, out, {vocal:'o', f:f*0.94, f2:f, pico:0.15, f3:f*0.97, d:dur, v:v*0.55, sucio:1.3, q:5, vib:5.2, aire:0.05, fk:0.8});
+    vox(t + 0.02, out, {vocal:'o', f:f*0.5*0.94, f2:f*0.5, pico:0.2, d:dur*0.9, v:v*0.3, sucio:1.1, q:5, fk:0.7}); envio(out, dest, 0.2, 0.6); }
   /* ---- la percusión */
   function taiko(dest, t, v, o){ o = o || {};
     const f0 = o.f || 60, larga = o.larga || 0.6, g = C.createGain(), s = oscF('sine', f0*2.2, t, t + larga*1.6 + 0.05), mix = G(1, dest);
@@ -472,6 +476,63 @@ const SON = (() => {
         if(x.v % 2 === 0) tocarMel(x, this.M, (tt, m, d, k) => koto(B, tt, m, d, 0.56*k, {b:0.8, eco:0.22, apaga:d < x.sp*3 ? 1 : 0}));
         else { tocarMel(x, this.M2, (tt, m, d, k, orn) => shaku(B, tt, m, d*0.85, 0.7*k, {desde:orn}));
           tocarMel(x, this.M, (tt, m, d, k) => { if(d <= x.sp*2) koto(B, tt, m - 12, d, 0.3*k, {b:0.6, apaga:1}); }); }
+      }},
+    /* ---- los jefes: la intensidad sale de la vida que le queda (arranca en 0,35 y llega a 1 en el último golpe) */
+    /* la in, 136: EL GRAN TENGU. O-daiko que galopa, bajo con la segunda bemol, shakuhachi que chilla y koto en trémolo */
+    jefe_tengu:{bpm:136, vol:0.85, intro:1, kMin:0.35, swing:0, ton:9, esc:[0, 1, 5, 7, 8], capas:{perc:0.1, lead:0.25, extra:0.48, taiko:0.72},
+      prog:'Am Bb Am G5 Fmaj7 Bb Esus E7b9',
+      mel:'A5.4 Bb5.2 A5.2 E5.4 F5.4 E5.2 D5.2 Bb4.4 A4.8 E5.4 F5.4 A5.4 Bb5.6 A5.2 F5.4 E5.12 -.4 A5.2 Bb5.2 D6.4 E6.4 D6.2 Bb5.2 A5.4 F5.4 E5.4 F5.2 E5.2 D5.2 Bb4.2 A4.16',
+      mel2:'E6.2 F6.2 E6.2 D6.2 Bb5.2 A5.2 Bb5.2 D6.2 E6.8 A5.8 F6.2 E6.2 D6.2 Bb5.2 A5.4 E5.4 F5.2 A5.2 Bb5.2 D6.2 E6.8 A6.4 Bb6.4 A6.2 F6.2 E6.4 D6.4 Bb5.4 A5.12 -.4',
+      RIFF:[0, 0, 12, 0, 1, 0, 12, 7],
+      toca(x){ const {s, t, ac, sp} = x, D = x.r.cap, L = lofi(x, 'base'), r0 = raiz(ac, 2);
+        if(s === 0 || s === 3 || s === 6 || s === 10 || s === 12) taiko(D.base, t, s === 0 ? 0.9 : 0.55, {f:s === 0 ? 50 : 64, larga:0.5});
+        shime(D.base, t, s % 4 === 0 ? 0.32 : s % 2 ? 0.12 : 0.2);
+        if(s % 2 === 0) bajo(D.base, t, r0 + this.RIFF[s >> 1], sp*1.7, s % 4 === 0 ? 0.62 : 0.46, {f:1500});
+        if(s === 0) padV(D.base, t, voces(ac, 57), sp*16, 0.5, {a:0.3, rel:0.6, f:1100});
+        if(x.intro){ if(s >= 8) taiko(D.base, t, 0.25 + (s - 8)*0.07, {f:90, larga:0.2}); return; }
+        if(x.on('perc')){ if(s % 2 === 0) bombo(L, t, s % 8 === 0 ? 0.75 : 0.5, {f:48}); if(s === 4 || s === 12) caja(L, t, 0.7, {d:0.16}); hat(D.perc, t, s % 2 ? 0.12 : 0.24); }
+        if(x.on('lead')){ if(x.v % 2) tocarMel(x, this.M2, (tt, m, d, k, orn) => shaku(D.lead, tt, m, d*0.92, 0.95*k, {desde:orn || -2, f:4200}));
+          else tocarMel(x, this.M, (tt, m, d, k, orn) => shaku(D.lead, tt, m, d*0.92, 0.9*k, {desde:orn, f:3800})); }
+        if(x.on('extra')){ const vs = voces(ac, 76); koto(D.extra, t, vs[s % vs.length] + (s % 8 >= 4 ? 12 : 0), sp*0.9, 0.18 + 0.05*x.r.rnd(), {b:0.8, apaga:1});
+          if(s === 0 && x.cb % 2 === 0) hyoshigi(D.extra, t, 0.5); if(s === 14) tsuzumi(D.extra, t, 0.45, 1.2); }
+        if(x.on('taiko')){ if(s % 2 === 1) taiko(D.taiko, t, 0.32, {f:78, larga:0.25}); if(x.cb % 2 === 1 && s >= 12) taiko(D.taiko, t, 0.4 + (s - 12)*0.12, {f:96, larga:0.2});
+          if(s === 0 && x.cb === 0) gong(D.taiko, t, 0.55, 82); }
+      }},
+    /* mi in, 70: YUKI-ONNA. Casi nada: un latido, cuencos de vidrio, el viento y una flauta que se congela; herida, aparece el pulso */
+    jefe_yuki:{bpm:70, vol:1.15, intro:1, kMin:0.35, swing:0, ton:4, esc:[0, 1, 5, 7, 8], capas:{perc:0.1, lead:0.25, extra:0.5, taiko:0.72},
+      prog:'Em Fmaj7 Em Cmaj7 Am9 Fmaj7 Bsus Em',
+      mel:'E5.8 F5.4 E5.4 B4.12 C5.4 A4.16 -.8 E5.4 F5.4 A5.8 B5.8 A5.4 F5.4 E5.16 -.8',
+      mel2:'B5.8 C6.4 B5.4 F5.12 E5.4 F5.16 -.8 A5.4 B5.4 E6.8 F6.8 E6.4 C6.4 B5.16 -.8',
+      toca(x){ const {s, t, ac, sp} = x, D = x.r.cap, r0 = raiz(ac, 2);
+        if(s === 0){ padV(D.base, t, voces(ac, 64), sp*16, 0.7, {a:2, rel:2.5, f:1600, aire:1.2, sala:0.7}); bajo(D.base, t, r0, sp*12, 0.36, {f:420}); }
+        if(s === 0 || s === 2) taiko(D.base, t, s ? 0.3 : 0.45, {f:44, larga:0.7, sala:0.5});                     /* el latido */
+        if((s === 6 || s === 11) && x.r.rnd() < 0.7){ const vs = voces(ac, 90); rin(D.base, t, vs[Math.floor(x.r.rnd()*vs.length)], 0.22, {largo:1.4, sala:0.8}); }
+        if(s % 4 === 1 && x.r.rnd() < 0.5){ const vs = voces(ac, 84); koto(D.base, t, vs[Math.floor(x.r.rnd()*vs.length)] + 12, sp*4, 0.16, {b:0.95, eco:0.5, sala:0.7}); }
+        if(x.intro) return;
+        if(x.on('perc')){ if(s % 2 === 0) shime(D.perc, t, s % 4 ? 0.1 : 0.18); if(s === 8) rim(D.perc, t, 0.2); if(s % 4 === 3) shaker(D.perc, t, 0.1); }
+        if(x.on('lead')) tocarMel(x, x.v % 2 ? this.M2 : this.M, (tt, m, d, k, orn) => shaku(D.lead, tt, m, d*0.95, 0.8*k, {desde:orn || -1.5, vib:34, sala:0.8, eco:0.35}));
+        if(x.on('extra')){ if(s === 0) padV(D.extra, t, [r0 + 24, r0 + 25, r0 + 31], sp*16, 0.5, {a:3, rel:2, f:2600, sala:0.8});          /* el racimo que desafina */
+          if(s % 2 === 1 && x.r.rnd() < 0.35) rin(D.extra, t, 96 + Math.floor(x.r.rnd()*8), 0.1, {largo:0.5, sala:0.8}); if(s === 0 && x.cb % 2) soplo(D.extra, t, sp*12, 0.08, 1800, 4200); }
+        if(x.on('taiko')){ if(s === 8 || s === 10) taiko(D.taiko, t, 0.5, {f:40, larga:1, sala:0.6}); if(s === 0 && x.cb % 4 === 0) gong(D.taiko, t, 0.5, 65); }
+      }},
+    /* do in, 144: EL SHOGUN. La guerra: o-daiko con redobles, riff en quintas rasgueado, caracola de guerra y el koto que no afloja */
+    jefe_shogun:{bpm:144, vol:0.78, intro:1, kMin:0.35, swing:0, ton:0, esc:[0, 1, 5, 7, 8], capas:{perc:0.1, lead:0.25, extra:0.48, taiko:0.72},
+      prog:'C5 Db5 C5 Ab5 F5 Db5 G5 G7sus',
+      mel:'C6.4 Db6.2 C6.2 G5.4 Ab5.4 G5.2 F5.2 Db5.4 C5.8 G5.4 Ab5.4 C6.4 Db6.6 C6.2 Ab5.4 G5.12 -.4 F6.4 Db6.4 C6.4 Ab5.4 G5.2 Ab5.2 G5.2 F5.2 Db5.4 C5.16',
+      RIFF:[0, 0, 0, 12, 0, 1, 0, 7],
+      toca(x){ const {s, t, ac, sp} = x, D = x.r.cap, L = lofi(x, 'base'), r0 = raiz(ac, 2);
+        if(s === 0 || s === 4 || s === 7 || s === 10 || s === 12) taiko(D.base, t, s === 0 ? 1 : 0.62, {f:s === 0 ? 42 : 58, larga:0.7});
+        if(s % 2 === 0) bajo(D.base, t, r0 + this.RIFF[s >> 1], sp*1.6, 0.62, {f:1800});
+        if(s === 0 || s === 6 || s === 8 || s === 14) rasgueo(D.base, t, voces(ac, 55).concat(voces(ac, 67)), 0.55, 0.01, {b:0.7, apaga:1});
+        if(s === 0) padV(D.base, t, voces(ac, 50), sp*16, 0.6, {a:0.2, rel:0.5, f:700});
+        if(x.intro){ if(s >= 8) taiko(D.base, t, 0.3 + (s - 8)*0.08, {f:88, larga:0.2}); return; }
+        if(x.on('perc')){ if(s % 2 === 0) bombo(L, t, 0.72, {f:46}); if(s === 4 || s === 12) caja(L, t, 0.75, {d:0.2}); hat(D.perc, t, s % 4 === 2 ? 0.3 : 0.14);
+          if(s === 0 && x.cb % 4 === 0) hyoshigi(D.perc, t, 0.6); }
+        if(x.on('lead')){ if(x.v % 2 === 0 && s === 0 && x.cb % 2 === 0) horagai(D.lead, t, raiz(ac, 3) + 7, sp*7, 0.8);
+          else if(x.v % 2) tocarMel(x, this.M, (tt, m, d, k, orn) => shaku(D.lead, tt, m, d*0.92, 0.95*k, {desde:orn, f:4000})); }
+        if(x.on('extra')){ const vs = voces(ac, 72); koto(D.extra, t, vs[(s >> 1) % vs.length] + (s % 2 ? 12 : 0), sp*0.8, 0.2, {b:0.85, apaga:1}); if(s === 6 || s === 14) tsuzumi(D.extra, t, 0.5, 0.9); }
+        if(x.on('taiko')){ if(s % 2 === 1) taiko(D.taiko, t, 0.38, {f:70, larga:0.3}); if(x.cb % 2 === 1 && s >= 8) taiko(D.taiko, t, 0.35 + (s - 8)*0.08, {f:100, larga:0.18});
+          if(s === 0 && x.cb === 0) gong(D.taiko, t, 0.7, 62); }
       }},
     /* re yo, 100: la fanfarria del torii y después un bucle suave */
     victoria:{bpm:100, vol:1.1, intro:2, cinta:0.1, swing:0, ton:2, esc:[0, 2, 5, 7, 9],
@@ -675,6 +736,91 @@ const SON = (() => {
     lento_entra(t, o, d){ RZ({t, a:0.06, d:0.3, v:0.7, f:2600, f2:320, fd:0.4, q:2.2, col:'rosa', dest:d}); TN({t, a:0.03, f:520, f2:120, fd:0.4, d:0.35, v:0.12, dest:d}); return 0.6; },
     lento_sale(t, o, d){ RZ({t, a:0.12, d:0.08, v:0.6, f:350, f2:2600, fd:0.2, q:2, col:'rosa', dest:d}); TN({t, a:0.1, f:140, f2:520, fd:0.22, d:0.08, v:0.1, dest:d}); return 0.4; }
   };
+  /* ---- los jefes (o.n: 0 tengu, 1 yuki-onna, 2 shogun) */
+  /* el grito del tengu: un cuervo enorme */
+  const graznar = (t, d, k, v) => { vox(t, d, {vocal:'a', f:560*k, f2:760*k, pico:0.15, f3:400*k, d:0.24, v, sucio:2.4, q:5, aire:0.08, fk:1.2}); RZ({t, d:0.05, v:v*0.3, f:2400*k, q:2, dest:d}); };
+  /* el metal que suena solo: parciales inarmónicos que baten */
+  const metal = (t, d, f0, v, largo) => [[1, 1], [2.76, 0.55], [5.4, 0.3], [8.93, 0.16], [13.3, 0.08]].forEach(([r, a], i) => {
+    for(const bat of [-1.5, 1.5]) TN({t, a:0.001, f:f0*r + bat*r, d:(largo || 0.8)*(1 - i*0.15), v:v*a*0.5, tipo:i ? 'sine' : 'triangle', dest:d}); });
+  const vidrio = (t, d, n, v, dur) => { for(let i = 0; i < n; i++){ const tt = t + Math.pow(Math.random(), 1.6)*dur; TN({t:tt, a:0.001, f:rv(2600, 7200), d:rv(0.06, 0.35), v:v*rv(0.4, 1), dest:panear(d, rv(-0.7, 0.7))}); } };
+  const trueno = (t, d, v, f) => { TN({t, f:(f || 90)*1.4, f2:(f || 90)*0.4, fd:0.35, d:0.5, v, dest:d}); RZ({t, a:0.01, d:1.1, v:v*0.8, f:240, f2:90, fd:1, tipo:'lowpass', col:'pardo', dest:d}); };
+  Object.assign(FX, {
+    jefe_aparece(t, o, d){ const n = o.n | 0, k = o.tono;
+      [0, 0.28, 0.5, 0.66, 0.78, 0.88, 0.96, 1.02, 1.07, 1.11].forEach((q, i) => taiko(d, t + q, 0.25 + i*0.06, {f:70 + i*3, larga:0.25}));
+      const g = G(0, d), lp = F('lowpass', 180, 1.2, g), a = oscF('sawtooth', 55*k, t, t + 3.2), b = oscF('sawtooth', 55.6*k, t, t + 3.2);    /* el zumbido que crece */
+      a.connect(lp); b.connect(lp); lp.frequency.setValueAtTime(180, t); lp.frequency.exponentialRampToValueAtTime(1100, t + 1.2); lp.frequency.exponentialRampToValueAtTime(200, t + 3);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.22, t + 1.15); g.gain.setTargetAtTime(0, t + 1.3, 0.5);
+      const t1 = t + 1.2; taiko(d, t1, 1, {f:40, larga:1.4}); gong(d, t1 + 0.02, 1, n === 1 ? 73 : 58, {fx:1}); trueno(t1, d, 0.6, 70);
+      if(n === 0){ graznar(t1 + 0.15, d, k, 0.5); graznar(t1 + 0.55, d, k*0.9, 0.45); FX.aleteo(t1 + 0.9, o, d); }
+      else if(n === 1){ RZ({t:t1, a:0.6, d:0.8, v:0.4, f:500, f2:2400, fd:1.2, q:3, col:'rosa', dest:d});
+        [96, 97, 101, 104].forEach((m, i) => rin(d, t1 + 0.2 + i*0.14, m, 0.5, {fx:1, largo:0.9})); vox(t1 + 0.4, d, {vocal:'u', f:420*k, f2:520*k, f3:300*k, d:1.2, v:0.18, q:9, vib:7, aire:0.12}); }
+      else { horagai(d, t1 + 0.15, 55 + semi(k), 1.3, 0.9); FX.kiai(t1 + 1.55, o, d); metal(t1 + 1.6, d, 380*k, 0.08, 0.5); }
+      return 3.6; },
+    reja(t, o, d){ const k = o.tono*rv(0.96, 1.04), abre = o.n === 1, t0 = abre ? t : t + 0.25;
+      for(let i = 0; i < (abre ? 18 : 9); i++){ const tt = abre ? t + 0.1 + i*0.05 + rv(0, 0.02) : t + i*0.026; RZ({t:tt, d:0.012, v:rv(0.12, 0.3), f:rv(2500, 4200)*k, q:6, dest:d}); }   /* la cadena */
+      TN({t:t0, f:95*k, f2:38, fd:0.2, d:0.35, v:abre ? 0.5 : 0.95, dest:d}); RZ({t:t0, d:0.4, v:0.55, f:420, tipo:'lowpass', col:'pardo', dest:d});
+      metal(t0, d, 310*k, abre ? 0.07 : 0.12, 0.9);
+      if(abre){ const cg = G(0, d), bp = F('bandpass', 700, 12, cg), sw = oscF('sawtooth', 22, t + 0.1, t + 1.1); sw.frequency.linearRampToValueAtTime(40, t + 1); bp.frequency.linearRampToValueAtTime(520, t + 1);
+        sw.connect(bp); adsr(cg.gain, t + 0.1, 0.2, 0.5, 0.9, t + 0.9, 0.2, 0.25); metal(t + 1.05, d, 260*k, 0.1, 0.7); }
+      return 1.6; },
+    jefe_golpe(t, o, d){ const n = o.n | 0, k = o.tono;
+      TN({t, f:130*k, f2:42, fd:0.12, d:0.28, v:1, dest:d}); RZ({t, d:0.1, v:0.7, f:1200, tipo:'lowpass', col:'rosa', dest:d}); FX.corte(t, {tono:0.9*k}, d); taiko(d, t, 0.7, {f:48, larga:0.5});
+      const t1 = t + 0.08;
+      if(n === 0) vox(t1, d, {vocal:'a', f:720*k, f2:1150*k, pico:0.2, f3:480*k, d:0.34, v:0.42, sucio:2.2, q:5, fk:1.3});
+      else if(n === 1){ vox(t1, d, {vocal:'i', f:900*k, f2:1400*k, pico:0.3, f3:700*k, d:0.4, v:0.28, q:9, vib:9, aire:0.1}); vidrio(t1, d, 14, 0.05, 0.5); }
+      else { vox(t1, d, {vocal:'u', f:118*k, f2:92*k, d:0.26, v:0.5, sucio:1.8, q:6}); metal(t, d, 520*k, 0.1, 0.6); }
+      return 1.1; },
+    clang(t, o, d){ const k = o.tono*rv(0.96, 1.04); metal(t, d, 430*k, 0.2, 1.1); RZ({t, d:0.03, v:0.8, f:3200, tipo:'highpass', dest:d}); TN({t, f:210*k, f2:90, fd:0.06, d:0.12, v:0.6, dest:d});
+      for(let i = 0; i < 6; i++) TN({t:t + rv(0.01, 0.12), a:0.001, f:rv(4000, 8000), d:0.04, v:0.04, dest:panear(d, rv(-0.6, 0.6))}); return 1.3; },
+    jefe_muere(t, o, d){ const n = o.n | 0, k = o.tono;
+      [0, 0.45, 0.9].forEach((q, i) => taiko(d, t + q, 0.9 - i*0.15, {f:60 - i*10, larga:0.9})); RZ({t, a:0.3, d:2.2, v:0.7, f:200, tipo:'lowpass', col:'pardo', dest:d});
+      if(n === 0){ vox(t + 0.05, d, {vocal:'a', f:780*k, f2:900*k, pico:0.08, f3:180*k, d:1.7, v:0.5, sucio:2.6, q:5, vib:6, fk:1.2}); FX.aleteo(t + 0.3, o, d); FX.aleteo(t + 0.9, {tono:0.8*k}, d); }
+      else if(n === 1){ vidrio(t, d, 30, 0.07, 1.4); vox(t + 0.1, d, {vocal:'i', f:1100*k, f2:1200*k, pico:0.1, f3:260*k, d:1.8, v:0.24, q:10, vib:8, aire:0.15});
+        [100, 96, 93, 88].forEach((m, i) => rin(d, t + 0.3 + i*0.3, m, 0.4, {fx:1, largo:0.8})); }
+      else { vox(t + 0.05, d, {vocal:'a', f:150*k, f2:170*k, pico:0.1, f3:55*k, d:1.6, v:0.6, sucio:2.2, q:6}); for(let i = 0; i < 7; i++) metal(t + 0.4 + i*0.16 + rv(0, 0.08), d, rv(300, 700)*k, 0.07, 0.4);
+        trueno(t + 1.5, d, 0.9, 60); }
+      return 3.2; },
+    aleteo(t, o, d){ const k = o.tono*rv(0.94, 1.06); for(let i = 0; i < 3; i++){ const tt = t + i*0.14;
+        RZ({t:tt, a:0.04, d:0.11, v:0.5, f:420*k, f2:170*k, fd:0.1, q:0.9, col:'rosa', dest:d}); TN({t:tt + 0.02, f:85*k, f2:55, d:0.08, v:0.25, dest:d}); } return 0.6; },
+    graznido(t, o, d){ const k = o.tono*rv(0.95, 1.05); graznar(t, d, k, 0.5); graznar(t + 0.3, d, k*0.92, 0.4); return 0.8; },
+    plumas(t, o, d){ const k = o.tono; for(let i = 0; i < 5; i++){ const p = panear(d, rv(-0.6, 0.6)); whoosh(t + i*0.03, 0.2, 1700*k, 4400*k, 0.32, p); RZ({t:t + i*0.03, d:0.15, v:0.06, f:6000, q:3, rate:1.6, dest:p}); }
+      TN({t, f:220*k, f2:120, d:0.08, v:0.3, dest:d}); return 0.6; },
+    picada(t, o, d){ const k = o.tono, g = G(0, d), s = oscF('sine', 2600*k, t, t + 1.1), l = oscF('sine', 7, t, t + 1.1);
+      s.frequency.exponentialRampToValueAtTime(520*k, t + 1); l.connect(G(60, s.frequency)); s.connect(g); adsr(g.gain, t, 0.05, 0.6, 0.8, t + 0.95, 0.1, 0.12);
+      RZ({t, a:0.45, d:0.55, v:0.6, f:500, f2:2600, fd:0.9, tipo:'lowpass', q:1.2, col:'rosa', dest:d}); graznar(t, d, k*1.1, 0.35); return 1.2; },
+    hielo_marca(t, o, d){ const k = o.tono; [88, 89, 93, 95, 100, 101].forEach((m, i) => { const tt = t + i*0.1, f = mtof(m)*k, g = G(0, d), s = oscF('sine', f, tt, tt + 0.5), tr = oscF('sine', 16, tt, tt + 0.5);
+        tr.connect(G(0.5, g.gain)); s.connect(g); env(g.gain, tt, 0.05, 0.05, 0.4); });
+      for(let i = 0; i < 12; i++) RZ({t:t + rv(0, 0.8), d:0.01, v:rv(0.05, 0.14), f:rv(5000, 9000), q:4, dest:d}); return 1.1; },
+    carambano(t, o, d){ const k = o.tono*rv(0.95, 1.05); RZ({t, d:0.025, v:0.75, f:2200, tipo:'highpass', dest:d}); TN({t, f:3200*k, f2:1700*k, fd:0.05, d:0.08, v:0.25, dest:d});
+      metal(t, d, 1250*k, 0.05, 0.4); TN({t:t + 0.05, f:1800*k, f2:700*k, fd:0.4, d:0.45, v:0.05, dest:d}); return 0.7; },
+    hielo_rompe(t, o, d){ const k = o.tono; vidrio(t, d, 6, 0.06, 0.15); RZ({t, d:0.04, v:0.35, f:3500*k, tipo:'highpass', dest:d}); return 0.5; },
+    susurro(t, o, d){ const k = o.tono; RZ({t, a:0.4, d:0.15, v:0.9, f:700*k, f2:2600*k, fd:0.5, q:2, col:'rosa', dest:d});
+      RZ({t, a:0.3, d:0.5, v:0.6, f:360*k, q:6, col:'rosa', dest:d}); RZ({t, a:0.3, d:0.5, v:0.4, f:720*k, q:6, col:'rosa', dest:d});
+      [98, 103].forEach((m, i) => { const tt = t + 0.1 + i*0.12, g = G(0, d); oscF('sine', mtof(m)*k, tt, tt + 1).connect(g); g.gain.setValueAtTime(0, tt); g.gain.linearRampToValueAtTime(0.07, tt + 0.35); g.gain.setTargetAtTime(0, tt + 0.4, 0.15); });
+      return 1.2; },
+    aliento(t, o, d){ const k = o.tono; RZ({t, a:0.12, d:0.7, v:0.55, f:2800*k, f2:6500*k, fd:0.6, q:1.2, dest:d}); RZ({t, a:0.1, d:0.5, v:0.25, f:900*k, q:0.8, col:'rosa', dest:d});
+      for(const f of [2637, 3951]){ const g = G(0, d), s = oscF('sine', f*k, t, t + 0.9), tr = oscF('sine', 18, t, t + 0.9); tr.connect(G(0.5, g.gain)); s.connect(g); env(g.gain, t, 0.08, 0.04, 0.7); }
+      vidrio(t + 0.1, d, 8, 0.04, 0.6); return 1.1; },
+    kiai(t, o, d){ const k = o.tono*rv(0.96, 1.04); RZ({t, a:0.02, d:0.05, v:0.14, f:1500, q:0.7, dest:d});
+      vox(t + 0.04, d, {vocal:'a', f:128*k, f2:175*k, pico:0.4, d:0.24, v:0.6, sucio:1.9, q:6, aire:0.05});
+      vox(t + 0.26, d, {vocal:'i', f:168*k, f3:108*k, d:0.2, v:0.5, sucio:1.9, q:6}); return 0.7; },
+    paso(t, o, d){ const k = o.tono*rv(0.92, 1.08); TN({t, f:72*k, f2:44, fd:0.08, d:0.14, v:0.55, dest:d}); RZ({t, d:0.05, v:0.3, f:420, tipo:'lowpass', col:'rosa', dest:d});
+      for(const f of [640, 930, 1370]) TN({t:t + 0.004, a:0.001, f:f*k*rv(0.97, 1.03), d:0.1, v:0.035, tipo:'triangle', dest:d}); return 0.35; },
+    onda(t, o, d){ const k = o.tono; RZ({t, a:0.02, d:0.2, v:0.8, f:700*k, f2:5200*k, fd:0.15, q:1.2, dest:d}); whoosh(t, 0.5, 300*k, 1200*k, 0.6, d);
+      [2960, 4180, 5790].forEach((f, i) => TN({t:t + 0.02, a:0.002, f:f*k*0.8, d:0.9 - i*0.2, v:0.05, dest:d})); TN({t, f:110*k, f2:50, d:0.2, v:0.6, dest:d}); return 1.1; },
+    aterriza(t, o, d){ const k = o.tono; trueno(t, d, 1, 80*k); taiko(d, t, 1, {f:36, larga:1.2}); metal(t, d, 350*k, 0.08, 0.5);
+      for(let i = 0; i < 14; i++) RZ({t:t + 0.05 + Math.pow(Math.random(), 1.4)*0.7, d:rv(0.02, 0.06), v:rv(0.1, 0.3), f:rv(400, 1600), q:rv(1.5, 4), col:'rosa', dest:panear(d, rv(-0.5, 0.5))});
+      return 1.7; },
+    fuego_carga(t, o, d){ const k = o.tono; RZ({t, a:0.6, d:0.2, v:0.55, f:260*k, f2:2200*k, fd:0.7, tipo:'lowpass', q:1.4, col:'rosa', dest:d});
+      for(let i = 0; i < 16; i++) RZ({t:t + rv(0, 0.75), d:0.008, v:rv(0.08, 0.25), f:rv(2500, 6000), tipo:'highpass', dest:panear(d, rv(-0.6, 0.6))}); return 1; },
+    fuego(t, o, d){ const k = o.tono*rv(0.95, 1.05); RZ({t, a:0.03, d:0.55, v:0.7, f:480*k, f2:1500*k, fd:0.3, q:0.8, col:'rosa', dest:d}); TN({t, f:70*k, f2:42, d:0.35, v:0.45, dest:d});
+      for(let i = 0; i < 8; i++) RZ({t:t + rv(0.05, 0.5), d:0.01, v:rv(0.06, 0.18), f:rv(2500, 6000), tipo:'highpass', dest:d}); return 0.8; }
+  });
+  Object.assign(FXM, {jefe_aparece:{max:1, vol:0.8, rev:0.6}, reja:{max:2, vol:0.7, rev:0.3}, jefe_golpe:{max:2, vol:0.75, rev:0.3}, clang:{max:2, vol:0.6, rev:0.3},
+    jefe_muere:{max:1, vol:0.8, rev:0.6}, aleteo:{max:3, vol:0.5, rev:0.1}, graznido:{max:2, vol:0.55, rev:0.35}, plumas:{max:3, vol:0.55, rev:0.1}, picada:{max:1, vol:0.6, rev:0.2},
+    hielo_marca:{max:2, vol:0.5, rev:0.5}, carambano:{max:3, vol:0.55, rev:0.3}, hielo_rompe:{max:4, vol:0.45, rev:0.3}, susurro:{max:2, vol:0.6, rev:0.6}, aliento:{max:2, vol:0.55, rev:0.4},
+    kiai:{max:2, vol:0.65, rev:0.3}, paso:{max:3, vol:0.45, rev:0.1}, onda:{max:2, vol:0.6, rev:0.3}, aterriza:{max:1, vol:0.7, rev:0.3}, fuego_carga:{max:1, vol:0.5, rev:0.2},
+    fuego:{max:3, vol:0.55, rev:0.2}});
   /* voces vivas por nombre y en total: la más vieja se apaga para hacer lugar */
   const VIVAS = [];
   function apagar(v, now){ try { const p = v.g.gain; p.cancelScheduledValues(now); p.setValueAtTime(p.value, now); p.linearRampToValueAtTime(0, now + 0.03); } catch(e){}

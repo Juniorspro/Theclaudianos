@@ -7,6 +7,7 @@ const JEFES = {
   shogun:{nombre:'EL SHOGUN', hp:7, hw:8, hh:13, col:'#ffc830'}
 };
 const JEFE_DE = {bambu:'tengu', montana:'yuki', castillo:'shogun'};
+const NJEFE = {tengu:0, yuki:1, shogun:2};                                             /* para los sonidos de cada uno */
 /* la arena: 23 filas de alto adentro, repisas a los costados y una isla en el medio */
 function arena(base){
   const piso = base - 1, techo = piso - 24;
@@ -28,7 +29,7 @@ function crearJefe(tipo, A){
 function activarJefe(j){
   const A = J.arena; j.activo = true; j.intro = 2.4; j.est = 'intro';
   for(let c = A.hueco.c0; c <= A.hueco.c1; c++) poner(c, A.hueco.r, T_REJA);                  /* se cierra por abajo */
-  sfx('titulo'); J.sacude = 1; vibrar(60);
+  sfx('reja'); sfx('jefe_aparece', {n:NJEFE[j.tipo]}); SON.musica('jefe_' + j.tipo); J.sacude = 1; vibrar(60);
 }
 const ANCLAS = A => [[34, A.techoY + 30], [ANCHO - 34, A.techoY + 30], [40, (A.techoY + A.pisoY)/2], [ANCHO - 40, (A.techoY + A.pisoY)/2], [ANCHO/2, A.techoY + 26]];
 function pasoJefe(dt){
@@ -55,14 +56,14 @@ function golpearJefe(j){
   j.hp--; j.inv = 1.2; J.hitstop = 0.1; J.sacude = 1.3; POST.aber = 3; vibrar(50); tinta(j.x, j.y, 22, 1.3);
   NIN.vy = -220; NIN.vx = Math.sign(NIN.x - j.x || 1)*120; NIN.dj = Math.max(NIN.dj, NJ().saltos || 1); NIN.tAire = 0.5;
   const p = 500*(NJ().bajas || 1); J.puntos += p; J.textos.push({x:j.x, y:j.y - 20, txt:'+' + p, t:1.1, grad:'oro'});
-  sfx('corte'); sfx('combo', {n:Math.min(10, j.D.hp - j.hp + 2)}); J.tajo = {x:j.x, y:j.y, a:Math.atan2(NIN.vy, NIN.vx), t:0.18};
-  if(j.tipo === 'yuki'){ j.est = 'se_va'; j.tt = 0.5; }
-  if(j.hp <= 0){ j.muere = 1.8; j.peligroso = false; sfx('muerte'); BALAS = []; J.marcas = []; }
+  sfx('jefe_golpe', {n:NJEFE[j.tipo]}); sfx('combo', {n:Math.min(10, j.D.hp - j.hp + 2)}); J.tajo = {x:j.x, y:j.y, a:Math.atan2(NIN.vy, NIN.vx), t:0.18};
+  if(j.tipo === 'yuki'){ j.est = 'se_va'; j.tt = 0.5; sfx('susurro'); }
+  if(j.hp <= 0){ j.muere = 1.8; j.peligroso = false; sfx('jefe_muere', {n:NJEFE[j.tipo]}); SON.musica(null); BALAS = []; J.marcas = []; }
 }
-function rebotaJefe(j){ j.rebote = j.t; NIN.vx = Math.sign(NIN.x - j.x || 1)*150; NIN.vy = -150; NIN.tAire = 0.5; sfx('pegar'); polvo(NIN.x, NIN.y, 6, '#ffe0a0');
+function rebotaJefe(j){ j.rebote = j.t; NIN.vx = Math.sign(NIN.x - j.x || 1)*150; NIN.vy = -150; NIN.tAire = 0.5; sfx(j.tipo === 'shogun' ? 'clang' : 'pegar'); polvo(NIN.x, NIN.y, 6, '#ffe0a0');
   if(j.tipo === 'shogun'){ J.textos.push({x:j.x, y:j.y - 26, txt:tr('¡CLANG!'), t:0.8, grad:'blanco'}); if(!j.pista){ j.pista = true; J.textos.push({x:ANCHO/2, y:j.y - 42, txt:tr('¡DE ARRIBA O POR LA ESPALDA!'), t:2.4, grad:'oro'}); } } }
 function jefeCae(j){
-  const A = J.arena; j.fuera = true; J.bajas++; sfx('meta'); J.sacude = 1.5; POST.destello = 0.4;
+  const A = J.arena; j.fuera = true; J.bajas++; sfx('meta'); sfx('reja', {n:1}); SON.musica(MUNDOS[J.nivel.mi].musica); J.sacude = 1.5; POST.destello = 0.4;
   for(let c = A.reja.c0; c <= A.reja.c1; c++){ poner(c, A.reja.r0, T_AIRE); poner(c, A.reja.r1, T_AIRE); }
   for(let i = 0; i < 12; i++){ const a = i/12*6.283; MONEDAS.push({x:lim(j.x + Math.cos(a)*22, 14, ANCHO - 14), y:lim(j.y + Math.sin(a)*18, A.techoY + 8, A.pisoY - 8), t:i}); } J.totMonedas += 12;
   J.textos.push({x:ANCHO/2, y:A.techoY + 30, txt:tr('¡LA REJA SE ABRIÓ!'), t:2.5, grad:'oro'});
@@ -72,40 +73,40 @@ const IA_JEFE = {
   /* el tengu vuela entre anclas, carga y tira un abanico de plumas; herido, apunta y se tira en picada */
   tengu(j, dt, A, N){ j.peligroso = j.est === 'picada';
     if(j.est === 'vuela'){ const [ox, oy] = j.obj, dx = ox - j.x, dy = oy - j.y, d = Math.hypot(dx, dy); j.dir = N.x >= j.x ? 1 : -1;
-      if(d > 3){ const v = Math.min(d, 72*dt); j.x += dx/d*v; j.y += dy/d*v; } else { j.est = 'carga'; j.tt = 1.0; } }
+      if(d > 3){ const v = Math.min(d, 72*dt); j.x += dx/d*v; j.y += dy/d*v; j.ale = (j.ale || 0) - dt; if(j.ale <= 0){ j.ale = 0.6; sfx('aleteo', {vol:0.45}); } } else { j.est = 'carga'; j.tt = 1.0; sfx('graznido'); } }
     else if(j.est === 'carga'){ j.tt -= dt; j.dir = N.x >= j.x ? 1 : -1; if(j.tt <= 0){ j.ciclo++;
-      if(j.hp <= 3 && j.ciclo % 2 === 0){ j.est = 'apunta'; j.tt = 0.65; sfx('laser_carga', {vol:0.6}); }
+      if(j.hp <= 3 && j.ciclo % 2 === 0){ j.est = 'apunta'; j.tt = 0.65; sfx('laser_carga', {vol:0.45}); sfx('graznido', {tono:1.15}); }
       else { const a = Math.atan2(N.y - j.y, N.x - j.x), n = j.hp <= 3 ? 2 : 1; for(let k = -n; k <= n; k++) BALAS.push({x:j.x, y:j.y, vx:Math.cos(a + k*0.26)*100, vy:Math.sin(a + k*0.26)*100, t:'pluma', vida:2.6, w:2, h:2});
-        sfx('shuriken'); j.est = 'vuela'; const an = ANCLAS(A); j.obj = an[(j.ciclo*3 + 1) % an.length]; } } }
-    else if(j.est === 'apunta'){ j.tt -= dt; if(j.tt > 0.2) j.ang = Math.atan2(N.y - j.y, N.x - j.x); if(j.tt <= 0){ j.est = 'picada'; j.tt = 1.1; j.vx = Math.cos(j.ang)*235; j.vy = Math.sin(j.ang)*235; } }
+        sfx('plumas'); j.est = 'vuela'; j.ale = 0.25; const an = ANCLAS(A); j.obj = an[(j.ciclo*3 + 1) % an.length]; } } }
+    else if(j.est === 'apunta'){ j.tt -= dt; if(j.tt > 0.2) j.ang = Math.atan2(N.y - j.y, N.x - j.x); if(j.tt <= 0){ j.est = 'picada'; j.tt = 1.1; j.vx = Math.cos(j.ang)*235; j.vy = Math.sin(j.ang)*235; sfx('picada'); } }
     else if(j.est === 'picada'){ j.tt -= dt; j.x += j.vx*dt; j.y += j.vy*dt;
-      if(j.tt <= 0 || j.x < 14 || j.x > ANCHO - 14 || j.y < A.techoY + 8 || j.y > A.pisoY - 8){ j.x = lim(j.x, 14, ANCHO - 14); j.y = lim(j.y, A.techoY + 8, A.pisoY - 8); J.sacude = 0.6; j.est = 'vuela'; const an = ANCLAS(A); j.obj = an[j.ciclo % an.length]; } } },
+      if(j.tt <= 0 || j.x < 14 || j.x > ANCHO - 14 || j.y < A.techoY + 8 || j.y > A.pisoY - 8){ j.x = lim(j.x, 14, ANCHO - 14); j.y = lim(j.y, A.techoY + 8, A.pisoY - 8); J.sacude = 0.6; j.est = 'vuela'; sfx('aterriza', {vol:0.4, tono:1.4}); const an = ANCLAS(A); j.obj = an[j.ciclo % an.length]; } } },
   /* yuki-onna flota arriba, hace caer carámbanos donde estás y, herida, sopla esquirlas; cuando la golpean se desvanece y aparece en otro lado */
   yuki(j, dt, A, N){ j.peligroso = false;
-    if(j.est === 'se_va'){ j.tt -= dt; j.alfa = Math.max(0, j.tt/0.5); if(j.tt <= 0){ const an = ANCLAS(A), p = an[Math.floor(Math.random()*an.length)]; j.x = p[0]; j.y = p[1]; j.est = 'vuelve'; j.tt = 0.5; } return; }
+    if(j.est === 'se_va'){ j.tt -= dt; j.alfa = Math.max(0, j.tt/0.5); if(j.tt <= 0){ const an = ANCLAS(A), p = an[Math.floor(Math.random()*an.length)]; j.x = p[0]; j.y = p[1]; j.est = 'vuelve'; j.tt = 0.5; sfx('susurro', {tono:1.3, vol:0.7}); } return; }
     if(j.est === 'vuelve'){ j.tt -= dt; j.alfa = 1 - Math.max(0, j.tt/0.5); if(j.tt <= 0){ j.est = 'flota'; j.tt = 1.2; } return; }
     j.alfa = 1; j.dir = N.x >= j.x ? 1 : -1; j.x += Math.sin(j.t*0.9)*22*dt; j.y += Math.sin(j.t*1.7)*10*dt; j.x = lim(j.x, 20, ANCHO - 20);
     if(j.est === 'flota'){ j.tt -= dt; if(j.tt <= 0){ j.ciclo++; j.est = 'hielo'; j.tt = 0.85; J.marcas = []; const xs = [N.x]; for(let i = 0; i < 3 + (j.hp <= 3 ? 2 : 0); i++) xs.push(16 + Math.random()*(ANCHO - 32));
-      for(const x of xs) J.marcas.push({x, y:A.techoY, t:0.85, tipo:'hielo'}); sfx('laser_carga', {vol:0.5}); } }
-    else if(j.est === 'hielo'){ j.tt -= dt; if(j.tt <= 0){ for(const m of J.marcas) BALAS.push({x:m.x, y:A.techoY + 3, vx:0, vy:20, t:'hielo', vida:2, w:1.5, h:4, grav:true}); J.marcas = []; sfx('desmorona');
+      for(const x of xs) J.marcas.push({x, y:A.techoY, t:0.85, tipo:'hielo'}); sfx('hielo_marca'); } }
+    else if(j.est === 'hielo'){ j.tt -= dt; if(j.tt <= 0){ for(const m of J.marcas) BALAS.push({x:m.x, y:A.techoY + 3, vx:0, vy:20, t:'hielo', vida:2, w:1.5, h:4, grav:true}); J.marcas = []; sfx('carambano');
       if(j.hp <= 4){ j.est = 'aliento'; j.tt = 0.5; } else { j.est = 'flota'; j.tt = 1.3; } } }
     else if(j.est === 'aliento'){ j.tt -= dt; if(j.tt <= 0){ const a = Math.atan2(N.y - j.y, N.x - j.x); for(let k = -3; k <= 3; k++) BALAS.push({x:j.x, y:j.y, vx:Math.cos(a + k*0.14)*115, vy:Math.sin(a + k*0.14)*115, t:'esquirla', vida:2.2, w:1.5, h:1.5});
-      sfx('shuriken'); j.est = 'flota'; j.tt = 1.4; } } },
+      sfx('aliento'); j.est = 'flota'; j.tt = 1.4; } } },
   /* el shogun camina por el piso mirándote, corta de lado a lado a tu altura, salta y hace temblar el piso, y hace llover fuego */
   shogun(j, dt, A, N){
     if(j.est === 'salto'){ j.vy += 700*dt; j.y += j.vy*dt; j.x += j.vx*dt; j.x = lim(j.x, 18, ANCHO - 18); j.peligroso = j.vy > 0;
-      if(j.y >= A.pisoY - j.D.hh){ j.y = A.pisoY - j.D.hh; j.est = 'camina'; j.tt = 1.4; j.peligroso = false; J.sacude = 1.2; sfx('desmorona');
+      if(j.y >= A.pisoY - j.D.hh){ j.y = A.pisoY - j.D.hh; j.est = 'camina'; j.tt = 1.4; j.peligroso = false; J.sacude = 1.2; sfx('aterriza');
         for(const s of [-1, 1]) BALAS.push({x:j.x + s*10, y:A.pisoY - 4, vx:s*190, vy:0, t:'ola', vida:1.2, w:4, h:3.5}); }
       return; }
     j.peligroso = false;
-    if(j.est === 'camina'){ j.dir = N.x >= j.x ? 1 : -1; j.tt -= dt; if(Math.abs(N.x - j.x) > 12) j.x += j.dir*22*dt; j.x = lim(j.x, 18, ANCHO - 18);
+    if(j.est === 'camina'){ j.dir = N.x >= j.x ? 1 : -1; j.tt -= dt; if(Math.abs(N.x - j.x) > 12){ j.x += j.dir*22*dt; j.pasoT = (j.pasoT || 0) - dt; if(j.pasoT <= 0){ j.pasoT = 0.55; sfx('paso', {x:pan(j.x)}); } } j.x = lim(j.x, 18, ANCHO - 18);
       if(N.est === 'pegado' && Math.abs(N.x - j.x) < 14 && Math.abs(N.y - j.y) < 16) j.peligroso = true;
       if(j.tt <= 0){ j.ciclo++; const r = j.ciclo % 3;
-        if(r === 1 && j.hp <= 5){ j.est = 'salto'; j.vy = -340; j.vx = (N.x - j.x)*0.9; sfx('samurai'); }
-        else if(r === 2 && j.hp <= 3){ j.est = 'fuego'; j.tt = 0.7; J.marcas = []; for(let i = 0; i < 6; i++) J.marcas.push({x:16 + i*(ANCHO - 32)/5 + rv(-6, 6), y:A.techoY, t:0.7, tipo:'fuego'}); sfx('laser_carga', {vol:0.5}); }
-        else { j.est = 'tajo'; j.tt = 0.8; j.yTajo = lim(N.y, A.techoY + 8, A.pisoY - 5); J.marcas = [{x:0, y:j.yTajo, t:0.8, tipo:'tajo'}]; sfx('samurai'); } } }
-    else if(j.est === 'tajo'){ j.tt -= dt; if(j.tt <= 0){ for(const s of [-1, 1]) BALAS.push({x:j.x + s*8, y:j.yTajo, vx:s*255, vy:0, t:'onda', vida:1.1, w:6, h:2.5}); J.marcas = []; sfx('corte'); j.est = 'camina'; j.tt = 1.6; } }
-    else if(j.est === 'fuego'){ j.tt -= dt; if(j.tt <= 0){ for(const m of J.marcas) BALAS.push({x:m.x, y:A.techoY + 3, vx:0, vy:30, t:'fuego', vida:2, w:2.5, h:2.5, grav:true}); J.marcas = []; j.est = 'camina'; j.tt = 1.4; } } }
+        if(r === 1 && j.hp <= 5){ j.est = 'salto'; j.vy = -340; j.vx = (N.x - j.x)*0.9; sfx('kiai'); }
+        else if(r === 2 && j.hp <= 3){ j.est = 'fuego'; j.tt = 0.7; J.marcas = []; for(let i = 0; i < 6; i++) J.marcas.push({x:16 + i*(ANCHO - 32)/5 + rv(-6, 6), y:A.techoY, t:0.7, tipo:'fuego'}); sfx('fuego_carga'); }
+        else { j.est = 'tajo'; j.tt = 0.8; j.yTajo = lim(N.y, A.techoY + 8, A.pisoY - 5); J.marcas = [{x:0, y:j.yTajo, t:0.8, tipo:'tajo'}]; sfx('kiai', {tono:0.92}); } } }
+    else if(j.est === 'tajo'){ j.tt -= dt; if(j.tt <= 0){ for(const s of [-1, 1]) BALAS.push({x:j.x + s*8, y:j.yTajo, vx:s*255, vy:0, t:'onda', vida:1.1, w:6, h:2.5}); J.marcas = []; sfx('onda'); j.est = 'camina'; j.tt = 1.6; } }
+    else if(j.est === 'fuego'){ j.tt -= dt; if(j.tt <= 0){ for(const m of J.marcas) BALAS.push({x:m.x, y:A.techoY + 3, vx:0, vy:30, t:'fuego', vida:2, w:2.5, h:2.5, grav:true}); J.marcas = []; sfx('fuego'); j.est = 'camina'; j.tt = 1.4; } } }
 };
 
 /* ================================================================ dibujar a los jefes */

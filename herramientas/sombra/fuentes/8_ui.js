@@ -50,7 +50,9 @@ function paso(dtR){
   CAM.objY = Math.min(NIN.y - H*0.6, CEL - H*0.86);
   if(J.jefe && J.jefe.activo && !J.jefe.fuera && NIN.est !== 'meta') CAM.objY = (J.arena.techoY + J.arena.pisoY)/2 - H*0.52;       /* en la arena la cámara se queda quieta */
   const k = NIN.est === 'aire' ? 5 : 3.2; CAM.y += (CAM.objY - CAM.y)*(1 - Math.exp(-dtR*k));
-  SON.intensidad(J.infinito ? lim(J.alturaMax/600, 0.15, 1) : lim(0.35 + J.combo*0.1, 0, 1));
+  /* con el jefe, la intensidad es cuánta vida le sacaste: entran las capas de la música a medida que cae */
+  const jf = J.jefe && J.jefe.activo && !J.jefe.fuera ? J.jefe : null;
+  SON.intensidad(jf ? lim(0.35 + 0.65*(1 - jf.hp/jf.D.hp), 0, 1) : J.infinito ? lim(J.alturaMax/600, 0.15, 1) : lim(0.35 + J.combo*0.1, 0, 1));
 }
 
 /* ================================================================ dibujar */
