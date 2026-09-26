@@ -219,7 +219,10 @@ function pasoEnemigos(dt){
       const ve = vivo && d < 150 && hayVista(e.x, e.y - 4, N.x, N.y);
       if(ve && e.cd <= 0){ if(e.carga === 0) sfx('laser_carga', {x:pan(e.x), vol:0.6}); e.carga += dt;
         if(e.carga < 0.8) e.apunta = Math.atan2(N.y - (e.y - 3), N.x - e.x);                      /* los últimos 0,25 s la mira queda fija: se puede esquivar */
-        if(e.carga >= 1.05){ e.carga = 0; e.cd = 1.5; sfx('disparo', {x:pan(e.x)}); BALAS.push({x:e.x + Math.cos(e.apunta)*6, y:e.y - 3 + Math.sin(e.apunta)*6, vx:Math.cos(e.apunta)*280, vy:Math.sin(e.apunta)*280, t:'bala', vida:1.4}); } }
+        if(e.carga >= 1.05){ e.carga = 0; e.cd = 1.5; sfx('disparo', {x:pan(e.x)}); BALAS.push({x:e.x + Math.cos(e.apunta)*6, y:e.y - 3 + Math.sin(e.apunta)*6, vx:Math.cos(e.apunta)*280, vy:Math.sin(e.apunta)*280, t:'bala', vida:1.4});
+          /* fogonazo y humo en la boca del arcabuz */
+          const bx = e.x + (e.dir || 1) + Math.cos(e.apunta)*8, by = e.y - 5 + Math.sin(e.apunta)*8; PARTS.push({x:bx - 1, y:by - 1, vx:0, vy:0, vida:0.07, col:'#fff4b0', tam:3});
+          for(let i = 0; i < 4; i++) PARTS.push({x:bx, y:by, vx:Math.cos(e.apunta)*rv(10, 40) + rv(-8, 8), vy:Math.sin(e.apunta)*rv(10, 40) - rv(8, 20), vida:rv(0.35, 0.7), col:i % 2 ? '#c8c0d0' : '#9a90a8', tam:2}); } }
       else if(!ve) e.carga = Math.max(0, e.carga - dt*2); }
     else if(e.t === 'samurai'){
       if(e.corta > 0){ e.corta -= dt; continue; }
@@ -242,7 +245,8 @@ function matar(e){
   sfx('corte', {x:pan(e.x)}); J.hitstop = 0.06; J.sacude = Math.max(J.sacude, 0.6); vibrar(20); POST.aber = Math.max(POST.aber, 2);
   tinta(e.x, e.y - 5, 18, 1); J.tajo = {x:e.x, y:e.y - 5, a:Math.atan2(NIN.vy, NIN.vx), t:0.18};
   /* las dos mitades del que cayó */
-  for(const s of [-1, 1]) PARTS.push({x:e.x, y:e.y - 5, vx:NIN.vx*0.2 + s*30, vy:-60 + rv(-20, 20), vida:1.4, col:efecto().silueta, tam:3, g:1, gira:true});
+  const img = fotoEnemigo(e, efecto()), ac = Math.cos(J.tajo.a), as = Math.sin(J.tajo.a);
+  for(const s of [-1, 1]) PARTS.push({x:e.x, y:e.y - 5, vx:NIN.vx*0.15 - as*s*38, vy:-70 + ac*s*30 + rv(-15, 15), vida:1.3, img, mitad:s, a:0, va:s*rv(3, 7)*(NIN.vx >= 0 ? 1 : -1), g:1});
 }
 function pasoBalas(dt){
   for(const b of BALAS){ if(b.clavada){ b.vida -= dt; continue; } b.vida -= dt; if(b.grav) b.vy += 420*dt; b.x += b.vx*dt; b.y += b.vy*dt; if(b.giro !== undefined) b.giro += dt*20;
@@ -262,7 +266,7 @@ function polvo(x, y, n, col){ for(let i = 0; i < n; i++) PARTS.push({x, y, vx:rv
 /* la «sangre» es tinta: salpica y queda pegada en la piedra */
 function tinta(x, y, n, f){ for(let i = 0; i < n; i++){ const a = rv(0, 6.28), v = rv(30, 150)*f; PARTS.push({x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v - 30, vida:rv(0.4, 0.9), col:i % 3 ? '#1a0610' : '#8a1020', tam:rv(1, 2.5), g:1, mancha:true}); } }
 function pasoParticulas(dt){
-  for(let i = PARTS.length - 1; i >= 0; i--){ const p = PARTS[i]; p.vida -= dt; if(p.g) p.vy += 380*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= Math.exp(-dt*1.5);
+  for(let i = PARTS.length - 1; i >= 0; i--){ const p = PARTS[i]; p.vida -= dt; if(p.va) p.a += p.va*dt; if(p.g) p.vy += 380*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= Math.exp(-dt*1.5);
     if(p.mancha){ const t = tile(Math.floor(p.x/CEL), Math.floor(p.y/CEL)); if(t === T_PIEDRA || t === T_DESM){ if(MANCHAS.length > 260) MANCHAS.shift(); MANCHAS.push({x:Math.round(p.x), y:Math.round(p.y), r:Math.round(p.tam), col:p.col}); PARTS.splice(i, 1); continue; } }
     if(p.vida <= 0) PARTS.splice(i, 1); }
   if(PARTS.length > 500) PARTS.splice(0, PARTS.length - 500);

@@ -1799,3 +1799,43 @@ Lo que costó una vuelta:
 - **El tengu mataba al bot en todas las pasadas**: bajó a 72 px/s, carga 1 s con aviso y plumas a 100 px/s.
 - **El bambú de fondo salía rosa y ruidoso**: la base se mezcla con el color de la torre y lleva menos hojas.
 
+### 2026-09-26 (aw) — SOMBRA: el ninja y la patota en pixel art de verdad
+**Pedido textual:** «Mejora el pixel art del jugador y de los enemigos, confío en ti, usa tu 100%».
+
+Eran palitos: rayas de 1 a 3 px y un disco de cabeza, todo del color de la silueta. Ahora son **sprites dibujados píxel
+por píxel** (`3b_personajes.js`), una grilla de letras por cuadro donde cada letra es un color de la paleta del efecto.
+- **El ninja** tiene 8 cuadros: listo, respirando, apuntando, en el aire, cayendo, hecho bola, pegado a la pared y colgado
+  del techo. Lleva capucha con la franja de la cara y el ojo (que parpadea), la faja del color de su bufanda, la katana a
+  la espalda con la tsuba de oro, y la bufanda de dos píxeles con sombra que se afina.
+  - Los siete ninjas se distinguen: color de bufanda y faja, ojo dorado o rojo, empuñadura verde (Ryu), sombrero de paja
+    (Kaze), orejas (Neko) y cuernos (Oni).
+- **La patota**:
+  - el **tirador** es un ashigaru arrodillado con jingasa y su escudo de oro, y un arcabuz de madera y caño que sigue la
+    mira; la mecha titila al cargar, y al tirar sale un fogonazo con humo;
+  - el **samurái** tiene kabuto con medialuna de oro, menpo rojo, hombreras, cordones de la armadura y paso de a dos
+    cuadros; levanta la katana sobre la cabeza y baja con un arco blanco;
+  - la **kunoichi** lleva rodete, vincha y faja del color del efecto, y una cola de pelo que se hamaca; al cargar, la
+    estrella gira en la mano;
+  - la **cometa** es de papel con sombra de un lado, un sol pintado, varillas y cola, con el tipo colgado de un travesaño.
+  - Los ojos se ponen rojos cuando van a atacar.
+- **Luz de borde**: el píxel del cuerpo que tiene aire arriba o a la izquierda se aclara hacia la luz del efecto, y el aire
+  pegado lleva un contorno tenue. Así la silueta se despega de la torre oscura de noche, y cada efecto la tiñe con su
+  luz. Los jefes pasan por el mismo filtro (`conLuz`), leyendo los píxeles de lo que ya dibujaban.
+- **Al morir, el enemigo se parte en dos mitades de su propio sprite**, cortadas por la línea del tajo y girando.
+- La estela de la cámara lenta es la silueta del ninja en el color de su bufanda.
+
+Arreglado de paso, medido con `banco/pies.js`: **los 133 enemigos de los 24 niveles estaban hundidos 3-4 px en la piedra**.
+La `y` del enemigo es la superficie, y el dibujo viejo ponía los pies de 1 a 4 px por debajo. Ahora pisan la fila de arriba.
+
+Medido:
+- Dibujar un personaje cuesta de 0,013 a 0,024 ms un enemigo y 0,11 ms el ninja girado (`banco/costo.js`).
+- El tajo mata al samurái y las dos mitades vuelan (`banco/tajo.js`).
+- Bot mortal: 14 de 21 niveles, igual que antes (la lógica no cambió). Jefes con el bot invencible: los tres caen.
+- Infinito hasta 898 m, `TR_FALTA` vacío en los tres idiomas, fuzz de 500 y dedo, todo sin errores.
+
+Lo que costó una vuelta:
+- **La katana del samurái apuntaba para atrás** y, levantada, cruzaba el casco: el ángulo se mide desde arriba hacia el
+  frente, y levantada sale de las manos sobre la cabeza.
+- **La mira del tengu mide 200 px** y se cortaba al pasar al jefe por un lienzo aparte de 96: va dibujada afuera.
+- **Ryu perdía su hoja verde**: con la katana en la vaina no se ve la hoja, así que el color va en la empuñadura.
+

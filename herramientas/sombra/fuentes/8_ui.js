@@ -160,7 +160,7 @@ function dibujarMundo(g, E, menu){
       g.globalAlpha = 0.25 + k*0.65; linea(g, e.x, e.y - 3, e.x + Math.cos(e.apunta)*L, e.y - 3 + Math.sin(e.apunta)*L, k > 0.76 ? '#ffffff' : '#ff2a3a', 1); g.globalAlpha = 1; }
     dibujarEnemigo(g, e, E, J.tr);
     if(e.carga > 0 && e.t !== 'tirador' && Math.floor(J.tr*14) % 2) texto(g, '!', e.x, e.y - 24, 'rojo'); }
-  dibujarMarcas(g); if(J.jefe) dibujarJefe(g, J.jefe, E);
+  dibujarMarcas(g); if(J.jefe && !J.jefe.fuera){ dibujarMiraJefe(g, J.jefe); conLuz(g, J.jefe.x, J.jefe.y, 96, gc => dibujarJefe(gc, J.jefe, E), paleta(E, null)); }
   if(J.jefe && (J.jefe.est === 'carga' || J.jefe.est === 'hielo' || J.jefe.est === 'tajo') && Math.floor(J.tr*12) % 2) texto(g, '!', J.jefe.x, J.jefe.y - J.jefe.D.hh - 18, 'rojo');
   for(const b of BALAS){ if(b.t === 'pluma'){ const a = Math.atan2(b.vy, b.vx); linea(g, b.x - Math.cos(a)*4, b.y - Math.sin(a)*4, b.x, b.y, E.silueta, 2); px(g, b.x, b.y, '#e8384a'); continue; }
     if(b.t === 'hielo'){ g.fillStyle = '#e8f4ff'; g.fillRect(Math.round(b.x) - 1, Math.round(b.y) - 4, 3, 5); g.fillRect(Math.round(b.x), Math.round(b.y) + 1, 1, 2); continue; }
@@ -173,7 +173,7 @@ function dibujarMundo(g, E, menu){
   /* el ninja, con su estela y su bufanda */
   const N = NJ(), ex = {bufanda:NIN.bufanda, colBuf:N.colBuf, accesorio:N.accesorio, colOjo:N.colOjo, colHoja:N.colHoja};
   if(NIN.est !== 'muerto'){
-    for(const e of NIN.estela){ g.globalAlpha = e.t*0.9; dibujarNinja(g, e.x, e.y, 'bola', e.dir, e.giro, {silueta:N.colBuf, acento:E.acento}, null); } g.globalAlpha = 1;
+    for(const e of NIN.estela){ g.globalAlpha = e.t*0.9; dibujarNinja(g, e.x, e.y, 'bola', e.dir, e.giro, E, {plano:N.colBuf}); } g.globalAlpha = 1;
     if(!(NIN.invul > 0 && Math.floor(J.tr*12) % 2)){
       const pose = NIN.est === 'aire' ? (NIN.tAire < 0.42 ? 'bola' : 'salto') : J.apunta ? 'apunta' : NIN.ny === -1 ? 'pie' : NIN.ny === 1 ? 'techo' : 'pared';
       /* pegado a una pared: la figura se para derecha y mira para afuera */
@@ -184,7 +184,9 @@ function dibujarMundo(g, E, menu){
   /* el tajo cuando mata */
   if(J.tajo){ const t = J.tajo, L = 12*(1 + (0.18 - t.t)*6); g.globalAlpha = t.t/0.18; linea(g, t.x - Math.cos(t.a)*L, t.y - Math.sin(t.a)*L, t.x + Math.cos(t.a)*L, t.y + Math.sin(t.a)*L, '#ffffff', 2); g.globalAlpha = 1; }
   /* partículas */
-  for(const p of PARTS){ g.fillStyle = p.col; const s2 = Math.max(1, Math.round(p.tam)); g.fillRect(Math.round(p.x), Math.round(p.y), s2, s2); }
+  for(const p of PARTS){ if(p.img){ g.save(); g.globalAlpha = lim(p.vida/0.4, 0, 1); g.translate(Math.round(p.x), Math.round(p.y)); g.rotate(Math.round(p.a*4)/4);
+      g.beginPath(); g.rect(-24, p.mitad < 0 ? -24 : 0, 48, 24); g.clip(); g.drawImage(p.img, -24, -19); g.restore(); continue; }
+    g.fillStyle = p.col; const s2 = Math.max(1, Math.round(p.tam)); g.fillRect(Math.round(p.x), Math.round(p.y), s2, s2); }
   /* la trayectoria mientras se apunta */
   if(J.apunta && J.modo === 'juego') trayectoria(g);
   /* la tinta que sube */

@@ -64,3 +64,10 @@ Fuentes en `herramientas/sombra/fuentes/`, se arma con `herramientas/sombra/arma
 - Todo lo que sea sólo visual **no puede usar el azar del nivel**: cambia todos los niveles ya verificados. Va con un
   hash de la fila.
 
+## Personajes
+- Sprites en grilla de letras (`3b_personajes.js`): cada letra es un color de la paleta del efecto, se pintan en una
+  lámina de 48×48, se giran ahí (vecino más cercano) y recién después llevan la luz de borde (aire arriba → fuerte, a la
+  izquierda → suave) y un contorno tenue. Girar después de la luz la pondría del lado equivocado.
+- La `y` de un enemigo es la **superficie**: los pies van en la fila de arriba (dy −1). El dibujo viejo los hundía.
+- Lo que se dibuja con trazos (jefes) pasa por `conLuz`: se pinta aparte y se leen los píxeles opacos y oscuros.
+

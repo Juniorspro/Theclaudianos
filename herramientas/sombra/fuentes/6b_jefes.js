@@ -109,6 +109,9 @@ const IA_JEFE = {
 };
 
 /* ================================================================ dibujar a los jefes */
+/* la mira del tengu antes de tirarse en picada (va aparte: sale del cuadro del jefe) */
+function dibujarMiraJefe(g, j){ if(!j || j.fuera || j.tipo !== 'tengu' || j.est !== 'apunta') return; const x = Math.round(j.x), y = Math.round(j.y);
+  g.globalAlpha = 0.4 + (0.65 - j.tt)*0.9; linea(g, x, y, x + Math.cos(j.ang)*200, y + Math.sin(j.ang)*200, j.tt < 0.2 ? '#ffffff' : '#ff3a3a', 1); g.globalAlpha = 1; }
 function dibujarJefe(g, j, E){
   if(!j || j.fuera || !j.activo && j.tipo !== 'shogun' && j.est === 'dormido' && false) return;
   const x = Math.round(j.x), y = Math.round(j.y), t = J.tr, col = E.silueta, d = j.dir, parpa = j.inv > 0 && Math.floor(t*16) % 2;
@@ -125,7 +128,7 @@ function dibujarJefe(g, j, E){
     px(g, x + d*3, y - 10, carga ? '#ff3a3a' : '#ffffff'); px(g, x + d*1, y - 10, carga ? '#ff3a3a' : '#ffffff');
     rect(g, x - 3, y - 13, 6, 2, col); rect(g, x - 1, y - 15, 2, 2, col);                                /* el tokin */
     const fx2 = x - d*6, fy = y + 2; g.fillStyle = '#5a8a3a'; for(let k = 0; k < 4; k++) g.fillRect(fx2 - d*k - 1, fy - 2 + k, 3, 1);   /* el abanico de hoja */
-    if(j.est === 'apunta'){ g.globalAlpha = 0.4 + (0.65 - j.tt)*0.9; linea(g, x, y, x + Math.cos(j.ang)*200, y + Math.sin(j.ang)*200, j.tt < 0.2 ? '#ffffff' : '#ff3a3a', 1); g.globalAlpha = 1; } }
+    }
   else if(j.tipo === 'yuki'){
     g.globalAlpha = (j.muere > 0 ? lim(j.muere/1.8, 0, 1) : 1)*j.alfa;
     for(let k = 0; k < 7; k++){ const o = Math.sin(t*2 + k*0.7)*3; linea(g, x - d*1, y - 9, x - d*(4 + k) + o, y + 4 + k*2, '#0a0a14', 1); }     /* el pelo larguísimo */

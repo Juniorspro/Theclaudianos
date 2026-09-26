@@ -65,58 +65,6 @@ function hornearFondo(E, w, h){
 function mezcla(cols, t){ const n = cols.length - 1, i = Math.min(n - 1, Math.floor(t*n)), k = t*n - i, a = hexRGB(cols[i]), b = hexRGB(cols[i + 1]);
   return 'rgb(' + a.map((v, j) => Math.round(v + (b[j] - v)*k)).join(',') + ')'; }
 
-/* ================================================================ el ninja: silueta hecha de huesos, dibujada cada cuadro
-   Las poses están mirando a la derecha con el piso abajo; se giran según la superficie y se espejan con dir. */
-const POSES = {
-  pie:   {cab:[0, -5], cad:[0, 0], mA:[3, -2], mB:[-2, -1], pA:[2, 3], pB:[-2, 3]},                 /* agachado en el piso, listo */
-  pared: {cab:[1, -4], cad:[0, 1], mA:[-3, -5], mB:[-3, 1], pA:[-3, 3], pB:[1, 4]},                 /* pegado a la pared (la pared a la izquierda) */
-  techo: {cab:[0, 1], cad:[0, 5], mA:[-2, -4], mB:[2, -4], pA:[-2, 8], pB:[2, 7]},                   /* colgado del techo */
-  salto: {cab:[1, -5], cad:[0, 1], mA:[4, -6], mB:[-3, 0], pA:[1, 5], pB:[-3, 4]},
-  bola:  {cab:[1, -2], cad:[-1, 1], mA:[2, 1], mB:[1, 2], pA:[1, 3], pB:[-2, 2]},                   /* hecho bolita en la voltereta */
-  apunta:{cab:[0, -4], cad:[0, 1], mA:[5, -3], mB:[-4, -2], pA:[3, 4], pB:[-3, 4]}
-};
-function dibujarNinja(g, x, y, pose, dir, giro, E, extra){
-  const P = POSES[pose] || POSES.salto, c = Math.cos(giro), s = Math.sin(giro), col = E.silueta;
-  const T = p => [x + (p[0]*dir*c - p[1]*s), y + (p[0]*dir*s + p[1]*c)];
-  const cab = T(P.cab), cad = T(P.cad), mA = T(P.mA), mB = T(P.mB), pA = T(P.pA), pB = T(P.pB), hom = T([P.cab[0]*0.6 + P.cad[0]*0.4, P.cab[1]*0.6 + P.cad[1]*0.4 + 1]);
-  /* la bufanda va atrás de todo */
-  if(extra && extra.bufanda) { const b = extra.bufanda; for(let i = 1; i < b.length; i++) linea(g, b[i - 1].x, b[i - 1].y, b[i].x, b[i].y, E.acento === '#ffffff' ? '#e8384a' : extra.colBuf || '#e8384a', i < 3 ? 2 : 1); }
-  linea(g, cad[0], cad[1], pA[0], pA[1], col, 2); linea(g, cad[0], cad[1], pB[0], pB[1], col, 2);
-  linea(g, hom[0], hom[1], cad[0], cad[1], col, 3);
-  linea(g, hom[0], hom[1], mA[0], mA[1], col, 1); linea(g, hom[0], hom[1], mB[0], mB[1], col, 1);
-  disco(g, cab[0], cab[1], 2.3, col);
-  /* la katana a la espalda y el ojo */
-  const esp = T([-2, -3]), esp2 = T([-6, 2]); linea(g, esp[0], esp[1], esp2[0], esp2[1], extra && extra.colHoja || tono(col, 2.2), 1);
-  const ojo = T([1.6, -0.4 + P.cab[1]]); px(g, ojo[0], ojo[1], extra && extra.colOjo || '#ffffff');
-  if(extra && extra.accesorio === 'orejas'){ const o1 = T([P.cab[0] - 1, P.cab[1] - 3]), o2 = T([P.cab[0] + 1.5, P.cab[1] - 3]); px(g, o1[0], o1[1], col); px(g, o2[0], o2[1], col); }
-  if(extra && extra.accesorio === 'cuernos'){ const o1 = T([P.cab[0] - 1.5, P.cab[1] - 3]), o2 = T([P.cab[0] + 2, P.cab[1] - 3]); px(g, o1[0], o1[1], '#e8384a'); px(g, o2[0], o2[1], '#e8384a'); }
-  if(extra && extra.accesorio === 'sombrero'){ const a = T([P.cab[0] - 4, P.cab[1] - 1.5]), b = T([P.cab[0] + 4, P.cab[1] - 1.5]), cc = T([P.cab[0], P.cab[1] - 4]); linea(g, a[0], a[1], cc[0], cc[1], col, 1); linea(g, cc[0], cc[1], b[0], b[1], col, 1); linea(g, a[0], a[1], b[0], b[1], col, 1); }
-}
-
-/* ================================================================ la patota del castillo, también en silueta */
-function dibujarEnemigo(g, e, E, t){
-  const x = Math.round(e.x), y = Math.round(e.y), col = E.silueta, d = e.dir || 1;
-  if(e.t === 'tirador'){                                                       /* rodilla en tierra, arco o arcabuz */
-    disco(g, x, y - 6, 2, col); rect(g, x - 2, y - 4, 4, 5, col); rect(g, x - 3, y + 1, 3, 2, col); rect(g, x + 1, y + 1, 2, 3, col);
-    const a = e.apunta || 0; linea(g, x, y - 3, x + Math.cos(a)*7, y - 3 + Math.sin(a)*7, col, 2);
-    px(g, x + d, y - 7, e.carga > 0 ? '#ff3a3a' : '#ffd0a0'); }
-  else if(e.t === 'samurai'){                                                  /* más grande, kabuto con cuernos y katana */
-    const ataca = e.corta > 0, lev = e.carga > 0;
-    disco(g, x, y - 9, 2.5, col); rect(g, x - 4, y - 11, 1, 2, col); rect(g, x + 3, y - 11, 1, 2, col); rect(g, x - 3, y - 7, 6, 7, col);
-    rect(g, x - 4, y - 6, 8, 2, col); rect(g, x - 3, y, 2, 4, col); rect(g, x + 1, y, 2, 4, col);
-    const ang = lev ? -2.2*d : ataca ? 0.4*d : -0.6*d, hx = x + d*3, hy = y - 5; linea(g, hx, hy, hx + Math.sin(ang)*9*d, hy - Math.cos(ang)*9, '#e8ecf4', 1);
-    px(g, x + d, y - 9, lev ? '#ff3a3a' : '#ffd0a0'); }
-  else if(e.t === 'shuriken'){                                                 /* la kunoichi que tira estrellas */
-    disco(g, x, y - 6, 2, col); rect(g, x - 2, y - 4, 4, 5, col); linea(g, x, y + 1, x - 2, y + 4, col, 2); linea(g, x, y + 1, x + 2, y + 4, col, 2);
-    rect(g, x - 3, y - 7, 2, 1, E.acento); const m = e.carga > 0 ? -1 : 1; linea(g, x, y - 3, x + d*4, y - 3 - m*3, col, 1); px(g, x + d, y - 7, '#ffd0a0'); }
-  else if(e.t === 'cometa'){                                                   /* una cometa con un tipo colgado */
-    const bx = x, by = y - 10, o = Math.sin(t*3 + e.fase)*1.5;
-    g.fillStyle = E.acento; g.beginPath(); g.moveTo(bx, by - 7); g.lineTo(bx + 6, by); g.lineTo(bx, by + 7); g.lineTo(bx - 6, by); g.fill();
-    g.fillStyle = col; g.fillRect(bx - 6, by, 12, 1); g.fillRect(bx, by - 7, 1, 14);
-    for(let i = 0; i < 5; i++) px(g, bx - 2 - i*2, by + 7 + Math.sin(t*6 + i)*1.5, col);
-    linea(g, bx, by + 6, x + o, y - 3, col, 1); disco(g, x + o, y - 3, 1.8, col); rect(g, x + o - 1, y - 1, 3, 4, col); }
-}
-
 /* ================================================================ las capas de atrás, que se repiten para arriba (así la torre nunca queda vacía)
    lejos: nubes, pagodas y torii flotando (0,15 de la cámara); medio: bambú, pinos o murallas del castillo (0,45). */
 const CAPAS = {k:null, lejos:null, medio:null};
