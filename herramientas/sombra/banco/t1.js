@@ -1,0 +1,12 @@
+const {chromium} = require('/tmp/ui/node_modules/playwright');
+(async () => { const b = await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox', '--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist']});
+  const p = await (await b.newContext({viewport:{width:412, height:892}, deviceScaleFactor:2.625, isMobile:true, hasTouch:true, locale:'es-AR'})).newPage(); const errs = [];
+  p.on('pageerror', e => errs.push('PE ' + e.message + ' ' + (e.stack || '').split('\n')[1])); p.on('console', m => { if(m.type() === 'error') errs.push(m.text()); });
+  await p.goto('file:///tmp/ui/sombra_b.html'); await p.waitForTimeout(1500);
+  const sh = n => p.screenshot({path:'/tmp/ui/sombra/' + n + '.png'});
+  await sh('0idioma'); await p.evaluate(() => __S.irA('principal')); await p.waitForTimeout(3000); await sh('1menu');
+  await p.evaluate(() => __S.empezarNivel(0)); await p.waitForTimeout(800); await sh('2nivel');
+  console.log(JSON.stringify(await p.evaluate(() => ({W:innerWidth, enem:__S.ENEM.length, mon:__S.MONEDAS.length, nin:[__S.NIN.x, __S.NIN.y, __S.NIN.est], meta:__S.MAPA.meta}))));
+  await p.evaluate(() => __S.empezarNivel(20)); await p.waitForTimeout(800); await sh('3castillo');
+  await p.evaluate(() => __S.empezarInfinito()); await p.waitForTimeout(800); await sh('4infinito');
+  console.log(errs.slice(0, 8).join('\n') || 'sin errores'); await b.close(); })();

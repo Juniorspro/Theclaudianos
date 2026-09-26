@@ -1,0 +1,2195 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1a0c1e">
+<title>SOMBRA</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#07060c;touch-action:none;-webkit-user-select:none;user-select:none;
+    overscroll-behavior:none;font-family:ui-monospace,Menlo,Consolas,monospace;color:#efe6d2}
+  /* todo vive en el escenario: con el celular parado se gira 90° y se juega acostado */
+  #stage{position:fixed;left:0;top:0;width:100vw;height:100vh;transform-origin:0 0;overflow:hidden;background:#07060c}
+  /* el juego se dibuja chico y se agranda por un número ENTERO de píxeles reales */
+  #gl,#hud{position:absolute;left:0;top:0;display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+  #hud{pointer-events:none}
+  canvas.px{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  /* menús: DOM encima, con la estética del juego */
+  #menu{position:absolute;inset:0;display:none;pointer-events:none}
+  #menu.ver{display:block}
+  #menu > *{pointer-events:auto}
+  .capa{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:12px 18px}
+  .der{align-items:flex-end;padding-right:6%}
+  .boton{border:0;background:rgba(20,10,24,.72);color:#fff;font:inherit;padding:9px 18px;min-width:210px;cursor:pointer;
+    box-shadow:inset 0 0 0 2px #f2c14e,0 0 0 2px #0a0610,0 5px 0 2px #0a0610;display:flex;justify-content:center;align-items:center}
+  .boton.sec{box-shadow:inset 0 0 0 2px #8a7e9e,0 0 0 2px #0a0610,0 5px 0 2px #0a0610}
+  .boton.chico{min-width:0;padding:7px 12px}
+  .boton:active{transform:translateY(3px)}
+  .boton.foco{background:rgba(242,193,78,.25)}
+  .panel{background:rgba(12,8,18,.86);box-shadow:inset 0 0 0 2px #3c2e52,0 0 0 2px #05030a;padding:12px;max-width:560px;width:100%}
+  .fila{display:flex;align-items:center;gap:10px;padding:7px 9px;margin:5px 0;background:rgba(40,28,58,.7);cursor:pointer;
+    box-shadow:inset 0 0 0 1px #4c3c66}
+  .fila .info{flex:1;font-size:11px;line-height:1.4}
+  .fila .info b{color:#f2c14e}
+  .fila .val{font-weight:800;color:#f2c14e;font-size:12px;white-space:nowrap}
+  .fila.no{opacity:.4}
+  .texto{font-size:12px;line-height:1.5;max-width:560px}
+  .texto b{color:#f2c14e}
+  .fila2{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .scroll{overflow-y:auto;max-height:100%}
+  /* pantalla de carga */
+  #carga{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#07060c;z-index:9;
+    font-size:13px;letter-spacing:3px;color:#8a7e9e}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="gl"></canvas><canvas id="hud"></canvas><div id="menu"></div><div id="carga">CARGANDO</div></div>
+<script>
+(function(){
+'use strict';
+/* ================================================================ traducciones: [castellano, inglés, portugués] */
+const FRASES = [
+  ['¡UNA VIDA MENOS!', 'ONE LIFE LESS!', 'UMA VIDA A MENOS!'], ['COMBO ×{0}', 'COMBO ×{0}', 'COMBO ×{0}'], ['M', 'M', 'M'],
+  ['BAMBÚ', 'BAMBOO', 'BAMBU'], ['MONTAÑA', 'MOUNTAIN', 'MONTANHA'], ['CASTILLO', 'CASTLE', 'CASTELO'],
+  ['TIRÁ PARA ATRÁS', 'PULL BACK', 'PUXE PARA TRÁS'], ['Y SOLTÁ PARA SALTAR', 'AND RELEASE TO JUMP', 'E SOLTE PARA PULAR'],
+  ['EN EL AIRE: OTRO SALTO', 'IN THE AIR: JUMP AGAIN', 'NO AR: OUTRO PULO'],
+  ['EL SALTO DEL NINJA', 'THE NINJA LEAP', 'O SALTO DO NINJA'], ['TOCÁ PARA EMPEZAR', 'TAP TO START', 'TOQUE PARA COMEÇAR'],
+  ['DESAFÍOS', 'CHALLENGES', 'DESAFIOS'], ['INFINITO', 'ENDLESS', 'INFINITO'], ['RÉCORD {0}', 'BEST {0}', 'RECORDE {0}'],
+  ['TIENDA', 'SHOP', 'LOJA'], ['OPCIONES', 'OPTIONS', 'OPÇÕES'], ['VOLVER', 'BACK', 'VOLTAR'],
+  ['NINJAS', 'NINJAS', 'NINJAS'], ['EFECTOS', 'EFFECTS', 'EFEITOS'], ['COFRE', 'CHEST', 'BAÚ'],
+  ['EL DEL MUNDO', "THE WORLD'S OWN", 'O DO MUNDO'], ['CADA MUNDO CON SU LUZ', 'EACH WORLD WITH ITS LIGHT', 'CADA MUNDO COM SUA LUZ'], ['AUTOMÁTICO', 'AUTOMATIC', 'AUTOMÁTICO'],
+  ['PUESTO', 'EQUIPPED', 'EQUIPADO'], ['PONER', 'EQUIP', 'EQUIPAR'], ['COMPRAR {0}', 'BUY {0}', 'COMPRAR {0}'], ['NO TE ALCANZA', 'NOT ENOUGH COINS', 'NÃO DÁ'],
+  ['¿QUÉ HABRÁ ADENTRO?', "WHAT'S INSIDE?", 'O QUE TEM DENTRO?'], ['ABRIR {0}', 'OPEN {0}', 'ABRIR {0}'],
+  ['SÍ', 'YES', 'SIM'], ['NO', 'NO', 'NÃO'], ['IDIOMA', 'LANGUAGE', 'IDIOMA'], ['MÚSICA', 'MUSIC', 'MÚSICA'], ['SONIDOS', 'SOUNDS', 'SONS'],
+  ['VIBRACIÓN', 'VIBRATION', 'VIBRAÇÃO'], ['EFECTOS VISUALES', 'VISUAL EFFECTS', 'EFEITOS VISUAIS'], ['ALTOS', 'HIGH', 'ALTOS'], ['BAJOS', 'LOW', 'BAIXOS'],
+  ['PAUSA', 'PAUSE', 'PAUSA'], ['SEGUIR', 'RESUME', 'CONTINUAR'], ['REINTENTAR', 'RETRY', 'TENTAR DE NOVO'], ['SALIR', 'QUIT', 'SAIR'],
+  ['¡NIVEL SUPERADO!', 'LEVEL CLEAR!', 'FASE CONCLUÍDA!'], ['LLEGASTE AL TORII', 'YOU REACHED THE TORII', 'VOCÊ CHEGOU AO TORII'],
+  ['MONEDAS {0}/{1}', 'COINS {0}/{1}', 'MOEDAS {0}/{1}'], ['BAJAS {0}/{1}', 'KILLS {0}/{1}', 'ABATES {0}/{1}'],
+  ['SIGUIENTE', 'NEXT', 'PRÓXIMA'], ['REPETIR', 'REPLAY', 'REPETIR'], ['MENÚ', 'MENU', 'MENU'],
+  ['ALTURA {0} M', 'HEIGHT {0} M', 'ALTURA {0} M'], ['PUNTOS {0}', 'SCORE {0}', 'PONTOS {0}'], ['¡NUEVO RÉCORD!', 'NEW BEST!', 'NOVO RECORDE!'],
+  ['¡NINJA NUEVO!', 'NEW NINJA!', 'NINJA NOVO!'], ['¡EFECTO NUEVO!', 'NEW EFFECT!', 'EFEITO NOVO!'], ['+{0} MONEDAS', '+{0} COINS', '+{0} MOEDAS'],
+  ['KAGE', 'KAGE', 'KAGE'], ['HANA', 'HANA', 'HANA'], ['KAZE', 'KAZE', 'KAZE'], ['TETSU', 'TETSU', 'TETSU'], ['NEKO', 'NEKO', 'NEKO'], ['RYU', 'RYU', 'RYU'], ['ONI', 'ONI', 'ONI'],
+  ['EL DE SIEMPRE', 'THE CLASSIC', 'O DE SEMPRE'], ['MÁS MONEDAS', 'MORE COINS', 'MAIS MOEDAS'], ['CÁMARA MÁS LENTA', 'SLOWER SLOW-MO', 'CÂMERA MAIS LENTA'],
+  ['UNA VIDA EXTRA', 'ONE EXTRA LIFE', 'UMA VIDA EXTRA'], ['IMÁN DE MONEDAS', 'COIN MAGNET', 'ÍMÃ DE MOEDAS'], ['TRIPLE SALTO', 'TRIPLE JUMP', 'PULO TRIPLO'],
+  ['BAJAS VALEN DOBLE', 'KILLS SCORE DOUBLE', 'ABATES VALEM DOBRO'],
+  ['BOSQUE DE BAMBÚ', 'BAMBOO FOREST', 'FLORESTA DE BAMBU'], ['LA MONTAÑA', 'THE MOUNTAIN', 'A MONTANHA'], ['EL CASTILLO', 'THE CASTLE', 'O CASTELO'],
+  ['ATARDECER', 'SUNSET', 'PÔR DO SOL'], ['NOCHE', 'NIGHT', 'NOITE'], ['FUEGO', 'FIRE', 'FOGO'], ['SAKURA', 'SAKURA', 'SAKURA'], ['TINTA', 'INK', 'TINTA'],
+  ['NEÓN', 'NEON', 'NEON'], ['OTOÑO', 'AUTUMN', 'OUTONO'],
+  ['TE CLAVASTE', 'SPIKED', 'ESPETADO'], ['TE TRAGÓ LA TINTA', 'THE INK GOT YOU', 'A TINTA TE ENGOLIU'], ['TE CORTARON', 'SLASHED', 'CORTARAM VOCÊ'],
+  ['TE DIERON', 'SHOT DOWN', 'ACERTARAM VOCÊ'], ['UNA ESTRELLA NINJA', 'A NINJA STAR', 'UMA ESTRELA NINJA'], ['TE CAÍSTE', 'YOU FELL', 'VOCÊ CAIU'],
+  ['ESPAÑOL', 'ESPAÑOL', 'ESPAÑOL'], ['ENGLISH', 'ENGLISH', 'ENGLISH'], ['PORTUGUÊS', 'PORTUGUÊS', 'PORTUGUÊS'], ['LANGUAGE', 'LANGUAGE', 'LANGUAGE'], ['SOMBRA', 'SOMBRA', 'SOMBRA'], ['LA TINTA SUBE', 'THE INK IS RISING', 'A TINTA ESTÁ SUBINDO']
+];
+
+/* ================================================================ utilidades */
+const lim = (v, a, b) => v < a ? a : (v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a)*t;
+const sig = v => v < 0 ? -1 : 1;
+const suave = t => t*t*(3 - 2*t);
+const rv = (a, b) => a + Math.random()*(b - a);
+function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0)/4294967296; }; }
+let rnd = mulberry(20161107);                                  /* el azar del mundo (con semilla para el banco) */
+const R = (a, b) => a + rnd()*(b - a), RI = (a, b) => Math.floor(R(a, b + 1)), elegir = l => l[Math.floor(rnd()*l.length)];
+function leer(k, def){ try { const v = localStorage.getItem(k); return v === null ? def : JSON.parse(v); } catch(e){ return def; } }
+function guardar(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+const K = '#0a0610';
+
+/* ================================================================ ajustes */
+const AJ = Object.assign({idioma:null, visual:'alta', musica:0.8, efectos:1, vibrar:true, visto:false}, leer('sombra.ajustes', {}));
+if(!['es', 'en', 'pt'].includes(AJ.idioma)){ const l = (navigator.language || 'es').slice(0, 2).toLowerCase(); AJ.idioma = l === 'pt' ? 'pt' : l === 'en' ? 'en' : 'es'; }
+if(!['alta', 'baja'].includes(AJ.visual)) AJ.visual = 'alta';  
+AJ.musica = lim(+AJ.musica || 0, 0, 1); AJ.efectos = lim(+AJ.efectos || 0, 0, 1);
+function vibrar(ms){ if(AJ.vibrar && navigator.vibrate) try { navigator.vibrate(ms); } catch(e){} }
+
+/* ================================================================ idiomas
+   tr(frase, …): la frase en castellano es la clave, {0} {1} para números y nombres. Lo exacto se
+   traduce solo en lienzoTexto y el(); lo compuesto va con plantilla. FRASES está en idiomas.js. */
+let IDIOMA = AJ.idioma, DIC = null;
+const TR_FALTA = new Set(), _SAL = new Set(), _TRAD = new Set();
+function dic(){ if(DIC) return DIC; DIC = {en:{}, pt:{}};
+  for(const [es, en, pt] of FRASES){ DIC.en[es] = en; DIC.pt[es] = pt; _TRAD.add(en); _TRAD.add(pt);
+    for(const q of [en, pt]) for(const w of q.toUpperCase().split(/[^A-ZÀ-Ü]+/)) if(w.length > 2) _PAL.add(w); } return DIC; }
+/* un texto ya traducido que se escribe de a poco o partido en renglones no es una frase que falte */
+const _PAL = new Set();
+function yaTraducido(s){ const ws = s.toUpperCase().split(/[^A-ZÀ-Ü]+/).filter(w => w.length > 2); if(!ws.length) return true;
+  return ws.every((w, i) => _PAL.has(w) || (i === ws.length - 1 && [..._PAL].some(p => p.startsWith(w)))); }
+function tr(s, ...a){
+  let t = s;
+  if(IDIOMA !== 'es'){ const d = dic()[IDIOMA]; if(d[s] !== undefined) t = d[s]; else if(!_TRAD.has(s)) TR_FALTA.add(s); }
+  const r = a.length ? String(t).replace(/\{(\d)\}/g, (m, i) => a[i]) : t;
+  if(IDIOMA !== 'es'){ if(_SAL.size > 800) _SAL.clear(); _SAL.add(r); }
+  return r;
+}
+function trAuto(s){
+  if(IDIOMA === 'es' || typeof s !== 'string') return s;
+  const d = dic()[IDIOMA]; if(d[s] !== undefined) return d[s];
+  if(!_TRAD.has(s) && !_SAL.has(s) && !/[<\d]/.test(s) && /[a-záéíóúñ]{3,}/i.test(s) && !yaTraducido(s)) TR_FALTA.add(s);
+  return s;
+}
+function ponerIdioma(l){ AJ.idioma = IDIOMA = l; guardar('sombra.ajustes', AJ); document.documentElement.lang = l; CACHE_TXT.clear(); }
+document.documentElement.lang = IDIOMA;
+
+
+/* ================================================================ fuente de píxeles 5×7
+   Mayúsculas, números y signos; las tildes, la Ñ y la Ü van como marca arriba de la letra. */
+const FUENTE = {
+A:'.###.#...##...#######...##...##...#', B:'####.#...##...#####.#...##...#####.', C:'.#####....#....#....#....#.....####',
+D:'####.#...##...##...##...##...#####.', E:'######....#....####.#....#....#####', F:'######....#....####.#....#....#....',
+G:'.#####....#....#.####...##...#.###.', H:'#...##...##...#######...##...##...#', I:'#####..#....#....#....#....#..#####',
+J:'..###...#....#....#....#.#..#..##..', K:'#...##..#.#.#..##...#.#..#..#.#...#', L:'#....#....#....#....#....#....#####',
+M:'#...###.###.#.##.#.##...##...##...#', N:'#...###..##.#.##..###...##...##...#', O:'.###.#...##...##...##...##...#.###.',
+P:'####.#...##...#####.#....#....#....', Q:'.###.#...##...##...##.#.##..#..##.#', R:'####.#...##...#####.#.#..#..#.#...#',
+S:'.#####....#.....###.....#....#####.', T:'#####..#....#....#....#....#....#..', U:'#...##...##...##...##...##...#.###.',
+V:'#...##...##...##...##...#.#.#...#..', W:'#...##...##...##.#.##.#.###.###...#', X:'#...##...#.#.#...#...#.#.#...##...#',
+Y:'#...##...#.#.#...#....#....#....#..', Z:'#####....#...#...#...#...#....#####',
+'0':'.###.#...##..###.#.###..##...#.###.', '1':'..#...##....#....#....#....#...###.', '2':'.###.#...#....#...#...#...#...#####',
+'3':'####.....#....#.###.....#....#####.', '4':'#...##...##...######....#....#....#', '5':'######....####.....#....##...#.###.',
+'6':'.###.#....#....####.#...##...#.###.', '7':'#####....#...#...#...#....#....#...', '8':'.###.#...##...#.###.#...##...#.###.',
+'9':'.###.#...##...#.####....#....#.###.',
+'.':'................................#..', ',':'...........................#...#...', ':':'.......#...............#...........',
+'!':'..#....#....#....#....#.........#..', '¡':'..#.........#....#....#....#....#..', '?':'.###.#...#....#...#...#.........#..',
+'¿':'..#.........#...#...#....#...#.###.', '-':'...............###.................', '+':'.......#....#..#####..#....#.......',
+'/':'....#....#...#...#...#...#....#....', "'":'..#....#...........................', '%':'##..###..#...#...#...#...#..###..##',
+'(':'...#...#...#....#....#.....#.....#.', ')':'.#.....#.....#....#....#...#...#...', '·':'.................#.................', '$':'..#...#####.#...###...#.#####...#..', '◀':'...#...##..###.####..###...##....#.', '▶':'.#....##...###..####.###..##...#...',
+'×':'.....#...#.#.#...#...#.#.#...#.....', '=':'..........#####.....#####..........', '#':'.#.#.#####.#.#..#.#.#####.#.#......',
+' ':'...................................'
+};
+const MARCA = {'Á':['A','agudo'], 'É':['E','agudo'], 'Í':['I','agudo'], 'Ó':['O','agudo'], 'Ú':['U','agudo'], 'Ñ':['N','tilde'], 'Ü':['U','dieresis'],
+  'Ã':['A','tilde'], 'Õ':['O','tilde'], 'Â':['A','circ'], 'Ê':['E','circ'], 'Ô':['O','circ'], 'À':['A','grave'], 'Ç':['C','cedilla', 1]};   /* 1: la marca va abajo */
+const MARCAS = {agudo:['..#..','.#...'], tilde:['.#.#.','#.#..'], dieresis:['.....','.#.#.'], circ:['..#..','.#.#.'], grave:['.#...','..#..'], cedilla:['..#..','.##..']};
+const GRAD = {
+  oro:  ['#fff8d0','#ffe888','#ffd040','#f8b020','#e08c10','#c06a08','#8c4604'],
+  blanco:['#ffffff','#f4f0ea','#e6e0d6','#d6cec2','#c4baae','#b0a496','#968a7c'],
+  rojo: ['#ffd0b8','#ff9070','#ff5a3c','#e83424','#c01c14','#901008','#600804'],
+  verde:['#e8ffc8','#b8f080','#88dc48','#58c028','#3a9c18','#267410','#185008'],
+  azul: ['#d8f0ff','#98d0ff','#60a8f8','#3880e8','#2060c0','#144498','#0c2c68'],
+  gris: ['#d8d4cc','#bcb6ac','#a09a90','#88827a','#706a64','#5a5550','#44403c'],
+  violeta:['#f4e0ff','#e0b8ff','#c890f8','#a868e8','#8848c8','#6430a0','#401c70'],
+  fuego:['#ffffc0','#ffee60','#ffc020','#ff8810','#f05808','#c83004','#881802'],
+  rosa: ['#ffe0f4','#ffb0e0','#ff70c8','#ff30a8','#e0108a','#a00868','#60044a'],
+  cian: ['#e8ffff','#a8f8ff','#60e8ff','#20c8f0','#1098d0','#0868a0','#044070']
+};
+const CACHE_TXT = new Map(), _AUD = new Set();      /* _AUD: los textos pixelados que se dibujaron (para la sonda de idiomas) */
+/* 1 px de lienzo = 1 px de fuente: sombra abajo-derecha, contorno 3×3 y relleno con degradé por fila */
+function lienzoTexto(str, grad, opc){
+  str = String(trAuto(String(str))).toUpperCase(); grad = grad || 'blanco'; opc = opc || {};
+  _AUD.add(str);
+  const clave = str + '|' + grad + '|' + (opc.sinBorde ? 1 : 0);
+  if(CACHE_TXT.has(clave)) return CACHE_TXT.get(clave);
+  if(CACHE_TXT.size > 400) CACHE_TXT.clear();
+  const chars = [...str], W = chars.length*6 + 3, H = 3 + 7 + 3;
+  const mascara = new Uint8Array(W*H);
+  chars.forEach((ch, i) => {
+    let base = ch, marca = null, abajo = false;
+    if(MARCA[ch]){ base = MARCA[ch][0]; marca = MARCAS[MARCA[ch][1]]; abajo = !!MARCA[ch][2]; }
+    const g = FUENTE[base] || FUENTE['?'], x0 = 1 + i*6, y0 = 4;
+    for(let y = 0; y < 7; y++) for(let x = 0; x < 5; x++) if(g[y*5 + x] === '#') mascara[(y0 + y)*W + x0 + x] = 1;
+    if(marca) for(let y = 0; y < 2; y++) for(let x = 0; x < 5; x++) if(marca[y][x] === '#') mascara[((abajo ? y0 + 7 : y0 - 3) + y)*W + x0 + x] = 1;
+  });
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'), paleta = GRAD[grad] || GRAD.blanco;
+  if(!opc.sinBorde){
+    g.fillStyle = '#140c08';
+    for(let y = 0; y < H; y++) for(let x = 0; x < W; x++) if(mascara[y*W + x]){ g.fillRect(x - 1, y - 1, 3, 3); g.fillRect(x + 1, y + 1, 1, 1); g.fillRect(x, y + 2, 1, 1); g.fillRect(x + 1, y + 2, 1, 1); }
+  }
+  for(let y = 0; y < H; y++) for(let x = 0; x < W; x++) if(mascara[y*W + x]){
+    g.fillStyle = paleta[lim(y - 4, 0, 6)]; g.fillRect(x, y, 1, 1); }
+  CACHE_TXT.set(clave, c);
+  return c;
+}
+/* texto en el mundo o en el HUD, centrado o no */
+function texto(ctx, str, x, y, grad, opc){
+  const c = lienzoTexto(str, grad, opc), e = (opc && opc.esc) || 1;
+  const ax = opc && opc.izq ? 0 : (opc && opc.der ? c.width*e : Math.floor(c.width*e/2));
+  ctx.drawImage(c, Math.round(x - ax), Math.round(y), c.width*e, c.height*e);
+  return c.width*e;
+}
+/* un texto en píxeles para los menús (DOM), a escala S */
+function pixelTxt(str, grad, S){
+  const c = lienzoTexto(str, grad), k = document.createElement('canvas');
+  k.width = c.width; k.height = c.height; k.getContext('2d').drawImage(c, 0, 0);
+  k.className = 'px'; k.style.width = c.width*(S || 3) + 'px'; k.style.height = c.height*(S || 3) + 'px';
+  return k;
+}
+
+
+/* ================================================================ el escenario girado y la medida
+   El juego se dibuja a ~180 columnas y se agranda por un número ENTERO de píxeles reales (PX). */
+const stage = document.getElementById('stage'), cvGL = document.getElementById('gl'), cvHUD = document.getElementById('hud');
+const cxHUD = cvHUD.getContext('2d');
+let GIRADO = false, PANT_W = 412, SW = 892, SH = 412, DPR = 1, PX = 5, W = 468, H = 216;
+function girar(){
+  const vv = window.visualViewport, w = Math.round(vv ? vv.width : innerWidth), h = Math.round(vv ? vv.height : innerHeight);
+  GIRADO = false; PANT_W = w; girar.ult = w + 'x' + h;                 /* este juego es vertical: no se gira nunca */
+  SW = GIRADO ? h : w; SH = GIRADO ? w : h;
+  stage.style.width = SW + 'px'; stage.style.height = SH + 'px';
+  stage.style.transform = GIRADO ? 'translate(' + w + 'px,0) rotate(90deg)' : 'none';
+}
+/* un toque de la pantalla → coordenadas del escenario: girado 90° a la derecha, (x, y) → (y, W − x) */
+const aStage = (x, y) => GIRADO ? [y, PANT_W - x] : [x, y];
+/* del escenario (px CSS) al lienzo chico */
+const aLienzo = (x, y) => [x*DPR/PX, y*DPR/PX];
+const alMedir = [];
+function medir(){
+  girar();
+  DPR = Math.min(devicePixelRatio || 1, 4);
+  const dw = Math.round(SW*DPR), dh = Math.round(SH*DPR);
+  PX = Math.max(1, Math.floor(Math.min(dw, dh*0.62)/180));        /* 180 píxeles de ancho de torre */
+  W = Math.ceil(dw/PX); H = Math.ceil(dh/PX);
+  const cw = W*PX/DPR + 'px', ch = H*PX/DPR + 'px';
+  for(const c of [cvGL, cvHUD]){ c.style.width = cw; c.style.height = ch; }
+  if(cvHUD.width !== W || cvHUD.height !== H){ cvHUD.width = W; cvHUD.height = H; }
+  cxHUD.imageSmoothingEnabled = false;
+  for(const f of alMedir) f();
+}
+new ResizeObserver(() => medir()).observe(stage);
+for(const ev of ['resize', 'orientationchange']) addEventListener(ev, () => medir());
+if(window.visualViewport) visualViewport.addEventListener('resize', () => medir());
+
+/* DOM chico */
+function el(tag, cls, html){ const e = document.createElement(tag); if(cls) e.className = cls; if(html !== undefined) e.innerHTML = trAuto(html); return e; }
+/* ================================================================ sonido
+   SOMBRA: lo-fi japonés, todo de Web Audio, sin archivos.
+   Tres buses (música, efectos, ambiente) → pasaaltos → compresor → recorte suave (nunca pasa de 0,95).
+   Los instrumentos: koto de cuerda pulsada (Karplus-Strong horneado una vez por nota), shakuhachi
+   (soplido afinado con vibrato que entra tarde), taikos, shime, kotsuzumi, hyoshigi, rin, gong,
+   bajo redondo, colchón de viento y una batería lo-fi con swing pasada por un reductor de bits.
+   La música es un secuenciador de semicorcheas que programa con anticipación contra currentTime:
+   escalas in, hirajōshi y yo, frases de 8 compases que se contestan (16 en total) y capas por
+   intensidad. La cámara lenta baja un tono todo lo que suena, cierra un pasabajos y frena el tempo.
+   Ninguna llamada de acá puede tirarle una excepción al juego: todo va envuelto. */
+const SON = (() => {
+  let C = null, N = null, RU = null, ONDA = null, listo = false;
+  let temaPed = null, temaAct, ambPed = null, ambAct, muertePed = false;        /* lo pedido antes de haber contexto */
+  let kLento = 0, kLentoObj = 0, kAplic = -1, tLento = 0, inten = 0, intenObj = 0, kAhora = 0, tPaso = 0, tPasoAnt = 0;
+  let kMuerte = 0, kCinta = 0, cintaAplic = -1;
+  const ERR = [], FALTAN = new Set();
+  const err = e => { if(ERR.length < 30) ERR.push(String(e && e.stack || e)); };
+  const tiene = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
+  const suv = t => t*t*(3 - 2*t);
+  const mtof = m => 440*Math.pow(2, (m - 69)/12);
+  const ya = () => C.currentTime;
+
+  /* ------------------------------------------------------------ armado del máster */
+  function ruidos(){
+    const sr = C.sampleRate, n = Math.floor(sr*3), mk = k => C.createBuffer(1, k || n, sr);
+    const bl = mk(), ro = mk(), pa = mk(), a = bl.getChannelData(0), b = ro.getChannelData(0), c = pa.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, u = 0;
+    for(let i = 0; i < n; i++){
+      const w = Math.random()*2 - 1; a[i] = w*0.7;
+      b0 = 0.99886*b0 + w*0.0555179; b1 = 0.99332*b1 + w*0.0750759; b2 = 0.96900*b2 + w*0.1538520;
+      b3 = 0.86650*b3 + w*0.3104856; b4 = 0.55000*b4 + w*0.5329522; b5 = -0.7616*b5 - w*0.0168980;
+      b[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w*0.5362)*0.1; b6 = w*0.115926;
+      u = (u + 0.02*w)/1.02; c[i] = u*3.2;
+    }
+    const fz = Math.floor(sr*0.02);                                /* que las puntas del bucle se toquen */
+    for(const d of [a, b, c]) for(let i = 0; i < fz; i++){ const k = i/fz; d[n - fz + i] = d[n - fz + i]*(1 - k) + d[i]*k; }
+    /* el crepitar del vinilo: chasquidos sueltos de largo y fuerza distintos, y cada tanto un pop */
+    const nc = Math.floor(sr*4), cr = mk(nc), e = cr.getChannelData(0);
+    for(let i = 0; i < nc; i++) if(Math.random() < 0.0004){
+      const pop = Math.random() < 0.06, amp = (pop ? 1 : Math.pow(Math.random(), 2.2)*0.7)*(Math.random() < 0.5 ? -1 : 1), L = pop ? 40 : 2 + Math.floor(Math.random()*14);
+      for(let j = 0; j < L && i + j < nc; j++) e[i + j] += amp*Math.exp(-j/(L*0.3))*(j % 2 ? -0.55 : 1);
+    }
+    RU = {blanco:bl, rosa:ro, pardo:pa, crepita:cr};
+  }
+  /* respuesta de impulso por código: ruido que se apaga y se oscurece, con reflexiones tempranas */
+  function ir(dur, caida, brillo, pre){
+    const sr = C.sampleRate, n = Math.floor(sr*dur), b = C.createBuffer(2, n, sr), p0 = Math.floor(sr*(pre || 0.012));
+    for(let ch = 0; ch < 2; ch++){
+      const d = b.getChannelData(ch); let lp = 0;
+      for(let i = p0; i < n; i++){
+        const x = (i - p0)/(n - p0), en = Math.pow(1 - x, caida)*Math.exp(-x*2.2);
+        lp += lerp(brillo, 0.03, Math.sqrt(x))*((Math.random()*2 - 1) - lp);
+        d[i] = lp*en*Math.min(1, (i - p0)/(sr*0.008));
+      }
+      for(let k = 0; k < 9; k++){ const i = Math.floor(sr*(0.008 + Math.random()*0.08)); if(i < n) d[i] += (Math.random() < 0.5 ? -1 : 1)*0.3*(1 - k/10); }
+    }
+    return b;
+  }
+  /* lineal hasta 0,6 y después se dobla suave hasta 0,95: por acá no pasa un clip */
+  function curvaRecorte(){
+    const n = 4096, c = new Float32Array(n);
+    for(let i = 0; i < n; i++){ const x = (i/(n - 1)*2 - 1)*2, a = Math.abs(x);
+      c[i] = Math.sign(x)*(a < 0.6 ? a : 0.6 + 0.35*Math.tanh((a - 0.6)/0.35)); }
+    return c;
+  }
+  const CURVAS = {};
+  function curvaSat(k){ const q = Math.max(0.5, Math.round(k*10)/10); if(CURVAS[q]) return CURVAS[q];
+    const n = 1024, c = new Float32Array(n), nrm = Math.tanh(q);
+    for(let i = 0; i < n; i++){ const x = i/(n - 1)*2 - 1; c[i] = (Math.tanh(q*(x + 0.06*x*x)))/nrm; }
+    return CURVAS[q] = c; }
+  function saturador(k, dest){ const w = C.createWaveShaper(); w.curve = curvaSat(k); w.oversample = '2x'; if(dest) w.connect(dest); return w; }
+  /* el reductor de bits de la batería: una escalera de 24 escalones */
+  let CRUSH = null;
+  function curvaCrush(){ if(CRUSH) return CRUSH; const n = 2048, c = new Float32Array(n);
+    for(let i = 0; i < n; i++){ const x = i/(n - 1)*2 - 1; c[i] = Math.round(x*12)/12; } return CRUSH = c; }
+  function ondas(){
+    /* el tubo del shakuhachi: casi todo fundamental, pares que asoman y la tercera un poco hueca */
+    const H = 12, re = new Float32Array(H), im = new Float32Array(H), A = [0, 1, 0.3, 0.14, 0.09, 0.045, 0.03, 0.015, 0.01, 0.006, 0.004, 0.002];
+    for(let k = 1; k < H; k++) im[k] = A[k];
+    ONDA = {fue:C.createPeriodicWave(re, im)};
+  }
+  const G = (v, dest) => { const g = C.createGain(); g.gain.value = v === undefined ? 1 : v; if(dest) g.connect(dest); return g; };
+  const F = (tipo, f, q, dest) => { const x = C.createBiquadFilter(); x.type = tipo; x.frequency.value = f; if(q !== undefined) x.Q.value = q; if(dest) x.connect(dest); return x; };
+  function armar(){
+    const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return false;
+    try { C = new AC({latencyHint:'interactive'}); } catch(e){ C = new AC(); }
+    ruidos(); ondas();
+    N = {};
+    N.sal = G(1, C.destination);
+    N.rec = C.createWaveShaper(); N.rec.curve = curvaRecorte(); N.rec.oversample = 'none'; N.rec.connect(N.sal);
+    N.pre = G(0.5, N.rec);
+    N.comp = C.createDynamicsCompressor();
+    N.comp.threshold.value = -16; N.comp.knee.value = 12; N.comp.ratio.value = 3.5; N.comp.attack.value = 0.004; N.comp.release.value = 0.25;
+    N.comp.connect(N.pre);
+    N.hp = F('highpass', 30, 0.7, N.comp);
+    N.mezcla = G(0.95, N.hp);
+    /* música: bus → cinta (retardo que se mueve) → lento → muerte → oscurecido de la cinta → volumen */
+    N.musV = G(0.55, N.mezcla); N.cLp = F('lowpass', 18000, 0.5, N.musV);
+    N.muG = G(1, N.cLp); N.muF = F('lowpass', 18000, 0.6, N.muG);
+    N.musF = F('lowpass', 18000, 0.6, N.muF);
+    N.wow = C.createDelay(0.1); N.wow.delayTime.value = 0.018; N.wow.connect(N.musF);
+    N.mus = G(1, N.wow);
+    /* la sala: la reverberación larga de la música, con envíos propios de cada instrumento */
+    N.revM = C.createConvolver(); N.revM.buffer = ir(3.4, 1.4, 0.5, 0.03); N.revM.connect(N.wow);
+    N.revMin = G(0.1, N.revM); N.mus.connect(N.revMin); N.sala = G(1, N.revM);
+    /* wow (0,55 Hz), flutter (7 Hz) y una deriva lenta: la profundidad la pone cinta() */
+    N.wowG = [];
+    for(const [f, tipo] of [[0.55, 'sine'], [7, 'sine'], [0.15, 'triangle']]){ const o = C.createOscillator(); o.type = tipo; o.frequency.value = f;
+      const g = G(0, N.wow.delayTime); o.connect(g); o.start(); N.wowG.push(g); }
+    N.siseo = G(0, N.muF); { const s = C.createBufferSource(); s.buffer = RU.rosa; s.loop = true; s.connect(F('highpass', 3000, 0.5, N.siseo)); s.start(); }
+    N.crep = G(0, N.muF); { const s = C.createBufferSource(); s.buffer = RU.crepita; s.loop = true; s.connect(F('highpass', 700, 0.6, F('lowpass', 7000, 0.6, N.crep))); s.start(); }
+    /* eco de corchea con puntillo, oscureciéndose en cada vuelta */
+    N.eco = G(1); N.ecoD = C.createDelay(2); N.ecoD.delayTime.value = 0.49;
+    N.ecoLp = F('lowpass', 2600, 0.6); N.ecoFb = G(0.34); N.ecoW = G(0.45, N.mus);
+    N.eco.connect(N.ecoD); N.ecoD.connect(N.ecoLp); N.ecoLp.connect(N.ecoFb); N.ecoFb.connect(N.ecoD); N.ecoLp.connect(N.ecoW);
+    /* efectos, con su cola; en cámara lenta se oscurecen un poco */
+    N.fxV = G(1, N.mezcla); N.fxF = F('lowpass', 20000, 0.5, N.fxV); N.fx = G(1, N.fxF);
+    N.revF = C.createConvolver(); N.revF.buffer = ir(2.2, 2, 0.6, 0.01); N.revF.connect(N.fxF); N.revFin = G(1, N.revF);
+    /* ambiente */
+    N.ambV = G(0.8, N.mezcla); N.ambF = F('lowpass', 18000, 0.5, N.ambV); N.amb = G(1, N.ambF);
+    /* iOS: un buffer mudo destraba la salida */
+    try { const s = C.createBufferSource(); s.buffer = C.createBuffer(1, 64, C.sampleRate); s.connect(C.destination); s.start(0); } catch(e){}
+    listo = true;
+    volumen(); aplicarCinta(); kAplic = -1; aplicarLento();
+    setInterval(() => { if(listo && performance.now() - tPaso > 140) paso(0.05); }, 50);   /* por si el juego deja de llamar paso() */
+    document.addEventListener('visibilitychange', () => { try {
+      if(document.hidden){ if(C.state === 'running') C.suspend(); } else if(C.state !== 'closed') C.resume().catch(() => {}); } catch(e){} });
+    return true;
+  }
+
+  /* ------------------------------------------------------------ piezas de síntesis */
+  /* lo que suena en la música queda anotado para que el lento y la muerte lo bajen de tono */
+  const OSC_M = [];
+  let repAct = null;                                  /* el tema que está programando: lo suyo se corta al soltarlo */
+  const detL = () => -kLento*200 - kMuerte*80;
+  function reg(nodo, p, d0, fin){ if(!p) return; try { p.value = d0 + detL(); } catch(e){}
+    const rg = {o:nodo, p, d0, fin}; OSC_M.push(rg); if(repAct) repAct.oscs.push(rg); }
+  function oscM(tipo, f, t, fin, det){
+    const o = C.createOscillator();
+    if(ONDA[tipo]) o.setPeriodicWave(ONDA[tipo]); else o.type = tipo;
+    o.frequency.setValueAtTime(f, t); reg(o, o.detune, det || 0, fin); o.start(t); o.stop(fin); return o;
+  }
+  function oscF(tipo, f, t, fin){ const o = C.createOscillator(); if(ONDA[tipo]) o.setPeriodicWave(ONDA[tipo]); else o.type = tipo;
+    o.frequency.setValueAtTime(f, t); o.start(t); o.stop(fin); return o; }
+  function fuente(col, t, fin, rate){ const s = C.createBufferSource(); s.buffer = RU[col || 'blanco']; s.loop = true;
+    if(rate) s.playbackRate.value = rate; s.start(t, Math.random()*2.6); s.stop(fin); return s; }
+  /* envolvente: ataque lineal y caída exponencial que llega a ~0 en d */
+  function env(p, t, a, v, d){ p.setValueAtTime(0, t); p.linearRampToValueAtTime(v, t + a); p.setTargetAtTime(0, t + a, d/5); return t + a + d*1.45; }
+  function adsr(p, t, a, dec, sus, fin, rel, v){ fin = Math.max(fin, t + a + 0.01);
+    p.setValueAtTime(0, t); p.linearRampToValueAtTime(v, t + a); p.setTargetAtTime(v*sus, t + a, dec); p.setTargetAtTime(0, fin, rel/4.5); return fin + rel*1.6; }
+  /* ruido filtrado con envolvente. o: {t, d, a, v, f, f2, fd, q, tipo, col, rate, dest} */
+  function RZ(o){
+    const t = o.t, a = o.a || 0.002, g = C.createGain(), fl = C.createBiquadFilter();
+    fl.type = o.tipo || 'bandpass'; fl.frequency.setValueAtTime(lim(o.f, 20, 20000), t); fl.Q.value = o.q === undefined ? 1 : o.q;
+    if(o.f2) fl.frequency.exponentialRampToValueAtTime(lim(o.f2, 20, 20000), t + (o.fd || o.d));
+    const fin = env(g.gain, t, a, o.v, o.d), s = fuente(o.col, t, fin + 0.02, o.rate);
+    s.connect(fl); fl.connect(g); g.connect(o.dest); return fin - t;
+  }
+  /* tono con barrido. o: {t, f, f2, fd, tipo, a, d, v, lp, dest} */
+  function TN(o){
+    const t = o.t, a = o.a || 0.002, g = C.createGain(), fin = env(g.gain, t, a, o.v, o.d), s = oscF(o.tipo || 'sine', lim(o.f, 1, 20000), t, fin + 0.02);
+    if(o.f2) s.frequency.exponentialRampToValueAtTime(lim(o.f2, 1, 20000), t + (o.fd || o.d));
+    if(o.lp){ const l = F('lowpass', o.lp, 0.7); s.connect(l); l.connect(g); } else s.connect(g);
+    g.connect(o.dest); return fin - t;
+  }
+  function panear(dest, x){ const p = C.createStereoPanner(); p.pan.value = lim(+x || 0, -1, 1); p.connect(dest); return p; }
+  const whoosh = (t, d, f1, f2, v, dest) => RZ({t, a:d*0.55, d:d*0.6, v, f:f1, f2, fd:d, q:1.4, col:'rosa', dest});
+  /* los envíos al eco y a la sala viajan con la capa (el destino los trae colgados) */
+  function envio(g, dest, e, s){ if(e && dest && dest._eco) g.connect(G(e, dest._eco)); if(s && dest && dest._sala) g.connect(G(s, dest._sala)); }
+  /* un pedazo de voz: sierra por tres formantes, con su curva de altura */
+  const FORM = {a:[[800, 1], [1200, 0.6], [2500, 0.2]], e:[[500, 1], [1850, 0.55], [2500, 0.2]], i:[[320, 1], [2300, 0.5], [3000, 0.2]],
+    o:[[500, 1], [850, 0.6], [2600, 0.12]], u:[[350, 1], [700, 0.45], [2400, 0.1]]};
+  function vox(t, dest, o){
+    const d = o.d, g = C.createGain(), mix = G(1), s = oscF('sawtooth', o.f, t, t + d + 0.25), q = o.q || 7;
+    if(o.f2) s.frequency.linearRampToValueAtTime(o.f2, t + d*(o.pico || 0.3));
+    if(o.f3) s.frequency.exponentialRampToValueAtTime(o.f3, t + d);
+    if(o.vib){ const l = oscF('sine', o.vib, t, t + d + 0.25); l.connect(G(o.f*0.03, s.frequency)); }
+    for(const [fr, a] of FORM[o.vocal || 'a']){ const bp = F('bandpass', fr*(o.fk || 1), q); mix.connect(bp); bp.connect(G(a*q*0.55, g)); }
+    s.connect(mix);
+    if(o.sucio) g.connect(saturador(o.sucio, dest)); else g.connect(dest);
+    adsr(g.gain, t, o.a || 0.02, 0.1, 0.8, t + d - 0.05, 0.07, o.v);
+    if(o.aire) RZ({t, a:0.01, d:d*0.7, v:o.aire, f:1600*(o.fk || 1), q:0.8, dest});
+    return d;
+  }
+
+  /* ------------------------------------------------------------ la cuerda del koto (Karplus-Strong)
+     Una vez por nota: ruido con pasabajos, peinado por la posición de la uña (cerca del puente suena
+     nasal), y el bucle de retardo con su promedio que se come los agudos de a poco. La afinación exacta
+     la pone la velocidad de reproducción, porque el largo del retardo es entero. */
+  const KS = new Map();
+  function ks(m){
+    m = Math.round(lim(m, 24, 108)); let K = KS.get(m); if(K) return K;
+    const sr = C.sampleRate, f = mtof(m), Nn = Math.max(4, Math.round(sr/f - 0.5)), fr = sr/(Nn + 0.5);
+    const t60 = lim(3.8 - (m - 45)*0.06, 0.8, 3.8), dur = Math.min(t60*0.85 + 0.15, 3.4), n = Math.floor(sr*dur);
+    const b = C.createBuffer(1, n, sr), y = b.getChannelData(0), rr = mulberry(m*7919 + 3);
+    const ro = Math.min(0.99995, Math.pow(10, -3/(t60*fr))/Math.cos(Math.PI*fr/sr));
+    const e = new Float32Array(Nn), P = Math.max(1, Math.floor(Nn*0.13)); let lp = 0, dc = 0;
+    for(let i = 0; i < Nn; i++){ lp += 0.6*((rr()*2 - 1) - lp); e[i] = lp; }
+    for(let i = 0; i < Nn; i++){ y[i] = e[i] - 0.85*e[(i - P + Nn) % Nn]; dc += y[i]; }
+    dc /= Nn; for(let i = 0; i < Nn; i++) y[i] -= dc;
+    for(let i = Nn; i < n; i++) y[i] = ro*0.5*(y[i - Nn] + y[i - Nn - 1 >= 0 ? i - Nn - 1 : 0]);
+    let pk = 0; for(let i = 0; i < Math.min(n, Nn*6); i++) pk = Math.max(pk, Math.abs(y[i]));
+    const k = pk > 0 ? 0.8/pk : 1, fz = Math.floor(sr*0.04);
+    for(let i = 0; i < n; i++) y[i] *= k*(i > n - fz ? (n - i)/fz : 1);
+    K = {b, rate:f/fr, dur}; KS.set(m, K); return K;
+  }
+  /* o: {b brillo 0..1, bend semitonos de arranque, apaga (se apaga con la mano al terminar), eco, sala, fx} */
+  function koto(dest, t, m, dur, v, o){ o = o || {};
+    const mr = Math.round(m), K = ks(mr); if(!K) return;
+    const s = C.createBufferSource(), g = C.createGain(), br = o.b === undefined ? 0.55 : o.b, lp = F('lowpass', lerp(1500, 7500, br), 0.6), cu = F('peaking', 1150, 1.1);
+    cu.gain.value = 3.5; s.buffer = K.b;
+    const rate = K.rate*Math.pow(2, (m - mr)/12);
+    s.playbackRate.setValueAtTime(rate*Math.pow(2, (o.bend || 0.1)/12), t); s.playbackRate.setTargetAtTime(rate, t + 0.004, o.bend ? 0.06 : 0.014);   /* el tirón de la cuerda */
+    s.connect(lp); lp.connect(cu); cu.connect(g); g.connect(dest);
+    const larga = K.dur/rate, apaga = o.apaga ? t + Math.max(dur, 0.05) : 0, stop = apaga ? Math.min(t + larga, apaga + 0.4) : t + larga;
+    g.gain.setValueAtTime(v*0.5, t); if(apaga) g.gain.setTargetAtTime(0, apaga, 0.06);
+    if(!o.fx) reg(s, s.detune, rv(-3, 3), stop);
+    s.start(t); s.stop(stop + 0.02);
+    RZ({t, d:0.007, v:v*0.05, f:4600, tipo:'highpass', q:0.7, dest});                                      /* la uña (tsume) */
+    envio(g, dest, o.eco, o.sala === undefined ? 0.22 : o.sala);
+  }
+  /* rasgueo: las notas de abajo para arriba, apenas separadas */
+  function rasgueo(dest, t, notas, v, gap, o){ const k = 1/Math.sqrt(notas.length); notas.forEach((m, i) => koto(dest, t + i*gap, m, 1, v*k*(1 - i*0.04), o)); }
+  /* shakuhachi: el tubo, el soplido afinado adentro y el aire que se escapa; entra de abajo y el vibrato llega tarde */
+  function shaku(dest, t, m, dur, v, o){ o = o || {};
+    const f = mtof(m), fin = t + Math.max(dur, 0.1), stop = fin + 0.45, g = C.createGain(), lp = F('lowpass', o.f || 3200, 0.7);
+    const f0 = f*Math.pow(2, (o.desde ? o.desde : -0.8)/12), sube = o.desde ? 0.13 : 0.07;
+    const a = C.createOscillator(); a.setPeriodicWave(ONDA.fue);
+    a.frequency.setValueAtTime(f0, t); a.frequency.exponentialRampToValueAtTime(f, t + sube);
+    if(dur > 1.1) a.frequency.setTargetAtTime(f*0.988, fin - 0.1, 0.1);                                  /* el meri del final: cae un pelo */
+    reg(a, a.detune, 0, stop); a.start(t); a.stop(stop); a.connect(lp);
+    const ns = fuente('rosa', t, stop), bp = F('bandpass', f0, 14); bp.frequency.exponentialRampToValueAtTime(f, t + sube);
+    ns.connect(bp); bp.connect(G(3.2, lp)); reg(ns, bp.detune, 0, stop);
+    const aire = fuente('blanco', t, stop), ab = F('bandpass', 2600, 0.7), ga = G(0); aire.connect(ab); ab.connect(ga); ga.connect(g);
+    ga.gain.setValueAtTime(0, t); ga.gain.linearRampToValueAtTime(v*0.05, t + 0.025); ga.gain.setTargetAtTime(v*0.01, t + 0.04, 0.08); ga.gain.setTargetAtTime(0, fin, 0.07);
+    lp.connect(g); g.connect(dest);
+    if(dur > 0.45){ const l = oscF('sine', rv(4.6, 5.3), t, stop), lg = G(0); lg.gain.setValueAtTime(0, t + 0.28); lg.gain.linearRampToValueAtTime(o.vib || 20, t + Math.min(0.95, dur));
+      l.connect(lg); lg.connect(a.detune); lg.connect(bp.detune); }
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v*0.12, t + 0.06); g.gain.linearRampToValueAtTime(v*0.14, t + Math.max(0.07, Math.min(dur*0.6, 0.8)));
+    g.gain.setTargetAtTime(0, fin, 0.09);
+    envio(g, dest, o.eco === undefined ? 0.22 : o.eco, o.sala === undefined ? 0.45 : o.sala);
+  }
+  /* rin: el cuenco de templo. Parciales inarmónicos, el fundamental batiendo contra sí mismo */
+  function rin(dest, t, m, v, o){ o = o || {}; const f = mtof(m), L = o.largo || 1, mix = G(1, dest);
+    for(const [r, a, d] of [[1, 1, 3.4], [2.76, 0.4, 1.9], [5.4, 0.18, 1.0], [8.93, 0.07, 0.5]]){
+      if(f*r > C.sampleRate*0.45) continue; const g = G(0, mix), fin = t + d*L*1.6 + 0.05;
+      for(const bat of r === 1 ? [-0.8, 0.8] : [0]){ const q = C.createOscillator(); q.frequency.value = f*r + bat; if(!o.fx) reg(q, q.detune, 0, fin); q.start(t); q.stop(fin); q.connect(g); }
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v*a*(r === 1 ? 0.06 : 0.09), t + 0.002); g.gain.setTargetAtTime(0, t + 0.002, d*L/4.5);
+    }
+    RZ({t, d:0.004, v:v*0.05, f:5200, q:2, dest:mix});
+    envio(mix, dest, o.eco, o.sala === undefined ? 0.5 : o.sala);
+  }
+  /* gong: parciales graves que florecen, suben un pelo y se asientan */
+  function gong(dest, t, v, f, o){ o = o || {}; const mix = G(1, dest);
+    [[1, 1, 5.5], [1.52, 0.6, 4.2], [2.03, 0.45, 3.4], [2.64, 0.32, 2.6], [3.3, 0.2, 2], [4.2, 0.13, 1.5], [5.9, 0.07, 1]].forEach(([r, a, d], i) => {
+      const g = G(0, mix), fin = t + d*1.6, q = C.createOscillator(), fr = f*r; q.frequency.setValueAtTime(fr*0.985, t);
+      q.frequency.linearRampToValueAtTime(fr*1.012, t + 0.3); q.frequency.exponentialRampToValueAtTime(fr, t + 1.6);
+      if(!o.fx) reg(q, q.detune, 0, fin); q.start(t); q.stop(fin); q.connect(g);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v*a*0.07, t + 0.01 + i*0.05); g.gain.setTargetAtTime(0, t + 0.01 + i*0.05, d/4.5); });
+    TN({t, f:f*0.9, f2:f*0.7, d:0.25, v:v*0.18, lp:300, dest:mix});
+    RZ({t, a:0.35, d:1.8, v:v*0.03, f:2200, q:0.8, dest:mix});
+    envio(mix, dest, 0, o.sala === undefined ? 0.6 : o.sala);
+  }
+  /* bajo redondo: seno y triángulo con un pasabajos que da el golpe y se cierra */
+  function bajo(dest, t, m, dur, v, o){ o = o || {};
+    const f = mtof(m), fin = t + Math.max(dur, 0.05), stop = fin + 0.25, g = C.createGain(), lp = F('lowpass', 900, 0.8);
+    oscM('sine', f, t, stop, 0).connect(lp); oscM('triangle', f, t, stop, 4).connect(G(0.55, lp));
+    lp.frequency.setValueAtTime(o.f || 1100, t); lp.frequency.setTargetAtTime(Math.max(160, f*2.6), t + 0.005, 0.08);
+    lp.connect(saturador(1.3, g)); g.connect(dest);
+    adsr(g.gain, t, 0.006, 0.3, 0.72, fin, 0.09, v*0.34);
+  }
+  /* colchón de viento: triángulos abiertos, una sierra finita y, si se pide, aire afinado arriba */
+  function padV(dest, t, notas, dur, v, o){ o = o || {};
+    const a = o.a || 1, rel = o.rel || 1.4, fin = t + dur, stop = fin + rel*1.7, fc = o.f || 1100;
+    const lp = F('lowpass', fc*0.45, 0.7), g = C.createGain();
+    lp.frequency.setValueAtTime(fc*0.45, t); lp.frequency.linearRampToValueAtTime(fc, t + Math.max(a, dur*0.5)); lp.frequency.linearRampToValueAtTime(fc*0.7, fin + rel);
+    for(const m of notas){ const f = mtof(m);
+      oscM('triangle', f, t, stop, -7 + rv(-2, 2)).connect(lp); oscM('triangle', f, t, stop, 7 + rv(-2, 2)).connect(lp); oscM('sawtooth', f, t, stop, rv(-4, 4)).connect(G(0.16, lp)); }
+    lp.connect(g);
+    if(o.aire){ const ns = fuente('rosa', t, stop), bp = F('bandpass', mtof(notas[notas.length - 1])*2, 6); ns.connect(bp); bp.connect(G(o.aire*2.2, g)); reg(ns, bp.detune, 0, stop); }
+    g.connect(dest); adsr(g.gain, t, a, 1, 0.9, fin, rel, v*0.1/Math.sqrt(notas.length));
+    envio(g, dest, 0, o.sala === undefined ? 0.3 : o.sala);
+  }
+  /* ---- la percusión */
+  function taiko(dest, t, v, o){ o = o || {};
+    const f0 = o.f || 60, larga = o.larga || 0.6, g = C.createGain(), s = oscF('sine', f0*2.2, t, t + larga*1.6 + 0.05), mix = G(1, dest);
+    s.frequency.exponentialRampToValueAtTime(f0*1.15, t + 0.03); s.frequency.exponentialRampToValueAtTime(f0, t + 0.25);
+    env(g.gain, t, 0.002, v*0.9, larga); s.connect(g); g.connect(mix);
+    TN({t, f:f0*3.7, f2:f0*2.4, fd:0.05, d:larga*0.35, v:v*0.18, dest:mix});                                  /* el parche que canta arriba */
+    RZ({t, d:0.03, v:v*0.3, f:850, q:0.9, col:'rosa', dest:mix}); RZ({t, d:0.012, v:v*0.14, f:2600, q:1, dest:mix});   /* el bachi */
+    RZ({t, a:0.004, d:larga*0.5, v:v*0.35, f:170, tipo:'lowpass', q:0.7, col:'pardo', dest:mix});
+    envio(mix, dest, 0, o.sala === undefined ? 0.3 : o.sala);
+  }
+  function shime(dest, t, v){ TN({t, f:540, f2:400, fd:0.03, d:0.08, v:v*0.35, tipo:'triangle', dest}); RZ({t, d:0.04, v:v*0.32, f:2300, q:1.5, dest});
+    RZ({t, d:0.01, v:v*0.18, f:5200, tipo:'highpass', dest}); }
+  /* kotsuzumi: el «pon» que sube cuando se aprietan las cuerdas y vuelve */
+  function tsuzumi(dest, t, v, k){ k = k || 1; const f = 300*k, g = G(0, dest), s = oscF('sine', f*0.9, t, t + 0.6);
+    s.frequency.linearRampToValueAtTime(f*1.12, t + 0.025); s.frequency.setTargetAtTime(f*0.97, t + 0.03, 0.12); s.connect(g);
+    env(g.gain, t, 0.002, v*0.4, 0.36); TN({t, f:f*2.45, d:0.1, v:v*0.08, dest}); RZ({t, d:0.02, v:v*0.25, f:1400, q:2.5, dest}); }
+  function hyoshigi(dest, t, v){ const mix = G(1, dest); RZ({t, d:0.05, v:v*0.5, f:2200, q:12, dest:mix}); TN({t, f:1850, d:0.05, v:v*0.18, tipo:'triangle', dest:mix});
+    TN({t, f:2950, d:0.03, v:v*0.08, dest:mix}); envio(mix, dest, 0, 0.6); }
+  function mokugyo(dest, t, v, f){ f = f || 700; TN({t, f, f2:f*0.94, d:0.09, v:v*0.35, tipo:'triangle', dest}); RZ({t, d:0.04, v:v*0.3, f, q:8, dest}); RZ({t, d:0.006, v:v*0.12, f:3500, tipo:'highpass', dest}); }
+  function bombo(dest, t, v, o){ o = o || {}; const f0 = o.f || 52, larga = o.larga || 0.32, g = C.createGain(), s = oscF('sine', f0*3, t, t + larga*1.6 + 0.05);
+    s.frequency.exponentialRampToValueAtTime(f0*1.3, t + 0.025); s.frequency.exponentialRampToValueAtTime(f0, t + 0.09);
+    env(g.gain, t, 0.002, v*0.9, larga); s.connect(g); g.connect(dest);
+    RZ({t, d:0.012, v:v*0.2, f:1800, tipo:'lowpass', q:0.7, dest}); }
+  function caja(dest, t, v, o){ o = o || {}; const out = G(1, dest);
+    RZ({t, d:o.d || 0.15, v:v*0.5, f:1700, q:0.7, col:'rosa', dest:out}); RZ({t, d:0.06, v:v*0.2, f:5200, tipo:'highpass', q:0.5, dest:out});
+    TN({t, f:210, f2:170, fd:0.04, d:0.08, v:v*0.4, tipo:'triangle', dest:out}); envio(out, dest, 0, o.sala === undefined ? 0.16 : o.sala); }
+  function rim(dest, t, v){ RZ({t, d:0.02, v:v*0.5, f:1900, q:5, dest}); TN({t, f:1050, d:0.025, v:v*0.2, tipo:'triangle', dest}); }
+  function hat(dest, t, v, abierto){ RZ({t, d:abierto ? 0.22 : 0.03, v:v*0.17, f:6800, tipo:'highpass', q:0.6, dest}); RZ({t, d:abierto ? 0.14 : 0.02, v:v*0.06, f:9800, q:1.8, dest}); }
+  function shaker(dest, t, v){ RZ({t, a:0.012, d:0.05, v:v*0.13, f:5600, q:1.1, dest}); }
+  function soplo(dest, t, dur, v, f1, f2){ const out = G(1, dest); RZ({t, a:dur*0.5, d:dur*0.6, v, f:f1, f2, fd:dur, q:1.2, col:'rosa', dest:out}); envio(out, dest, 0, 0.5); }
+
+  /* ------------------------------------------------------------ notación */
+  const NT = {C:0, D:2, E:4, F:5, G:7, A:9, B:11};
+  function nota(s){ const m = /^([A-G])([#b]?)(-?\d)$/.exec(s); return 12*(+m[3] + 1) + NT[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0); }
+  /* 'A4.6 D5.2 -.4': nota y largo en semicorcheas; queda indexado por compás */
+  function melodia(txt){ const por = []; let p = 0;
+    for(const tk of txt.trim().split(/\s+/)){ const [n, d] = tk.split('.'), dur = +d;
+      if(n !== '-'){ const b = Math.floor(p/16); (por[b] = por[b] || []).push([p % 16, nota(n), dur]); } p += dur; }
+    por.largo = Math.ceil(p/16); por.pasos = p; return por; }
+  const TIPOS = {'':[0, 4, 7], m:[0, 3, 7], '7':[0, 4, 7, 10], m7:[0, 3, 7, 10], maj7:[0, 4, 7, 11], m9:[0, 3, 7, 10, 14], maj9:[0, 4, 7, 11, 14],
+    add9:[0, 4, 7, 14], sus:[0, 5, 7], sus2:[0, 2, 7], '6':[0, 4, 7, 9], '5':[0, 7, 12], m7b5:[0, 3, 6, 10], '7sus':[0, 5, 7, 10], '7b9':[0, 4, 7, 10, 13]};
+  function acorde(s){ const m = /^([A-G])([#b]?)(.*)$/.exec(s), r = NT[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+    return {r:(r + 12) % 12, iv:TIPOS[m[3]] || TIPOS['']}; }
+  const raiz = (ac, oct) => 12*(oct + 1) + ac.r;
+  /* las notas del acorde alrededor de un centro, de abajo para arriba, sin repetir */
+  function voces(ac, centro){ const l = ac.iv.map(i => { let n = ac.r + i; while(n < centro - 6) n += 12; while(n >= centro + 6) n -= 12; return n; });
+    return [...new Set(l)].sort((a, b) => a - b); }
+  /* la nota de la escala vecina (d = +1 arriba, -1 abajo) */
+  function vecino(T, m, d){ for(let k = 1; k < 13; k++){ const q = m + d*k, pc = ((q - T.ton) % 12 + 12) % 12; if(T.esc.includes(pc)) return q; } return m + d*2; }
+  /* la frase: con variaciones en las vueltas de a dos (una nota se adorna desde la de arriba, alguna salta de octava) */
+  function tocarMel(x, mel, fn){
+    if(!mel) return; const evs = mel[x.cb % mel.largo]; if(!evs) return;
+    for(const e of evs) if(e[0] === x.s){ const dur = e[2]*x.sp, vr = x.v % 4 >= 2; let m = e[1], orn = 0;
+      if(vr && e[2] >= 4 && x.r.rnd() < 0.35) orn = vecino(x.r.T, m, 1) - m;
+      if(vr && e[2] <= 2 && x.r.rnd() < 0.1) m += 12;
+      fn(x.t + x.sw(e[0]), m, dur, 1, orn); }
+  }
+
+  /* ------------------------------------------------------------ los temas
+     ton y esc: la tónica y la escala (in [0,1,5,7,8], hirajōshi [0,2,3,7,8], yo [0,2,5,7,9]). */
+  const TEMAS = {
+    /* re yo, 78: koto que arpegia despacio, shakuhachi que contesta, el rin cada dos compases y cinta gastada */
+    menu:{bpm:78, vol:1.25, intro:1, cinta:0.22, swing:0.12, ton:2, esc:[0, 2, 5, 7, 9],
+      prog:'Gmaj9 Em9 Bm7 Asus Gmaj9 Em9 Asus Dadd9',
+      mel:'A4.8 B4.4 D5.4 E5.12 D5.4 B4.6 A4.2 G4.8 A4.16 D5.8 E5.4 G5.4 A5.10 G5.2 E5.4 D5.6 E5.2 B4.8 A4.16',
+      mel2:'-.4 G5.4 A5.8 B5.8 A5.4 G5.4 E5.12 G5.4 D5.16 -.4 B4.4 D5.4 E5.4 G5.6 E5.2 D5.8 B4.6 D5.2 A4.8 D5.16',
+      toca(x){ const {s, t, ac, sp} = x, B = x.r.cap.base;
+        if(s === 0){ padV(B, t, voces(ac, 62), sp*16, 0.8, {a:1.6, rel:2, f:1300, aire:0.5}); bajo(B, t, raiz(ac, 2), sp*15, 0.42, {f:650}); }
+        if(s === 0 && x.cb % 2 === 0){ const vs = voces(ac, 86); rin(B, t + 0.01, vs[vs.length - 1], 0.4); }
+        if(s % 2 === 0 && !(x.intro && s > 6)){ const vs = voces(ac, 67), P = [0, 1, 2, 3, 4, 3, 2, 1], i = P[(s >> 1) % 8] % vs.length;
+          if(s === 0 || x.r.rnd() > 0.15) koto(B, t + (x.r.rnd() - 0.5)*0.012, vs[i] + (x.v % 2 && s >= 8 ? 12 : 0), sp*3, lerp(0.3, 0.44, x.r.rnd()) + (s % 8 === 0 ? 0.08 : 0), {b:0.42, eco:0.16}); }
+        if(x.intro) return;
+        if(x.v >= 1){ const L = lofi(x, 'base'); if(s === 0 || s === 10) bombo(L, t, 0.32, {larga:0.26}); if(s % 4 === 2) shaker(B, t, 0.14);
+          if(s === 12 && x.cb % 2) rim(L, t, 0.16); }
+        const q = x.v % 4;
+        if(q === 1 || q === 3) tocarMel(x, q === 1 ? this.M2 : this.M, (tt, m, d, k, orn) => shaku(B, tt, m, d*0.96, 0.8*k, {desde:orn}));
+        else tocarMel(x, this.M, (tt, m, d, k) => koto(B, tt, m + (q === 2 ? 12 : 0), d, 0.5*k, {b:0.6, eco:0.3}));
+      }},
+    /* la hirajōshi, 92: lo-fi con swing, koto arpegiado en corcheas, bajo que camina y el shakuhachi que se turna con el koto */
+    bambu:{bpm:92, vol:1, intro:1, kMin:0.75, swing:0.2, ton:9, esc:[0, 2, 3, 7, 8], capas:{perc:0.15, lead:0.3, extra:0.55, taiko:0.88},
+      prog:'Am9 Fmaj7 Dm9 Esus Am9 Fmaj7 Bm7b5 E7b9',
+      mel:'E5.3 F5.3 E5.2 C5.4 B4.4 A4.6 B4.2 C5.8 F5.4 E5.4 C5.3 B4.3 A4.2 B4.12 -.4 E5.3 F5.3 A5.2 B5.4 A5.4 F5.6 E5.2 C5.8 B4.3 C5.3 E5.2 F5.4 B4.4 E5.12 -.4',
+      mel2:'A5.2 B5.2 C6.4 B5.2 A5.2 E5.4 F5.2 E5.2 C5.4 A4.8 F5.2 A5.2 C6.4 A5.2 F5.2 E5.4 B5.6 A5.2 E5.8 C6.3 B5.3 A5.2 E5.4 C5.4 F5.4 A5.4 C6.4 E6.4 F6.3 E6.3 C6.2 B5.4 A5.4 B5.4 F5.4 E5.8',
+      BJ:{0:[0, 5], 7:[7, 2], 10:[0, 3], 14:[12, 2]},
+      toca(x){ const {s, t, ac, sp} = x, D = x.r.cap, L = lofi(x, 'base'), r0 = raiz(ac, 2), b = this.BJ[s];
+        if(s === 0) padV(D.base, t, voces(ac, 60), sp*16, 0.7, {a:0.9, rel:1.4, f:1500});
+        if(b) bajo(D.base, t + x.sw(s), r0 + b[0], sp*b[1]*0.92, s ? 0.48 : 0.6);
+        if(s % 2 === 0){ const vs = voces(ac, 69), P = [0, 2, 1, 3, 2, 4, 3, 1], i = P[s >> 1] % vs.length;
+          koto(D.base, t, vs[i] + (x.v % 2 && s >= 8 ? 12 : 0), sp*2.5, (s % 4 === 0 ? 0.4 : 0.3) + 0.06*x.r.rnd(), {b:0.5, eco:0.12}); }
+        if(x.intro) return;
+        if(s === 0 || s === 10 || (s === 7 && x.cb % 2)) bombo(L, t + x.sw(s), 0.72);
+        if(s === 4 || s === 12) caja(L, t, 0.6);
+        if(x.on('perc')){ if(s !== 14) hat(D.perc, t + x.sw(s), s % 2 ? 0.14 + 0.08*x.r.rnd() : 0.28); else hat(D.perc, t, 0.28, true);
+          if(s % 4 === 2) shaker(D.perc, t, 0.2); if((s === 7 || s === 15) && x.r.rnd() < 0.4) rim(D.perc, t + x.sw(s), 0.14); }
+        if(x.on('lead')){ if(x.v % 2) tocarMel(x, this.M2, (tt, m, d, k) => koto(D.lead, tt, m, d, 0.55*k, {b:0.7, eco:0.3}));
+          else tocarMel(x, this.M, (tt, m, d, k, orn) => shaku(D.lead, tt, m, d*0.95, 0.85*k, {desde:orn})); }
+        if(x.on('extra')){ if(s === 0 && x.cb % 2 === 0){ const vs = voces(ac, 88); rin(D.extra, t, vs[vs.length - 1], 0.3); }
+          if((s === 6 || s === 14) && x.cb % 2 === 1) tsuzumi(D.extra, t, 0.4, s === 6 ? 1 : 1.2);
+          if(s % 2 === 1 && x.v % 2 === 0 && x.r.rnd() < 0.45){ const vs = voces(ac, 81); koto(D.extra, t + x.sw(s), vs[(s >> 1) % vs.length], sp*1.5, 0.2, {b:0.8, eco:0.3}); }
+          if(x.cb === 7 && s >= 12) taiko(D.extra, t, 0.35 + (s - 12)*0.08, {f:95, larga:0.35}); }
+        if(x.on('taiko')){ if(s === 0 || s === 8) taiko(D.taiko, t, 0.6, {f:62}); if(s % 4 === 2) shime(D.taiko, t, 0.3); }
+      }},
+    /* mi in, 88: frío y abierto. Batería a medio tiempo, campanitas que caen, viento en el colchón y mucha sala */
+    montana:{bpm:88, vol:1.05, intro:1, kMin:0.75, swing:0.14, ton:4, esc:[0, 1, 5, 7, 8], capas:{perc:0.15, lead:0.3, extra:0.55, taiko:0.9},
+      prog:'Em9 Cmaj7 Am9 Bsus Em9 Cmaj7 Fmaj7 Bsus',
+      mel:'B4.8 C5.4 E5.4 F5.12 E5.4 C5.8 B4.4 A4.4 B4.16 E5.8 F5.4 A5.4 B5.12 A5.4 F5.8 E5.4 C5.4 B4.16',
+      mel2:'-.8 B5.4 C6.4 E6.8 C6.8 A5.8 B5.4 C6.4 B5.16 -.8 E6.4 F6.4 E6.8 C6.8 A5.8 F5.8 B5.16',
+      toca(x){ const {s, t, ac, sp} = x, D = x.r.cap, L = lofi(x, 'base'), r0 = raiz(ac, 2);
+        if(s === 0){ padV(D.base, t, voces(ac, 59), sp*16, 0.85, {a:1.8, rel:2.4, f:1000, aire:1.1, sala:0.5}); bajo(D.base, t, r0, sp*11, 0.5, {f:600}); }
+        if(s === 11) bajo(D.base, t, r0 + 7, sp*4.5, 0.3, {f:600});
+        if(x.cb % 2 === 0 && (s === 0 || s === 3 || s === 6)){ const vs = voces(ac, 84), i = [0, 2, 4][s/3] % vs.length; rin(D.base, t, vs[i] + (s === 6 ? 12 : 0), 0.24, {largo:1.3, sala:0.7}); }
+        if((s === 2 || s === 9 || s === 13) && x.r.rnd() < 0.55){ const vs = voces(ac, 76); koto(D.base, t + x.sw(s), vs[Math.floor(x.r.rnd()*vs.length)] + 12, sp*3, 0.24, {b:0.35, eco:0.35, sala:0.5}); }
+        if(x.intro) return;
+        if(s === 0 || (s === 11 && x.cb % 2)) bombo(L, t, 0.62, {larga:0.4});
+        if(s === 8) caja(L, t, 0.5, {sala:0.5, d:0.2});
+        if(x.on('perc')){ if(s % 2 === 0) hat(D.perc, t, s % 4 ? 0.16 : 0.22); if(s % 4 === 3 && x.r.rnd() < 0.5) shaker(D.perc, t + x.sw(s), 0.14); }
+        if(x.on('lead')){ if(x.v % 2) tocarMel(x, this.M2, (tt, m, d, k) => koto(D.lead, tt, m, d, 0.46*k, {b:0.55, eco:0.35, sala:0.5}));
+          else tocarMel(x, this.M, (tt, m, d, k, orn) => shaku(D.lead, tt, m, d*0.95, 0.85*k, {desde:orn, sala:0.7, eco:0.3})); }
+        if(x.on('extra')){ if(s === 0 && x.cb % 4 === 0) soplo(D.extra, t, sp*14, 0.07, 700, 1700);
+          if(s === 4 && x.cb % 2) tsuzumi(D.extra, t, 0.3, 0.9);
+          if(s === 14 && x.r.rnd() < 0.4){ const vs = voces(ac, 91); rin(D.extra, t, vs[vs.length - 1], 0.16, {largo:0.8}); } }
+        if(x.on('taiko')){ if(s === 0 || s === 8) taiko(D.taiko, t, 0.45, {f:55, larga:0.9, sala:0.6}); }
+      }},
+    /* do in, 112: el castillo en llamas. Taikos, shime en corcheas, bajo que empuja y el koto que no para */
+    castillo:{bpm:112, vol:0.95, intro:1, kMin:0.7, swing:0, ton:0, esc:[0, 1, 5, 7, 8], capas:{perc:0.1, lead:0.3, extra:0.55, taiko:0.8},
+      prog:'Csus Cm Dbmaj7 Cm Fm Abmaj7 Db G7sus',
+      mel:'G5.4 Ab5.4 G5.2 F5.2 C5.4 Db5.6 C5.2 G4.8 Ab4.4 C5.4 Db5.4 F5.4 G5.12 -.4 C6.4 Db6.4 C6.2 Ab5.2 G5.4 F5.6 G5.2 Ab5.8 G5.3 F5.3 Db5.2 C5.4 Db5.4 C5.12 -.4',
+      mel2:'C6.2 G5.2 Ab5.2 G5.2 C6.2 Db6.2 C6.2 G5.2 F5.2 G5.2 Ab5.2 C6.2 Db6.4 C6.4 F6.2 Db6.2 C6.2 Ab5.2 F5.2 Ab5.2 C6.2 Db6.2 C6.4 G5.4 Ab5.4 G5.4 C6.2 C6.2 Db6.2 C6.2 Ab5.2 G5.2 F5.2 G5.2 Ab5.4 C6.4 F6.4 Ab5.4 G5.2 Ab5.2 G5.2 F5.2 Db5.2 F5.2 G5.2 Db6.2 C6.8 G5.8',
+      RIFF:[0, 0, 12, 0, 7, 0, 12, 7],
+      toca(x){ const {s, t, ac, sp} = x, D = x.r.cap, L = lofi(x, 'base'), r0 = raiz(ac, 2);
+        if(s === 0 || s === 6 || s === 8) taiko(D.base, t, s === 0 ? 0.85 : 0.58, {f:58, larga:0.6});
+        if(s % 2 === 0) shime(D.base, t, s % 4 === 0 ? 0.34 : 0.2);
+        if(s % 2 === 0) bajo(D.base, t, r0 + this.RIFF[s >> 1], sp*1.6, s % 4 === 0 ? 0.6 : 0.44, {f:1300});
+        if(s === 0) padV(D.base, t, voces(ac, 57), sp*16, 0.62, {a:0.4, rel:0.8, f:900});
+        if(s === 0 || s === 10) rasgueo(D.base, t, voces(ac, 64), 0.5, 0.016, {b:0.65});
+        if(x.intro) return;
+        if(s === 0 || s === 8 || s === 11) bombo(L, t, 0.72, {f:50});
+        if(s === 4 || s === 12) caja(L, t, 0.68, {d:0.18});
+        if(x.on('perc')){ hat(D.perc, t, s % 4 === 2 ? 0.3 : 0.16); if(s % 2) shime(D.perc, t, 0.1 + 0.05*x.r.rnd());
+          if(s === 6 || s === 14) tsuzumi(D.perc, t, 0.42, s === 6 ? 1.1 : 0.95); }
+        if(x.on('lead')){ if(x.v % 2) tocarMel(x, this.M2, (tt, m, d, k) => koto(D.lead, tt, m, d, 0.55*k, {b:0.75, eco:0.2, apaga:1}));
+          else tocarMel(x, this.M, (tt, m, d, k, orn) => shaku(D.lead, tt, m, d*0.94, 0.9*k, {desde:orn, f:3600})); }
+        if(x.on('extra')){ if((x.cb === 3 || x.cb === 7) && s >= 12) taiko(D.extra, t, 0.4 + (s - 12)*0.1, {f:85, larga:0.3});
+          if(s === 0 && x.cb % 4 === 0) hyoshigi(D.extra, t, 0.5);
+          if(s === 0 && x.cb === 0 && x.v >= 1) gong(D.extra, t, 0.55, 82);
+          if(x.v % 2 && s % 2 === 0){ const vs = voces(ac, 79); koto(D.extra, t, vs[(s >> 1) % vs.length], sp*1.2, 0.2, {b:0.8, apaga:1}); } }
+        if(x.on('taiko')){ if(s === 2 || s === 10 || s === 14) taiko(D.taiko, t, 0.55, {f:72, larga:0.4}); if(s === 0) taiko(D.taiko, t, 0.9, {f:44, larga:1});
+          if(x.cb % 2 === 1 && s >= 8) taiko(D.taiko, t, 0.3 + (s - 8)*0.04, {f:95, larga:0.25}); }
+      }},
+    /* sol hirajōshi, 104: el infinito. Arranca con koto y colchón; con la intensidad entran la batería, la melodía, el shime y al final los taikos */
+    infinito:{bpm:104, vol:1, intro:1, swing:0.16, ton:7, esc:[0, 2, 3, 7, 8], capas:{perc:0.15, lead:0.35, extra:0.6, taiko:0.82},
+      prog:'Gm9 Ebmaj7 Cm9 D7sus Gm9 Ebmaj7 Bbmaj7 D7b9',
+      mel:'D5.4 Eb5.4 D5.2 Bb4.2 A4.4 G4.6 A4.2 Bb4.8 Eb5.4 D5.4 Bb4.4 G4.4 A4.12 -.4 D5.3 Eb5.3 G5.2 A5.4 G5.4 Eb5.6 D5.2 Bb4.8 A4.3 Bb4.3 D5.2 Eb5.4 D5.4 D5.12 -.4',
+      mel2:'G5.2 A5.2 Bb5.4 A5.2 G5.2 D5.4 Eb5.2 D5.2 Bb4.4 G4.8 Eb5.2 G5.2 Bb5.4 G5.2 Eb5.2 D5.4 A5.6 G5.2 D5.8 Bb5.3 A5.3 G5.2 D5.4 Bb4.4 Eb5.4 G5.4 Bb5.4 D6.4 Eb6.3 D6.3 Bb5.2 A5.4 G5.4 A5.4 Eb5.4 D5.8',
+      toca(x){ const {s, t, ac, sp} = x, D = x.r.cap, r0 = raiz(ac, 2);
+        if(s === 0) padV(D.base, t, voces(ac, 60), sp*16, 0.72, {a:0.8, rel:1.4, f:lerp(900, 1700, kAhora), aire:0.4});
+        if(s === 0 || s === 10) bajo(D.base, t, r0 + (s ? 7 : 0), sp*(s ? 5 : 9), 0.46, {f:700});
+        if(s % 2 === 0){ const vs = voces(ac, 67), P = [0, 1, 2, 3, 4, 3, 2, 1], i = P[s >> 1] % vs.length;
+          if(s % 4 === 0 || x.r.rnd() < 0.75) koto(D.base, t, vs[i] + (s >= 8 && x.c % 2 ? 12 : 0), sp*2.5, 0.3 + 0.08*x.r.rnd(), {b:0.5, eco:0.15}); }
+        if(s === 0 && x.cb % 4 === 0){ const vs = voces(ac, 86); rin(D.base, t, vs[vs.length - 1], 0.3); }
+        if(x.intro) return;
+        if(x.on('perc')){ const L = lofi(x, 'perc'); if(s === 0 || s === 10 || (s === 7 && x.cb % 2)) bombo(L, t + x.sw(s), 0.7); if(s === 4 || s === 12) caja(L, t, 0.58);
+          if(s !== 14) hat(D.perc, t + x.sw(s), s % 2 ? 0.13 : 0.24); else hat(D.perc, t, 0.26, true); }
+        if(x.on('lead')){ if(x.v % 2) tocarMel(x, this.M2, (tt, m, d, k) => koto(D.lead, tt, m, d, 0.55*k, {b:0.7, eco:0.28}));
+          else tocarMel(x, this.M, (tt, m, d, k, orn) => shaku(D.lead, tt, m, d*0.95, 0.85*k, {desde:orn})); }
+        if(x.on('extra')){ if(s % 2 === 1) bajo(D.extra, t, r0 + (s % 8 === 7 ? 12 : 0), sp*0.8, 0.3, {f:1400});
+          if(s % 2 === 0) shime(D.extra, t, s % 4 ? 0.14 : 0.24); if(s === 6 || s === 14) tsuzumi(D.extra, t, 0.36, s === 6 ? 1 : 1.15); }
+        if(x.on('taiko')){ if(s === 0 || s === 3 || s === 8 || s === 11) taiko(D.taiko, t, s % 8 === 0 ? 0.85 : 0.55, {f:s % 8 ? 70 : 50, larga:0.55});
+          if(s % 2 === 1) shime(D.taiko, t, 0.12); if(s === 0 && x.cb % 4 === 0) hyoshigi(D.taiko, t, 0.45);
+          if(x.cb === 7 && s >= 8) taiko(D.taiko, t, 0.3 + (s - 8)*0.05, {f:92, larga:0.25});
+          if(s === 0 && x.cb === 0) gong(D.taiko, t, 0.4, 98); }
+      }},
+    /* do yo, 96: la tienda. Bajo que rebota, koto picado a contratiempo, mokugyo y una melodía que juega */
+    tienda:{bpm:96, vol:1.05, intro:1, swing:0.22, ton:0, esc:[0, 2, 5, 7, 9],
+      prog:'Cadd9 Am7 Dm7 G7sus Cadd9 Am7 Fmaj7 G6',
+      mel:'G5.2 A5.2 C6.2 -.2 A5.2 G5.2 -.4 D5.2 F5.2 G5.4 -.8 A5.2 G5.2 F5.2 D5.2 C5.4 D5.4 G5.8 -.8 C6.2 D6.2 C6.2 A5.2 G5.4 A5.4 C6.2 -.2 A5.2 -.2 G5.8 F5.2 G5.2 A5.2 C6.2 D6.4 C6.4 G5.8 -.8',
+      mel2:'-.8 C6.2 D6.2 F6.4 D6.4 C6.4 A5.8 -.8 F5.2 G5.2 A5.4 G5.4 D5.4 G5.8 -.8 A5.2 C6.2 D6.4 C6.4 A5.4 G5.8 -.8 A5.2 G5.2 F5.4 G5.16',
+      BJ:{0:[0, 1.5], 3:[12, 1], 6:[7, 1.5], 8:[0, 1.5], 11:[12, 1], 14:[7, 1]},
+      toca(x){ const {s, t, ac, sp} = x, B = x.r.cap.base, L = lofi(x, 'base'), r0 = raiz(ac, 2), b = this.BJ[s];
+        if(b) bajo(B, t + x.sw(s), r0 + b[0], sp*b[1], 0.55, {f:1400});
+        if(s === 0) padV(B, t, voces(ac, 62), sp*16, 0.45, {a:0.5, rel:0.8, f:1600});
+        if(s % 4 === 2) rasgueo(B, t, voces(ac, 67).slice(0, 3), 0.42, 0.012, {b:0.7, apaga:1});
+        if(x.intro) return;
+        if(s === 0 || s === 8 || (s === 11 && x.cb % 2)) bombo(L, t + x.sw(s), 0.62, {larga:0.26});
+        if(s === 4 || s === 12) rim(L, t, 0.4);
+        if(s % 2 === 0 || x.r.rnd() < 0.3) shaker(B, t + x.sw(s), s % 4 === 2 ? 0.2 : 0.12);
+        if(s === 15 && x.r.rnd() < 0.5) mokugyo(B, t + x.sw(s), 0.4, [820, 700, 980][x.cb % 3]);
+        if(s === 0 && x.cb % 4 === 0){ const vs = voces(ac, 88); rin(B, t, vs[vs.length - 1], 0.28, {largo:0.7}); }
+        if(x.v % 2 === 0) tocarMel(x, this.M, (tt, m, d, k) => koto(B, tt, m, d, 0.56*k, {b:0.8, eco:0.22, apaga:d < x.sp*3 ? 1 : 0}));
+        else { tocarMel(x, this.M2, (tt, m, d, k, orn) => shaku(B, tt, m, d*0.85, 0.7*k, {desde:orn}));
+          tocarMel(x, this.M, (tt, m, d, k) => { if(d <= x.sp*2) koto(B, tt, m - 12, d, 0.3*k, {b:0.6, apaga:1}); }); }
+      }},
+    /* re yo, 100: la fanfarria del torii y después un bucle suave */
+    victoria:{bpm:100, vol:1.1, intro:2, cinta:0.1, swing:0, ton:2, esc:[0, 2, 5, 7, 9],
+      prog:'Gmaj9 Dadd9 Gmaj9 Asus',
+      toca(x){ const {s, t, ac, sp, c} = x, B = x.r.cap.base;
+        if(c === 0){
+          if(s === 0) [0, 0.3, 0.5, 0.62, 0.72, 0.8, 0.86, 0.91].forEach((q, i) => taiko(B, t + q*sp*8, 0.3 + i*0.06, {f:78, larga:0.3}));
+          if(s === 8){ taiko(B, t, 1, {f:48, larga:1.1}); [62, 64, 67, 69, 71, 74, 76, 79, 81, 83, 86].forEach((m, i) => koto(B, t + i*0.035, m, 1.2, 0.42, {b:0.75})); }
+          if(s === 12) shaku(B, t, 81, sp*4, 0.9, {desde:-2});
+        }
+        if(c === 1 && s === 0){ gong(B, t, 0.6, 73.4); [86, 90, 93].forEach((m, i) => rin(B, t + i*0.12, m, 0.4));
+          shaku(B, t, 86, sp*14, 0.85, {desde:-3, vib:26}); padV(B, t, voces(TEMAS.victoria.A[1], 62), sp*16, 0.7, {a:0.6, rel:2}); bajo(B, t, 38, sp*14, 0.5); }
+        if(c < 2) return;
+        if(s === 0){ padV(B, t, voces(ac, 62), sp*16, 0.55, {a:1.5, rel:2, f:1100, aire:0.4}); bajo(B, t, raiz(ac, 2), sp*14, 0.34, {f:600}); }
+        if(s % 2 === 0 && x.r.rnd() < 0.55){ const vs = voces(ac, 69); koto(B, t, vs[(s >> 1) % vs.length] + (s >= 8 ? 12 : 0), sp*3, 0.3, {b:0.5, eco:0.25}); }
+        if(s === 0 && x.cb % 2 === 0){ const vs = voces(ac, 88); rin(B, t, vs[vs.length - 1], 0.26); }
+      }}
+  };
+  for(const k in TEMAS){ const T = TEMAS[k]; if(T.prog) T.A = T.prog.split(' ').map(acorde); if(T.mel) T.M = melodia(T.mel); if(T.mel2) T.M2 = melodia(T.mel2); }
+
+  /* ------------------------------------------------------------ secuenciador */
+  const REPS = [], CAPAS = ['perc', 'lead', 'extra', 'taiko'], CAPA0 = {perc:0.2, lead:0.45, extra:0.7, taiko:0.85};
+  const objCapa = (T, n) => T.capas ? suv(lim((Math.max(inten, T.kMin || 0) - (T.capas || CAPA0)[n])/0.2, 0, 1)) : 0;
+  let semilla = 7;
+  /* la batería lo-fi de cada capa: pasabajos de parlante y un poco del reductor de bits por arriba */
+  function lofi(x, capa){ const r = x.r, key = 'lofi:' + capa; if(r.sc[key]) return r.sc[key];
+    const cap = r.cap[capa], ent = G(1), cr = C.createWaveShaper(); cr.curve = curvaCrush();
+    ent.connect(F('lowpass', 5200, 0.7, cap)); ent.connect(cr); cr.connect(F('highpass', 1400, 0.7, G(0.1, cap)));
+    ent._eco = cap._eco; ent._sala = cap._sala; return r.sc[key] = ent; }
+  function nuevoRep(nom, entra){
+    const T = TEMAS[nom], now = ya(), vol = T.vol || 1;
+    const r = {nom, T, paso:0, t:now + 0.08, vivo:true, muere:0, cap:{}, cv:{}, sc:{}, oscs:[], rnd:mulberry(semilla++*977 + 13)};
+    r.bus = G(0, N.mus); r.eco = G(0, N.eco); r.sala = G(0, N.sala);                        /* los envíos también se funden con el tema */
+    for(const g of [r.bus, r.eco, r.sala]){ g.gain.setValueAtTime(0.0001, now); g.gain.linearRampToValueAtTime(vol, now + entra); }
+    const capa = v => { const g = G(v, r.bus); g._eco = G(v, r.eco); g._sala = G(v, r.sala); return g; };
+    r.kb = T.capas ? lerp(0.75, 1, Math.max(inten, T.kMin || 0)) : 1; r.cap.base = capa(r.kb);
+    for(const n of CAPAS){ r.cv[n] = objCapa(T, n); r.cap[n] = capa(r.cv[n]); }
+    r.on = n => !!T.capas && (r.cv[n] > 0.004 || objCapa(T, n) > 0.004);
+    N.ecoD.delayTime.setTargetAtTime(60/T.bpm*0.75, now, 0.1);
+    return r;
+  }
+  function capaA(g, v, now){ for(const p of [g.gain, g._eco.gain, g._sala.gain]) p.setTargetAtTime(v, now, 0.35); }
+  function soltar(r, fund){ const now = ya();
+    for(const g of [r.bus, r.eco, r.sala]){ const p = g.gain; p.cancelScheduledValues(now); p.setValueAtTime(Math.max(p.value, 0.0001), now); p.linearRampToValueAtTime(0.0001, now + fund); }
+    r.vivo = false; r.muere = Math.min(r.muere || Infinity, now + fund + 0.2); }
+  const durPaso = r => 60/r.T.bpm/4*(1 + 0.3*kLento);
+  function bombear(){
+    const now = ya(), hasta = now + 0.12;
+    for(const r of REPS){
+      if(!r.vivo && now > r.muere - 0.2) continue;
+      if(r.t < now - 0.06) r.t = now + 0.02;                  /* se trabó el cuadro: no se programa en el pasado */
+      kAhora = Math.max(inten, r.T.kMin || 0);
+      let n = 0;
+      while(r.t < hasta && n++ < 16){
+        const T = r.T, s = r.paso % 16, c = Math.floor(r.paso/16), intro = c < T.intro, cb = intro ? c % T.A.length : (c - T.intro) % T.A.length;
+        const sp = durPaso(r), sw16 = sp*(T.swing || 0);
+        const x = {r, s, c, cb, v:intro ? 0 : Math.floor((c - T.intro)/T.A.length), intro, ac:T.A[cb], t:r.t, sp, on:r.on, sw:q => q % 2 ? sw16 : 0};
+        repAct = r; try { T.toca(x); } catch(e){ err(e); } repAct = null;
+        r.t += sp; r.paso++;
+      }
+    }
+  }
+  function musica(tema){
+    const pedido = tiene(TEMAS, tema) ? tema : null;
+    temaPed = pedido; if(!listo) return;
+    try {
+      if(pedido === temaAct) return; temaAct = pedido;
+      for(const r of REPS) if(r.vivo) soltar(r, 1.2);
+      if(pedido) REPS.push(nuevoRep(pedido, 1.2));
+      aplicarCinta();
+    } catch(e){ err(e); }
+  }
+
+  /* ------------------------------------------------------------ efectos */
+  const FXM = {
+    salto:{max:3, vol:0.55, rev:0.05}, doble_salto:{max:3, vol:0.55, rev:0.12}, pegar:{max:3, vol:0.62, rev:0.06}, corte:{max:4, vol:0.62, rev:0.2},
+    combo:{max:3, vol:0.55, rev:0.3, ui:1}, moneda:{max:5, vol:0.6, rev:0.15, ui:1}, monedas:{max:2, vol:0.5, rev:0.15, ui:1},
+    laser_carga:{max:3, vol:0.42, rev:0.1}, disparo:{max:4, vol:0.6, rev:0.3}, shuriken:{max:4, vol:0.8, rev:0.08}, shuriken_clava:{max:4, vol:0.58, rev:0.12},
+    samurai:{max:2, vol:0.6, rev:0.2}, muerte:{max:1, vol:0.6, rev:0.4}, pinchos:{max:2, vol:0.6, rev:0.12}, desmorona:{max:3, vol:0.58, rev:0.2},
+    plataforma:{max:2, vol:0.5, rev:0.1}, cometa:{max:3, vol:0.5, rev:0.1}, tinta:{max:2, vol:0.62, rev:0.15}, meta:{max:1, vol:0.75, rev:0.5, ui:1},
+    estrella:{max:3, vol:0.6, rev:0.35, ui:1}, cofre:{max:1, vol:0.62, rev:0.3, ui:1}, compra:{max:2, vol:0.58, rev:0.2, ui:1}, no_alcanza:{max:2, vol:0.55, rev:0.1, ui:1},
+    boton:{max:3, vol:0.5, rev:0.06, ui:1}, clic:{max:4, vol:0.45, ui:1}, atras:{max:2, vol:0.45, ui:1}, desliza_menu:{max:2, vol:0.5, ui:1},
+    titulo:{max:1, vol:0.7, rev:0.5, ui:1}, lento_entra:{max:2, vol:0.5, rev:0.2, ui:1}, lento_sale:{max:2, vol:0.45, rev:0.15, ui:1},
+    vida:{max:1, vol:0.68, rev:0.35, ui:1}, record:{max:1, vol:0.65, rev:0.4, ui:1}
+  };
+  /* otros nombres que el juego pueda usar */
+  const ALIAS = {doble:['doble_salto'], pared:['pegar'], matar:['corte'], mata:['corte'], tajo:['corte'], laser:['laser_carga'], tiro:['disparo'],
+    clava:['shuriken_clava'], morir:['muerte'], pincho:['pinchos'], estrellas:['estrella'], gong:['meta'], torii:['meta'], nuevo_record:['record']};
+  const YO = [0, 2, 5, 7, 9];
+  const kotoFx = (d, t, m, dur, v, o) => koto(d, t, m, dur, v, Object.assign({fx:1}, o || {}));
+  const semi = k => 12*Math.log2(k);
+  const FX = {
+    /* ---- el ninja */
+    salto(t, o, d){ const k = o.tono*rv(0.94, 1.06); whoosh(t, 0.17, 420*k, 1500*k, 1.5, d);
+      RZ({t:t + 0.015, a:0.03, d:0.1, v:0.45, f:280*k, tipo:'lowpass', col:'rosa', dest:d}); RZ({t, d:0.012, v:0.12, f:1200*k, q:2, dest:d}); return 0.35; },
+    doble_salto(t, o, d){ const k = o.tono*rv(0.95, 1.05); whoosh(t, 0.15, 800*k, 2800*k, 1.3, d); whoosh(t + 0.06, 0.1, 1500*k, 3600*k, 0.55, d);
+      for(const [f, q, v] of [[2637, 0.03, 0.08], [3520, 0.08, 0.06], [2637*2.76, 0.03, 0.015]]) TN({t:t + q, f:f*k, d:0.25, v, dest:d}); return 0.45; },
+    pegar(t, o, d){ const k = o.tono*rv(0.92, 1.08); TN({t, f:170*k, f2:80*k, fd:0.05, d:0.09, v:0.8, dest:d}); RZ({t, d:0.035, v:0.6, f:900*k, tipo:'lowpass', q:0.8, col:'rosa', dest:d});
+      RZ({t:t + 0.003, d:0.05, v:0.35, f:480*k, q:4, dest:d}); RZ({t, d:0.012, v:0.22, f:3000*k, q:1, dest:d}); return 0.25; },
+    corte(t, o, d){ const k = o.tono*rv(0.95, 1.05), p = C.createStereoPanner(); p.pan.setValueAtTime(-0.5, t); p.pan.linearRampToValueAtTime(0.5, t + 0.12); p.connect(d);
+      RZ({t, a:0.03, d:0.05, v:0.7, f:1400*k, f2:6500*k, fd:0.08, q:1.8, dest:p});
+      [2960, 4180, 5790, 7950].forEach((f, i) => TN({t:t + 0.03, a:0.003, f:f*k*rv(0.98, 1.02), d:0.45 - i*0.08, v:0.07 - i*0.012, dest:p}));   /* el filo que canta */
+      const t1 = t + 0.05; TN({t:t1, f:140*k, f2:55, fd:0.08, d:0.12, v:0.75, dest:d}); RZ({t:t1, d:0.06, v:0.6, f:1100*k, f2:350, q:1.5, col:'rosa', dest:d});
+      RZ({t:t1, d:0.12, v:0.22, f:2400*k, f2:900*k, q:3, dest:d}); return 0.65; },
+    muerte(t, o, d){ const k = o.tono;
+      TN({t, f:130*k, f2:45, fd:0.1, d:0.25, v:0.85, dest:d}); RZ({t, d:0.12, v:0.65, f:700, tipo:'lowpass', col:'rosa', dest:d}); taiko(d, t, 0.55, {f:52, larga:0.8});
+      FX.corte(t + 0.03, {tono:0.85*k}, d);
+      const g = G(0, d), lp = F('lowpass', 1800, 0.7, g), a = oscF('triangle', 520*k, t + 0.12, t + 2), b = oscF('sine', 522*k, t + 0.12, t + 2), l = oscF('sine', 5, t + 0.12, t + 2), lg = G(0);
+      lp.frequency.setValueAtTime(1800, t + 0.12); lp.frequency.exponentialRampToValueAtTime(260, t + 1.7);
+      a.frequency.exponentialRampToValueAtTime(55*k, t + 1.7); b.frequency.exponentialRampToValueAtTime(52*k, t + 1.7);
+      lg.gain.setValueAtTime(0, t + 0.12); lg.gain.linearRampToValueAtTime(60, t + 1.5); l.connect(lg); lg.connect(a.detune); lg.connect(b.detune);   /* se desafina al caer */
+      a.connect(lp); b.connect(G(0.6, lp)); adsr(g.gain, t + 0.12, 0.05, 0.4, 0.8, t + 1.5, 0.3, 0.24); return 2.3; },
+    pinchos(t, o, d){ const k = o.tono*rv(0.95, 1.05), g = G(0, d), bp = F('bandpass', 3200*k, 5, g);
+      for(const r of [1, 1.41, 1.93]) oscF('square', 820*k*r, t, t + 0.2).connect(bp); env(g.gain, t, 0.001, 0.22, 0.12);
+      TN({t, f:160*k, f2:60, fd:0.08, d:0.12, v:0.7, dest:d}); RZ({t, d:0.08, v:0.5, f:900, tipo:'lowpass', col:'rosa', dest:d});
+      RZ({t:t + 0.02, d:0.15, v:0.2, f:1800*k, f2:700, q:3, col:'rosa', dest:d}); return 0.45; },
+    vida(t, o, d){ const k = o.tono;
+      for(let i = 0; i < 10; i++) TN({t:t + Math.random()*0.22, f:rv(2500, 6000)*k, d:rv(0.05, 0.2), v:rv(0.02, 0.05), dest:panear(d, rv(-0.7, 0.7))});   /* el amuleto que se parte */
+      TN({t, f:110*k, f2:60, fd:0.1, d:0.2, v:0.55, dest:d}); RZ({t, d:0.03, v:0.3, f:4000, tipo:'highpass', dest:d});
+      [93, 88, 86].forEach((m, i) => rin(d, t + 0.1 + i*0.15, m + semi(k), 0.6, {fx:1, largo:0.45}));
+      RZ({t:t + 0.5, a:0.3, d:0.1, v:0.25, f:400*k, f2:2200*k, fd:0.35, q:1.4, col:'rosa', dest:d}); return 2.2; },
+    /* ---- los enemigos */
+    laser_carga(t, o, d){ const k = o.tono, g = G(0, d), lp = F('lowpass', 3000, 0.8, g), tr = G(0.6), a = oscF('sine', 300*k, t, t + 1.12), b = oscF('triangle', 301.5*k, t, t + 1.12);
+      a.frequency.exponentialRampToValueAtTime(1400*k, t + 1); b.frequency.exponentialRampToValueAtTime(1403*k, t + 1);
+      const l = oscF('sine', 6, t, t + 1.12); l.frequency.linearRampToValueAtTime(26, t + 1); l.connect(G(0.4, tr.gain));
+      a.connect(tr); b.connect(G(0.5, tr)); tr.connect(lp);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.28, t + 0.92); g.gain.setTargetAtTime(0, t + 1, 0.02);
+      RZ({t, a:0.9, d:0.1, v:0.04, f:2000, f2:5000, fd:1, q:2, dest:d}); return 1.2; },
+    disparo(t, o, d){ const k = o.tono*rv(0.95, 1.05);
+      RZ({t, d:0.012, v:0.85, f:3600*k, tipo:'highpass', q:0.7, dest:d}); RZ({t, d:0.08, v:0.8, f:1400*k, f2:480*k, q:0.9, dest:d});
+      RZ({t, d:0.22, v:0.28, f:1000*k, f2:180, tipo:'lowpass', col:'rosa', dest:d}); TN({t, f:175*k, f2:46*k, fd:0.08, d:0.12, v:0.9, dest:d}); return 0.5; },
+    shuriken(t, o, d){ const k = o.tono*rv(0.95, 1.05), x = o.x || 0, p = C.createStereoPanner(), g = G(0, p), am = G(0.5), bp = F('bandpass', 3000*k, 5);
+      p.pan.setValueAtTime(lim(x - 0.6, -1, 1), t); p.pan.linearRampToValueAtTime(lim(x + 0.6, -1, 1), t + 0.5); p.connect(d);
+      const s = fuente('blanco', t, t + 0.56), l = oscF('sine', 22*k, t, t + 0.56), w = oscF('sine', 2600*k, t, t + 0.56);
+      l.connect(G(0.5, am.gain)); l.connect(G(500*k, bp.frequency)); w.frequency.setValueAtTime(2700*k, t + 0.2); w.frequency.linearRampToValueAtTime(2400*k, t + 0.5);   /* gira y pasa */
+      s.connect(bp); bp.connect(am); w.connect(G(0.05, am)); am.connect(g); adsr(g.gain, t, 0.05, 0.3, 0.9, t + 0.42, 0.08, 0.5); return 0.6; },
+    shuriken_clava(t, o, d){ const k = o.tono*rv(0.94, 1.06); TN({t, f:500*k, f2:170*k, fd:0.04, d:0.07, v:0.6, dest:d}); RZ({t, d:0.04, v:0.55, f:1300*k, q:2.5, col:'rosa', dest:d});
+      RZ({t, d:0.01, v:0.3, f:4000*k, tipo:'highpass', dest:d});
+      const g = G(0, d), s = oscF('triangle', 1250*k, t, t + 0.5), vb = oscF('sine', 28, t, t + 0.5); vb.connect(G(60*k, s.frequency)); s.connect(g); env(g.gain, t + 0.005, 0.002, 0.12, 0.35); return 0.55; },
+    samurai(t, o, d){ const k = o.tono*rv(0.95, 1.05);
+      RZ({t, a:0.02, d:0.05, v:0.12, f:1800, q:0.7, dest:d});                                                   /* la h */
+      vox(t + 0.04, d, {vocal:'a', f:185*k, f2:240*k, pico:0.5, d:0.17, v:0.5, sucio:1.4, q:6, aire:0.05});
+      vox(t + 0.18, d, {vocal:'i', f:235*k, f3:150*k, d:0.16, v:0.42, sucio:1.4, q:6});
+      const t2 = t + 0.36; RZ({t:t2, a:0.05, d:0.25, v:0.3, f:2500*k, f2:6500*k, fd:0.3, q:7, dest:d});             /* el desenvaine */
+      [3150, 4420, 6230].forEach((f, i) => TN({t:t2 + 0.28, a:0.003, f:f*k, d:0.7 - i*0.15, v:0.05, dest:d})); TN({t:t2 + 0.28, f:900*k, d:0.03, v:0.12, tipo:'triangle', dest:d}); return 1.3; },
+    /* ---- el mundo */
+    desmorona(t, o, d){ const k = o.tono*rv(0.92, 1.08); RZ({t, d:0.03, v:0.55, f:2500*k, tipo:'highpass', dest:d}); TN({t, f:180*k, f2:70, fd:0.1, d:0.15, v:0.5, dest:d});
+      for(let i = 0; i < 16; i++){ const tt = t + 0.04 + Math.pow(Math.random(), 1.4)*0.85, vv = rv(0.15, 0.45)*(1 - (tt - t)/1.1);
+        RZ({t:tt, d:rv(0.02, 0.07), v:vv, f:rv(350, 1600)*k, q:rv(1.5, 4), col:'rosa', dest:panear(d, rv(-0.4, 0.4))}); }
+      RZ({t, a:0.05, d:0.7, v:0.35, f:220*k, tipo:'lowpass', col:'pardo', dest:d}); return 1.2; },
+    plataforma(t, o, d){ const k = o.tono; for(let i = 0; i < 8; i++) RZ({t:t + i*0.035, d:0.012, v:0.3*(i % 2 ? 0.7 : 1), f:2800*k, q:6, dest:d});   /* el trinquete */
+      const g = G(0, d), lp = F('lowpass', 320, 1.5, g), s = oscF('sawtooth', 55*k, t, t + 0.56); s.frequency.linearRampToValueAtTime(75*k, t + 0.45); s.connect(lp);
+      adsr(g.gain, t, 0.05, 0.2, 0.8, t + 0.4, 0.1, 0.25);
+      TN({t:t + 0.42, f:120*k, f2:70, d:0.1, v:0.5, dest:d}); RZ({t:t + 0.42, d:0.05, v:0.35, f:800, tipo:'lowpass', col:'rosa', dest:d}); return 0.7; },
+    cometa(t, o, d){ const k = o.tono*rv(0.93, 1.07), x = o.x || 0, p = C.createStereoPanner(), g = G(0, p), am = G(0.4), bp = F('bandpass', 1700*k, 0.9);
+      p.pan.setValueAtTime(lim(x - 0.3, -1, 1), t); p.pan.linearRampToValueAtTime(lim(x + 0.3, -1, 1), t + 0.6); p.connect(d);
+      const s = fuente('rosa', t, t + 0.75), l = oscF('triangle', 16, t, t + 0.75); l.frequency.linearRampToValueAtTime(11, t + 0.6); l.connect(G(0.6, am.gain));
+      s.connect(bp); bp.connect(am); am.connect(g); adsr(g.gain, t, 0.08, 0.3, 0.8, t + 0.5, 0.15, 1.4);
+      RZ({t, a:0.15, d:0.3, v:0.4, f:500, f2:300, q:0.8, col:'rosa', dest:d}); return 0.8; },
+    tinta(t, o, d){ const k = o.tono*rv(0.9, 1.1); RZ({t, a:0.2, d:0.6, v:0.35, f:140, tipo:'lowpass', col:'pardo', dest:d});
+      for(let i = 0, tt = t; i < 7; i++, tt += rv(0.06, 0.13)){ const f = rv(90, 210)*k, g = G(0, panear(d, rv(-0.4, 0.4))), s = oscF('sine', f, tt, tt + 0.13);
+        s.frequency.exponentialRampToValueAtTime(f*1.8, tt + 0.06); s.connect(g); env(g.gain, tt, 0.004, 0.3, 0.06);
+        RZ({t:tt, d:0.03, v:0.08, f:f*3, q:3, col:'rosa', dest:d}); }
+      return 1.3; },
+    /* ---- lo que se gana */
+    combo(t, o, d){ const n = lim(Math.round(+o.n || 2), 2, 10), g = n - 2, m = 74 + 12*Math.floor(g/5) + YO[g % 5];
+      rin(d, t, m, 1, {fx:1, largo:0.7}); kotoFx(d, t, m - 12, 0.6, 0.5, {b:0.8});
+      if(n >= 6) rin(d, t + 0.07, m + 7, 0.45, {fx:1, largo:0.5}); return 2.4; },
+    moneda(t, o, d){ const k = o.tono; TN({t, f:1975*k, d:0.06, v:0.18, tipo:'triangle', dest:d}); TN({t:t + 0.055, f:2637*k, d:0.4, v:0.2, dest:d});
+      TN({t:t + 0.055, f:2637*2.76*k, d:0.12, v:0.025, dest:d}); RZ({t, d:0.005, v:0.14, f:6000, tipo:'highpass', dest:d}); return 0.55; },
+    monedas(t, o, d){ const n = lim(Math.round(+o.n || 5), 2, 12), k = o.tono; let tt = t;
+      for(let i = 0; i < n; i++, tt += rv(0.035, 0.07)){ const p = panear(d, rv(-0.5, 0.5)), f = mtof(88 + YO[Math.floor(Math.random()*5)] + (Math.random() < 0.3 ? 12 : 0))*k;
+        TN({t:tt, f:f*0.75, d:0.04, v:0.1, tipo:'triangle', dest:p}); TN({t:tt + 0.035, f, d:0.3, v:0.14, dest:p}); RZ({t:tt, d:0.004, v:0.09, f:6000, tipo:'highpass', dest:p}); }
+      return tt - t + 0.5; },
+    estrella(t, o, d){ const n = lim(Math.round(+o.n || 1), 1, 3), m = [79, 83, 86][n - 1];
+      rin(d, t, m + 12, 0.8, {fx:1}); kotoFx(d, t, m, 1, 0.6, {b:0.8}); taiko(d, t, 0.25 + 0.12*n, {f:80, larga:0.3});
+      for(let i = 0; i < 4 + n*2; i++) TN({t:t + 0.03 + i*0.035, f:mtof(m + 24 + YO[i % 5]), d:0.12, v:0.03, dest:panear(d, rv(-0.5, 0.5))}); return 2.3; },
+    meta(t, o, d){ gong(d, t, 0.85, 110, {fx:1});
+      [86, 88, 91, 93, 95, 98].forEach((m, i) => rin(d, t + 0.25 + i*0.09, m, 0.35, {fx:1, largo:0.6})); return 4.5; },
+    record(t, o, d){ [74, 76, 79, 81, 83, 86, 88, 91].forEach((m, i) => kotoFx(d, t + i*0.06, m, 1, 0.5, {b:0.8}));
+      const t1 = t + 0.5; [86, 91, 95].forEach((m, i) => rin(d, t1 + i*0.03, m, 0.55, {fx:1})); taiko(d, t1, 0.7, {f:60, larga:0.7});
+      for(let i = 0; i < 10; i++) TN({t:t1 + 0.05 + i*0.04, f:mtof(98 + YO[i % 5]), d:0.1, v:0.025, dest:panear(d, rv(-0.6, 0.6))}); return 3.2; },
+    cofre(t, o, d){ TN({t, f:900, d:0.03, v:0.2, tipo:'triangle', dest:d}); RZ({t, d:0.02, v:0.3, f:2000, q:6, dest:d});        /* el pestillo */
+      const t1 = t + 0.06, g = G(0, d), bp = F('bandpass', 700, 10, g), s = oscF('sawtooth', 22, t1, t1 + 0.45); s.frequency.linearRampToValueAtTime(38, t1 + 0.35);   /* la tapa que cruje */
+      bp.frequency.linearRampToValueAtTime(900, t1 + 0.35); s.connect(bp); adsr(g.gain, t1, 0.08, 0.2, 0.9, t1 + 0.3, 0.08, 0.35);
+      const t2 = t + 0.42; [74, 79, 83, 86].forEach((m, i) => kotoFx(d, t2 + i*0.05, m, 1, 0.45, {b:0.75}));
+      [91, 95, 98, 100, 103].forEach((m, i) => TN({t:t2 + 0.2 + i*0.06, f:mtof(m), d:0.3, v:0.035, dest:panear(d, rv(-0.5, 0.5))})); return 2.4; },
+    compra(t, o, d){ FX.moneda(t, o, d); kotoFx(d, t + 0.08, 79, 0.6, 0.5, {b:0.75}); kotoFx(d, t + 0.16, 86, 0.8, 0.5, {b:0.75}); rin(d, t + 0.16, 98, 0.3, {fx:1, largo:0.5}); return 1.6; },
+    no_alcanza(t, o, d){ kotoFx(d, t, 57, 0.15, 0.6, {apaga:1, b:0.3}); kotoFx(d, t + 0.13, 56, 0.25, 0.6, {apaga:1, b:0.3});
+      TN({t:t + 0.13, f:140, f2:90, d:0.08, v:0.35, dest:d}); return 0.6; },
+    /* ---- los menús */
+    boton(t, o, d){ mokugyo(d, t, 0.6, 820*o.tono); kotoFx(d, t, 81 + semi(o.tono), 0.3, 0.3, {b:0.7}); return 0.6; },
+    clic(t, o, d){ RZ({t, d:0.008, v:0.8, f:3200*o.tono, q:6, dest:d}); TN({t, f:1900*o.tono, d:0.02, v:0.08, tipo:'triangle', dest:d}); return 0.1; },
+    atras(t, o, d){ RZ({t, d:0.01, v:0.9, f:2600, q:6, dest:d}); RZ({t:t + 0.06, d:0.012, v:0.8, f:1800, q:6, dest:d});
+      RZ({t, a:0.03, d:0.09, v:0.35, f:1500, f2:600, q:1, col:'rosa', dest:d}); return 0.3; },
+    desliza_menu(t, o, d){ const k = o.tono;                                                            /* el fusuma que se corre */
+      RZ({t, a:0.08, d:0.2, v:0.9, f:900*k, f2:1500*k, fd:0.25, q:0.9, col:'rosa', dest:d}); RZ({t, a:0.05, d:0.2, v:0.4, f:200, tipo:'lowpass', col:'pardo', dest:d});
+      RZ({t:t + 0.26, d:0.02, v:0.25, f:700, q:4, dest:d}); return 0.45; },
+    titulo(t, o, d){ taiko(d, t, 0.5, {f:70, larga:0.25}); taiko(d, t + 0.18, 1, {f:46, larga:1.4}); gong(d, t + 0.2, 0.8, 98, {fx:1});
+      RZ({t:t + 0.18, a:0.01, d:1, v:0.25, f:120, tipo:'lowpass', col:'pardo', dest:d}); return 5; },
+    lento_entra(t, o, d){ RZ({t, a:0.06, d:0.3, v:0.7, f:2600, f2:320, fd:0.4, q:2.2, col:'rosa', dest:d}); TN({t, a:0.03, f:520, f2:120, fd:0.4, d:0.35, v:0.12, dest:d}); return 0.6; },
+    lento_sale(t, o, d){ RZ({t, a:0.12, d:0.08, v:0.6, f:350, f2:2600, fd:0.2, q:2, col:'rosa', dest:d}); TN({t, a:0.1, f:140, f2:520, fd:0.22, d:0.08, v:0.1, dest:d}); return 0.4; }
+  };
+  /* voces vivas por nombre y en total: la más vieja se apaga para hacer lugar */
+  const VIVAS = [];
+  function apagar(v, now){ try { const p = v.g.gain; p.cancelScheduledValues(now); p.setValueAtTime(p.value, now); p.linearRampToValueAtTime(0, now + 0.03); } catch(e){}
+    v.fin = Math.min(v.fin, now + 0.06); v.robada = 1; }
+  function salida(nom, meta, x, vol){
+    const now = ya(), mias = VIVAS.filter(v => v.nom === nom && !v.robada);
+    if(mias.length >= (meta.max || 3)) apagar(mias[0], now);
+    const todas = VIVAS.filter(v => !v.robada); if(todas.length >= 28) apagar(todas[0], now);
+    const juntas = mias.filter(v => now - v.t0 < 0.045).length;              /* la ráfaga pierde volumen */
+    const g = G(vol/(1 + 0.6*juntas)), p = panear(N.fx, x); g.connect(p);
+    const e = meta.rev ? G(meta.rev, N.revFin) : null; if(e) p.connect(e);
+    const v = {nom, g, p, e, t0:now, fin:now + 10}; VIVAS.push(v); return v;
+  }
+  /* el gancho: un AudioBuffer ya hecho (o un dataURL que se decodifica una vez) le gana a la síntesis */
+  const DECOD = new Set();
+  function bufExt(nom){
+    const B = window.SONIDOS_BUF, S = window.SONIDOS;
+    if(B && tiene(B, nom) && B[nom] && typeof B[nom].getChannelData === 'function') return B[nom];
+    if(S && tiene(S, nom) && S[nom]){
+      if(typeof S[nom].getChannelData === 'function') return S[nom];
+      if(typeof S[nom] === 'string' && !DECOD.has(nom) && window.fetch){ DECOD.add(nom);
+        fetch(S[nom]).then(r => r.arrayBuffer()).then(ab => new Promise((ok, no) => C.decodeAudioData(ab, ok, no)))
+          .then(b => { window.SONIDOS_BUF = window.SONIDOS_BUF || {}; window.SONIDOS_BUF[nom] = b; }).catch(() => {}); }
+    }
+    return null;
+  }
+  function fx(nom, opc){
+    if(!listo) return;
+    try {
+      let o = opc && typeof opc === 'object' ? Object.assign({}, opc) : {};
+      if(tiene(ALIAS, nom)){ const a = ALIAS[nom]; nom = a[0]; if(a[1]) o = Object.assign(o, a[1]); }
+      if(!tiene(FX, nom)){ if(typeof nom === 'string' && FALTAN.size < 50) FALTAN.add(nom); return; }
+      if(C.state !== 'running') return;
+      const f = FX[nom], meta = FXM[nom] || {}, t = ya() + 0.006;
+      const x = lim(+(o.x !== undefined ? o.x : o.pan) || 0, -1, 1);
+      const tono = lim(+o.tono || 1, 0.25, 4)*(meta.ui ? 1 : lerp(1, 0.78, kLento)*rv(0.97, 1.03));   /* en cámara lenta todo suena más grave */
+      const vol = (o.vol === undefined ? 1 : lim(+o.vol || 0, 0, 2))*(meta.vol || 0.5);
+      if(vol <= 0) return;
+      const v = salida(nom, meta, x, vol), ext = bufExt(nom);
+      let dur;
+      if(ext){ const s = C.createBufferSource(); s.buffer = ext; s.playbackRate.value = tono; s.connect(v.g); s.start(t); dur = ext.duration/tono; }
+      else dur = f(t, {x, tono, n:o.n}, v.g) || 1;
+      v.fin = t + dur + (meta.rev ? 2.2 : 0.3);
+    } catch(e){ err(e); }
+  }
+
+  /* ------------------------------------------------------------ ambiente */
+  let AMB = null;
+  const VIEJOS = [];
+  function ambiente(lugar){
+    const pedido = tiene(ARMA, lugar) ? lugar : null;
+    ambPed = pedido; if(!listo) return;
+    try {
+      if(pedido === ambAct) return; ambAct = pedido;
+      const now = ya();
+      if(AMB){ const A = AMB, p = A.g.gain; p.cancelScheduledValues(now); p.setValueAtTime(Math.max(p.value, 0.0001), now); p.linearRampToValueAtTime(0, now + 2);
+        A.fin = now + 2.2; VIEJOS.push(A); AMB = null; }
+      if(pedido){ AMB = {lugar:pedido, g:G(0, N.amb), nodos:[], loops:[], ev:[], fin:Infinity};
+        AMB.g.gain.setValueAtTime(0.0001, now); AMB.g.gain.linearRampToValueAtTime(1, now + 2.5); ARMA[pedido](AMB); }
+    } catch(e){ err(e); }
+  }
+  /* un bucle de ruido filtrado que no para; queda anotado para el lento y para apagarlo */
+  function bucle(A, col, tipo, f, q, v, x, rate){
+    const s = C.createBufferSource(); s.buffer = RU[col]; s.loop = true; s.playbackRate.value = (rate || 1)*lerp(1, 0.6, kLento); s.start(ya(), Math.random()*2.5);
+    const fl = F(tipo, f, q), g = G(v); s.connect(fl); fl.connect(g); g.connect(panear(A.g, x || 0));
+    A.nodos.push(s); A.loops.push({s, r:rate || 1}); return {s, fl, g};
+  }
+  function lfo(A, f, prof, param, tipo){ const o = C.createOscillator(); o.type = tipo || 'sine'; o.frequency.value = f; o.connect(G(prof, param)); o.start(); A.nodos.push(o); return o; }
+  const suceso = (A, a, b, fn, primero) => A.ev.push({a, b, fn, prox:ya() + (primero !== undefined ? primero : rv(a, b))});
+  const conSala = (dest, v) => { const g = G(1, dest); g.connect(G(v, N.revFin)); return g; };
+  function gota(dest, t, v){ TN({t, f:rv(600, 1100), f2:rv(1600, 2600), fd:0.025, d:0.06, v, dest}); RZ({t:t + 0.01, d:0.02, v:v*0.5, f:5000, tipo:'highpass', dest}); }
+  function crujido(dest, t, v){ const d = rv(0.8, 2), g = G(0, dest), bp = F('bandpass', rv(500, 900), 12, g), bp2 = F('bandpass', rv(1300, 1900), 10, G(0.5, g)), s = oscF('sawtooth', rv(14, 26), t, t + d + 0.1);
+    s.frequency.linearRampToValueAtTime(rv(28, 50), t + d); bp.frequency.linearRampToValueAtTime(bp.frequency.value*rv(0.7, 1.3), t + d); s.connect(bp); s.connect(bp2);
+    adsr(g.gain, t, d*0.3, 0.5, 0.9, t + d*0.8, d*0.2, v); }
+  /* las cañas que se golpean entre sí: kon, kon */
+  function canas(A, t){ const p = conSala(panear(A.g, rv(-0.9, 0.9)), 0.4), n = 2 + Math.floor(Math.random()*3), f0 = rv(380, 720);
+    for(let i = 0, tt = t; i < n; i++, tt += rv(0.09, 0.3)){ TN({t:tt, f:f0*rv(0.95, 1.08), f2:f0*0.92, d:0.14, v:rv(0.012, 0.03), tipo:'triangle', dest:p}); RZ({t:tt, d:0.03, v:rv(0.01, 0.02), f:f0*2.1, q:9, dest:p}); } }
+  function pajaro(A, t){ const p = panear(F('lowpass', 5000, 0.7, A.g), rv(-0.9, 0.9)), n = 2 + Math.floor(Math.random()*4);
+    for(let i = 0, tt = t; i < n; i++, tt += rv(0.09, 0.16)){ const f = rv(3200, 4600); TN({t:tt, f, f2:f*rv(0.75, 1.25), fd:0.05, d:0.06, v:rv(0.004, 0.01), dest:p}); } }
+  /* el uguisu: una nota larga y el «ho-ke-kyo» */
+  function uguisu(A, t){ const p = conSala(panear(A.g, rv(-0.7, 0.7)), 0.5), g = G(0, p), s = oscF('sine', 1350, t, t + 0.8);
+    s.frequency.linearRampToValueAtTime(1420, t + 0.55); s.connect(g); adsr(g.gain, t, 0.08, 0.3, 0.9, t + 0.55, 0.06, 0.012);
+    TN({t:t + 0.75, f:2300, f2:2000, d:0.1, v:0.01, dest:p}); TN({t:t + 0.92, f:2600, f2:2150, d:0.12, v:0.011, dest:p}); TN({t:t + 1.1, f:2200, f2:1900, d:0.24, v:0.01, dest:p}); }
+  function cuervo(A, t){ const p = conSala(panear(F('lowpass', 2600, 0.7, A.g), rv(-0.8, 0.8)), 0.5), n = 2 + Math.floor(Math.random()*2);
+    for(let i = 0, tt = t; i < n; i++, tt += rv(0.32, 0.45)) vox(tt, p, {vocal:'a', f:rv(480, 560), f2:rv(560, 620), pico:0.2, f3:rv(380, 440), d:0.22, v:0.03, sucio:3, q:5, fk:1.15}); }
+  function grito(A, t){ const p = conSala(panear(F('lowpass', 900, 0.7, A.g), rv(-0.9, 0.9)), 0.8);
+    vox(t, p, {vocal:Math.random() < 0.5 ? 'a' : 'o', f:rv(170, 260), f2:rv(260, 340), pico:0.35, f3:rv(140, 200), d:rv(0.4, 0.75), v:0.012, sucio:1.6, q:5, vib:rv(5, 7)}); }
+  /* la campana grande del templo, lejos: parciales graves que baten y tardan en irse */
+  function bonsho(A, t){ const p = conSala(F('lowpass', 1400, 0.7, A.g), 0.6), f = 68;
+    for(const [r, a, d] of [[1, 1, 9], [2, 0.5, 6], [2.74, 0.4, 5], [3.4, 0.25, 4], [4.2, 0.15, 3], [5.4, 0.1, 2]]){
+      const g = G(0, p), fin = t + d*1.5; for(const b of [-0.35, 0.35]){ const q = oscF('sine', f*r + b, t, fin); q.connect(g); }
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.03*a, t + 0.006); g.gain.setTargetAtTime(0, t + 0.006, d/4.5); }
+    TN({t, f:70, f2:55, d:0.3, v:0.04, dest:p}); }
+  /* el shishi-odoshi: el agua que llena la caña y el golpe contra la piedra */
+  function shishi(A, t){ const p = conSala(panear(A.g, 0.45), 0.6); RZ({t, a:1.2, d:0.2, v:0.02, f:800, f2:1500, fd:1.3, q:3, dest:p});
+    const t1 = t + 1.4; for(const [q, k] of [[0, 1], [0.16, 0.4]]){ TN({t:t1 + q, f:540, f2:480, d:0.14, v:0.05*k, tipo:'triangle', dest:p}); TN({t:t1 + q, f:1260, d:0.06, v:0.02*k, dest:p}); RZ({t:t1 + q, d:0.03, v:0.05*k, f:900, q:8, dest:p}); } }
+  const ARMA = {
+    bambu(A){
+      const vi = bucle(A, 'rosa', 'bandpass', 420, 0.6, 0.07, 0); lfo(A, 0.07, 0.035, vi.g.gain); lfo(A, 0.045, 140, vi.fl.frequency);   /* el viento entre las cañas */
+      const ho = bucle(A, 'blanco', 'highpass', 3800, 0.5, 0.014, 0.3, 0.9); lfo(A, 0.13, 0.01, ho.g.gain);                            /* las hojas */
+      bucle(A, 'pardo', 'lowpass', 180, 0.7, 0.08, 0);
+      suceso(A, 2.5, 7, t => canas(A, t), 1.5);
+      suceso(A, 6, 14, t => crujido(F('lowpass', 1400, 0.7, panear(A.g, rv(-0.8, 0.8))), t, 0.02), 4);
+      suceso(A, 3, 9, t => pajaro(A, t), 2);
+      suceso(A, 18, 36, t => uguisu(A, t), rv(8, 14));
+    },
+    montana(A){
+      const vi = bucle(A, 'blanco', 'bandpass', 950, 3.5, 0.035, -0.2); lfo(A, 0.05, 380, vi.fl.frequency); lfo(A, 0.09, 0.02, vi.g.gain);   /* el silbido del viento helado */
+      const vb = bucle(A, 'rosa', 'bandpass', 520, 0.8, 0.07, 0.3); lfo(A, 0.06, 0.04, vb.g.gain);
+      bucle(A, 'pardo', 'lowpass', 160, 0.7, 0.16, 0);
+      suceso(A, 6, 14, t => RZ({t, a:rv(1, 2), d:rv(1.5, 3), v:rv(0.03, 0.06), f:rv(600, 900), f2:rv(1300, 1900), fd:2.5, q:1.2, col:'rosa', dest:panear(A.g, rv(-0.8, 0.8))}), 3);   /* ráfaga */
+      suceso(A, 0.12, 0.45, t => RZ({t, d:0.004, v:rv(0.003, 0.009), f:rv(5000, 9000), q:4, dest:panear(A.g, rv(-0.9, 0.9))}));             /* la nieve que pega */
+      suceso(A, 15, 35, t => cuervo(A, t), rv(6, 12));
+    },
+    castillo(A){
+      const fu = bucle(A, 'pardo', 'lowpass', 240, 0.7, 0.22, 0); lfo(A, 0.3, 0.07, fu.g.gain); lfo(A, 0.13, 60, fu.fl.frequency);    /* el fuego que ruge */
+      const ll = bucle(A, 'rosa', 'bandpass', 1100, 0.7, 0.03, 0.2); lfo(A, 0.7, 0.012, ll.g.gain);
+      suceso(A, 0.04, 0.22, t => RZ({t, d:rv(0.003, 0.012), v:rv(0.015, 0.07), f:rv(1400, 5200), q:rv(1, 3), dest:panear(A.g, rv(-0.8, 0.8))}));   /* crepita */
+      suceso(A, 1.5, 4, t => { const p = panear(A.g, rv(-0.7, 0.7)); for(let i = 0; i < 6; i++) RZ({t:t + i*rv(0.01, 0.05), d:0.006, v:rv(0.03, 0.09), f:rv(1800, 4000), q:2, dest:p}); });
+      suceso(A, 5, 12, t => crujido(F('lowpass', 1100, 0.7, panear(A.g, rv(-0.8, 0.8))), t, 0.025), 3);
+      suceso(A, 10, 24, t => grito(A, t), rv(5, 9));
+      suceso(A, 28, 55, t => { const p = conSala(A.g, 0.6); TN({t, f:70, f2:40, d:0.5, v:0.12, lp:300, dest:p}); RZ({t, a:0.02, d:0.6, v:0.1, f:300, tipo:'lowpass', col:'pardo', dest:p}); }, rv(12, 20));   /* una viga que cae lejos */
+    },
+    templo(A){
+      const ag = bucle(A, 'blanco', 'bandpass', 1900, 0.8, 0.026, -0.35); lfo(A, 3.1, 0.006, ag.g.gain); lfo(A, 0.23, 260, ag.fl.frequency);
+      const ag2 = bucle(A, 'rosa', 'bandpass', 620, 0.9, 0.04, -0.3); lfo(A, 4.7, 0.01, ag2.g.gain);                                     /* la fuente */
+      bucle(A, 'rosa', 'lowpass', 380, 0.7, 0.05, 0.2);                                                                                  /* el aire del patio */
+      suceso(A, 0.12, 0.5, t => gota(panear(A.g, rv(-0.6, 0)), t, rv(0.006, 0.018)));
+      suceso(A, 22, 42, t => bonsho(A, t), 4);
+      suceso(A, 26, 48, t => shishi(A, t), rv(10, 16));
+      suceso(A, 7, 16, t => pajaro(A, t), 5);
+    }
+  };
+  function pasoAmb(){
+    const now = ya();
+    if(AMB) for(const e of AMB.ev) if(now >= e.prox){ e.prox = now + rv(e.a, e.b); try { e.fn(now + 0.05); } catch(x){ err(x); } }
+    for(let i = VIEJOS.length - 1; i >= 0; i--){ const A = VIEJOS[i];
+      if(now > A.fin){ for(const n of A.nodos) try { n.stop(); n.disconnect(); } catch(e){} try { A.g.disconnect(); } catch(e){} VIEJOS.splice(i, 1); } }
+  }
+
+  /* ------------------------------------------------------------ lento, intensidad, cinta, muerte, volumen, paso */
+  function aplicarLento(){
+    if(Math.abs(kLento - kAplic) < 0.004) return; kAplic = kLento;
+    const now = ya(), fc = 18000*Math.pow(850/18000, kLento), dl = detL();
+    N.musF.frequency.setTargetAtTime(fc, now, 0.03); N.ambF.frequency.setTargetAtTime(Math.min(fc*1.3, 20000), now, 0.03);
+    N.fxF.frequency.setTargetAtTime(20000*Math.pow(0.3, kLento), now, 0.03);
+    N.revMin.gain.setTargetAtTime(lerp(0.1, 0.35, kLento), now, 0.06);
+    for(const r of OSC_M) if(r.fin > now) try { r.p.setTargetAtTime(r.d0 + dl, now, 0.03); } catch(e){}
+    if(AMB) for(const l of AMB.loops) try { l.s.playbackRate.setTargetAtTime(l.r*lerp(1, 0.6, kLento), now, 0.04); } catch(e){}
+  }
+  /* se sigue al objetivo por tiempo real: da lo mismo que lo llamen el juego, paso() o los dos */
+  function avanzarLento(){
+    const tn = performance.now(), dt = tLento ? lim((tn - tLento)/1000, 0, 0.1) : 0.016; tLento = tn;
+    kLento += (kLentoObj - kLento)*(1 - Math.exp(-dt*18)); if(Math.abs(kLento - kLentoObj) < 0.003) kLento = kLentoObj;
+    aplicarLento();
+  }
+  function lento(k){ kLentoObj = lim(+k || 0, 0, 1); if(!listo) return; try { avanzarLento(); } catch(e){ err(e); } }
+  function intensidad(k){ intenObj = lim(+k || 0, 0, 1); }
+  /* la cinta y el vinilo: wow, flutter, siseo, crepitar y un poco de agudos menos. Algunos temas ya traen su piso */
+  function aplicarCinta(){
+    const T = tiene(TEMAS, temaAct) ? TEMAS[temaAct] : null, k = Math.max(kCinta, (T && T.cinta) || 0);
+    if(Math.abs(k - cintaAplic) < 0.003) return; cintaAplic = k; const now = ya();
+    N.wowG[0].gain.setTargetAtTime(0.0022*k, now, 0.3); N.wowG[1].gain.setTargetAtTime(0.00008*k, now, 0.3); N.wowG[2].gain.setTargetAtTime(0.003*k, now, 0.3);
+    N.siseo.gain.setTargetAtTime(0.022*k, now, 0.3); N.crep.gain.setTargetAtTime(0.09*k, now, 0.3); N.cLp.frequency.setTargetAtTime(lerp(18000, 5200, Math.sqrt(k)), now, 0.3);
+  }
+  function cinta(k){ kCinta = lim(+k || 0, 0, 1); if(!listo) return; try { aplicarCinta(); } catch(e){ err(e); } }
+  /* el ninja murió: la música se hunde detrás de un pasabajos y se desafina como una cinta que frena */
+  function filtroMuerte(on){
+    muertePed = !!on; if(!listo) return;
+    try { const now = ya(), k = muertePed ? 1 : 0; if(k === kMuerte) return; kMuerte = k;
+      const fr = N.muF.frequency, gg = N.muG.gain; fr.cancelScheduledValues(now); gg.cancelScheduledValues(now); fr.setValueAtTime(fr.value, now); gg.setValueAtTime(gg.value, now);
+      if(k){ fr.setTargetAtTime(420, now, 0.16); gg.setTargetAtTime(0.55, now, 0.25); } else { fr.setTargetAtTime(18000, now, 0.075); gg.setTargetAtTime(1, now, 0.075); }
+      const dl = detL(), tc = k ? 0.35 : 0.075;
+      for(const r of OSC_M) if(r.fin > now) try { r.p.setTargetAtTime(r.d0 + dl, now, tc); } catch(e){}
+    } catch(e){ err(e); }
+  }
+  function volumen(){
+    if(!listo) return;
+    try { const now = ya(), m = Math.pow(lim(+AJ.musica || 0, 0, 1), 1.6), e = Math.pow(lim(+AJ.efectos || 0, 0, 1), 1.4);
+      N.musV.gain.setTargetAtTime(m*0.55, now, 0.02); N.fxV.gain.setTargetAtTime(e, now, 0.02); N.ambV.gain.setTargetAtTime(e*0.8, now, 0.02); } catch(e){ err(e); }
+  }
+  function paso(dt){
+    if(!listo) return;
+    try {
+      const tn = performance.now(); tPaso = tn;
+      const d = lim(tPasoAnt ? (tn - tPasoAnt)/1000 : (+dt || 0.016), 0, 0.25); tPasoAnt = tn;
+      if(kLento !== kLentoObj) avanzarLento();
+      if(C.state !== 'running') return;
+      inten += (intenObj - inten)*(1 - Math.exp(-d*1.4));
+      const now = ya();
+      for(const r of REPS) if(r.vivo && r.T.capas){ const kb = lerp(0.75, 1, Math.max(inten, r.T.kMin || 0));          /* con poca intensidad la base va más atrás */
+        if(Math.abs(kb - r.kb) > 0.01){ r.kb = kb; capaA(r.cap.base, kb, now); }
+        for(const n of CAPAS){ const v = objCapa(r.T, n);
+          if(Math.abs(v - r.cv[n]) > 0.01 || (v !== r.cv[n] && (v === 0 || v === 1))){ r.cv[n] = v; capaA(r.cap[n], v, now); } } }
+      bombear(); pasoAmb(); aplicarCinta();
+      for(let i = REPS.length - 1; i >= 0; i--){ const r = REPS[i];
+        if(!r.vivo && now > r.muere){ for(const g of r.oscs) if(g.fin > now){ g.fin = now; try { g.o.stop(); } catch(e){} } try { r.bus.disconnect(); r.eco.disconnect(); r.sala.disconnect(); } catch(e){} REPS.splice(i, 1); }
+        else if(r.oscs.length > 300) r.oscs = r.oscs.filter(g => g.fin > now); }
+      for(let i = VIVAS.length - 1; i >= 0; i--){ const v = VIVAS[i]; if(now > v.fin){ try { v.g.disconnect(); v.p.disconnect(); if(v.e) v.e.disconnect(); } catch(e){} VIVAS.splice(i, 1); } }
+      if(OSC_M.length > 60) for(let i = OSC_M.length - 1; i >= 0; i--) if(OSC_M[i].fin < now) OSC_M.splice(i, 1);
+    } catch(e){ err(e); }
+  }
+  function arrancar(){
+    try {
+      if(!C){ if(!armar()) return; if(temaPed !== null) musica(temaPed); if(ambPed) ambiente(ambPed); if(muertePed) filtroMuerte(true); }
+      if(C.state === 'suspended' || C.state === 'interrupted') C.resume().catch(() => {});
+    } catch(e){ err(e); }
+  }
+
+  return {arrancar, fx:(n, o) => fx(n, o), musica, ambiente, lento, paso, volumen, intensidad, filtroMuerte, cinta,
+    /* para el banco */
+    _N:() => N, _ctx:() => C, _salida:() => N && N.sal, _err:ERR, _faltan:FALTAN, _vivas:() => VIVAS.length, _reps:() => REPS.map(r => r.nom + (r.vivo ? '' : '·')),
+    _lista:() => Object.keys(FX), _temas:() => Object.keys(TEMAS), _ambientes:() => Object.keys(ARMA),
+    _mel:() => Object.keys(TEMAS).filter(k => TEMAS[k].M).map(k => [k, TEMAS[k].M.pasos, TEMAS[k].M2 ? TEMAS[k].M2.pasos : 0, TEMAS[k].A.length*16]),
+    _vivos:() => { const n = ya(); return OSC_M.filter(r => r.fin > n).length; }, _ks:() => KS.size,
+    /* una nota de shakuhachi y una de koto por el camino de la música, para medir la altura */
+    _nota:(m, d, cual) => { if(!listo) return; try { const t = ya() + 0.02; if(cual === 'koto') koto(N.mus, t, m, d, 0.8); else shaku(N.mus, t, m, d, 0.9, {eco:0, sala:0, vib:0.001}); } catch(e){ err(e); } },
+    _estado:() => ({kLento, inten, kMuerte, kCinta, tema:temaAct, amb:ambAct, osc:OSC_M.length, vivas:VIVAS.length, reps:REPS.length, cinta:cintaAplic, viejos:VIEJOS.length, ks:KS.size})};
+})();
+/* ================================================================ arte por código, visto desde arriba
+   Todo mira a +x. Los personajes van por partes (piernas, torso según el arma, cabeza o máscara) que se
+   giran por separado al dibujar: las piernas hacia donde caminás, el torso hacia donde apuntás. Girados sin
+   suavizado a baja resolución dan el serrucho de los juegos de los ochenta, que es lo que queremos. */
+function lienzo(w, h){ const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d', {willReadFrequently:true}); g.imageSmoothingEnabled = false; return [c, g]; }
+function px(g, x, y, c){ g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), 1, 1); }
+function rect(g, x, y, w, h, c){ g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
+function disco(g, cx, cy, r, c){ g.fillStyle = c; for(let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) for(let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) if((x - cx)*(x - cx) + (y - cy)*(y - cy) <= r*r) g.fillRect(x, y, 1, 1); }
+function elipse(g, cx, cy, rx, ry, c){ g.fillStyle = c; for(let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for(let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++){ const a = (x - cx)/rx, b = (y - cy)/ry; if(a*a + b*b <= 1) g.fillRect(x, y, 1, 1); } }
+function linea(g, x0, y0, x1, y1, c, grosor){ const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0)*1.5)); g.fillStyle = c; const gr = grosor || 1;
+  for(let i = 0; i <= n; i++){ const t = i/n; g.fillRect(Math.round(x0 + (x1 - x0)*t - (gr - 1)/2), Math.round(y0 + (y1 - y0)*t - (gr - 1)/2), gr, gr); } }
+/* contorno oscuro de un píxel alrededor de lo pintado: los personajes se leen sobre cualquier piso */
+function contorno(c, col){ const g = c.getContext('2d'), w = c.width, h = c.height, d = g.getImageData(0, 0, w, h), a = d.data, o = new Uint8ClampedArray(a);
+  const [r0, g0, b0] = hexRGB(col || '#0a0610');
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){ const i = (y*w + x)*4; if(a[i + 3] > 40) continue;
+    let v = false; for(const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const X = x + dx, Y = y + dy; if(X >= 0 && Y >= 0 && X < w && Y < h && a[(Y*w + X)*4 + 3] > 40){ v = true; break; } }
+    if(v){ o[i] = r0; o[i + 1] = g0; o[i + 2] = b0; o[i + 3] = 255; } }
+  g.putImageData(new ImageData(o, w, h), 0, 0); return c; }
+function hexRGB(h){ const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
+function tono(h, k){ const [r, g, b] = hexRGB(h), f = v => Math.round(lim(v*k, 0, 255)).toString(16).padStart(2, '0'); return '#' + f(r) + f(g) + f(b); }
+
+
+/* ================================================================ los efectos: cada uno es una paleta entera
+   (cielo, sol, montes, torre, siluetas, acento, partículas). El mundo trae el suyo; el jugador puede ponerse otro. */
+const EFECTOS = {
+  atardecer:{nombre:'ATARDECER', cielo:['#fbe4cc', '#f4c2a6', '#e79f95'], sol:'#fff3e0', montes:['#d7968f', '#b87887'], torre:'#3d2748', borde:'#6b4a7c', luzBorde:'#8a6aa0',
+    silueta:'#1b0f22', acento:'#e8384a', part:'sakura', colPart:['#f7a8c4', '#e87aa6', '#fcd4e2'], tint:[1.02, 0.98, 0.98], precio:0},
+  noche:    {nombre:'NOCHE', cielo:['#0e1630', '#1c2c56', '#40507e'], sol:'#e8f0ff', luna:true, montes:['#26345e', '#1a2446'], torre:'#0c1022', borde:'#2a3868', luzBorde:'#4a60a0',
+    silueta:'#05060e', acento:'#5ae0ff', part:'nieve', colPart:['#ffffff', '#c8d8ff', '#e8f0ff'], tint:[0.95, 1, 1.06], precio:0},
+  fuego:    {nombre:'FUEGO', cielo:['#2a0a0e', '#6a1a14', '#e8582a'], sol:'#ffd080', montes:['#4a1410', '#2a0a0a'], torre:'#1a0808', borde:'#5a1a12', luzBorde:'#c8401a',
+    silueta:'#0a0404', acento:'#ffb030', part:'brasas', colPart:['#ffd060', '#ff8a2a', '#ff4a1a'], tint:[1.08, 0.98, 0.92], precio:0},
+  sakura:   {nombre:'SAKURA', cielo:['#fff0f6', '#ffd0e4', '#f7a6c8'], sol:'#ffffff', montes:['#f09ac0', '#d878a8'], torre:'#5a2448', borde:'#9a4a7a', luzBorde:'#d880b0',
+    silueta:'#2a0a20', acento:'#ffffff', part:'sakura', colPart:['#ffffff', '#ffc8e0', '#ff90c0'], tint:[1.04, 0.98, 1.02], precio:400},
+  tinta:    {nombre:'TINTA', cielo:['#f4efe2', '#e8e2d2', '#d4cdbb'], sol:'#c8201a', montes:['#b8b2a2', '#948e80'], torre:'#1a1816', borde:'#3a3834', luzBorde:'#5a5650',
+    silueta:'#0a0a0a', acento:'#c8201a', part:'tinta', colPart:['#1a1816', '#3a3834', '#5a5650'], tint:[1, 1, 1], precio:700},
+  neon:     {nombre:'NEÓN', cielo:['#12042a', '#3a0a5a', '#ff3aa8'], sol:'#ffe060', rayas:true, montes:['#5a1a8a', '#2a0a4a'], torre:'#0a0418', borde:'#3a1a6a', luzBorde:'#5ae8ff',
+    silueta:'#000000', acento:'#5ae8ff', part:'chispas', colPart:['#5ae8ff', '#ff5ad8', '#ffe060'], tint:[1.02, 0.96, 1.08], precio:1000},
+  otono:    {nombre:'OTOÑO', cielo:['#fce8c0', '#f4c48a', '#e0905a'], sol:'#fff8e0', montes:['#c87a4a', '#a05a3a'], torre:'#3a1e14', borde:'#6a3a22', luzBorde:'#a0602a',
+    silueta:'#1a0c06', acento:'#ffcc30', part:'hojas', colPart:['#e86a1a', '#c84a10', '#f0a030'], tint:[1.04, 1, 0.94], precio:1400}
+};
+
+/* ================================================================ el fondo: se hornea una vez por efecto y alto de pantalla */
+const FONDO = {k:null, cielo:null, montes:[]};
+function hornearFondo(E, w, h){
+  const k = E.nombre + w + 'x' + h; if(FONDO.k === k) return; FONDO.k = k;
+  const [c, g] = lienzo(w, h);
+  /* el cielo en bandas de 6 px con trama en el borde (degradé de pixel art, no liso) */
+  const bandas = 14;
+  for(let i = 0; i < bandas; i++){ const t = i/(bandas - 1), col = mezcla(E.cielo, t), y0 = Math.round(h*i/bandas), y1 = Math.round(h*(i + 1)/bandas);
+    g.fillStyle = col; g.fillRect(0, y0, w, y1 - y0);
+    if(i < bandas - 1){ g.fillStyle = mezcla(E.cielo, (i + 1)/(bandas - 1)); for(let x = 0; x < w; x += 2) g.fillRect(x + (y1 % 2), y1 - 1, 1, 1); } }
+  FONDO.cielo = c;
+  /* los montes: dos cordones que se repiten a lo ancho, con nieve o faroles según el efecto */
+  FONDO.montes = [0, 1].map(k2 => { const alto = Math.round(h*(k2 ? 0.34 : 0.46)), [m, gm] = lienzo(w*2, alto), r = mulberry(k2*77 + 5);
+    gm.fillStyle = E.montes[k2];
+    const picos = []; for(let x = -40; x < w*2 + 40; x += 30 + r()*50) picos.push([x, alto*(0.15 + r()*0.45)*(k2 ? 1.1 : 0.8)]);
+    for(let x = 0; x < w*2; x++){ let y = alto; for(const [px2, py] of picos){ const d = Math.abs(x - px2), yy = py + d*(k2 ? 1.1 : 0.75); if(yy < y) y = yy; } gm.fillRect(x, Math.round(y), 1, alto - Math.round(y));
+      if(E.part === 'nieve' && !k2){ gm.fillStyle = '#c8d4f0'; for(const [px2, py] of picos){ const d = Math.abs(x - px2); if(d < 8 && Math.round(py + d*0.75) === Math.round(y)) gm.fillRect(x, Math.round(y), 1, 3); } gm.fillStyle = E.montes[k2]; } }
+    /* un torii y una pagoda chiquitos en el cordón de adelante */
+    if(k2){ gm.fillStyle = tono(E.montes[1], 0.8); const tx = Math.round(w*0.6), ty = Math.round(alto*0.45);
+      gm.fillRect(tx, ty, 18, 2); gm.fillRect(tx + 1, ty + 4, 16, 1); gm.fillRect(tx + 3, ty + 2, 2, 12); gm.fillRect(tx + 13, ty + 2, 2, 12);
+      const px3 = Math.round(w*1.4), py3 = Math.round(alto*0.35); for(let i = 0; i < 4; i++){ gm.fillRect(px3 - 8 + i*2, py3 + i*6, 16 - i*4 + 8, 2); gm.fillRect(px3 - 3 + i, py3 + i*6 + 2, 6 - i*2 + 6, 4); } }
+    return m; });
+}
+function mezcla(cols, t){ const n = cols.length - 1, i = Math.min(n - 1, Math.floor(t*n)), k = t*n - i, a = hexRGB(cols[i]), b = hexRGB(cols[i + 1]);
+  return 'rgb(' + a.map((v, j) => Math.round(v + (b[j] - v)*k)).join(',') + ')'; }
+
+/* ================================================================ el ninja: silueta hecha de huesos, dibujada cada cuadro
+   Las poses están mirando a la derecha con el piso abajo; se giran según la superficie y se espejan con dir. */
+const POSES = {
+  pie:   {cab:[0, -5], cad:[0, 0], mA:[3, -2], mB:[-2, -1], pA:[2, 3], pB:[-2, 3]},                 /* agachado en el piso, listo */
+  pared: {cab:[1, -4], cad:[0, 1], mA:[-3, -5], mB:[-3, 1], pA:[-3, 3], pB:[1, 4]},                 /* pegado a la pared (la pared a la izquierda) */
+  techo: {cab:[0, 1], cad:[0, 5], mA:[-2, -4], mB:[2, -4], pA:[-2, 8], pB:[2, 7]},                   /* colgado del techo */
+  salto: {cab:[1, -5], cad:[0, 1], mA:[4, -6], mB:[-3, 0], pA:[1, 5], pB:[-3, 4]},
+  bola:  {cab:[1, -2], cad:[-1, 1], mA:[2, 1], mB:[1, 2], pA:[1, 3], pB:[-2, 2]},                   /* hecho bolita en la voltereta */
+  apunta:{cab:[0, -4], cad:[0, 1], mA:[5, -3], mB:[-4, -2], pA:[3, 4], pB:[-3, 4]}
+};
+function dibujarNinja(g, x, y, pose, dir, giro, E, extra){
+  const P = POSES[pose] || POSES.salto, c = Math.cos(giro), s = Math.sin(giro), col = E.silueta;
+  const T = p => [x + (p[0]*dir*c - p[1]*s), y + (p[0]*dir*s + p[1]*c)];
+  const cab = T(P.cab), cad = T(P.cad), mA = T(P.mA), mB = T(P.mB), pA = T(P.pA), pB = T(P.pB), hom = T([P.cab[0]*0.6 + P.cad[0]*0.4, P.cab[1]*0.6 + P.cad[1]*0.4 + 1]);
+  /* la bufanda va atrás de todo */
+  if(extra && extra.bufanda) { const b = extra.bufanda; for(let i = 1; i < b.length; i++) linea(g, b[i - 1].x, b[i - 1].y, b[i].x, b[i].y, E.acento === '#ffffff' ? '#e8384a' : extra.colBuf || '#e8384a', i < 3 ? 2 : 1); }
+  linea(g, cad[0], cad[1], pA[0], pA[1], col, 2); linea(g, cad[0], cad[1], pB[0], pB[1], col, 2);
+  linea(g, hom[0], hom[1], cad[0], cad[1], col, 3);
+  linea(g, hom[0], hom[1], mA[0], mA[1], col, 1); linea(g, hom[0], hom[1], mB[0], mB[1], col, 1);
+  disco(g, cab[0], cab[1], 2.3, col);
+  /* la katana a la espalda y el ojo */
+  const esp = T([-2, -3]), esp2 = T([-6, 2]); linea(g, esp[0], esp[1], esp2[0], esp2[1], extra && extra.colHoja || tono(col, 2.2), 1);
+  const ojo = T([1.6, -0.4 + P.cab[1]]); px(g, ojo[0], ojo[1], extra && extra.colOjo || '#ffffff');
+  if(extra && extra.accesorio === 'orejas'){ const o1 = T([P.cab[0] - 1, P.cab[1] - 3]), o2 = T([P.cab[0] + 1.5, P.cab[1] - 3]); px(g, o1[0], o1[1], col); px(g, o2[0], o2[1], col); }
+  if(extra && extra.accesorio === 'cuernos'){ const o1 = T([P.cab[0] - 1.5, P.cab[1] - 3]), o2 = T([P.cab[0] + 2, P.cab[1] - 3]); px(g, o1[0], o1[1], '#e8384a'); px(g, o2[0], o2[1], '#e8384a'); }
+  if(extra && extra.accesorio === 'sombrero'){ const a = T([P.cab[0] - 4, P.cab[1] - 1.5]), b = T([P.cab[0] + 4, P.cab[1] - 1.5]), cc = T([P.cab[0], P.cab[1] - 4]); linea(g, a[0], a[1], cc[0], cc[1], col, 1); linea(g, cc[0], cc[1], b[0], b[1], col, 1); linea(g, a[0], a[1], b[0], b[1], col, 1); }
+}
+
+/* ================================================================ la patota del castillo, también en silueta */
+function dibujarEnemigo(g, e, E, t){
+  const x = Math.round(e.x), y = Math.round(e.y), col = E.silueta, d = e.dir || 1;
+  if(e.t === 'tirador'){                                                       /* rodilla en tierra, arco o arcabuz */
+    disco(g, x, y - 6, 2, col); rect(g, x - 2, y - 4, 4, 5, col); rect(g, x - 3, y + 1, 3, 2, col); rect(g, x + 1, y + 1, 2, 3, col);
+    const a = e.apunta || 0; linea(g, x, y - 3, x + Math.cos(a)*7, y - 3 + Math.sin(a)*7, col, 2);
+    px(g, x + d, y - 7, e.carga > 0 ? '#ff3a3a' : '#ffd0a0'); }
+  else if(e.t === 'samurai'){                                                  /* más grande, kabuto con cuernos y katana */
+    const ataca = e.corta > 0, lev = e.carga > 0;
+    disco(g, x, y - 9, 2.5, col); rect(g, x - 4, y - 11, 1, 2, col); rect(g, x + 3, y - 11, 1, 2, col); rect(g, x - 3, y - 7, 6, 7, col);
+    rect(g, x - 4, y - 6, 8, 2, col); rect(g, x - 3, y, 2, 4, col); rect(g, x + 1, y, 2, 4, col);
+    const ang = lev ? -2.2*d : ataca ? 0.4*d : -0.6*d, hx = x + d*3, hy = y - 5; linea(g, hx, hy, hx + Math.sin(ang)*9*d, hy - Math.cos(ang)*9, '#e8ecf4', 1);
+    px(g, x + d, y - 9, lev ? '#ff3a3a' : '#ffd0a0'); }
+  else if(e.t === 'shuriken'){                                                 /* la kunoichi que tira estrellas */
+    disco(g, x, y - 6, 2, col); rect(g, x - 2, y - 4, 4, 5, col); linea(g, x, y + 1, x - 2, y + 4, col, 2); linea(g, x, y + 1, x + 2, y + 4, col, 2);
+    rect(g, x - 3, y - 7, 2, 1, E.acento); const m = e.carga > 0 ? -1 : 1; linea(g, x, y - 3, x + d*4, y - 3 - m*3, col, 1); px(g, x + d, y - 7, '#ffd0a0'); }
+  else if(e.t === 'cometa'){                                                   /* una cometa con un tipo colgado */
+    const bx = x, by = y - 10, o = Math.sin(t*3 + e.fase)*1.5;
+    g.fillStyle = E.acento; g.beginPath(); g.moveTo(bx, by - 7); g.lineTo(bx + 6, by); g.lineTo(bx, by + 7); g.lineTo(bx - 6, by); g.fill();
+    g.fillStyle = col; g.fillRect(bx - 6, by, 12, 1); g.fillRect(bx, by - 7, 1, 14);
+    for(let i = 0; i < 5; i++) px(g, bx - 2 - i*2, by + 7 + Math.sin(t*6 + i)*1.5, col);
+    linea(g, bx, by + 6, x + o, y - 3, col, 1); disco(g, x + o, y - 3, 1.8, col); rect(g, x + o - 1, y - 1, 3, 4, col); }
+}
+/* ================================================================ el lienzo del mundo y el revelado
+   El mundo se dibuja en 2D a baja resolución (MUNDO) y pasa por un revelado en WebGL: aberración que
+   late con los golpes, brillo barato, saturación de neón, viñeta, grano, destello y rojo al morir.
+   Si no hay WebGL se copia tal cual. */
+const MUNDO = document.createElement('canvas'), cxM = MUNDO.getContext('2d');
+const POST = {ok:false, gl:null, aber:0, brillo:1, satur:1.15, vin:0.35, grano:0.035, destello:0, rojo:0, onda:0, tint:[1, 1, 1], lift:[0.02, 0, 0.04]};
+let cx2dGL = null;
+function iniciarPost(){
+  try {
+    const gl = cvGL.getContext('webgl', {antialias:false, alpha:false, premultipliedAlpha:false, preserveDrawingBuffer:false, depth:false});
+    if(!gl) throw 0;
+    const sh = (tipo, src) => { const s = gl.createShader(tipo); gl.shaderSource(s, src); gl.compileShader(s); if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw gl.getShaderInfoLog(s); return s; };
+    const p = gl.createProgram();
+    gl.attachShader(p, sh(gl.VERTEX_SHADER, 'attribute vec2 a; varying vec2 v; void main(){ v = a*.5 + .5; v.y = 1. - v.y; gl_Position = vec4(a, 0., 1.); }'));
+    gl.attachShader(p, sh(gl.FRAGMENT_SHADER, `precision mediump float; varying vec2 v; uniform sampler2D t; uniform vec2 res; uniform float tiempo, aber, brillo, satur, vin, grano, destello, rojo, onda;
+      uniform vec3 tint, lift;
+      float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)))*43758.5453); }
+      void main(){
+        vec2 uv = v; uv.x += sin(uv.y*16. + tiempo*2.6)*onda*.006; uv.y += sin(uv.x*11. + tiempo*1.9)*onda*.004;
+        vec2 dc = uv - .5; float r = length(dc*vec2(res.x/res.y, 1.)); vec2 px = 1./res;
+        float ab = aber*(1.2 + r*3.);
+        vec3 c = vec3(texture2D(t, uv + vec2(ab, 0.)*px).r, texture2D(t, uv).g, texture2D(t, uv - vec2(ab, 0.)*px).b);
+        vec3 b = vec3(0.);
+        for(int i = 0; i < 8; i++){ float a = float(i)*.785; vec3 s = texture2D(t, uv + vec2(cos(a), sin(a))*px*2.5).rgb; b += max(s - .6, 0.); }
+        c += b*brillo*.22;
+        float l = dot(c, vec3(.299, .587, .114)); c = mix(vec3(l), c, satur); c = c*tint + lift*(1. - c);
+        c = mix(c, vec3(l*1.1, l*.12, l*.2), rojo*.7);
+        c += destello;
+        c *= 1. - vin*smoothstep(.4, 1.15, r);
+        c += (h(floor(uv*res) + fract(tiempo)*91.7) - .5)*grano;
+        gl_FragColor = vec4(c, 1.); }`));
+    gl.linkProgram(p); if(!gl.getProgramParameter(p, gl.LINK_STATUS)) throw gl.getProgramInfoLog(p);
+    gl.useProgram(p);
+    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    const la = gl.getAttribLocation(p, 'a'); gl.enableVertexAttribArray(la); gl.vertexAttribPointer(la, 2, gl.FLOAT, false, 0, 0);
+    const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+    for(const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+    const U = {}; for(const k of ['res', 'tiempo', 'aber', 'brillo', 'satur', 'vin', 'grano', 'destello', 'rojo', 'onda', 'tint', 'lift']) U[k] = gl.getUniformLocation(p, k);
+    Object.assign(POST, {ok:true, gl, U});
+  } catch(e){ POST.ok = false; console.warn('sin WebGL: revelado apagado', e); }
+}
+function revelar(t){
+  if(!POST.ok || AJ.visual === 'baja'){ if(!cx2dGL){ if(POST.ok){ /* con WebGL tomado no se puede pedir 2D: se dibuja igual sin efectos */ revelarGL(t, true); return; } cx2dGL = cvGL.getContext('2d'); }
+    if(cx2dGL){ cx2dGL.imageSmoothingEnabled = false; cx2dGL.drawImage(MUNDO, 0, 0); } return; }
+  revelarGL(t, false);
+}
+function revelarGL(t, plano){
+  const gl = POST.gl, U = POST.U;
+  gl.viewport(0, 0, cvGL.width, cvGL.height);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, MUNDO);
+  gl.uniform2f(U.res, MUNDO.width, MUNDO.height); gl.uniform1f(U.tiempo, t);
+  gl.uniform1f(U.aber, plano ? 0 : POST.aber); gl.uniform1f(U.brillo, plano ? 0 : POST.brillo); gl.uniform1f(U.satur, plano ? 1 : POST.satur);
+  gl.uniform1f(U.vin, plano ? 0 : POST.vin); gl.uniform1f(U.grano, plano ? 0 : POST.grano); gl.uniform1f(U.destello, POST.destello); gl.uniform1f(U.rojo, POST.rojo);
+  gl.uniform1f(U.onda, plano ? 0 : POST.onda); gl.uniform3fv(U.tint, POST.tint); gl.uniform3fv(U.lift, plano ? [0, 0, 0] : POST.lift);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+alMedir.push(() => { if(MUNDO.width !== W || MUNDO.height !== H){ MUNDO.width = W; MUNDO.height = H; } cxM.imageSmoothingEnabled = false;
+  if(cvGL.width !== W || cvGL.height !== H){ cvGL.width = W; cvGL.height = H; } if(cx2dGL) cx2dGL.imageSmoothingEnabled = false; });
+/* ================================================================ la torre
+   22 columnas de 8 px (176 de ancho), las filas crecen hacia arriba (y negativa). Se guarda en un anillo de 2048
+   filas: en el infinito lo que quedó muy abajo se pisa con lo nuevo de arriba. 0 aire, 1 piedra, 2 pinchos,
+   3 piedra que se desmorona. Las dos columnas de afuera son pared, salvo que se diga otra cosa. */
+const CEL = 8, COLS = 22, ANCHO = COLS*CEL, ANILLO = 2048;
+const T_AIRE = 0, T_PIEDRA = 1, T_PINCHO = 2, T_DESM = 3;
+const MAPA = {cel:new Uint8Array(COLS*ANILLO), rMin:0, rMax:0, piso:4, meta:null, plats:[], desm:new Map(), gen:0, ver:0};
+const idx = (c, r) => (((r % ANILLO) + ANILLO) % ANILLO)*COLS + c;
+function tile(c, r){ if(c < 0 || c >= COLS) return T_PIEDRA; if(r > MAPA.piso) return T_PIEDRA; if(r < MAPA.rMin) return (c === 0 || c === COLS - 1) ? T_PIEDRA : T_AIRE; return MAPA.cel[idx(c, r)]; }
+function poner(c, r, v){ if(c < 0 || c >= COLS || r < MAPA.rMin || r > MAPA.piso) return; MAPA.cel[idx(c, r)] = v; MAPA.ver++; }
+/* abrir filas nuevas arriba (con las paredes de afuera puestas) */
+function abrirFilas(hasta){ while(MAPA.rMin > hasta){ MAPA.rMin--; const i = idx(0, MAPA.rMin); MAPA.cel.fill(0, i, i + COLS); MAPA.cel[i] = MAPA.cel[i + COLS - 1] = T_PIEDRA; } MAPA.ver++; }
+function nuevoMapa(){ MAPA.cel.fill(0); MAPA.rMin = MAPA.piso + 1; MAPA.plats = []; MAPA.desm.clear(); MAPA.meta = null; MAPA.ver++; MAPA.gen++;
+  abrirFilas(0); for(let r = 1; r <= MAPA.piso; r++) for(let c = 0; c < COLS; c++) MAPA.cel[idx(c, r)] = T_PIEDRA; }
+const rect2 = (c0, r0, c1, r1, v) => { for(let r = Math.min(r0, r1); r <= Math.max(r0, r1); r++) for(let c = Math.min(c0, c1); c <= Math.max(c0, c1); c++) poner(c, r, v); };
+
+/* ================================================================ los tramos: cada uno arma unas filas y deja gente, monedas y máquinas
+   base = la fila de más abajo del tramo; k filas hacia arriba = base - k. d = dificultad 0..1. */
+const TRAMOS = {
+  /* repisas que salen de una pared y de la otra, como en la foto */
+  repisas(base, r, d, o){ const h = 26; let k = 3, lado = r() < 0.5 ? 0 : 1;
+    while(k < h - 3){ const largo = 4 + Math.floor(r()*4), rr = base - k, c0 = lado ? COLS - 1 - largo : 1;
+      rect2(c0, rr, c0 + largo - 1, rr - (r() < 0.3 ? 1 : 0), T_PIEDRA);
+      if(d > 0.35 && r() < d*0.6){ const cp = lado ? c0 : c0 + largo - 1; poner(cp, rr, T_PINCHO); }                 /* la punta con pinchos */
+      if(r() < 0.3 + d*0.5) o.gente.push({t:r() < 0.5 + d*0.2 ? 'tirador' : 'samurai', c:lado ? c0 + 1 : c0 + largo - 2, r:rr - 1});
+      if(d > 0.5 && r() < 0.4){ rect2(lado ? 0 : COLS - 1, rr - 2, lado ? 0 : COLS - 1, rr - 4, T_PINCHO); }      /* pared de enfrente pinchuda */
+      lado = 1 - lado; k += 5 + Math.floor(r()*3); }
+    return h; },
+  /* islas sueltas en el medio */
+  islas(base, r, d, o){ const h = 24; let k = 3;
+    while(k < h - 3){ const w = 2 + Math.floor(r()*3), c0 = 2 + Math.floor(r()*(COLS - 4 - w)), rr = base - k;
+      rect2(c0, rr, c0 + w - 1, rr - 1, T_PIEDRA); if(d > 0.3 && r() < d*0.5) poner(c0 + (r() < 0.5 ? 0 : w - 1), rr - 1, T_PINCHO);
+      if(r() < 0.2 + d*0.4 && w >= 3) o.gente.push({t:'tirador', c:c0 + 1, r:rr - 2});
+      k += 4 + Math.floor(r()*3); }
+    if(d > 0.3) o.gente.push({t:'cometa', c:6 + Math.floor(r()*10), r:base - 12});
+    return h; },
+  /* una columna en el medio, con pinchos de un lado y del otro a tramos */
+  columna(base, r, d, o){ const h = 22, c0 = 9 + Math.floor(r()*2);
+    rect2(c0, base - 4, c0 + 2, base - 17, T_PIEDRA);
+    for(let k = 4; k <= 17; k += 4){ if(r() < 0.35 + d*0.4){ const lado = r() < 0.5 ? c0 - 1 : c0 + 3; rect2(lado, base - k, lado, base - k - 1, T_PINCHO); } }
+    rect2(1, base - 2, 3, base - 2, T_PIEDRA); rect2(COLS - 4, base - 2, COLS - 2, base - 2, T_PIEDRA);
+    rect2(c0 - 1, base - 18, c0 + 3, base - 18, T_PIEDRA);
+    if(r() < 0.3 + d*0.5) o.gente.push({t:'samurai', c:c0 + 1, r:base - 19});
+    if(d > 0.25) o.gente.push({t:'shuriken', c:r() < 0.5 ? 1 : COLS - 2, r:base - 3});
+    return h; },
+  /* el pasillo se angosta: paredes de adentro con huecos y pinchos atrás */
+  embudo(base, r, d, o){ const h = 22, ci = 5 + Math.floor(r()*2), cd = COLS - 1 - ci;
+    for(let k = 3; k < h - 3; k++){ const rr = base - k; if(k % 7 !== 0){ poner(ci, rr, T_PIEDRA); poner(cd, rr, T_PIEDRA); } }
+    rect2(1, base - 10, ci - 1, base - 10, T_PIEDRA); rect2(cd + 1, base - 14, COLS - 2, base - 14, T_PIEDRA);
+    if(d > 0.2){ rect2(0, base - 4, 0, base - 8, T_PINCHO); rect2(COLS - 1, base - 12, COLS - 1, base - 17, T_PINCHO); }
+    if(r() < 0.4 + d*0.4) o.gente.push({t:'tirador', c:2 + Math.floor(r()*2), r:base - 11});
+    return h; },
+  /* las paredes de afuera llenas de pinchos, con piedritas para ir saltando */
+  pinchera(base, r, d, o){ const h = 24;
+    rect2(0, base - 3, 0, base - 20, T_PINCHO); rect2(COLS - 1, base - 3, COLS - 1, base - 20, T_PINCHO);
+    let k = 4, x = 4 + Math.floor(r()*4);
+    while(k < 21){ rect2(x, base - k, x + 2, base - k, T_PIEDRA); x = x < 11 ? 12 + Math.floor(r()*5) : 3 + Math.floor(r()*5); k += 4 + Math.floor(r()*2); }
+    if(d > 0.4) o.gente.push({t:'cometa', c:10, r:base - 10});
+    return h; },
+  /* plataformas que van y vienen, y piedras firmes en las puntas */
+  movil(base, r, d, o){ const h = 24;
+    rect2(1, base - 4, 3, base - 4, T_PIEDRA); rect2(COLS - 4, base - 10, COLS - 2, base - 10, T_PIEDRA); rect2(1, base - 16, 3, base - 16, T_PIEDRA); rect2(COLS - 4, base - 21, COLS - 2, base - 21, T_PIEDRA);
+    rect2(9, base - 13, 12, base - 13, T_PIEDRA);
+    o.plats.push({r:base - 7, c0:4, c1:COLS - 8, w:4, v:0.35 + d*0.35, f:r()*6}); o.plats.push({r:base - 18, c0:4, c1:COLS - 8, w:4, v:0.4 + d*0.4, f:r()*6});
+    if(d > 0.3) o.gente.push({t:'shuriken', c:COLS - 3, r:base - 11});
+    return h; },
+  /* repisas que se desmoronan a los 0,45 s de pisarlas */
+  desmorona(base, r, d, o){ const h = 24; let k = 3, lado = r() < 0.5 ? 0 : 1;
+    while(k < h - 3){ const largo = 3 + Math.floor(r()*3), c0 = lado ? COLS - 1 - largo : 1 + Math.floor(r()*3); rect2(c0, base - k, c0 + largo - 1, base - k, T_DESM);
+      lado = 1 - lado; k += 5 + Math.floor(r()*2); }
+    rect2(8, base - 12, 13, base - 12, T_DESM);
+    return h; }
+};
+/* qué tramos salen según el mundo y cuánto se avanzó */
+const MEZCLAS = {bambu:['repisas', 'islas', 'repisas', 'columna', 'desmorona', 'islas'], montana:['repisas', 'embudo', 'columna', 'desmorona', 'movil', 'islas', 'pinchera'],
+  castillo:['pinchera', 'embudo', 'movil', 'columna', 'repisas', 'desmorona', 'islas'], infinito:['repisas', 'islas', 'columna', 'embudo', 'desmorona', 'movil', 'pinchera']};
+/* un descanso ancho entre tramos: una repisa que cruza casi toda la torre con un hueco */
+function descanso(base, r){ const hueco = 3 + Math.floor(r()*14); for(let c = 1; c < COLS - 1; c++) if(c < hueco || c > hueco + 3) poner(c, base - 1, T_PIEDRA); return 3; }
+
+/* ================================================================ la física del ninja (la misma para jugar y para verificar) */
+const G = 560, V_MAX = 345, V_CAIDA = 430, HW = 2.8, HH = 4;
+/* ¿qué toca una caja? devuelve pincho, o la piedra (con su rectángulo) que la frena */
+function tocaCaja(x, y, conPlats){
+  const c0 = Math.floor((x - HW)/CEL), c1 = Math.floor((x + HW - 0.001)/CEL), r0 = Math.floor((y - HH)/CEL), r1 = Math.floor((y + HH - 0.001)/CEL);
+  let dura = null;
+  for(let r = r0; r <= r1; r++) for(let c = c0; c <= c1; c++){ const t = tile(c, r); if(t === T_AIRE) continue;
+    if(t === T_PINCHO){ /* los pinchos perdonan un píxel y medio de cada lado */
+      if(x + HW > c*CEL + 1.5 && x - HW < c*CEL + CEL - 1.5 && y + HH > r*CEL + 1.5 && y - HH < r*CEL + CEL - 1.5) return {pincho:true}; continue; }
+    if(!dura) dura = {x:c*CEL, y:r*CEL, w:CEL, h:CEL, c, r, t}; }
+  if(!dura && conPlats) for(const p of MAPA.plats){ if(x + HW > p.x && x - HW < p.x + p.w && y + HH > p.y && y - HH < p.y + p.h) return {x:p.x, y:p.y, w:p.w, h:p.h, plat:p}; }
+  return dura;
+}
+/* un paso: mueve por ejes y, si choca, se pega del lado del choque */
+function pasoCuerpo(o, dt, conPlats){
+  o.vy = Math.min(V_CAIDA, o.vy + G*dt);
+  const n = Math.max(1, Math.ceil(Math.max(Math.abs(o.vx), Math.abs(o.vy))*dt/2.5)), sx = o.vx*dt/n, sy = o.vy*dt/n;
+  for(let i = 0; i < n; i++){
+    let h = tocaCaja(o.x + sx, o.y, conPlats);
+    if(h){ if(h.pincho) return {muere:'pinchos'}; o.x = sx > 0 ? h.x - HW - 0.01 : h.x + h.w + HW + 0.01; return {pega:true, nx:sx > 0 ? -1 : 1, ny:0, h}; }
+    o.x += sx;
+    h = tocaCaja(o.x, o.y + sy, conPlats);
+    if(h){ if(h.pincho) return {muere:'pinchos'}; o.y = sy > 0 ? h.y - HH - 0.01 : h.y + h.h + HH + 0.01; return {pega:true, nx:0, ny:sy > 0 ? -1 : 1, h}; }
+    o.y += sy; }
+  return null;
+}
+/* el tiro: la velocidad sale del arrastre (tirar para atrás), topada; no se puede tirar contra la superficie */
+function velTiro(dx, dy, nx, ny){
+  let vx = -dx*5.6, vy = -dy*5.6; const v = Math.hypot(vx, vy); if(v < 40) return null;
+  if(v > V_MAX){ vx *= V_MAX/v; vy *= V_MAX/v; }
+  if(nx !== undefined && (nx || ny) && (vx*nx + vy*ny)/Math.hypot(vx, vy) < -0.05) return null;
+  return {vx, vy};
+}
+
+/* ================================================================ la búsqueda: desde el arranque, probando saltos de verdad, ¿se llega arriba?
+   Nodos = lugares donde el ninja queda pegado. Sin doble salto (es margen) y sin plataformas móviles (son ayuda). */
+function alcance(desde, metaY, maxNodos, conCaminos){
+  /* primero lo más alto (búsqueda golosa hacia arriba): en una torre larga a lo ancho se agotan los nodos antes de subir */
+  const vistos = new Map(), cola = [], dirs = [];
+  const meter = q => { cola.push(q); let i = cola.length - 1; while(i > 0){ const p = (i - 1) >> 1; if(cola[p].y <= cola[i].y) break; [cola[p], cola[i]] = [cola[i], cola[p]]; i = p; } };
+  const sacar = () => { const top = cola[0], ult = cola.pop(); if(cola.length){ cola[0] = ult; let i = 0; for(;;){ const l = i*2 + 1, r2 = l + 1; let m = i;
+    if(l < cola.length && cola[l].y < cola[m].y) m = l; if(r2 < cola.length && cola[r2].y < cola[m].y) m = r2; if(m === i) break; [cola[m], cola[i]] = [cola[i], cola[m]]; i = m; } } return top; };
+  meter(desde);
+  for(let i = 0; i < 28; i++) dirs.push(i/28*Math.PI*2);
+  const clave = q => Math.round(q.x/4) + ',' + Math.round(q.y/4) + ',' + q.nx + ',' + q.ny;
+  vistos.set(clave(desde), {q:desde, padre:null, camino:null});
+  let llega = null, masAlto = desde.y, nodos = 0;
+  while(cola.length && nodos < (maxNodos || 900)){
+    const q = sacar(); nodos++;
+    for(const a of dirs) for(const f of [0.5, 0.75, 1]){
+      let vx = Math.cos(a)*V_MAX*f, vy = Math.sin(a)*V_MAX*f;
+      if((q.nx || q.ny) && (vx*q.nx + vy*q.ny)/Math.hypot(vx, vy) < -0.05) continue;
+      const o = {x:q.x + q.nx*0.02, y:q.y + q.ny*0.02, vx, vy}, pts = conCaminos ? [] : null; let res = null;
+      for(let s = 0; s < 600; s++){ res = pasoCuerpo(o, 1/240, false); if(pts && s % 20 === 8) pts.push([o.x, o.y]);   /* el mismo paso que el juego */
+        if(o.y < metaY){ res = {meta:true}; break; } if(res) break; if(o.y > (MAPA.piso + 1)*CEL) { res = {muere:'cae'}; break; } }
+      if(!res || res.muere) continue;
+      if(res.meta){ llega = {q, camino:pts, a, f}; break; }
+      const nq = {x:o.x, y:o.y, nx:res.nx, ny:res.ny}, k = clave(nq);
+      if(!vistos.has(k)){ vistos.set(k, {q:nq, padre:q, camino:pts, a, f}); meter(nq); if(nq.y < masAlto) masAlto = nq.y; }
+    }
+    if(llega) break;
+  }
+  return {llega:!!llega, final:llega, vistos, masAlto, nodos};
+}
+/* ================================================================ el juego
+   Se arrastra para atrás y se suelta para saltar; mientras se apunta el tiempo se frena. Se pega a cualquier
+   piedra, se muere en los pinchos, y a los enemigos se los mata atravesándolos: cada baja devuelve el doble salto. */
+const J = {modo:'menu', t:0, tr:0, ts:1, tsObj:1, pausa:false, nivel:null, idx:0, infinito:false, reloj:0, puntos:0, monedas:0, bajas:0, combo:0,
+  hitstop:0, textos:[], gen:0, fin:null, tinta:null, altura:0, alturaMax:0, apunta:null, sacude:0, fundido:0, muerto:0};
+const NIN = {x:0, y:0, vx:0, vy:0, est:'pegado', nx:0, ny:-1, plat:null, dj:1, giro:0, tAire:0, dir:1, bufanda:[], vidas:0, invul:0, ultimo:null, estela:[]};
+let ENEM = [], BALAS = [], MONEDAS = [], PARTS = [], MANCHAS = [];
+/* los ninjas de la tienda y lo que tiene cada uno */
+const NINJAS = {
+  kage:{nombre:'KAGE', precio:0, perk:'EL DE SIEMPRE', colBuf:'#e8384a'},
+  hana:{nombre:'HANA', precio:600, perk:'MÁS MONEDAS', colBuf:'#ff8ac0', monedas:1.5},
+  kaze:{nombre:'KAZE', precio:900, perk:'CÁMARA MÁS LENTA', colBuf:'#5ae0ff', lento:0.55, accesorio:'sombrero'},
+  tetsu:{nombre:'TETSU', precio:1200, perk:'UNA VIDA EXTRA', colBuf:'#c8c8d0', vidas:1, colOjo:'#ffd060'},
+  neko:{nombre:'NEKO', precio:1500, perk:'IMÁN DE MONEDAS', colBuf:'#ffd060', iman:true, accesorio:'orejas'},
+  ryu:{nombre:'RYU', precio:2000, perk:'TRIPLE SALTO', colBuf:'#5aff9a', saltos:2, colHoja:'#5aff9a'},
+  oni:{nombre:'ONI', precio:2500, perk:'BAJAS VALEN DOBLE', colBuf:'#ff3a3a', bajas:2, accesorio:'cuernos', colOjo:'#ff3a3a'}
+};
+const PROG = Object.assign({monedas:0, ninjas:['kage'], efectos:['auto'], ninja:'kage', efecto:'auto', niveles:{}, record:0, abierto:0}, leer('sombra.progreso', {}));
+function guardarProg(){ guardar('sombra.progreso', PROG); }
+const NJ = () => NINJAS[PROG.ninja] || NINJAS.kage;
+/* el efecto que se ve: el del mundo, o el que se puso el jugador */
+function efecto(){ if(PROG.efecto !== 'auto' && EFECTOS[PROG.efecto]) return EFECTOS[PROG.efecto]; const m = J.nivel ? J.nivel.mundo : 'bambu'; return EFECTOS[{bambu:'atardecer', montana:'noche', castillo:'fuego', infinito:'atardecer'}[m] || 'atardecer']; }
+
+/* ================================================================ los niveles: 3 mundos × 8, generados con semilla y verificados */
+const MUNDOS = [{id:'bambu', nombre:'BOSQUE DE BAMBÚ', musica:'bambu', amb:'bambu'}, {id:'montana', nombre:'LA MONTAÑA', musica:'montana', amb:'montana'}, {id:'castillo', nombre:'EL CASTILLO', musica:'castillo', amb:'castillo'}];
+const NIVELES = [];
+MUNDOS.forEach((m, mi) => { for(let i = 0; i < 8; i++) NIVELES.push({id:m.id + '-' + (i + 1), mundo:m.id, mi, n:i, semilla:1000 + mi*97 + i*13, tramos:3 + Math.floor(i/2) + mi, d:Math.min(1, mi*0.3 + i*0.07), tinta:mi === 2 && i > 1 ? 12 + i*1.5 : mi === 1 && i > 4 ? 8 : 0}); });
+/* armar un nivel: tramos de la mezcla del mundo con descansos, arriba el torii. Si la búsqueda no llega, otra semilla. */
+function armarNivel(def){
+  for(let intento = 0; intento < 12; intento++){
+    const semilla = (def.semillaBuena || def.semilla) + intento*7919, r = mulberry(semilla), o = {gente:[], plats:[]};
+    nuevoMapa(); let base = 0;
+    const mezcla = MEZCLAS[def.mundo] || MEZCLAS.bambu;
+    for(let k = 0; k < def.tramos; k++){ abrirFilas(base - 40); const tipo = k === 0 ? 'repisas' : mezcla[Math.floor(r()*mezcla.length)];
+      base -= TRAMOS[tipo](base, r, def.d, o); abrirFilas(base - 6); base -= descanso(base, r); }
+    abrirFilas(base - 14);
+    /* el techo con el torii: se gana al pasar por debajo */
+    rect2(1, base - 11, COLS - 2, base - 12, T_PIEDRA); MAPA.meta = {y:(base - 4)*CEL, r:base - 4};
+    const desde = {x:ANCHO/2, y:CEL - HH - 0.01, nx:0, ny:-1};
+    const a = alcance(desde, MAPA.meta.y, 2500, true);
+    if(a.llega){ def.semillaBuena = semilla; const P = poblar(o, a, r); ENEM = P.enem; MONEDAS = P.mon; MAPA.plats = P.plats; BALAS = []; PARTS = []; MANCHAS = [];
+      J.totMonedas = MONEDAS.length; J.totEnem = ENEM.length; return true; }
+  }
+  console.warn('nivel sin camino', def.id); return false;
+}
+/* las monedas van donde el ninja de verdad pasa: sobre los arcos del camino que encontró la búsqueda */
+function poblar(o, a, r){
+  const ENEM = [], MONEDAS = [];
+  const clave = q => Math.round(q.x/4) + ',' + Math.round(q.y/4) + ',' + q.nx + ',' + q.ny;
+  const arcos = []; if(a.final) arcos.push(a.final.camino);
+  let q = a.final ? a.final.q : null; while(q){ const v = a.vistos.get(clave(q)); if(!v || !v.padre) break; if(v.camino) arcos.push(v.camino); q = v.padre; }
+  for(const cam of arcos){ if(!cam) continue; for(let i = 1; i < cam.length - 1 && i < 9; i += 2){ const [x, y] = cam[i]; if(tile(Math.floor(x/CEL), Math.floor(y/CEL)) === T_AIRE && !MONEDAS.some(m => Math.hypot(m.x - x, m.y - y) < 9)) MONEDAS.push({x, y, t:r()*6}); } }
+  /* la gente: parada sobre piedra, con lugar arriba, lejos del arranque */
+  for(const g of o.gente){ const x = g.c*CEL + CEL/2;
+    if(g.t === 'cometa'){ ENEM.push(crearEnemigo('cometa', x, g.r*CEL, r)); continue; }
+    if(tile(g.c, g.r) !== T_AIRE || tile(g.c, g.r - 1) !== T_AIRE || tile(g.c, g.r + 1) !== T_PIEDRA) continue;
+    if(g.r > -6) continue;
+    ENEM.push(crearEnemigo(g.t, x, (g.r + 1)*CEL, r)); }
+  const plats = o.plats.map(p => ({x:p.c0*CEL, y:p.r*CEL, w:p.w*CEL, h:5, xa:p.c0*CEL, xb:(p.c1 - p.w)*CEL + CEL, v:p.v, f:p.f, dx:0}));
+  return {enem:ENEM, mon:MONEDAS, plats};
+}
+function crearEnemigo(t, x, y, r){ return {t, x, y, x0:x, dir:r() < 0.5 ? -1 : 1, carga:0, cd:0.6 + r(), apunta:0, corta:0, fase:r()*6, muerto:false, vx:t === 'cometa' ? (r() < 0.5 ? -26 : 26) : 0}; }
+
+/* ================================================================ el infinito: se va generando de a tramos, verificados desde lo que ya se alcanzó */
+const INF = {base:0, desde:null, r:null, n:0};
+function armarInfinito(){
+  nuevoMapa(); ENEM = []; MONEDAS = []; BALAS = []; PARTS = []; MANCHAS = []; MAPA.meta = null;
+  INF.base = 0; INF.n = 0; INF.r = mulberry(Math.floor(Math.random()*1e9)); INF.desde = {x:ANCHO/2, y:CEL - HH - 0.01, nx:0, ny:-1};
+  for(let i = 0; i < 3; i++) tramoInfinito();
+}
+function tramoInfinito(){
+  const r = INF.r, d = Math.min(1, INF.n*0.06), mezcla = MEZCLAS.infinito;
+  for(let intento = 0; intento < 6; intento++){
+    const o = {gente:[], plats:[]}, base0 = INF.base; let base = base0;
+    abrirFilas(base - 40); const tipo = INF.n === 0 ? 'repisas' : intento >= 3 ? 'repisas' : mezcla[Math.floor(r()*mezcla.length)];
+    base -= TRAMOS[tipo](base, r, intento >= 3 ? d*0.3 : d, o); abrirFilas(base - 6); base -= descanso(base, r); abrirFilas(base - 20);
+    const a = alcance(INF.desde, (base + 1)*CEL, 700, true);
+    if(a.llega || intento === 5){
+      const P = poblar(o, a, r); ENEM = ENEM.concat(P.enem); MONEDAS = MONEDAS.concat(P.mon); MAPA.plats = MAPA.plats.concat(P.plats);
+      /* el próximo tramo arranca desde el lugar más alto al que se llegó */
+      let mejor = INF.desde; for(const v of a.vistos.values()) if(v.q.y < mejor.y) mejor = v.q; INF.desde = mejor;
+      INF.base = base; INF.n++; return; }
+    /* no se llega: se borran esas filas y se prueba otro tramo */
+    for(let rr = base0 - 1; rr >= base - 20; rr--){ const i = idx(0, rr); MAPA.cel.fill(0, i, i + COLS); MAPA.cel[i] = MAPA.cel[i + COLS - 1] = T_PIEDRA; }
+  }
+}
+
+/* ================================================================ empezar, morir, ganar */
+function empezarNivel(i){
+  const def = NIVELES[i]; J.nivel = def; J.idx = i; J.infinito = false; J.gen++;
+  armarNivel(def); arrancarCorrida(def.tinta);
+  SON.musica(MUNDOS[def.mi].musica); SON.ambiente(MUNDOS[def.mi].amb); SON.cinta(0);
+}
+function empezarInfinito(){ J.nivel = {id:'infinito', mundo:'infinito', mi:0, n:0}; J.infinito = true; J.gen++; armarInfinito(); arrancarCorrida(1); SON.musica('infinito'); SON.ambiente('bambu'); SON.cinta(0); }
+function arrancarCorrida(tinta){
+  const N = NJ();
+  Object.assign(NIN, {x:ANCHO/2, y:CEL - HH - 0.01, vx:0, vy:0, est:'pegado', nx:0, ny:-1, plat:null, dj:N.saltos || 1, giro:0, tAire:0, dir:1, vidas:N.vidas || 0, invul:0, estela:[]});
+  NIN.bufanda = []; for(let i = 0; i < 6; i++) NIN.bufanda.push({x:NIN.x, y:NIN.y, px:NIN.x, py:NIN.y});
+  NIN.ultimo = {x:NIN.x, y:NIN.y, nx:0, ny:-1};
+  Object.assign(J, {modo:'juego', t:0, reloj:0, puntos:0, monedas:0, bajas:0, combo:0, hitstop:0, textos:[], fin:null, pausa:false, apunta:null, ts:1, tsObj:1, muerto:0, altura:0, alturaMax:0, fundido:1});
+  J.tinta = tinta ? {y:(MAPA.piso + 3)*CEL, v:tinta, t:0} : null;
+  CAM.y = Math.min(NIN.y - H*0.6, CEL - H*0.86); CAM.objY = CAM.y;
+}
+function morir(causa){
+  if(NIN.est === 'muerto' || NIN.invul > 0) return;
+  if(NIN.vidas > 0){ NIN.vidas--; sfx('vida'); vibrar(40); const u = NIN.ultimo; Object.assign(NIN, {x:u.x, y:u.y, nx:u.nx, ny:u.ny, vx:0, vy:0, est:'pegado', plat:null, invul:1.6, dj:NJ().saltos || 1});
+    if(J.tinta && J.tinta.y < NIN.y + 60) J.tinta.y = NIN.y + 60; aviso(tr('¡UNA VIDA MENOS!')); return; }
+  NIN.est = 'muerto'; NIN.causa = causa; J.muerto = 0.001; J.apunta = null; sfx('muerte'); SON.filtroMuerte(true); vibrar(90); J.sacude = 1.5;
+  tinta(NIN.x, NIN.y, 26, 1.4); J.hitstop = 0.12;
+  luego(1.1, () => terminarCorrida(false));
+}
+function ganar(){
+  if(J.fin) return; J.fin = {gana:true}; NIN.est = 'meta'; sfx('meta'); SON.musica('victoria'); vibrar(30);
+  luego(1.4, () => terminarCorrida(true));
+}
+/* al terminar: monedas a la billetera, estrellas, récord */
+function terminarCorrida(gano){
+  const N = NJ(), mon = Math.round(J.monedas*(N.monedas || 1));
+  PROG.monedas += mon; const res = {gano, mon, puntos:J.puntos, altura:J.altura, bajas:J.bajas};
+  if(J.infinito){ res.record = J.puntos > PROG.record; if(res.record){ PROG.record = J.puntos; } }
+  else if(gano){ const est = 1 + (J.monedas >= J.totMonedas ? 1 : 0) + (J.bajas >= J.totEnem ? 1 : 0), ant = PROG.niveles[J.nivel.id] || 0;
+    res.estrellas = est; res.ant = ant; res.monOk = J.monedas >= J.totMonedas; res.bajOk = J.bajas >= J.totEnem; PROG.niveles[J.nivel.id] = Math.max(ant, est); PROG.abierto = Math.max(PROG.abierto, J.idx + 1); }
+  guardarProg(); UI.res = res; J.modo = 'resultado'; UI.p = gano ? 'gana' : 'muerte'; UI.t = 0; SON.filtroMuerte(false); if(!gano) SON.musica(null);
+}
+
+/* ================================================================ saltar */
+function puedeSaltar(){ return NIN.est === 'pegado' || (NIN.est === 'aire' && NIN.dj > 0); }
+function saltar(dx, dy){
+  if(!puedeSaltar()) return false;
+  const pegado = NIN.est === 'pegado', v = velTiro(dx, dy, pegado ? NIN.nx : undefined, pegado ? NIN.ny : undefined); if(!v) return false;
+  if(!pegado){ NIN.dj--; sfx('doble_salto', {x:pan(NIN.x)}); polvo(NIN.x, NIN.y + 3, 6, '#ffffff'); }
+  else { sfx('salto', {x:pan(NIN.x)}); polvo(NIN.x - NIN.nx*3, NIN.y - NIN.ny*3, 5, null); NIN.dj = NJ().saltos || 1; }
+  NIN.x += (NIN.nx || 0)*0.3; NIN.y += (NIN.ny || 0)*0.3;
+  NIN.vx = v.vx; NIN.vy = v.vy; NIN.est = 'aire'; NIN.plat = null; NIN.tAire = 0; NIN.dir = v.vx >= 0 ? 1 : -1; NIN.giro = 0;
+  if(NIN.desm){ NIN.desm = null; }
+  return true;
+}
+/* ================================================================ el paso de todo */
+function pasoJuego(dt, dtR){
+  J.t += dt; J.reloj += dt; NIN.invul = Math.max(0, NIN.invul - dt);
+  /* las plataformas que van y vienen */
+  for(const p of MAPA.plats){ const u = (Math.sin(J.t*p.v*2 + p.f) + 1)/2, nx = lerp(p.xa, p.xb, u); p.dx = nx - p.x; p.x = nx; }
+  pasoNinja(dt);
+  pasoEnemigos(dt);
+  pasoBalas(dt);
+  pasoMonedas(dt);
+  pasoDesm(dt);
+  /* la tinta que sube */
+  if(J.tinta && NIN.est !== 'meta'){ const T = J.tinta; T.t += dt; const v = J.infinito ? Math.min(55, 6 + T.t*0.45) : T.v;
+    T.y -= v*dt; if(T.y > NIN.y + H*0.9) T.y = NIN.y + H*0.9;                                  /* nunca queda demasiado lejos */
+    if(NIN.est !== 'muerto' && NIN.y + HH > T.y) morir('tinta');
+    const cerca = lim(1 - (T.y - NIN.y)/140, 0, 1); if(cerca > 0.5 && Math.random() < dt*3) sfx('tinta', {vol:cerca*0.5}); J.sacude = Math.max(J.sacude, cerca*0.35); }
+  /* la altura y los puntos del infinito */
+  J.altura = Math.max(0, Math.round(-NIN.y/CEL)); if(J.altura > J.alturaMax){ J.puntos += (J.altura - J.alturaMax)*10; J.alturaMax = J.altura; }
+  if(J.infinito){ while(MAPA.rMin > Math.floor((CAM.y - H)/CEL) - 10) tramoInfinito();
+    const abajo = (J.tinta ? J.tinta.y : CAM.y + H*2) + 120; ENEM = ENEM.filter(e => e.y < abajo); MONEDAS = MONEDAS.filter(m => m.y < abajo); MAPA.plats = MAPA.plats.filter(p => p.y < abajo); MANCHAS = MANCHAS.filter(m => m.y < abajo); }
+  if(MAPA.meta && NIN.est !== 'muerto' && NIN.y < MAPA.meta.y) ganar();
+  for(const t of J.textos){ t.t -= dtR; t.y -= dtR*18; } J.textos = J.textos.filter(t => t.t > 0);
+  pasoParticulas(dt);
+}
+function pasoNinja(dt){
+  const N = NIN;
+  if(N.est === 'muerto' || N.est === 'meta'){ if(N.est === 'meta'){ N.vy = Math.max(-80, N.vy - 400*dt); N.y += N.vy*dt; } pasoBufanda(dt); return; }
+  if(N.est === 'pegado'){
+    if(N.plat){ N.x += N.plat.dx; if(!MAPA.plats.includes(N.plat)) soltar(); }
+    /* si se fue lo que lo sostenía (desmoronado), cae */
+    if(!N.plat){ const h = tocaCaja(N.x - N.nx*0.6, N.y - N.ny*0.6, false); if(!h) soltar(); else if(h.pincho) morir('pinchos'); }
+  } else {
+    N.tAire += dt; N.giro += dt*(N.tAire < 0.42 ? 16 : 0)*N.dir; if(N.tAire >= 0.42) N.giro *= Math.exp(-dt*12);
+    const sub = Math.max(1, Math.ceil(dt/(1/240)));
+    for(let i = 0; i < sub; i++){ const res = pasoCuerpo(N, dt/sub, true);
+      if(res && res.muere){ morir(res.muere); return; }
+      if(res && res.pega){ pegar(res); break; } }
+    if(N.y > (MAPA.piso + 2)*CEL) morir('cae');
+    if(!J.infinito && N.y > CAM.y + H + 30 && N.tAire > 1) morir('cae');
+    if(J.infinito && N.y > CAM.y + H + 20) morir('cae');
+  }
+  pasoBufanda(dt);
+  /* la estela en cámara lenta */
+  if(J.ts < 0.6 && N.est === 'aire'){ N.estela.push({x:N.x, y:N.y, giro:N.giro, dir:N.dir, t:0.35}); if(N.estela.length > 10) N.estela.shift(); }
+  for(const e of N.estela) e.t -= dt*3; N.estela = N.estela.filter(e => e.t > 0);
+}
+function pegar(res){
+  const N = NIN; N.est = 'pegado'; N.nx = res.nx; N.ny = res.ny; N.vx = N.vy = 0; N.plat = res.h && res.h.plat || null; N.giro = 0; N.dj = NJ().saltos || 1;
+  if(N.nx) N.dir = N.nx; sfx('pegar', {x:pan(N.x)}); polvo(N.x - N.nx*3, N.y - N.ny*4, 4, null);
+  if(J.combo > 1) aviso(tr('COMBO ×{0}', J.combo)); J.combo = 0;
+  if(res.h && res.h.t === T_DESM){ const k = res.h.c + ',' + res.h.r; if(!MAPA.desm.has(k)) MAPA.desm.set(k, {c:res.h.c, r:res.h.r, t:0.45}); }
+  N.ultimo = {x:N.x, y:N.y, nx:N.nx, ny:N.ny};
+}
+function soltar(){ NIN.est = 'aire'; NIN.plat = null; NIN.vx = 0; NIN.vy = 20; NIN.tAire = 0.5; }
+/* la bufanda: una cadena que cuelga del cuello y se queda atrás */
+function pasoBufanda(dt){
+  const b = NIN.bufanda; if(!b.length) return; b[0].x = NIN.x - NIN.dir*1; b[0].y = NIN.y - 3;
+  for(let i = 1; i < b.length; i++){ const p = b[i], vx = (p.x - p.px)*0.9, vy = (p.y - p.py)*0.9; p.px = p.x; p.py = p.y; p.x += vx - NIN.dir*dt*20 + Math.sin(J.tr*8 + i)*0.08; p.y += vy + dt*40*(NIN.est === 'aire' ? 0.2 : 1);
+    const q = b[i - 1], dx = p.x - q.x, dy = p.y - q.y, d = Math.hypot(dx, dy) || 1, L = 1.8; p.x = q.x + dx/d*L; p.y = q.y + dy/d*L; }
+}
+function pasoDesm(dt){ for(const [k, q] of MAPA.desm){ q.t -= dt; if(q.t <= 0){ MAPA.desm.delete(k); poner(q.c, q.r, T_AIRE); sfx('desmorona', {x:pan(q.c*CEL)});
+  for(let i = 0; i < 6; i++) PARTS.push({x:q.c*CEL + rv(0, 8), y:q.r*CEL + rv(0, 8), vx:rv(-20, 20), vy:rv(-20, 10), vida:rv(0.6, 1.1), col:efecto().torre, tam:2, g:1}); } } }
+
+/* ================================================================ los enemigos */
+function hayVista(x0, y0, x1, y1){ const d = Math.hypot(x1 - x0, y1 - y0), n = Math.ceil(d/4); for(let i = 1; i < n; i++){ const t = i/n, t2 = tile(Math.floor((x0 + (x1 - x0)*t)/CEL), Math.floor((y0 + (y1 - y0)*t)/CEL)); if(t2 === T_PIEDRA || t2 === T_DESM) return false; } return true; }
+function pasoEnemigos(dt){
+  const N = NIN, vivo = N.est !== 'muerto' && N.est !== 'meta';
+  for(const e of ENEM){ if(e.muerto) continue;
+    /* ¿lo atravesó el ninja? */
+    const bx = e.t === 'samurai' ? 5 : e.t === 'cometa' ? 7 : 4, by = e.t === 'samurai' ? 12 : 9, cy = e.t === 'cometa' ? e.y - 6 : e.y - by/2;
+    if(vivo && N.est === 'aire' && Math.abs(N.x - e.x) < bx + HW && Math.abs(N.y - cy) < by/2 + HH){ matar(e); continue; }
+    const dx = N.x - e.x, dy = N.y - (e.y - 6), d = Math.hypot(dx, dy);
+    if(e.t === 'tirador'){ e.cd -= dt; e.dir = dx >= 0 ? 1 : -1;
+      const ve = vivo && d < 150 && hayVista(e.x, e.y - 4, N.x, N.y);
+      if(ve && e.cd <= 0){ if(e.carga === 0) sfx('laser_carga', {x:pan(e.x), vol:0.6}); e.carga += dt;
+        if(e.carga < 0.8) e.apunta = Math.atan2(N.y - (e.y - 3), N.x - e.x);                      /* los últimos 0,25 s la mira queda fija: se puede esquivar */
+        if(e.carga >= 1.05){ e.carga = 0; e.cd = 1.5; sfx('disparo', {x:pan(e.x)}); BALAS.push({x:e.x + Math.cos(e.apunta)*6, y:e.y - 3 + Math.sin(e.apunta)*6, vx:Math.cos(e.apunta)*280, vy:Math.sin(e.apunta)*280, t:'bala', vida:1.4}); } }
+      else if(!ve) e.carga = Math.max(0, e.carga - dt*2); }
+    else if(e.t === 'samurai'){
+      if(e.corta > 0){ e.corta -= dt; continue; }
+      const cerca = vivo && N.est === 'pegado' && Math.abs(dx) < 16 && Math.abs(N.y - (e.y - 6)) < 10;
+      if(e.carga > 0){ e.carga -= dt; if(e.carga <= 0){ e.corta = 0.3; sfx('corte', {x:pan(e.x), vol:0.6}); if(vivo && Math.abs(N.x - e.x) < 18 && Math.abs(N.y - (e.y - 6)) < 11) morir('samurai'); } continue; }
+      if(cerca){ e.carga = 0.42; e.dir = dx >= 0 ? 1 : -1; sfx('samurai', {x:pan(e.x)}); continue; }
+      /* camina por su repisa hasta el borde */
+      const nx = e.x + e.dir*14*dt, cAde = Math.floor((nx + e.dir*4)/CEL), rPie = Math.floor(e.y/CEL), rCab = Math.floor((e.y - 4)/CEL);
+      if(tile(cAde, rPie) !== T_PIEDRA || tile(cAde, rCab) !== T_AIRE) e.dir *= -1; else e.x = nx; }
+    else if(e.t === 'shuriken'){ e.cd -= dt; e.dir = dx >= 0 ? 1 : -1; if(e.carga > 0){ e.carga -= dt; if(e.carga <= 0){ const a = Math.atan2(dy, dx);
+        for(const k of [-0.22, 0, 0.22]) BALAS.push({x:e.x, y:e.y - 5, vx:Math.cos(a + k)*150, vy:Math.sin(a + k)*150, t:'shuriken', vida:2, giro:0}); sfx('shuriken', {x:pan(e.x)}); e.cd = 2.4; } }
+      else if(vivo && e.cd <= 0 && d < 160 && hayVista(e.x, e.y - 5, N.x, N.y)) e.carga = 0.35; }
+    else if(e.t === 'cometa'){ e.x += e.vx*dt; if(e.x < 20 || e.x > ANCHO - 20) e.vx *= -1; e.dir = e.vx > 0 ? 1 : -1; e.y += Math.sin(J.t*1.3 + e.fase)*6*dt; }
+  }
+}
+function matar(e){
+  e.muerto = true; J.bajas++; J.combo++; const N = NJ(), p = Math.round(100*J.combo*(N.bajas || 1)); J.puntos += p;
+  NIN.dj = Math.max(NIN.dj, N.saltos || 1);                                                          /* cada baja devuelve el doble salto */
+  J.textos.push({x:e.x, y:e.y - 16, txt:'+' + p, t:1, grad:'oro'}); if(J.combo > 1) sfx('combo', {n:Math.min(10, J.combo)});
+  sfx('corte', {x:pan(e.x)}); J.hitstop = 0.06; J.sacude = Math.max(J.sacude, 0.6); vibrar(20); POST.aber = Math.max(POST.aber, 2);
+  tinta(e.x, e.y - 5, 18, 1); J.tajo = {x:e.x, y:e.y - 5, a:Math.atan2(NIN.vy, NIN.vx), t:0.18};
+  /* las dos mitades del que cayó */
+  for(const s of [-1, 1]) PARTS.push({x:e.x, y:e.y - 5, vx:NIN.vx*0.2 + s*30, vy:-60 + rv(-20, 20), vida:1.4, col:efecto().silueta, tam:3, g:1, gira:true});
+}
+function pasoBalas(dt){
+  for(const b of BALAS){ if(b.clavada){ b.vida -= dt; continue; } b.vida -= dt; b.x += b.vx*dt; b.y += b.vy*dt; if(b.giro !== undefined) b.giro += dt*20;
+    const t = tile(Math.floor(b.x/CEL), Math.floor(b.y/CEL)); if(t === T_PIEDRA || t === T_DESM){ if(b.t === 'shuriken'){ b.clavada = true; b.vida = 1.2; sfx('shuriken_clava', {x:pan(b.x), vol:0.4}); } else { b.vida = 0; polvo(b.x, b.y, 3, '#ffe0a0'); } continue; }
+    if(NIN.est !== 'muerto' && NIN.est !== 'meta' && Math.abs(b.x - NIN.x) < HW + 1.5 && Math.abs(b.y - NIN.y) < HH + 1.5){ b.vida = 0; morir(b.t); } }
+  BALAS = BALAS.filter(b => b.vida > 0);
+}
+function pasoMonedas(dt){
+  const iman = NJ().iman;
+  for(const m of MONEDAS){ if(m.tomada) continue; m.t += dt; const dx = NIN.x - m.x, dy = NIN.y - m.y, d = Math.hypot(dx, dy);
+    if(iman && d < 44 && NIN.est !== 'muerto'){ m.x += dx/d*140*dt; m.y += dy/d*140*dt; }
+    if(d < 7 && NIN.est !== 'muerto'){ m.tomada = true; J.monedas++; J.puntos += 10; sfx('moneda', {x:pan(m.x), tono:1 + (J.monedas % 8)*0.04}); for(let i = 0; i < 4; i++) PARTS.push({x:m.x, y:m.y, vx:rv(-40, 40), vy:rv(-50, 10), vida:0.3, col:'#ffe060', tam:1}); } }
+  MONEDAS = MONEDAS.filter(m => !m.tomada);
+}
+/* ================================================================ partículas y manchas */
+function polvo(x, y, n, col){ for(let i = 0; i < n; i++) PARTS.push({x, y, vx:rv(-30, 30), vy:rv(-30, 5), vida:rv(0.2, 0.4), col:col || efecto().borde, tam:1}); }
+/* la «sangre» es tinta: salpica y queda pegada en la piedra */
+function tinta(x, y, n, f){ for(let i = 0; i < n; i++){ const a = rv(0, 6.28), v = rv(30, 150)*f; PARTS.push({x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v - 30, vida:rv(0.4, 0.9), col:i % 3 ? '#1a0610' : '#8a1020', tam:rv(1, 2.5), g:1, mancha:true}); } }
+function pasoParticulas(dt){
+  for(let i = PARTS.length - 1; i >= 0; i--){ const p = PARTS[i]; p.vida -= dt; if(p.g) p.vy += 380*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= Math.exp(-dt*1.5);
+    if(p.mancha){ const t = tile(Math.floor(p.x/CEL), Math.floor(p.y/CEL)); if(t === T_PIEDRA || t === T_DESM){ if(MANCHAS.length > 260) MANCHAS.shift(); MANCHAS.push({x:Math.round(p.x), y:Math.round(p.y), r:Math.round(p.tam), col:p.col}); PARTS.splice(i, 1); continue; } }
+    if(p.vida <= 0) PARTS.splice(i, 1); }
+  if(PARTS.length > 500) PARTS.splice(0, PARTS.length - 500);
+}
+function aviso(txt){ J.textos.push({x:NIN.x, y:NIN.y - 14, txt, t:1.1, grad:'blanco'}); }
+/* en el menú el ninja salta solo y no tiene que sonar */
+function sfx(n, o){ if(J.modo !== 'menu') SON.fx(n, o); }
+function pan(x){ return lim((x - ANCHO/2)/(ANCHO/2), -1, 1)*0.7; }
+/* ================================================================ entrada: se apoya el dedo en cualquier lado, se tira para atrás y se suelta */
+const CAM = {y:0, objY:0};
+function aPx(ev){ const [sx, sy] = aStage(ev.clientX, ev.clientY); return aLienzo(sx, sy); }
+let DEDO = null;
+stage.addEventListener('pointerdown', ev => {
+  SON.arrancar(); const [x, y] = aPx(ev);
+  if(uiActiva()){ uiDown(x, y); DEDO = {id:ev.pointerId, ui:true}; return; }
+  if(J.modo !== 'juego') return;
+  if(x > W - 30 && y < 22){ pausar(); return; }
+  if(DEDO || !puedeSaltar() || J.fin) return;
+  DEDO = {id:ev.pointerId, x0:x, y0:y, x, y}; J.apunta = DEDO; SON.fx('lento_entra', {vol:0.4});
+});
+addEventListener('pointermove', ev => { if(!DEDO || DEDO.id !== ev.pointerId || DEDO.ui) return; const [x, y] = aPx(ev); DEDO.x = x; DEDO.y = y; });
+function soltarDedo(ev, cancela){
+  SON.arrancar(); if(!DEDO || DEDO.id !== ev.pointerId) return; const d = DEDO; DEDO = null;
+  if(d.ui){ if(!cancela){ const [x, y] = aPx(ev); uiUp(x, y); } else UI.presion = null; return; }
+  J.apunta = null; if(cancela || J.modo !== 'juego' || J.pausa) return;
+  if(!saltar(d.x - d.x0, d.y - d.y0)) SON.fx('lento_sale', {vol:0.3});
+}
+addEventListener('pointerup', ev => soltarDedo(ev, false)); addEventListener('pointercancel', ev => soltarDedo(ev, true));
+addEventListener('blur', () => { DEDO = null; J.apunta = null; });
+addEventListener('keydown', ev => { if(ev.code === 'Escape' && J.modo === 'juego') pausar(); });
+document.addEventListener('visibilitychange', () => { if(document.hidden && J.modo === 'juego' && !J.pausa && NIN.est !== 'muerto') pausar(); });
+
+/* ================================================================ el lazo */
+let ultimo = 0;
+function lazo(ts){
+  requestAnimationFrame(lazo);
+  const dtR = Math.min(0.05, Math.max(0, (ts - (ultimo || ts))/1000)); ultimo = ts; J.tr += dtR;
+  try { paso(dtR); } catch(e){ console.error(e); }
+  try { dibujar(dtR); } catch(e){ console.error(e); }
+  try { SON.paso(dtR); } catch(e){}
+}
+function paso(dtR){
+  UI.t += dtR; pasoLuego(dtR);
+  POST.destello = Math.max(0, POST.destello - dtR*2.5); POST.aber = Math.max(0.1, POST.aber - dtR*5); J.sacude = Math.max(0, J.sacude - dtR*3);
+  if(J.modo === 'menu'){ pasoFondoMenu(dtR); return; }
+  if(J.modo !== 'juego' || J.pausa) return;
+  /* la cámara lenta: apuntando se frena el tiempo, en el aire mucho más */
+  const lento = NJ().lento || 1;
+  J.tsObj = NIN.est === 'muerto' ? 0.3 : J.apunta && puedeSaltar() ? (NIN.est === 'aire' ? 0.1 : 0.3)*lento : 1;
+  J.ts += (J.tsObj - J.ts)*(1 - Math.exp(-dtR*(J.tsObj < J.ts ? 18 : 7)));
+  SON.lento(lim((1 - J.ts)*1.2, 0, 1));
+  POST.satur = lerp(1.15, 0.55, lim((1 - J.ts)*1.3, 0, 1)); POST.vin = lerp(0.3, 0.62, lim(1 - J.ts, 0, 1)); POST.aber = Math.max(POST.aber, (1 - J.ts)*0.8);
+  let dt = dtR*J.ts; if(J.hitstop > 0){ J.hitstop -= dtR; dt = 0; }
+  if(J.muerto) J.muerto += dtR;
+  J.fundido = Math.max(0, J.fundido - dtR*2.5); if(J.tajo){ J.tajo.t -= dtR; if(J.tajo.t <= 0) J.tajo = null; }
+  pasoJuego(dt, dtR);
+  /* la cámara: el ninja un poco abajo del medio, así se ve más para arriba */
+  CAM.objY = Math.min(NIN.y - H*0.6, CEL - H*0.86); const k = NIN.est === 'aire' ? 5 : 3.2; CAM.y += (CAM.objY - CAM.y)*(1 - Math.exp(-dtR*k));
+  SON.intensidad(J.infinito ? lim(J.alturaMax/600, 0.15, 1) : lim(0.35 + J.combo*0.1, 0, 1));
+}
+
+/* ================================================================ dibujar */
+const BLOQUES = new Map(), FB = 16;                                      /* la torre se hornea de a 16 filas */
+function bloque(b, E){
+  let c = BLOQUES.get(b);
+  if(c && c.ver === MAPA.ver && c.ef === E.nombre && c.gen === MAPA.gen) return c.cv;
+  if(!c){ if(BLOQUES.size > 60) BLOQUES.clear(); const [cv] = lienzo(ANCHO, FB*CEL); c = {cv}; BLOQUES.set(b, c); }
+  c.ver = MAPA.ver; c.ef = E.nombre; c.gen = MAPA.gen;
+  const g = c.cv.getContext('2d'); g.clearRect(0, 0, ANCHO, FB*CEL);
+  for(let k = 0; k < FB; k++){ const r = b*FB + k; for(let cc = 0; cc < COLS; cc++){ const t = tile(cc, r); if(t === T_AIRE) continue; pintarTile(g, cc*CEL, k*CEL, cc, r, t, E); } }
+  return c.cv;
+}
+const dura = t => t === T_PIEDRA || t === T_DESM;
+function pintarTile(g, x, y, c, r, t, E){
+  const h = (c*73 + r*151) & 255;
+  if(t === T_PINCHO){ /* los pinchos miran para el lado contrario a la piedra que los sostiene */
+    const ab = dura(tile(c, r + 1)), ar = dura(tile(c, r - 1)), iz = dura(tile(c - 1, r)), de = dura(tile(c + 1, r));
+    const dir = ab ? 'u' : ar ? 'd' : iz ? 'r' : de ? 'l' : 'u';
+    g.fillStyle = E.torre; if(dir === 'u') g.fillRect(x, y + 6, 8, 2); else if(dir === 'd') g.fillRect(x, y, 8, 2); else if(dir === 'r') g.fillRect(x, y, 2, 8); else g.fillRect(x + 6, y, 2, 8);
+    for(let i = 0; i < 2; i++) for(let k = 0; k < 4; k++){ const w = 4 - k;
+      if(dir === 'u'){ g.fillStyle = k ? '#f0e4e8' : '#b098a8'; g.fillRect(x + i*4 + (4 - w)/2, y + 6 - k*1.5 - 1.5, w, 1.5); }
+      else if(dir === 'd'){ g.fillStyle = k ? '#f0e4e8' : '#b098a8'; g.fillRect(x + i*4 + (4 - w)/2, y + 2 + k*1.5, w, 1.5); }
+      else if(dir === 'r'){ g.fillStyle = k ? '#f0e4e8' : '#b098a8'; g.fillRect(x + 2 + k*1.5, y + i*4 + (4 - w)/2, 1.5, w); }
+      else { g.fillStyle = k ? '#f0e4e8' : '#b098a8'; g.fillRect(x + 6 - k*1.5 - 1.5, y + i*4 + (4 - w)/2, 1.5, w); } }
+    return; }
+  g.fillStyle = E.torre; g.fillRect(x, y, 8, 8);
+  if(h < 40){ g.fillStyle = tono(E.torre, 1.18); g.fillRect(x + (h & 7), y + ((h >> 3) & 7), 1, 1); }
+  const arriba = !dura(tile(c, r - 1)) && tile(c, r - 1) !== T_PINCHO, izq = !dura(tile(c - 1, r)), der = !dura(tile(c + 1, r)), abajo = !dura(tile(c, r + 1));
+  if(arriba){ g.fillStyle = E.luzBorde; g.fillRect(x, y, 8, 1); g.fillStyle = E.borde; g.fillRect(x, y + 1, 8, 1); }
+  if(izq){ g.fillStyle = E.borde; g.fillRect(x, y, 1, 8); }
+  if(der){ g.fillStyle = tono(E.torre, 0.7); g.fillRect(x + 7, y, 1, 8); }
+  if(abajo){ g.fillStyle = tono(E.torre, 0.6); g.fillRect(x, y + 7, 8, 1); }
+  if(t === T_DESM){ g.fillStyle = E.luzBorde; g.fillRect(x + 2, y + 2, 1, 1); g.fillRect(x + 3, y + 3, 1, 2); g.fillRect(x + 5, y + 4, 1, 1); g.fillRect(x + 4, y + 5, 2, 1); }
+}
+function dibujar(dtR){
+  const g = cxM; g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
+  const E = efecto(); hornearFondo(E, W, H);
+  if(J.modo === 'menu') dibujarMundo(g, E, true); else dibujarMundo(g, E, false);
+  POST.tint = E.tint;
+  revelar(J.tr);
+  const h = cxHUD; h.setTransform(1, 0, 0, 1, 0, 0); h.clearRect(0, 0, W, H); h.imageSmoothingEnabled = false; UI.botones = [];
+  if(J.modo === 'juego') dibujarHUD(h, E);
+  if(uiActiva()) dibujarUI(h);
+}
+function dibujarMundo(g, E, menu){
+  const OX = Math.floor((W - ANCHO)/2), s = J.sacude, sx = s ? Math.round(rv(-1, 1)*s*2) : 0, sy = s ? Math.round(rv(-1, 1)*s*2) : 0, cy = Math.round(CAM.y) + sy;
+  /* el cielo, el sol, los montes que se hunden a medida que se sube, nubes y cañas */
+  g.drawImage(FONDO.cielo, 0, 0);
+  const sube = Math.max(0, -CAM.y - 0);
+  const solY = Math.round(H*0.34 + sube*0.03); g.fillStyle = E.sol; g.beginPath(); g.arc(W/2 + 30, solY, 26, 0, 6.283); g.fill();
+  if(E.luna){ g.fillStyle = E.cielo[0]; g.beginPath(); g.arc(W/2 + 38, solY - 5, 22, 0, 6.283); g.fill(); }
+  else if(!E.rayas) for(let i = 0; i < 4; i++){ g.fillStyle = E.cielo[2]; g.fillRect(W/2 + 4, solY + 6 + i*5, 54, 1 + (i >> 1)); }
+  else for(let i = 0; i < 6; i++){ g.fillStyle = E.cielo[1]; g.fillRect(W/2 + 4, solY + 2 + i*4, 54, 1 + (i >> 1)); }
+  for(let k = 0; k < 2; k++){ const m = FONDO.montes[k], y = Math.round(H - m.height + sube*(k ? 0.12 : 0.06)), x = -Math.round((J.tr*(k ? 3 : 1.5)) % W); if(y < H) { g.drawImage(m, x, y); g.drawImage(m, x + m.width, y); } }
+  /* nubes que pasan mientras se sube (dan la sensación de altura) */
+  g.fillStyle = 'rgba(255,255,255,0.18)'; for(let i = 0; i < 7; i++){ const yy = ((i*97 - CAM.y*0.25) % (H + 60) + H + 60) % (H + 60) - 30, xx = ((i*53 + J.tr*(4 + i)) % (W + 80)) - 40; g.fillRect(Math.round(xx), Math.round(yy), 34 + i*5, 3); g.fillRect(Math.round(xx) + 8, Math.round(yy) - 2, 18, 2); }
+  /* cañas de bambú atrás, más lentas que la torre */
+  g.fillStyle = tono(E.montes[1], 0.85); g.globalAlpha = 0.2;
+  for(let i = 0; i < 9; i++){ const x = OX + 10 + i*19 + (i % 2)*5, off = ((-CAM.y*0.5) % 26 + 26) % 26; g.fillRect(x, 0, 3, H); for(let y = -26 + off + i*3; y < H; y += 26) g.fillRect(x - 1, Math.round(y), 5, 1); }
+  g.globalAlpha = 1;
+  /* los costados de afuera de la torre (en pantallas más anchas) */
+  if(OX > 0){ g.fillStyle = E.torre; g.fillRect(0, 0, OX, H); g.fillRect(OX + ANCHO, 0, W - OX - ANCHO, H); }
+  g.save(); g.translate(OX + sx, -cy);
+  /* la torre */
+  const b0 = Math.floor(cy/CEL/FB) - 1, b1 = Math.floor((cy + H)/CEL/FB) + 1;
+  for(let b = b0; b <= b1; b++){ g.drawImage(bloque(b, E), 0, b*FB*CEL); }
+  /* piedras que tiemblan antes de caerse */
+  for(const q of MAPA.desm.values()){ g.fillStyle = E.torre; g.fillRect(q.c*CEL + Math.round(rv(-1, 1)), q.r*CEL, 8, 8); g.fillStyle = E.luzBorde; g.fillRect(q.c*CEL + 2, q.r*CEL + 3, 4, 1); }
+  /* las manchas de tinta pegadas */
+  for(const m of MANCHAS){ g.fillStyle = m.col; g.fillRect(m.x - (m.r >> 1), m.y - (m.r >> 1), m.r, m.r); }
+  /* el torii de la meta */
+  if(MAPA.meta){ const y = MAPA.meta.y, c = E.acento === '#ffffff' ? '#e8384a' : '#c8283a';
+    g.fillStyle = c; g.fillRect(40, y - 26, 96, 5); g.fillRect(34, y - 29, 108, 3); g.fillRect(46, y - 16, 84, 3); g.fillRect(52, y - 21, 5, 28); g.fillRect(119, y - 21, 5, 28);
+    g.fillStyle = tono(c, 0.6); g.fillRect(52, y - 21, 2, 28); g.fillRect(119, y - 21, 2, 28);
+    const k = 0.4 + Math.sin(J.tr*3)*0.2; g.fillStyle = 'rgba(255,240,180,' + k.toFixed(2) + ')'; g.fillRect(57, y - 13, 62, 20); }
+  /* plataformas que van y vienen */
+  for(const p of MAPA.plats){ g.fillStyle = tono(E.torre, 1.1); g.fillRect(Math.round(p.x), p.y, p.w, p.h); g.fillStyle = E.luzBorde; g.fillRect(Math.round(p.x), p.y, p.w, 1);
+    g.fillStyle = E.borde; for(let x = 3; x < p.w; x += 6) g.fillRect(Math.round(p.x) + x, p.y + 2, 1, 2); }
+  /* monedas que giran */
+  /* las monedas: redondas, con agujero cuadrado como las de antes, girando */
+  for(const m of MONEDAS){ const k = Math.abs(Math.cos(m.t*3)), w = Math.max(0.6, k*3), x = Math.round(m.x), y = Math.round(m.y + Math.sin(m.t*3)*1.2);
+    g.fillStyle = '#7a4a06'; g.fillRect(Math.round(x - w) - 1, y - 2, Math.round(w*2) + 2, 5); g.fillRect(Math.round(x - w), y - 3, Math.round(w*2), 7);
+    g.fillStyle = '#ffc830'; g.fillRect(Math.round(x - w) + 0, y - 2, Math.max(1, Math.round(w*2)), 5); if(w > 1.5){ g.fillStyle = '#fff4a0'; g.fillRect(Math.round(x - w), y - 2, 1, 2); g.fillStyle = '#7a4a06'; g.fillRect(x, y, 1, 1); } }
+  /* enemigos, láseres y lo que tiran */
+  for(const e of ENEM){ if(e.muerto) continue; if(e.t === 'tirador' && e.carga > 0){ const k = lim(e.carga/1.05, 0, 1), L = 170;
+      g.globalAlpha = 0.25 + k*0.65; linea(g, e.x, e.y - 3, e.x + Math.cos(e.apunta)*L, e.y - 3 + Math.sin(e.apunta)*L, k > 0.76 ? '#ffffff' : '#ff2a3a', 1); g.globalAlpha = 1; }
+    dibujarEnemigo(g, e, E, J.tr);
+    if(e.carga > 0 && e.t !== 'tirador' && Math.floor(J.tr*14) % 2) texto(g, '!', e.x, e.y - 24, 'rojo'); }
+  for(const b of BALAS){ if(b.t === 'shuriken'){ const a = b.giro || 0; for(let i = 0; i < 4; i++){ const q = a + i*1.5708; px(g, b.x + Math.cos(q)*2, b.y + Math.sin(q)*2, '#e8e8f0'); } px(g, b.x, b.y, E.silueta); }
+    else { linea(g, b.x - b.vx*0.012, b.y - b.vy*0.012, b.x, b.y, '#fff0a0', 1); } }
+  /* el ninja, con su estela y su bufanda */
+  const N = NJ(), ex = {bufanda:NIN.bufanda, colBuf:N.colBuf, accesorio:N.accesorio, colOjo:N.colOjo, colHoja:N.colHoja};
+  if(NIN.est !== 'muerto'){
+    for(const e of NIN.estela){ g.globalAlpha = e.t*0.9; dibujarNinja(g, e.x, e.y, 'bola', e.dir, e.giro, {silueta:N.colBuf, acento:E.acento}, null); } g.globalAlpha = 1;
+    if(!(NIN.invul > 0 && Math.floor(J.tr*12) % 2)){
+      const pose = NIN.est === 'aire' ? (NIN.tAire < 0.42 ? 'bola' : 'salto') : J.apunta ? 'apunta' : NIN.ny === -1 ? 'pie' : NIN.ny === 1 ? 'techo' : 'pared';
+      /* pegado a una pared: la figura se para derecha y mira para afuera */
+      const giro = NIN.est === 'aire' ? NIN.giro : 0, dir = NIN.est === 'pegado' && NIN.nx ? NIN.nx : NIN.dir;
+      dibujarNinja(g, NIN.x, NIN.y, pose, dir, giro, E, ex);
+      /* los saltos que le quedan en el aire, como puntitos arriba de la cabeza */
+      if(NIN.est === 'aire') for(let i = 0; i < NIN.dj; i++) px(g, NIN.x - 1 + i*3, NIN.y - 9, '#ffffff'); } }
+  /* el tajo cuando mata */
+  if(J.tajo){ const t = J.tajo, L = 12*(1 + (0.18 - t.t)*6); g.globalAlpha = t.t/0.18; linea(g, t.x - Math.cos(t.a)*L, t.y - Math.sin(t.a)*L, t.x + Math.cos(t.a)*L, t.y + Math.sin(t.a)*L, '#ffffff', 2); g.globalAlpha = 1; }
+  /* partículas */
+  for(const p of PARTS){ g.fillStyle = p.col; const s2 = Math.max(1, Math.round(p.tam)); g.fillRect(Math.round(p.x), Math.round(p.y), s2, s2); }
+  /* la trayectoria mientras se apunta */
+  if(J.apunta && J.modo === 'juego') trayectoria(g);
+  /* la tinta que sube */
+  if(J.tinta){ const T = J.tinta, y0 = Math.round(T.y);
+    if(y0 < cy + H + 10){ g.fillStyle = '#12061a'; g.fillRect(-OX, y0 + 3, W, cy + H - y0 + 4);
+      for(let x = -OX; x < W - OX; x++){ const o = Math.round(Math.sin(x*0.18 + J.tr*4)*1.6 + Math.sin(x*0.07 - J.tr*2.3)*1.5); g.fillStyle = '#12061a'; g.fillRect(x, y0 + o, 1, 4); g.fillStyle = '#5a2a6a'; g.fillRect(x, y0 + o, 1, 1); }
+      for(let i = 0; i < 8; i++){ const bx = ((i*41 + Math.floor(J.tr*20)) % ANCHO), by = y0 + 6 + ((i*13 + J.tr*30) % 20); px(g, bx, by, '#3a1a4a'); } } }
+  g.restore();
+  /* pétalos, nieve o brasas por delante de todo */
+  particulasAire(g, E, dtParticulas());
+  if(J.fundido > 0){ g.fillStyle = 'rgba(10,4,14,' + J.fundido.toFixed(2) + ')'; g.fillRect(0, 0, W, H); }
+}
+let _uT = 0; function dtParticulas(){ const d = J.tr - _uT; _uT = J.tr; return Math.min(0.05, d)*(J.modo === 'juego' ? J.ts : 1); }
+const AIRE = [];
+function particulasAire(g, E, dt){
+  const n = E.part === 'nieve' ? 60 : 34; while(AIRE.length < n) AIRE.push({x:Math.random()*W, y:Math.random()*H, v:rv(0.6, 1.4), f:Math.random()*6});
+  if(AIRE.length > n) AIRE.length = n;
+  const dy0 = (AIRE._cy === undefined ? 0 : CAM.y - AIRE._cy); AIRE._cy = CAM.y;
+  for(const p of AIRE){ const tipo = E.part;
+    if(tipo === 'brasas'){ p.y -= 22*p.v*dt; p.x += Math.sin(J.tr*2 + p.f)*8*dt; } else { p.y += (tipo === 'nieve' ? 16 : 12)*p.v*dt; p.x += (Math.sin(J.tr*1.3 + p.f)*10 + (tipo === 'hojas' ? 6 : 3))*dt; }
+    p.y -= dy0*0.9;                                                                                    /* se mueven con la cámara, un pelo más lento que la torre */
+    if(p.y > H + 4) { p.y = -4; p.x = Math.random()*W; } if(p.y < -6){ p.y = H + 3; p.x = Math.random()*W; } if(p.x > W + 4) p.x = -4; if(p.x < -4) p.x = W + 4;
+    const c = E.colPart[Math.floor(p.f*10) % E.colPart.length]; g.fillStyle = c;
+    if(tipo === 'sakura' || tipo === 'hojas'){ const k = Math.sin(J.tr*3 + p.f) > 0; g.fillRect(Math.round(p.x), Math.round(p.y), k ? 2 : 1, k ? 1 : 2); }
+    else if(tipo === 'tinta'){ g.globalAlpha = 0.5; g.fillRect(Math.round(p.x), Math.round(p.y), 1, 1); g.globalAlpha = 1; }
+    else g.fillRect(Math.round(p.x), Math.round(p.y), 1, 1); }
+}
+/* la trayectoria: la misma física, un segundo para adelante */
+function trayectoria(g){
+  const d = J.apunta, pegado = NIN.est === 'pegado', v = velTiro(d.x - d.x0, d.y - d.y0, pegado ? NIN.nx : undefined, pegado ? NIN.ny : undefined);
+  if(!v || !puedeSaltar()) return;
+  const o = {x:NIN.x, y:NIN.y, vx:v.vx, vy:v.vy}; let fin = null;
+  for(let s = 0; s < 70; s++){ const r = pasoCuerpo(o, 1/60, true); if(r){ fin = r; break; }
+    if(s % 4 === 1){ const a = 1 - s/85, x = Math.round(o.x), y = Math.round(o.y); g.globalAlpha = a; g.fillStyle = '#1a0a20'; g.fillRect(x - 1, y - 1, 3, 3); px(g, x, y, NIN.est === 'aire' ? '#9ae8ff' : '#ffffff'); g.globalAlpha = 1; } }
+  if(fin && fin.muere){ const x = Math.round(o.x), y = Math.round(o.y); for(let i = -2; i <= 2; i++){ px(g, x + i, y + i, '#ff3a3a'); px(g, x + i, y - i, '#ff3a3a'); } }
+  else if(fin && fin.pega){ g.fillStyle = '#ffffff'; g.fillRect(Math.round(o.x) - 2, Math.round(o.y) - 2, 1, 1); g.fillRect(Math.round(o.x) + 2, Math.round(o.y) - 2, 1, 1); g.fillRect(Math.round(o.x) - 2, Math.round(o.y) + 2, 1, 1); g.fillRect(Math.round(o.x) + 2, Math.round(o.y) + 2, 1, 1); }
+}
+
+/* ================================================================ el HUD */
+function dibujarHUD(g, E){
+  const t = J.tr;
+  if(J.infinito){ texto(g, J.alturaMax + tr('M'), 6, 5, 'blanco', {izq:true}); texto(g, String(J.puntos), 6, 17, 'oro', {izq:true}); }
+  else { texto(g, J.nivel.id.toUpperCase().replace('BAMBU', tr('BAMBÚ')).replace('MONTANA', tr('MONTAÑA')).replace('CASTILLO', tr('CASTILLO')), 6, 5, 'blanco', {izq:true});
+    texto(g, J.bajas + '/' + J.totEnem, 6, 17, J.bajas >= J.totEnem ? 'verde' : 'gris', {izq:true}); }
+  /* monedas */
+  const ms = J.infinito ? String(J.monedas) : J.monedas + '/' + J.totMonedas; texto(g, ms, W - 8, 17, J.monedas >= J.totMonedas && !J.infinito ? 'verde' : 'oro', {der:true}); disco(g, W - 12 - lienzoTexto(ms, 'oro').width, 22, 3, '#8a5a08'); disco(g, W - 12 - lienzoTexto(ms, 'oro').width, 22, 2, '#ffd040');
+  /* pausa */
+  g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(W - 20, 2, 16, 13); g.fillStyle = '#ffffff'; g.fillRect(W - 15, 5, 2, 7); g.fillRect(W - 10, 5, 2, 7);
+  if(NJ().vidas) for(let i = 0; i < NIN.vidas; i++) disco(g, 8 + i*7, 32, 2, '#ff5a6a');
+  /* el dedo: dónde apoyaste y cuánto tiraste */
+  if(J.apunta){ const d = J.apunta, v = velTiro(d.x - d.x0, d.y - d.y0), k = v ? Math.hypot(v.vx, v.vy)/V_MAX : 0;
+    anillo(g, d.x0, d.y0, 7, 'rgba(255,255,255,0.6)'); linea(g, d.x0, d.y0, d.x, d.y, 'rgba(255,255,255,0.45)', 1); disco(g, d.x, d.y, 2.5, k > 0.98 ? '#ffd040' : '#ffffff');
+    const bw = 40; g.fillStyle = 'rgba(0,0,0,0.4)'; g.fillRect(W/2 - bw/2, H - 14, bw, 4); g.fillStyle = k > 0.98 ? '#ffd040' : '#ffffff'; g.fillRect(W/2 - bw/2, H - 14, Math.round(bw*k), 4); }
+  /* la tinta cerca: el borde de abajo se pone morado */
+  if(J.tinta){ const k = lim(1 - (J.tinta.y - NIN.y)/140, 0, 1); if(k > 0){ const gr = g.createLinearGradient(0, H, 0, H - 60); gr.addColorStop(0, 'rgba(90,20,110,' + (k*0.6).toFixed(2) + ')'); gr.addColorStop(1, 'rgba(90,20,110,0)'); g.fillStyle = gr; g.fillRect(0, H - 60, W, 60); } }
+  for(const tx of J.textos){ g.globalAlpha = lim(tx.t*3, 0, 1); const sy = Math.round(tx.y - CAM.y), sx = Math.round(tx.x + (W - ANCHO)/2); texto(g, tx.txt, sx, sy, tx.grad); g.globalAlpha = 1; }
+  /* el cartel del nivel al arrancar */
+  if(J.reloj < 1.8 && !J.pausa){ const a = lim((1.8 - J.reloj)*2, 0, 1)*lim(J.reloj*4, 0, 1); g.globalAlpha = a;
+    const t1 = J.infinito ? tr('INFINITO') : tr(MUNDOS[J.nivel.mi].nombre), t2 = J.infinito ? tr('LA TINTA SUBE') : String(J.nivel.n + 1);
+    g.fillStyle = 'rgba(10,4,14,0.55)'; g.fillRect(0, Math.round(H*0.36), W, 34); texto(g, t1, W/2, Math.round(H*0.36) + 5, 'blanco'); texto(g, t2, W/2, Math.round(H*0.36) + 18, J.infinito ? 'rojo' : 'oro'); g.globalAlpha = 1; }
+  /* el primer nivel explica */
+  if(J.nivel && J.nivel.id === 'bambu-1' && J.reloj < 9 && NIN.est === 'pegado' && !J.apunta && !J.pausa){ const a = lim((9 - J.reloj), 0, 1);
+    g.globalAlpha = a; texto(g, tr('TIRÁ PARA ATRÁS'), W/2, Math.round(H*0.2), 'blanco'); texto(g, tr('Y SOLTÁ PARA SALTAR'), W/2, Math.round(H*0.2) + 12, 'blanco');
+    const k = (t*0.8) % 1, x0 = W/2, y0 = Math.round(H*0.2) + 40; disco(g, x0 - k*18, y0 + k*18, 3, '#ffffff'); anillo(g, x0, y0, 6, 'rgba(255,255,255,0.6)'); g.globalAlpha = 1; }
+  if(J.nivel && J.nivel.id === 'bambu-1' && NIN.est === 'aire' && NIN.dj > 0 && J.reloj < 20){ texto(g, tr('EN EL AIRE: OTRO SALTO'), W/2, Math.round(H*0.2), 'cian'); }
+}
+function anillo(g, x, y, r, col){ g.fillStyle = col; for(let a = 0; a < 6.283; a += 1/r) g.fillRect(Math.round(x + Math.cos(a)*r), Math.round(y + Math.sin(a)*r), 1, 1); }
+/* ================================================================ menús: en la misma grilla de píxeles, encima de la torre viva */
+function marco(g, x, y, w, h, fondo, borde){ g.fillStyle = fondo || 'rgba(10,4,20,0.86)'; g.fillRect(x, y, w, h);
+  g.fillStyle = borde || '#ff3aa8'; g.fillRect(x, y, w, 1); g.fillRect(x, y + h - 1, w, 1); g.fillRect(x, y, 1, h); g.fillRect(x + w - 1, y, 1, h); }
+function boton(g, id, x, y, w, h, label, opc){
+  opc = opc || {}; x = Math.round(x); y = Math.round(y);
+  const ap = UI.presion === id, apag = opc.apagado, dy = ap ? 1 : 0;
+  UI.botones.push({id, x, y, w, h, fn:opc.fn, apagado:apag});
+  g.fillStyle = K; g.fillRect(x - 1, y - 1, w + 2, h + 3);
+  const base = apag ? '#241a30' : opc.principal ? '#b8283a' : opc.color || '#2a1a34';
+  g.fillStyle = base; g.fillRect(x, y + dy, w, h);
+  g.fillStyle = apag ? '#34283e' : opc.principal ? '#ff5a5a' : '#4a3452'; g.fillRect(x, y + dy, w, 1);
+  g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x, y + dy + h - 2, w, 2);
+  if(!ap){ g.fillStyle = '#05030a'; g.fillRect(x, y + h, w, 2); }
+  if(opc.sel){ g.fillStyle = '#ffd040'; g.fillRect(x, y + dy, 2, h); g.fillRect(x + w - 2, y + dy, 2, h); }
+  texto(g, label, x + w/2, y + dy + Math.round(h/2 - 6), apag ? 'gris' : opc.grad || 'blanco');
+}
+/* letras gordas: cada píxel de la fuente es un bloque, con degradé, canto en 3D y contorno */
+function letrasGordas(str, B, cols, canto, colCanto){
+  const f = lienzoTexto(str, 'blanco', {sinBorde:true}), d = f.getContext('2d').getImageData(0, 0, f.width, f.height).data, fw = f.width, fh = f.height;
+  const on = (x, y) => x >= 0 && y >= 0 && x < fw && y < fh && d[(y*fw + x)*4 + 3] > 40;
+  let y0 = fh, y1 = 0; for(let y = 0; y < fh; y++) for(let x = 0; x < fw; x++) if(on(x, y)){ y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  const P2 = 2, E = canto, w = fw*B + P2*2, h = (y1 - y0 + 1)*B + P2*2 + E, [c, g] = lienzo(w, h), [m, gm] = lienzo(w, h);
+  for(let y = y0; y <= y1; y++) for(let x = 0; x < fw; x++) if(on(x, y)) gm.fillRect(P2 + x*B, P2 + (y - y0)*B, B, B);
+  const md = gm.getImageData(0, 0, w, h).data, M2 = (x, y) => x >= 0 && y >= 0 && x < w && y < h && md[(y*w + x)*4 + 3] > 0, hh = (y1 - y0 + 1)*B;
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
+    if(M2(x, y)){ const k = lim((y - P2)/hh, 0, 0.999); g.fillStyle = !M2(x, y - 1) || !M2(x - 1, y) ? '#fff8ff' : !M2(x + 1, y) || !M2(x, y + 1) ? cols[cols.length - 1] : cols[Math.floor(k*cols.length)]; g.fillRect(x, y, 1, 1); continue; }
+    let prof = 0; for(let e = 1; e <= E; e++) if(M2(x, y - e)){ prof = e; break; }
+    if(prof){ g.fillStyle = colCanto[Math.min(colCanto.length - 1, prof - 1)]; g.fillRect(x, y, 1, 1); } }
+  const cd = g.getImageData(0, 0, w, h).data, C2 = (x, y) => x >= 0 && y >= 0 && x < w && y < h && cd[(y*w + x)*4 + 3] > 0;
+  g.fillStyle = K; for(let y = 0; y < h; y++) for(let x = 0; x < w; x++) if(!C2(x, y) && (C2(x - 1, y) || C2(x + 1, y) || C2(x, y - 1) || C2(x, y + 1))) g.fillRect(x, y, 1, 1);
+  return c;
+}
+function bandera(g, k, x, y){
+  g.fillStyle = K; g.fillRect(x - 1, y - 1, 20, 14);
+  if(k === 'es'){ rect(g, x, y, 18, 4, '#74acdf'); rect(g, x, y + 4, 18, 4, '#f4f4f4'); rect(g, x, y + 8, 18, 4, '#74acdf'); rect(g, x + 8, y + 5, 2, 2, '#f6b40e'); px(g, x + 7, y + 6, '#f6b40e'); px(g, x + 10, y + 5, '#f6b40e'); px(g, x + 9, y + 4, '#f6b40e'); px(g, x + 8, y + 7, '#f6b40e'); }
+  else if(k === 'en'){ rect(g, x, y, 18, 12, '#1e3a8a'); for(let i = 0; i < 18; i++){ const j = Math.round(i*11/17); px(g, x + i, y + j, '#f4f4f4'); px(g, x + i, y + 11 - j, '#f4f4f4'); px(g, x + i, y + Math.min(11, j + 1), '#c8102e'); }
+    rect(g, x + 7, y, 4, 12, '#f4f4f4'); rect(g, x, y + 4, 18, 4, '#f4f4f4'); rect(g, x + 8, y, 2, 12, '#c8102e'); rect(g, x, y + 5, 18, 2, '#c8102e'); }
+  else { rect(g, x, y, 18, 12, '#009b3a'); for(let j = 0; j < 12; j++){ const w2 = Math.round(8*(1 - Math.abs(j - 5.5)/6)); rect(g, x + 9 - w2, y + j, w2*2, 1, '#fedf00'); } disco(g, x + 9, y + 6, 3, '#002776'); rect(g, x + 7, y + 6, 5, 1, '#f4f4f4'); }
+}
+
+const UI = {p:'idioma', t:0, botones:[], presion:null, res:null, mundo:0, tab:'ninjas', ver:0, cofre:null};
+function uiActiva(){ return J.modo === 'menu' || J.modo === 'resultado' || J.pausa; }
+function irA(p){ UI.p = p; UI.t = 0; UI.presion = null; SON.fx('desliza_menu'); }
+function uiBoton(x, y){ return UI.botones.find(b => x >= b.x - 3 && x <= b.x + b.w + 3 && y >= b.y - 3 && y <= b.y + b.h + 4); }
+function uiDown(x, y){
+  if(UI.p === 'titulo'){ irA('principal'); SON.fx('titulo'); return; }
+  const b = uiBoton(x, y); UI.presion = b && !b.apagado ? b.id : null; if(UI.presion) SON.fx('clic');
+}
+function uiUp(x, y){ const b = uiBoton(x, y), id = UI.presion; UI.presion = null; if(b && b.id === id && b.fn){ SON.fx('boton'); vibrar(8); b.fn(); } }
+/* temporizadores que corren con el juego y se descartan si cambió la carga */
+const LUEGO = [];
+function luego(seg, fn){ LUEGO.push({t:seg, fn, gen:J.gen}); }
+function pasoLuego(dt){ for(let i = LUEGO.length - 1; i >= 0; i--){ const l = LUEGO[i]; l.t -= dt; if(l.t <= 0){ LUEGO.splice(i, 1); if(l.gen === J.gen) try { l.fn(); } catch(e){ console.error(e); } } } }
+
+/* ---------- el logo: SOMBRA en letras gordas, con una luna atrás y un tajo que la cruza ---------- */
+let _LOGO = null;
+function logo(g, cx, y){
+  if(!_LOGO){ const a = letrasGordas('SOMBRA', 4, ['#ffffff', '#f4e8f0', '#d8c8e0', '#a890b8'], 4, ['#3a1a4a', '#2a1036', '#1a0822']); _LOGO = a; }
+  const c = _LOGO, x0 = Math.round(cx - c.width/2), t = J.tr;
+  disco(g, cx + 34, y + 10, 18, 'rgba(232,56,74,0.9)');
+  g.drawImage(c, x0, y + Math.round(Math.sin(t*1.6)*1.5));
+  const k = (t*0.5) % 3; if(k < 0.25){ g.globalAlpha = 1 - k*4; linea(g, x0 - 6 + k*40, y + c.height + 2, x0 + c.width*k*4, y - 4, '#ffffff', 1); g.globalAlpha = 1; }
+  texto(g, tr('EL SALTO DEL NINJA'), cx, y + c.height + 4, 'rojo');
+}
+function monedero(g){ const x = W - 8; texto(g, String(PROG.monedas), x - 8, 5, 'oro', {der:true}); disco(g, x - 3, 10, 3, '#8a5a08'); disco(g, x - 3, 10, 2, '#ffd040'); }
+function estrellita(g, x, y, llena, e){ const E2 = ['...#...', '..###..', '#######', '.#####.', '..###..', '.##.##.', '.#...#.']; e = e || 1;
+  E2.forEach((f, j) => { for(let i = 0; i < 7; i++) if(f[i] === '#'){ g.fillStyle = llena ? (j < 3 && i < 4 ? '#fff4a0' : '#ffc830') : '#4a3a52'; g.fillRect(Math.round(x + i*e), Math.round(y + j*e), e, e); } }); }
+const CAUSA = {pinchos:'TE CLAVASTE', tinta:'TE TRAGÓ LA TINTA', samurai:'TE CORTARON', bala:'TE DIERON', shuriken:'UNA ESTRELLA NINJA', cae:'TE CAÍSTE'};
+
+const PANTALLAS = {
+  idioma(g){
+    g.fillStyle = 'rgba(10,4,14,0.6)'; g.fillRect(0, 0, W, H);
+    texto(g, 'IDIOMA', W/2, Math.round(H*0.14), 'oro'); texto(g, 'LANGUAGE', W/2, Math.round(H*0.14) + 12, 'oro');
+    const op = [['es', 'ESPAÑOL'], ['en', 'ENGLISH'], ['pt', 'PORTUGUÊS']], w = Math.min(150, W - 24), x = Math.round(W/2 - w/2);
+    op.forEach(([k, nom], i) => { const y = Math.round(H*0.32) + i*44;
+      boton(g, 'idi' + k, x, y, w, 30, '', {sel:IDIOMA === k, fn:() => { ponerIdioma(k); _LOGO = null; irA('titulo'); }});
+      bandera(g, k, x + 10, y + 9); texto(g, nom, x + w/2 + 10, y + 9, IDIOMA === k ? 'oro' : 'blanco'); });
+  },
+  titulo(g){ logo(g, W/2, Math.round(H*0.16)); if(Math.floor(J.tr*2) % 2 === 0) texto(g, tr('TOCÁ PARA EMPEZAR'), W/2, Math.round(H*0.8), 'blanco'); },
+  principal(g){
+    logo(g, W/2, Math.round(H*0.1)); monedero(g);
+    const w = 130, x = Math.round(W/2 - w/2); let y = Math.round(H*0.42);
+    boton(g, 'des', x, y, w, 24, tr('DESAFÍOS'), {principal:true, fn:() => irA('desafios')}); y += 32;
+    boton(g, 'inf', x, y, w, 24, tr('INFINITO'), {fn:() => { SON.fx('titulo'); empezarInfinito(); }}); texto(g, tr('RÉCORD {0}', PROG.record), W/2, y + 27, 'gris'); y += 44;
+    boton(g, 'tie', x, y, w, 24, tr('TIENDA'), {fn:() => { UI.tab = 'ninjas'; UI.ver = Object.keys(NINJAS).indexOf(PROG.ninja); UI.cofre = null; irA('tienda'); SON.musica('tienda'); }}); y += 32;
+    boton(g, 'opc', x, y, w, 24, tr('OPCIONES'), {fn:() => { UI.desde = 'principal'; irA('opciones'); }});
+  },
+  desafios(g){
+    g.fillStyle = 'rgba(10,4,14,0.55)'; g.fillRect(0, 0, W, H); monedero(g);
+    const M = MUNDOS[UI.mundo], tot = NIVELES.filter(n => n.mi === UI.mundo).reduce((s, n) => s + (PROG.niveles[n.id] || 0), 0);
+    boton(g, 'mA', 6, 24, 22, 22, '◀', {fn:() => { UI.mundo = (UI.mundo + 2) % 3; }}); boton(g, 'mB', W - 28, 24, 22, 22, '▶', {fn:() => { UI.mundo = (UI.mundo + 1) % 3; }});
+    texto(g, tr(M.nombre), W/2, 28, 'oro'); estrellita(g, W/2 - 20, 40, true); texto(g, tot + '/24', W/2 + 12, 40, 'blanco');
+    const bw = 64, bh = 40, x0 = Math.round(W/2 - bw - 4);
+    NIVELES.filter(n => n.mi === UI.mundo).forEach((n, i) => { const x = x0 + (i % 2)*(bw + 8), y = 60 + Math.floor(i/2)*(bh + 8), gi = NIVELES.indexOf(n), ab = gi <= PROG.abierto, e = PROG.niveles[n.id] || 0;
+      boton(g, 'n' + gi, x, y, bw, bh, '', {apagado:!ab, fn:() => { J.pausa = false; SON.fx('titulo'); empezarNivel(gi); }});
+      if(ab){ texto(g, String(n.n + 1), x + bw/2, y + 7, 'blanco'); for(let k = 0; k < 3; k++) estrellita(g, x + bw/2 - 19 + k*13, y + 22, k < e); }
+      else { rect(g, x + bw/2 - 4, y + 14, 8, 7, '#6a5a72'); rect(g, x + bw/2 - 3, y + 10, 1, 4, '#6a5a72'); rect(g, x + bw/2 + 2, y + 10, 1, 4, '#6a5a72'); rect(g, x + bw/2 - 3, y + 10, 6, 1, '#6a5a72'); } });
+    boton(g, 'vol', 8, H - 30, 70, 22, tr('VOLVER'), {fn:() => irA('principal')});
+  },
+  tienda(g){
+    g.fillStyle = 'rgba(10,4,14,0.62)'; g.fillRect(0, 0, W, H); monedero(g);
+    texto(g, tr('TIENDA'), 8, 5, 'blanco', {izq:true});
+    const tabs = [['ninjas', 'NINJAS'], ['efectos', 'EFECTOS'], ['cofre', 'COFRE']], tw = Math.floor((W - 16)/3);
+    tabs.forEach(([k, n], i) => boton(g, 't' + k, 8 + i*tw, 22, tw - 4, 20, tr(n), {sel:UI.tab === k, color:UI.tab === k ? '#4a2a5a' : undefined, fn:() => { UI.tab = k; UI.cofre = null;
+      UI.ver = k === 'ninjas' ? Object.keys(NINJAS).indexOf(PROG.ninja) : Math.max(0, ['auto'].concat(Object.keys(EFECTOS)).indexOf(PROG.efecto)); }}));
+    const cx = W/2, cy = 110;
+    if(UI.tab === 'ninjas' || UI.tab === 'efectos'){
+      const ninjas = UI.tab === 'ninjas', lista = ninjas ? Object.keys(NINJAS) : ['auto'].concat(Object.keys(EFECTOS)), k = lista[(UI.ver + lista.length) % lista.length];
+      const tiene = ninjas ? PROG.ninjas.includes(k) : k === 'auto' || !EFECTOS[k].precio || PROG.efectos.includes(k), puesto = ninjas ? PROG.ninja === k : PROG.efecto === k;
+      marco(g, 20, 50, W - 40, 110, 'rgba(20,10,26,0.8)', '#6a4a7c');
+      if(ninjas){ const N = NINJAS[k], E = efecto(), [c, gc] = lienzo(40, 30);
+        dibujarNinja(gc, 20, 16, ['pie', 'apunta', 'salto'][Math.floor(J.tr*0.7) % 3], 1, 0, {silueta:'#0a0610', acento:'#e8384a'}, {bufanda:[{x:19, y:13}, {x:16, y:12}, {x:14, y:13 + Math.sin(J.tr*6)}, {x:12, y:12 + Math.sin(J.tr*6 + 1)}, {x:10, y:13 + Math.sin(J.tr*6 + 2)}], colBuf:N.colBuf, accesorio:N.accesorio, colOjo:N.colOjo, colHoja:N.colHoja});
+        g.drawImage(c, 0, 0, 40, 30, cx - 60, cy - 58, 120, 90);
+        texto(g, N.nombre, cx, cy + 34, 'oro'); texto(g, tr(N.perk), cx, 176, 'blanco'); }
+      else { const E = k === 'auto' ? null : EFECTOS[k];
+        if(E){ const x0 = cx - 40, y0 = 58; for(let i = 0; i < 6; i++){ g.fillStyle = mezcla(E.cielo, i/5); g.fillRect(x0, y0 + i*9, 80, 9); } disco(g, cx + 14, y0 + 22, 9, E.sol); g.fillStyle = E.montes[0]; g.fillRect(x0, y0 + 40, 80, 14);
+          g.fillStyle = E.torre; g.fillRect(x0, y0, 10, 54); g.fillRect(x0 + 70, y0, 10, 54); g.fillRect(x0 + 10, y0 + 30, 22, 5); g.fillStyle = E.luzBorde; g.fillRect(x0 + 10, y0 + 30, 22, 1);
+          dibujarNinja(g, x0 + 22, y0 + 25, 'pie', 1, 0, E, {bufanda:[{x:x0 + 21, y:y0 + 22}, {x:x0 + 18, y:y0 + 21}, {x:x0 + 16, y:y0 + 22}], colBuf:'#e8384a'});
+          for(let i = 0; i < 8; i++) px(g, x0 + (i*23 + Math.floor(J.tr*9)) % 80, y0 + (i*17 + Math.floor(J.tr*14)) % 54, E.colPart[i % 3]); }
+        else { texto(g, tr('EL DEL MUNDO'), cx, 90, 'blanco'); texto(g, tr('CADA MUNDO CON SU LUZ'), cx, 104, 'gris'); }
+        texto(g, E ? tr(E.nombre) : tr('AUTOMÁTICO'), cx, cy + 34, 'oro'); }
+      boton(g, 'vA', 24, cy - 8, 20, 20, '◀', {fn:() => { UI.ver = (UI.ver - 1 + lista.length) % lista.length; SON.fx('clic'); }});
+      boton(g, 'vB', W - 44, cy - 8, 20, 20, '▶', {fn:() => { UI.ver = (UI.ver + 1) % lista.length; SON.fx('clic'); }});
+      const precio = ninjas ? NINJAS[k].precio : k === 'auto' ? 0 : EFECTOS[k].precio;
+      if(puesto) boton(g, 'acc', W/2 - 55, 200, 110, 24, tr('PUESTO'), {apagado:true});
+      else if(tiene) boton(g, 'acc', W/2 - 55, 200, 110, 24, tr('PONER'), {principal:true, fn:() => { if(ninjas) PROG.ninja = k; else PROG.efecto = k; guardarProg(); SON.fx('compra'); }});
+      else boton(g, 'acc', W/2 - 55, 200, 110, 24, tr('COMPRAR {0}', precio), {principal:PROG.monedas >= precio, fn:() => {
+        if(PROG.monedas < precio){ SON.fx('no_alcanza'); UI.aviso = {txt:tr('NO TE ALCANZA'), t:1.5}; return; }
+        PROG.monedas -= precio; if(ninjas){ PROG.ninjas.push(k); PROG.ninja = k; } else { PROG.efectos.push(k); PROG.efecto = k; } guardarProg(); SON.fx('compra'); vibrar(30); }});
+    } else {
+      /* el cofre: 150 monedas por algo al azar */
+      const abierto = UI.cofre && UI.t - UI.cofre.t0 > 0.6, sac = UI.cofre && !abierto ? Math.round(rv(-2, 2)) : 0, bx = cx - 26 + sac, by = 70;
+      rect(g, bx, by + 16, 52, 30, '#6a3a1a'); rect(g, bx, by + 16, 52, 3, '#8a4a22'); for(let i = 0; i < 4; i++) rect(g, bx + 4 + i*13, by + 20, 1, 24, '#4a2a10');
+      if(abierto){ rect(g, bx - 2, by + 2, 56, 10, '#6a3a1a'); g.globalAlpha = 0.6 + Math.sin(J.tr*6)*0.3; disco(g, cx, by + 16, 14, '#fff0a0'); g.globalAlpha = 1; }
+      else { rect(g, bx - 2, by + 8, 56, 10, '#8a4a22'); rect(g, bx - 2, by + 8, 56, 2, '#a86a32'); }
+      rect(g, bx + 22, by + 14, 8, 8, '#e8c040'); rect(g, bx + 25, by + 17, 2, 3, '#4a2a10');
+      if(abierto) { texto(g, UI.cofre.txt, cx, 128, 'oro'); if(UI.cofre.sub) texto(g, UI.cofre.sub, cx, 140, 'blanco'); }
+      else texto(g, tr('¿QUÉ HABRÁ ADENTRO?'), cx, 128, 'blanco');
+      boton(g, 'cof', W/2 - 55, 200, 110, 24, tr('ABRIR {0}', 150), {principal:PROG.monedas >= 150, fn:() => abrirCofre()}); }
+    if(UI.aviso && UI.aviso.t > 0){ UI.aviso.t -= 1/60; texto(g, UI.aviso.txt, W/2, 232, 'rojo'); }
+    boton(g, 'vol', 8, H - 30, 70, 22, tr('VOLVER'), {fn:() => { irA('principal'); SON.musica('menu'); }});
+  },
+  opciones(g){
+    g.fillStyle = 'rgba(10,4,14,0.7)'; g.fillRect(0, 0, W, H);
+    texto(g, tr('OPCIONES'), W/2, 10, 'oro');
+    const onoff = v => v ? tr('SÍ') : tr('NO'), nIdi = {es:'ESPAÑOL', en:'ENGLISH', pt:'PORTUGUÊS'}, ls = ['es', 'en', 'pt'];
+    const filas = [
+      [tr('IDIOMA'), nIdi[IDIOMA], d => { ponerIdioma(ls[(ls.indexOf(IDIOMA) + d + 3) % 3]); _LOGO = null; }],
+      [tr('MÚSICA'), Math.round(AJ.musica*10) + '/10', d => { AJ.musica = lim(Math.round(AJ.musica*10 + d)/10, 0, 1); SON.volumen(); }],
+      [tr('SONIDOS'), Math.round(AJ.efectos*10) + '/10', d => { AJ.efectos = lim(Math.round(AJ.efectos*10 + d)/10, 0, 1); SON.volumen(); SON.fx('moneda'); }],
+      [tr('VIBRACIÓN'), onoff(AJ.vibrar), () => { AJ.vibrar = !AJ.vibrar; vibrar(30); }],
+      [tr('EFECTOS VISUALES'), AJ.visual === 'alta' ? tr('ALTOS') : tr('BAJOS'), () => { AJ.visual = AJ.visual === 'alta' ? 'baja' : 'alta'; }]];
+    filas.forEach(([nom, val, fn], i) => { const y = 34 + i*40; texto(g, nom, W/2, y, 'blanco');
+      boton(g, 'o' + i + 'a', 14, y + 12, 22, 20, '◀', {fn:() => { fn(-1); guardar('sombra.ajustes', AJ); }}); texto(g, val, W/2, y + 16, 'oro');
+      boton(g, 'o' + i + 'b', W - 36, y + 12, 22, 20, '▶', {fn:() => { fn(1); guardar('sombra.ajustes', AJ); }}); });
+    boton(g, 'vol', 8, H - 30, 70, 22, tr('VOLVER'), {fn:() => irA(UI.desde || 'principal')});
+  },
+  pausa(g){
+    g.fillStyle = 'rgba(10,4,14,0.7)'; g.fillRect(0, 0, W, H); texto(g, tr('PAUSA'), W/2, Math.round(H*0.22), 'oro');
+    const w = 130, x = Math.round(W/2 - w/2); let y = Math.round(H*0.38);
+    boton(g, 'seg', x, y, w, 24, tr('SEGUIR'), {principal:true, fn:() => { J.pausa = false; }}); y += 32;
+    boton(g, 'rei', x, y, w, 24, tr('REINTENTAR'), {fn:() => { J.pausa = false; reintentar(); }}); y += 32;
+    boton(g, 'opc', x, y, w, 24, tr('OPCIONES'), {fn:() => { UI.desde = 'pausa'; irA('opciones'); }}); y += 32;
+    boton(g, 'sal', x, y, w, 24, tr('SALIR'), {fn:() => volverAlMenu()});
+  },
+  gana(g){
+    const R2 = UI.res, t = UI.t; g.fillStyle = 'rgba(10,4,14,0.62)'; g.fillRect(0, 0, W, H);
+    texto(g, tr('¡NIVEL SUPERADO!'), W/2, Math.round(H*0.12), 'oro');
+    /* las tres estrellas se estampan de a una */
+    for(let k = 0; k < 3; k++){ const tk = 0.4 + k*0.45, gana2 = k < R2.estrellas; if(t > tk && !R2['e' + k]){ R2['e' + k] = true; if(gana2){ SON.fx('estrella', {n:k + 1}); vibrar(20); } }
+      const e = t > tk && gana2 ? Math.max(3, Math.round(lerp(6, 3, lim((t - tk)/0.15, 0, 1)))) : 3; estrellita(g, W/2 - 42 + k*30 - (e - 3)*3.5, Math.round(H*0.2) - (e - 3)*3.5, t > tk && gana2, e); }
+    const y = Math.round(H*0.34);
+    texto(g, tr('LLEGASTE AL TORII'), W/2, y, 'blanco');
+    texto(g, tr('MONEDAS {0}/{1}', J.monedas, J.totMonedas), W/2, y + 14, R2.monOk ? 'oro' : 'gris');
+    texto(g, tr('BAJAS {0}/{1}', J.bajas, J.totEnem), W/2, y + 28, R2.bajOk ? 'oro' : 'gris');
+    texto(g, '+' + R2.mon, W/2 - 4, y + 46, 'oro'); disco(g, W/2 + 12 + String(R2.mon).length*3, y + 50, 3, '#ffd040');
+    if(t > 1.6){ const w = 130, x = Math.round(W/2 - w/2); let yb = Math.round(H*0.56);
+      if(J.idx + 1 < NIVELES.length) { boton(g, 'sig', x, yb, w, 24, tr('SIGUIENTE'), {principal:true, fn:() => empezarNivel(J.idx + 1)}); yb += 32; }
+      boton(g, 'rep', x, yb, w, 24, tr('REPETIR'), {fn:() => empezarNivel(J.idx)}); yb += 32;
+      boton(g, 'men', x, yb, w, 24, tr('MENÚ'), {fn:() => { volverAlMenu(); irA('desafios'); }}); }
+  },
+  muerte(g){
+    const R2 = UI.res, t = UI.t; g.fillStyle = 'rgba(40,4,14,' + Math.min(0.62, t*1.5).toFixed(2) + ')'; g.fillRect(0, 0, W, H);
+    texto(g, tr(CAUSA[NIN.causa] || 'TE CAÍSTE'), W/2, Math.round(H*0.18), 'rojo');
+    if(J.infinito){ texto(g, tr('ALTURA {0} M', J.alturaMax), W/2, Math.round(H*0.28), 'blanco'); texto(g, tr('PUNTOS {0}', J.puntos), W/2, Math.round(H*0.28) + 14, 'oro');
+      if(R2.record && Math.floor(t*3) % 2) texto(g, tr('¡NUEVO RÉCORD!'), W/2, Math.round(H*0.28) + 30, 'oro'); else if(!R2.record) texto(g, tr('RÉCORD {0}', PROG.record), W/2, Math.round(H*0.28) + 30, 'gris'); }
+    else texto(g, tr('MONEDAS {0}/{1}', J.monedas, J.totMonedas), W/2, Math.round(H*0.28), 'gris');
+    if(R2.mon) { texto(g, '+' + R2.mon, W/2 - 4, Math.round(H*0.28) + 46, 'oro'); disco(g, W/2 + 12 + String(R2.mon).length*3, Math.round(H*0.28) + 50, 3, '#ffd040'); }
+    if(t > 0.5){ const w = 130, x = Math.round(W/2 - w/2); let yb = Math.round(H*0.52);
+      boton(g, 'rei', x, yb, w, 26, tr('REINTENTAR'), {principal:true, fn:() => reintentar()}); yb += 34;
+      boton(g, 'men', x, yb, w, 24, tr('MENÚ'), {fn:() => { const inf = J.infinito; volverAlMenu(); if(!inf) irA('desafios'); }}); }
+  }
+};
+function dibujarUI(g){ const f = PANTALLAS[UI.p]; if(f) f(g); }
+function abrirCofre(){
+  if(PROG.monedas < 150){ SON.fx('no_alcanza'); UI.aviso = {txt:tr('NO TE ALCANZA'), t:1.5}; return; }
+  PROG.monedas -= 150; SON.fx('cofre'); vibrar(40);
+  const faltan = Object.keys(NINJAS).filter(k => !PROG.ninjas.includes(k)).map(k => ['n', k]).concat(Object.keys(EFECTOS).filter(k => EFECTOS[k].precio && !PROG.efectos.includes(k)).map(k => ['e', k]));
+  if(faltan.length && Math.random() < 0.35){ const [t, k] = faltan[Math.floor(Math.random()*faltan.length)];
+    if(t === 'n'){ PROG.ninjas.push(k); UI.cofre = {txt:tr('¡NINJA NUEVO!'), sub:NINJAS[k].nombre, t0:UI.t}; } else { PROG.efectos.push(k); UI.cofre = {txt:tr('¡EFECTO NUEVO!'), sub:tr(EFECTOS[k].nombre), t0:UI.t}; } }
+  else { const m = [60, 90, 120, 180, 250, 400][Math.floor(Math.random()*Math.random()*6)]; PROG.monedas += m; UI.cofre = {txt:tr('+{0} MONEDAS', m), sub:null, t0:UI.t}; }
+  guardarProg();
+}
+/* ---------- el flujo ---------- */
+function volverAlMenu(){ J.modo = 'menu'; J.pausa = false; J.gen++; UI.p = 'principal'; UI.t = 0; SON.musica('menu'); SON.ambiente('templo'); SON.filtroMuerte(false); SON.lento(0); SON.cinta(0.3);
+  POST.satur = 1.15; POST.vin = 0.3; J.ts = 1; prepararFondoMenu(); }
+function reintentar(){ if(J.infinito) empezarInfinito(); else empezarNivel(J.idx); }
+function pausar(){ if(J.modo !== 'juego' || NIN.est === 'muerto') return; J.pausa = !J.pausa; UI.p = 'pausa'; UI.t = 0; J.apunta = null; DEDO = null; SON.fx('boton'); }
+/* ---------- el fondo del menú: una torre infinita con un ninja que salta solo ---------- */
+function prepararFondoMenu(){ J.nivel = {id:'menu', mundo:'bambu', mi:0, n:0}; J.infinito = false; armarInfinito(); arrancarCorrida(0); J.modo = 'menu'; J.tinta = null; NIN.quieto = 0; }
+function pasoFondoMenu(dt){
+  for(const p of MAPA.plats){ const u = (Math.sin(J.tr*p.v*2 + p.f) + 1)/2, nx = lerp(p.xa, p.xb, u); p.dx = nx - p.x; p.x = nx; }
+  J.t += dt; J.fundido = Math.max(0, J.fundido - dt*2); pasoNinja(dt); pasoParticulas(dt); pasoDesm(dt);
+  for(const t of J.textos){ t.t -= dt; t.y -= dt*18; } J.textos = J.textos.filter(t => t.t > 0);
+  if(NIN.est === 'aire'){ for(const e of ENEM){ if(e.muerto) continue; const cy = e.t === 'cometa' ? e.y - 6 : e.y - 5; if(Math.abs(NIN.x - e.x) < 6 && Math.abs(NIN.y - cy) < 9){ e.muerto = true; tinta(e.x, cy, 12, 1); J.tajo = {x:e.x, y:cy, a:Math.atan2(NIN.vy, NIN.vx), t:0.18}; } } }
+  if(J.tajo){ J.tajo.t -= dt; if(J.tajo.t <= 0) J.tajo = null; }
+  if(NIN.est === 'muerto' || NIN.y > CAM.y + H + 40){ prepararFondoMenu(); return; }
+  while(MAPA.rMin > Math.floor((CAM.y - H)/CEL) - 10) tramoInfinito();
+  /* el ninja del menú: cada tanto prueba saltos y se queda con uno que sube y lo deja pegado */
+  if(NIN.est === 'pegado'){ NIN.quieto += dt; if(NIN.quieto > 0.9){ NIN.quieto = 0; let mejor = null;
+    for(let i = 0; i < 40; i++){ const a = NIN.ny === 1 ? Math.PI*(0.1 + Math.random()*0.8) : -Math.PI*(0.08 + Math.random()*0.84), f = 0.55 + Math.random()*0.45, dx = -Math.cos(a)*V_MAX*f/5.6, dy = -Math.sin(a)*V_MAX*f/5.6, v = velTiro(dx, dy, NIN.nx, NIN.ny); if(!v) continue;
+      const o = {x:NIN.x, y:NIN.y, vx:v.vx, vy:v.vy}; let r = null; for(let s = 0; s < 150; s++){ r = pasoCuerpo(o, 1/60, true); if(r) break; }
+      if(r && r.pega && (!mejor || o.y < mejor.y + rv(-20, 20))) mejor = {dx, dy, y:o.y}; }
+    if(mejor) saltar(mejor.dx, mejor.dy); } }
+  CAM.objY = Math.min(NIN.y - H*0.55, CEL - H*0.86); CAM.y += (CAM.objY - CAM.y)*(1 - Math.exp(-dt*2));
+}
+/* ================================================================ arranque */
+medir(); iniciarPost(); POST.brillo = 0.35;
+for(const n of NIVELES) n.tramos = Math.min(n.tramos, 9);
+prepararFondoMenu();
+document.getElementById('carga').style.display = 'none';
+UI.p = 'idioma'; SON.cinta(0.3);
+/* las sondas del banco */
+window.__S = {J, NIN, CAM, UI, PROG, AJ, POST, MAPA, NIVELES, MUNDOS, NINJAS, EFECTOS, TR_FALTA, _AUD, get ENEM(){ return ENEM; }, get MONEDAS(){ return MONEDAS; }, get BALAS(){ return BALAS; },
+  empezarNivel, empezarInfinito, volverAlMenu, reintentar, ponerIdioma, irA, saltar, puedeSaltar, alcance, armarNivel, velTiro, pasoCuerpo, tile, abrirCofre, guardarProg, efecto, HH, V_MAX,
+  sim:(n, dt) => { for(let i = 0; i < n; i++) paso(dt); }, textos:() => [..._AUD], SON};
+requestAnimationFrame(lazo);
+})();
+</script>
+</body>
+</html>
