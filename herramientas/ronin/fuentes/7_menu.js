@@ -12,7 +12,7 @@
   @keyframes late { 0%,100% { transform:scale(1); } 50% { transform:scale(1.06); } }
   @keyframes tinta { from { transform:scale(0); } to { transform:scale(1); } }
   .menu-der { position:absolute; right:4%; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; align-items:flex-end; gap:0.2em; width:40%; }
-  .menu-der .btn { width:100%; justify-content:flex-start; animation:entra 0.5s both; }
+  .menu-der .btn { width:100%; justify-content:flex-start; animation:entra 0.5s both; padding-top:0.42em; padding-bottom:0.42em; }
   .menu-der .btn .k { font-size:1.15em; color:#d8322a; margin-right:0.4em; }
   .oro { position:absolute; left:3%; bottom:4%; font-size:clamp(13px, 4vmin, 20px); font-weight:900; color:#f0d27a; text-shadow:0 2px 6px #000; animation:sube 0.6s 0.4s both; }
   .fila { display:flex; gap:2%; justify-content:center; flex-wrap:nowrap; }
@@ -78,13 +78,14 @@ UI.titulo = () => {
   JUEGO.modo = 'menu'; JUEGO.pausa = false; TITULO.t0 = RELOJ.real; LUGAR = 'bambu'; CLIMA.length = 0; SON.musica('menu'); SON.ambiente('bambu'); SON.fx('titulo');
   const hayCap = CAPITULOS.length, y = PROG.cap_hecho || {};
   const d = capa(`<div class="menu-der">
-    ${btn(tr('HISTORIA'), 'm_hist', '', '道')}${btn(tr('BATALLAS DE YOKAI'), 'm_yok', y[1] ? '' : 'claro', '妖')}${btn(tr('HERRERÍA'), 'm_her', '', '刀')}${btn(tr('DOJO'), 'm_doj', '', '道場')}${btn(tr('OPCIONES'), 'm_opc', '', '設')}${btn(tr('CÓMO SE JUEGA'), 'm_como', 'claro', '?')}
+    ${btn(tr('HISTORIA'), 'm_hist', '', '道')}${btn(tr('BATALLAS DE YOKAI'), 'm_yok', y[1] ? '' : 'claro', '妖')}${btn(tr('HERRERÍA'), 'm_her', '', '刀')}${btn(tr('DOJO'), 'm_doj', '', '道場')}${btn(tr('MASCOTAS'), 'm_mas', '', '友')}${btn(tr('OPCIONES'), 'm_opc', '', '設')}${btn(tr('CÓMO SE JUEGA'), 'm_como', 'claro', '?')}
   </div><div class="oro">${miles(PROG.oro)} ${tr('ryo')}</div>`);
   d.querySelectorAll('.menu-der .btn').forEach((b, i) => b.style.animationDelay = (1.1 + i*0.08) + 's');
   tocar(d.querySelector('#m_hist'), () => { SON.fx('menu_ok'); cortina(() => UI.capitulos()); });
   tocar(d.querySelector('#m_yok'), () => { SON.fx('menu_ok'); cortina(() => UI.yokai()); });
   tocar(d.querySelector('#m_her'), () => { SON.fx('menu_ok'); cortina(() => UI.herreria()); });
   tocar(d.querySelector('#m_doj'), () => { SON.fx('menu_ok'); cortina(() => UI.dojo()); });
+  tocar(d.querySelector('#m_mas'), () => { SON.fx('menu_ok'); cortina(() => UI.mascotas()); });
   tocar(d.querySelector('#m_opc'), () => { SON.fx('menu_ok'); UI.opciones(); });
   tocar(d.querySelector('#m_como'), () => { SON.fx('menu_ok'); UI.como(); });
 };
@@ -97,7 +98,10 @@ function dibujarTitulo(dt){
   g.fillStyle = `rgba(10,6,4,${0.28 + TITULO.subK*0.4})`; g.fillRect(0, 0, W, H);
   /* el ronin respira a la izquierda */
   const P = PJ.heroe; if(P && P.anims.quieto){ const e = TITULO.e || (TITULO.e = luchador('heroe', 0, 1)); e.animT = RELOJ.real; e.anim = 'quieto'; e.fpsAnim = 8;
-    const x = W*0.2/u + 0; e.x = x; dibujarLuchador(e, 0); }
+    const x = W*0.2/u + 0; e.x = x;
+    const mp = mascotaPuesta(); if(mp && PJ[MASCOTAS[mp].pj]){ const M = MASCOTAS[mp]; if(!TITULO.m || TITULO.m.id !== mp) TITULO.m = crearMascota(null);
+      const m = TITULO.m; m.x = x - M.atras; m.dir = 1; m.animT = RELOJ.real; if(M.vuela) m.yOff = M.vuela + Math.sin(RELOJ.real*2.2)*8; dibujarLuchador(m, 0); }
+    dibujarLuchador(e, 0); }
   /* el título: se revela de izquierda a derecha con un borde de pincel, y gotea */
   if(!_tituloCv){ _tituloCv = document.createElement('canvas'); }
   const tw = Math.round(W*0.5), th = Math.round(H*0.34), c = _tituloCv; if(c.width !== tw*2 || c.height !== th*2 || c._l !== IDIOMA){ c.width = tw*2; c.height = th*2; c._l = IDIOMA;
@@ -150,6 +154,24 @@ UI.herreria = () => {
   const d = capa(`<div class="panel"><p class="titulo-p"><span class="kanji" style="color:#b3191b">刀</span> ${tr('HERRERÍA')} <small style="font-size:0.5em;float:right">${miles(PROG.oro)} ${tr('ryo')}</small></p><div class="lista">${filas}</div><div style="text-align:right;margin-top:0.6em">${btn(tr('VOLVER'), 'volver', 'claro')}</div></div>`);
   for(const id in ESPADAS){ tocar(d.querySelector('#a_' + id), () => { if(comprarEspada(id)) UI.herreria(); }); const m = d.querySelector('#m_' + id); if(m) tocar(m, () => { if(mejorarEspada(id)) UI.herreria(); }); }
   tocar(d.querySelector('#volver'), () => { SON.fx('menu_atras'); cortina(() => UI.titulo()); });
+};
+/* ---------------------------------------------------------------- mascotas: se compran, se llevan y se mejoran */
+function retratoMascota(id){ const P = PJ[MASCOTAS[id].pj], q = P && P.anims.quieto && P.anims.quieto.cuadros[0]; if(!q || !q.c) return '';
+  const c = document.createElement('canvas'), k = Math.min(64/q.w, 64/q.h); c.width = Math.round(q.w*k); c.height = Math.round(q.h*k); c.getContext('2d').drawImage(q.c, 0, 0, c.width, c.height);
+  return `<img src="${c.toDataURL()}" style="height:2.4em;width:auto;margin-right:0.35em">`; }
+UI.mascotas = () => {
+  const filas = Object.keys(MASCOTAS).map((id, i) => { const M = MASCOTAS[id], nv = PROG.mascotas[id] || 0, puesta = PROG.mascota === id, [b1, b2] = bonoMascota(id, Math.max(1, nv));
+    const accion = !nv ? btn(M.precio ? tr('COMPRAR {0}', miles(M.precio)) : tr('LLEVAR'), 'a_' + id, PROG.oro >= M.precio ? 'rojo' : '') : puesta ? btn(tr('CON VOS'), 'a_' + id, 'claro') : btn(tr('LLEVAR'), 'a_' + id);
+    const mej = nv && nv < 5 ? btn(tr('MEJORAR {0}', miles(precioMascota(id))), 'm_' + id, PROG.oro >= precioMascota(id) ? '' : 'claro') : '';
+    const cara = retratoMascota(id) || `<span class="kanji" style="font-size:1.8em;color:#b3191b">${M.kanji}</span>`;
+    return `<div class="item" style="animation-delay:${i*0.05}s">${cara}<div class="dat"><b>${tr(M.nombre)}${nv ? ' · ' + tr('nivel {0}', nv) + '/5' : ''}</b>
+      <small>${tr(M.txt, b1, b2)}</small></div>${mej}${accion}</div>`; }).join('');
+  const d = capa(`<div class="panel"><p class="titulo-p"><span class="kanji" style="color:#b3191b">友</span> ${tr('MASCOTAS')} <small style="font-size:0.5em;float:right">${miles(PROG.oro)} ${tr('ryo')}</small></p>
+    <p class="sub" style="margin:0 0 0.4em">${tr('No pelean: te acompañan, festejan y te dan su ventaja.')}</p><div class="lista">${filas}</div><div style="text-align:right;margin-top:0.6em">${btn(tr('VOLVER'), 'volver', 'claro')}</div></div>`);
+  for(const id in MASCOTAS){ tocar(d.querySelector('#a_' + id), () => { if(comprarMascota(id)) UI.mascotas(); }); const m = d.querySelector('#m_' + id); if(m) tocar(m, () => { if(mejorarMascota(id)) UI.mascotas(); }); }
+  tocar(d.querySelector('#volver'), () => { SON.fx('menu_atras'); cortina(() => UI.titulo()); });
+  /* los retratos: se cargan las cinco y se vuelve a dibujar la lista cuando están */
+  if(!UI._mascotasCargadas){ UI._mascotasCargadas = true; Promise.all(Object.values(MASCOTAS).map(M => cargarPJ(M.pj).catch(() => {}))).then(() => { if(d.isConnected) UI.mascotas(); }); }
 };
 const DOJO = [['vida', '命', 'Vida', '+30 de vida máxima por nivel.'], ['filo', '刃', 'Filo', '+7% de daño por nivel.'], ['postura', '根', 'Equilibrio', '+12 de equilibrio por nivel.'], ['ki', '気', 'Ki', 'La habilidad carga un 8% más rápido por nivel.']];
 UI.dojo = () => {

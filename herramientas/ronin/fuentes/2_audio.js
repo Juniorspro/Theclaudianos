@@ -543,9 +543,27 @@ const SON = (() => {
     jefe_aparece:{max:1, vol:0.8, rev:0.6}, etapa:{max:1, vol:0.7, rev:0.5}, victoria:{max:1, vol:0.7, rev:0.45, ui:1}, derrota:{max:1, vol:0.7, rev:0.5, ui:1},
     carta:{max:3, vol:0.55, rev:0.1, ui:1}, elegir:{max:1, vol:0.6, rev:0.35, ui:1}, moneda:{max:5, vol:0.6, rev:0.15, ui:1}, compra:{max:2, vol:0.58, rev:0.2, ui:1},
     mejora:{max:1, vol:0.85, rev:0.35, ui:1}, desbloqueo:{max:1, vol:0.9, rev:0.45, ui:1}, menu_mover:{max:4, vol:0.4, ui:1}, menu_ok:{max:3, vol:0.5, rev:0.06, ui:1},
+    maullido:{max:2, vol:0.55, rev:0.2}, ladrido:{max:2, vol:0.6, rev:0.2}, chillido:{max:2, vol:0.45, rev:0.4}, graznido:{max:2, vol:0.55, rev:0.3}, panda:{max:2, vol:0.5, rev:0.2},
     menu_atras:{max:2, vol:0.45, ui:1}, titulo:{max:1, vol:0.75, rev:0.5, ui:1}, pincel:{max:3, vol:0.85, rev:0.15, ui:1}
   };
   const FX = {
+    /* ---- las mascotas: cada una con su voz, cortita, para festejar o avisar */
+    maullido(t, o, d){ const k = o.tono*rv(0.93, 1.07);
+      TN({t, a:0.04, f:620*k, f2:1050*k, fd:0.16, d:0.42, v:0.5, tipo:'triangle', lp:2600, dest:d});
+      TN({t:t + 0.16, a:0.02, f:1050*k, f2:560*k, fd:0.3, d:0.32, v:0.4, tipo:'triangle', lp:2200, dest:d});
+      TN({t, a:0.04, f:1240*k, f2:2100*k, fd:0.16, d:0.4, v:0.12, lp:4000, dest:d}); return 0.6; },
+    ladrido(t, o, d){ const k = o.tono*rv(0.94, 1.06);
+      for(const q of [0, 0.17]){ TN({t:t + q, a:0.005, f:420*k, f2:230*k, fd:0.1, d:0.11, v:0.55, tipo:'sawtooth', lp:1500, dest:d});
+        RZ({t:t + q, a:0.004, d:0.08, v:0.35, f:900*k, f2:500*k, fd:0.08, q:1.4, dest:d}); } return 0.45; },
+    chillido(t, o, d){ const k = o.tono*rv(0.95, 1.05);
+      TN({t, a:0.03, f:2600*k, f2:1700*k, fd:0.55, d:0.6, v:0.35, tipo:'triangle', dest:d});
+      TN({t, a:0.03, f:5200*k, f2:3400*k, fd:0.55, d:0.5, v:0.08, dest:d});
+      RZ({t, a:0.02, d:0.3, v:0.12, f:3500*k, q:3, dest:d}); return 0.7; },
+    graznido(t, o, d){ const k = o.tono*rv(0.93, 1.07);
+      for(const q of [0, 0.26]){ TN({t:t + q, a:0.01, f:560*k, f2:420*k, fd:0.2, d:0.2, v:0.45, tipo:'sawtooth', lp:1800, dest:d});
+        RZ({t:t + q, a:0.01, d:0.18, v:0.3, f:1300*k, q:2.5, dest:d}); } return 0.55; },
+    panda(t, o, d){ const k = o.tono*rv(0.94, 1.06);
+      for(const q of [0, 0.12]) TN({t:t + q, a:0.01, f:1300*k, f2:1750*k, fd:0.07, d:0.09, v:0.35, tipo:'triangle', dest:d}); return 0.3; },
     /* ---- la katana del héroe */
     tajo(t, o, d){ const k = o.tono*rv(0.94, 1.06), p = barrido(d, t, -0.35, 0.35, 0.14);
       RZ({t, a:0.05, d:0.07, v:1.1, f:900*k, f2:5200*k, fd:0.12, q:1.6, dest:p});                           /* la hoja partiendo el aire */

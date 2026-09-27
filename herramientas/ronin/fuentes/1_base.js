@@ -26,9 +26,9 @@ const AJ = Object.assign({idioma:null, musica:0.75, efectos:1, vibrar:true, sacu
 if(!['es', 'en', 'pt'].includes(AJ.idioma)){ const l = (navigator.language || 'es').slice(0, 2).toLowerCase(); AJ.idioma = l === 'pt' ? 'pt' : l === 'en' ? 'en' : 'es'; }
 AJ.musica = lim(+AJ.musica, 0, 1); AJ.efectos = lim(+AJ.efectos, 0, 1);
 const guardarAj = () => guardar('ronin.ajustes', AJ);
-const PROG_DEF = {oro:0, capitulo:1, mejor:{}, espadas:{sarashi:1}, espada:'sarashi', dojo:{vida:0, filo:0, postura:0, ki:0}, yokai:{}, tutorial:false, muertes:0, bajas:0};
+const PROG_DEF = {oro:0, capitulo:1, mejor:{}, espadas:{sarashi:1}, espada:'sarashi', dojo:{vida:0, filo:0, postura:0, ki:0}, yokai:{}, tutorial:false, muertes:0, bajas:0, mascotas:{gato:1}, mascota:'gato'};
 const PROG = Object.assign({}, PROG_DEF, leer('ronin.progreso', {}));
-for(const k of ['mejor', 'espadas', 'dojo', 'yokai']) PROG[k] = Object.assign({}, PROG_DEF[k], PROG[k] || {});
+for(const k of ['mejor', 'espadas', 'dojo', 'yokai', 'mascotas']) PROG[k] = Object.assign({}, PROG_DEF[k], PROG[k] || {});
 const guardarProg = () => guardar('ronin.progreso', PROG);
 function vibrar(ms){ if(AJ.vibrar && navigator.vibrate) try { navigator.vibrate(ms); } catch(e){} }
 

@@ -13,7 +13,7 @@ const TIPOS = {
   shinobi:{pj:'e_shinobi', nombre:'Shinobi', alto:176, vida:120, post:70, vel:170, dano:28, pesado:62, alc:133, alcP:146, rapido:1.35, p:{ataque:0.65, pesado:0.2, guardia:0.15, atras:0.35}, espera:[0.35, 0.9], oro:20},
   monje:{pj:'e_monje', nombre:'Monje guerrero', alto:204, vida:200, post:120, vel:80, dano:38, pesado:82, alc:193, alcP:208, p:{ataque:0.45, pesado:0.3, guardia:0.45, atras:0.1}, espera:[0.8, 1.7], oro:24},
   general:{pj:'j_general', nombre:'General Akagane', jefe:true, alto:250, vida:880, post:230, vel:80, dano:40, pesado:84, alc:188, alcP:213, p:{ataque:0.45, pesado:0.3, especial:0.2, guardia:0.35, atras:0.05}, espera:[0.6, 1.3], oro:260, armadura:0.35},
-  maestro:{pj:'j_maestro', nombre:'Kageyama, el maestro de la espada', jefe:true, alto:204, vida:1250, post:240, vel:120, dano:44, pesado:90, alc:178, alcP:198, rapido:1.2, p:{ataque:0.55, pesado:0.25, especial:0.2, guardia:0.5, atras:0.15}, espera:[0.35, 0.9], oro:420},
+  maestro:{pj:'j_maestro', nombre:'Kageyama, el maestro de la espada', jefe:true, alto:204, vida:1250, post:240, vel:120, dano:50, pesado:100, alc:178, alcP:198, rapido:1.2, p:{ataque:0.55, pesado:0.25, especial:0.2, guardia:0.5, atras:0.15}, espera:[0.25, 0.7], oro:420},
   oni:{pj:'j_oni', nombre:'Shuten, el oni', jefe:true, alto:286, vida:1700, post:320, vel:70, dano:58, pesado:120, alc:203, alcP:233, p:{ataque:0.4, pesado:0.35, especial:0.25, guardia:0.15, atras:0.05}, espera:[0.7, 1.4], oro:650, armadura:0.5},
   gashadokuro:{pj:'y_gashadokuro', nombre:'Gashadokuro', yokai:true, cuerpo:150, jefe:true, alto:250, vida:2600, post:400, vel:40, dano:62, pesado:130, alc:300, alcP:330, p:{ataque:0.5, pesado:0.45, guardia:0, atras:0}, espera:[0.8, 1.6], oro:900, armadura:0.6, fijo:true},
   oogama:{pj:'y_oogama', nombre:'Oogama', yokai:true, cuerpo:110, jefe:true, alto:230, vida:2200, post:360, vel:55, dano:50, pesado:104, alc:248, alcP:278, p:{ataque:0.55, pesado:0.4, guardia:0, atras:0}, espera:[0.7, 1.4], oro:800, armadura:0.55, fijo:true},
@@ -63,6 +63,7 @@ function nuevaPelea(tipoEnemigo, extra){
   if(PJ.heroe && PJ.heroe.anims.chiburi){ ponerEstado(H, 'chiburi'); anima(H, 'chiburi'); H.fpsAnim = 16; }
   /* un dedo que quedó apoyado de la pelea anterior no pasa a esta */
   ENT.izq = ENT.der = ENT.guardia = false; ENT.dedos.clear(); ENT.ataque = ENT.esquive = ENT.habilidad = -9;
+  L.mascota = crearMascota(H);
   const E = luchador(tipoEnemigo, H.x + 330, -1, extra); anima(E, 'quieto'); E.estado = 'entra'; E.t = 0; L.enemigo = E;
   L.fx = []; L.numeros = []; L.fin = null; L.finT = 0; L.congelado = 0; L.lento = 0; L.lentoT = 0; L.pendiente = null; L.textoT = 0; L.cerrando = false; L.resucito = false; RELOJ.escala = 1; L.conc = 0; L.distorsion = 0; L.combo = 0;
   L.cam = L.camObj = (H.x + E.x)/2 - 446; L.stats = L.stats || {desvios:0, relampagos:0, golpes:0, recibido:0};
@@ -70,9 +71,10 @@ function nuevaPelea(tipoEnemigo, extra){
 }
 function heroeStats(){
   const B = LUCHA.bend, n = k => B[k] || 0, D = PROG.dojo, esp = ESPADAS[PROG.espada] || ESPADAS.sarashi, nv = PROG.espadas[PROG.espada] || 1;
-  const vidaMax = Math.round((300 + D.vida*30)*(1 + 0.2*n('piel'))), postMax = Math.round((100 + D.postura*12)*(1 + 0.4*n('postura')));
+  const vidaMax = Math.round((300 + D.vida*30)*(1 + 0.2*n('piel'))*(1 + ventaja('panda'))), postMax = Math.round((100 + D.postura*12)*(1 + 0.4*n('postura'))*(1 + ventaja('gato', 1)));
   return {vidaMax, postMax, dano:esp.dano*(1 + (nv - 1)*0.12)*(1 + D.filo*0.07)*(1 + 0.2*n('filo')), hab:esp.hab, kiK:(1 + D.ki*0.08)*(1 + 0.5*n('ki')),
-    ventana:n('halcon') ? 0.3 : 0.2, recibe:Math.pow(0.8, n('hierro')), cura:0.04*n('sed')};
+    ventana:n('halcon') ? 0.3 : 0.2, recibe:Math.pow(0.8, n('hierro')), cura:0.04*n('sed'),
+    recup:1 + ventaja('gato'), critico:0.05 + ventaja('halcon'), esquiveSolo:ventaja('shiba')};
 }
 /* ---------------------------------------------------------------- efectos: se anotan acá y los dibuja 4_render */
 function fx(tipo, x, y, o){ LUCHA.fx.push(Object.assign({tipo, x, y, t:0}, o || {})); }
@@ -110,7 +112,7 @@ function aturdir(v, s){ v.aturdido = s; v.post = 0; ponerEstado(v, 'aturdido'); 
 function morir(v, a){
   v.vivo = false; ponerEstado(v, 'muerte'); v.aturdido = 0; sangre(v.x, PISO - v.T.alto*0.5, a ? a.dir : 1, 30);
   if(v === LUCHA.heroe){ SON.fx('muerte_heroe'); SON.musica(null); camaraLenta(2.2, 0.8); LUCHA.fin = 'derrota'; LUCHA.finT = 0; PROG.muertes++; guardarProg(); }
-  else { SON.fx('muerte', {pan:panDe(v.x)}); camaraLenta(v.T.jefe ? 2.4 : 1.1, v.T.jefe ? 0.85 : 0.6); pausaGolpe(0.12); LUCHA.fin = 'victoria'; LUCHA.finT = 0; PROG.bajas++;
+  else { mascotaFesteja(); SON.fx('muerte', {pan:panDe(v.x)}); camaraLenta(v.T.jefe ? 2.4 : 1.1, v.T.jefe ? 0.85 : 0.6); pausaGolpe(0.12); LUCHA.fin = 'victoria'; LUCHA.finT = 0; PROG.bajas++;
     if(v.T.jefe) textoGrande(tr('DERROTADO'), '#ff3a2a', 2.2); }
 }
 function panDe(x){ return lim(((x - LUCHA.cam)/892)*2 - 1, -1, 1); }
@@ -130,7 +132,7 @@ function pasoHeroe(H, E, dt){
   H.t += dt; H.animT += dt; H.ivul = Math.max(0, H.ivul - dt); H.flash = Math.max(0, H.flash - dt);
   if(!H.vivo) return;
   /* el equilibrio vuelve solo si no te pegan */
-  H.sinPostT += dt; if(H.sinPostT > 1.4 && H.estado !== 'guardia') H.post = Math.min(H.postMax, H.post + H.postMax*0.22*dt);
+  H.sinPostT += dt; if(H.sinPostT > 1.4 && H.estado !== 'guardia') H.post = Math.min(H.postMax, H.post + H.postMax*0.22*st.recup*dt);
   if(H.empuje){ H.x += H.empuje*dt; H.empuje *= Math.pow(0.02, dt); if(Math.abs(H.empuje) < 4) H.empuje = 0; }
   const pedido = (k, ventana) => RELOJ.t - ENT[k] < (ventana || 0.28);
   const libre = ['quieto', 'caminar', 'guardia', 'chiburi'].includes(H.estado);
@@ -163,7 +165,9 @@ function pasoHeroe(H, E, dt){
       if(E.vivo && Math.abs(E.x - H.x) < G.alc + (E.T.cuerpo || 0) && Math.sign(E.x - H.x) === H.dir){
         if(E.estado === 'guardiaE' || (E.estado === 'quieto' || E.estado === 'caminar') && !E.T.fijo && Math.random() < E.T.p.guardia*(E.aturdido > 0 ? 0 : 1)){
           bloqueaEnemigo(E, H, G); }
-        else { danar(E, H, st.dano*G.dano*rv(0.92, 1.08), G.post, {fuerte:H.estado === 'tajo' || H.estado === 'remate', ang:H.estado === 'tajo2' ? -0.7 : H.estado === 'tajo3' ? 0 : 0.8}); LUCHA.stats.golpes++; pausaGolpe(H.estado === 'remate' ? 0.14 : H.estado === 'tajo' ? 0.08 : 0.05); if(H.estado === 'remate'){ camaraLenta(0.55, 0.7); textoGrande(tr('¡REMATE!'), '#ff3a2a', 1.0); sacudir(14); } }
+        else { const crit = Math.random() < st.critico + (E.aturdido > 0 ? 0.25 : 0);
+          if(crit){ textoGrande(tr('¡CRÍTICO!'), '#ffd24a', 0.7); if(mascotaPuesta() === 'halcon') mascotaFesteja(); }
+          danar(E, H, st.dano*G.dano*rv(0.92, 1.08)*(crit ? 1.8 : 1), G.post, {fuerte:crit || H.estado === 'tajo' || H.estado === 'remate', ang:H.estado === 'tajo2' ? -0.7 : H.estado === 'tajo3' ? 0 : 0.8}); LUCHA.stats.golpes++; pausaGolpe(H.estado === 'remate' ? 0.14 : H.estado === 'tajo' ? 0.08 : 0.05); if(H.estado === 'remate'){ mascotaFesteja(); camaraLenta(0.55, 0.7); textoGrande(tr('¡REMATE!'), '#ff3a2a', 1.0); sacudir(14); } }
       } }
     if(H.t >= duracion(H, H.estado, G.fps)) ponerEstado(H, 'quieto'); }
   else if(H.estado === 'esquive'){ const k = H.t/0.3; if(k < 1) H.x -= H.dir*300*dt*(1 - k); if(H.t >= duracion(H, 'esquive', 26)) ponerEstado(H, 'quieto'); }
@@ -187,7 +191,7 @@ function bloqueaEnemigo(E, H, G){
 /* ---------------------------------------------------------------- contragolpe relámpago */
 function relampago(H, E, porConc){
   ponerEstado(H, 'relampago'); anima(H, 'relampago'); H.fpsAnim = 26; H.ivul = 0.9; H.rel = {x0:H.x, x1:E.x + H.dir*120, pego:false, porConc};
-  E.aviso = null; if(!porConc){ LUCHA.stats.relampagos++; LUCHA.ki = Math.min(1, LUCHA.ki + 0.25*heroeStats().kiK); }
+  E.aviso = null; if(!porConc){ LUCHA.stats.relampagos++; mascotaFesteja(); LUCHA.ki = Math.min(1, LUCHA.ki + 0.25*heroeStats().kiK); }
   camaraLenta(0.7, 0.8); SON.fx('relampago'); SON.lento(1); textoGrande(tr('¡CONTRAGOLPE RELÁMPAGO!'), '#f4f0e0', 1.1);
   if(!porConc) ponerEstado(E, 'sorprendido');
 }
@@ -281,6 +285,8 @@ function ataqueEnemigo(E, H, d){
         H.post = Math.max(0, H.post - danoB*0.8); H.sinPostT = 0; const x = (H.x + E.x)/2; fx('chispas', x, PISO - 120, {n:8}); SON.fx('choque', {pan:panDe(x)}); sacudir(4); H.empuje = -H.dir*90;
         if(H.post > 0 && PJ.heroe.anims.bloqueo){ ponerEstado(H, 'bloqueo'); anima(H, 'bloqueo'); H.fpsAnim = 22; }
         if(H.post <= 0){ aturdir(H, 1.1); danar(H, E, danoB*0.5, 0, {sinReaccion:true}); } }
+      else if(aviso === 'ligero' && heroeStats().esquiveSolo > 0 && Math.random() < heroeStats().esquiveSolo && !['aturdido', 'habilidad', 'relampago'].includes(H.estado)){
+        ponerEstado(H, 'esquive'); anima(H, 'esquive'); H.fpsAnim = 26; H.ivul = 0.42; SON.fx('esquive'); textoGrande(tr('¡ESQUIVE!'), '#f4ead6', 0.6); mascotaFesteja(); }
       else { if(aviso === 'pesado' && guardando(H)){ aturdir(H, 1.0); }
         danar(H, E, danoB*rv(0.9, 1.1), aviso === 'pesado' ? 45 : 25, {fuerte:aviso === 'pesado'}); if(aviso === 'pesado'){ pausaGolpe(0.1); sacudir(14); } }
     } }
@@ -288,7 +294,7 @@ function ataqueEnemigo(E, H, d){
 }
 const guardando = H => H.estado === 'guardia' || H.estado === 'bloqueo';
 function desvio(H, E){
-  ponerEstado(H, 'desvio'); anima(H, 'desvio'); H.fpsAnim = 26; H.ivul = 0.25; LUCHA.stats.desvios++;
+  ponerEstado(H, 'desvio'); anima(H, 'desvio'); H.fpsAnim = 26; H.ivul = 0.25; LUCHA.stats.desvios++; mascotaFesteja();
   E.post = Math.max(0, E.post - 32 - E.postMax*0.08); E.sinPostT = 0; LUCHA.ki = Math.min(1, LUCHA.ki + 0.15*heroeStats().kiK);
   const x = (H.x + E.x)/2, y = PISO - 128; fx('chispas', x, y, {n:22, oro:true}); fx('anillo', x, y, {vida:0.45}); SON.fx('desvio', {pan:panDe(x)}); pausaGolpe(0.09); sacudir(6); vibrar(20);
   textoGrande(tr('¡DESVÍO!'), '#f0e6c8', 0.7);
@@ -304,7 +310,7 @@ function pasoLucha(dtReal){
   const esc = 1 - L.lento*0.8, dt = dtReal*esc; RELOJ.escala = esc;
   if(L.pendiente){ L.pendiente.t -= dt; if(L.pendiente.t <= 0){ const f = L.pendiente.f; L.pendiente = null; f(); } }
   if(L.distorsion > 0) L.distorsion -= dtReal;
-  pasoHeroe(H, E, dt); pasoEnemigo(E, H, dt);
+  pasoHeroe(H, E, dt); pasoEnemigo(E, H, dt); pasoMascota(dt);
   /* los cuerpos no se atraviesan: el que empuja es el enemigo, el héroe apenas cede */
   { const sep = (E.T.jefe ? 112 : 102) + (E.T.cuerpo || 0), d = E.x - H.x;
     if(E.vivo && H.vivo && H.estado !== 'esquive' && H.estado !== 'relampago' && Math.abs(d) < sep){ const falta = sep - Math.abs(d), s = d >= 0 ? 1 : -1; E.x += s*falta*0.8; H.x -= s*falta*0.2; H.x = lim(H.x, ARENA.x0, ARENA.x1); } }

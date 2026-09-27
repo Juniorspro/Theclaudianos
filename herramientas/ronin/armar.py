@@ -2,7 +2,7 @@
 """Arma juegos-pc/Ronin.html (animaciones en MP4 H.264) y /tmp/ui/ronin/r.html (MP4 VP9, para el Chromium del banco)."""
 import os, json, base64, glob
 AQ = os.path.dirname(os.path.abspath(__file__)); F = os.path.join(AQ, 'fuentes'); A = os.path.join(AQ, 'assets'); R = os.path.join(AQ, '..', '..')
-PARTES = ['1_base.js', '9_idiomas.js', '2_audio.js', '3_assets.js', '4_render.js', '5_lucha.js', '6_juego.js', '7_menu.js', '9z_arranque.js']
+PARTES = ['1_base.js', '9_idiomas.js', '2_audio.js', '3_assets.js', '4_render.js', '5_lucha.js', '5b_mascotas.js', '6_juego.js', '7_menu.js', '9z_arranque.js']
 def datos(tipo):
     D = {'tipo':'mp4', 'codec':tipo, 'pj':{}, 'fondos':{}}
     for d in sorted(glob.glob(os.path.join(A, '*', '*.json'))):

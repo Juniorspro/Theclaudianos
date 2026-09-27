@@ -6,7 +6,7 @@ from PIL import Image
 AQ = os.path.dirname(os.path.abspath(__file__)); DEST = os.path.join(AQ, 'assets')
 F = '/tmp/ronin/f24'   # los cuadros a 24 por segundo (los de 12 quedaron en /tmp/ronin/f)
 def ultimo(nom):   # la versión aprobada: _v2 pisa a la primera si existe
-    for n in (nom + '_v3', nom + '_v2', nom):
+    for n in (nom + '_d2', nom + '_d', nom + '_v3', nom + '_v2', nom):   # _d: rehecha desde otra referencia
         if os.path.isdir(os.path.join(F, n)) and glob.glob(os.path.join(F, n, 'a_*.png')): return n
     return None
 # 'fj' es a cuántos cuadros por segundo pasa el juego esa animación (su fpsAnim): con eso procesar.py saca los cuadros que
@@ -23,11 +23,12 @@ ENEM = {'quieto':{'loop':True, 'max':10, 'recortar':False, 'fps':8, 'fj':8}, 'ca
   'burla':{'max':14, 'fj':14}}
 YOK = {'quieto':{'loop':True, 'max':10, 'recortar':False, 'fps':8, 'fj':8}, 'ataque':{'golpe':True, 'max':12, 'fj':16}, 'pesado':{'golpe':True, 'max':14, 'fj':13},
   'golpeado':{'max':8, 'fj':20}, 'muerte':{'max':12, 'fj':12}, 'rugido':{'max':14, 'fj':14}, 'aturdido':{'loop':True, 'max':12, 'recortar':False, 'fps':10, 'fj':10}}
-ALTO = {'heroe':300, 'j_general':320, 'j_oni':330, 'y_gashadokuro':320, 'y_oogama':300}
+MASC = {'quieto':{'loop':True, 'max':12, 'recortar':False, 'fps':8, 'fj':8}, 'festejo':{'max':14, 'fj':14}}
+ALTO = {'m_gato':150, 'm_shiba':150, 'm_cuervo':130, 'm_halcon':140, 'm_panda':160, 'heroe':300, 'j_general':320, 'j_oni':330, 'y_gashadokuro':320, 'y_oogama':300}
 EXTRA = {('e_bandido', 'golpeado'):{'sinverde':True}, ('j_general', 'guardia'):{'solo_mayor':True}}   # una mancha de sangre con verde de fondo adentro
 SRC_HEROE = {'tajo':'heroe_tajo', 'quieto':'heroe_quieto', 'relampago':'heroe_relampago'}
 def pj(p):
-    base = HEROE if p == 'heroe' else YOK if p.startswith('y_') else ENEM
+    base = HEROE if p == 'heroe' else YOK if p.startswith('y_') else MASC if p.startswith('m_') else ENEM
     anims = {}
     for a, s in base.items():
         src = ultimo(SRC_HEROE.get(a, f'{p}_{a}') if p == 'heroe' else f'{p}_{a}')

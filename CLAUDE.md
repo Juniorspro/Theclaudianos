@@ -20,7 +20,7 @@ se prueba **en el celular, en vertical (412×892)**.
 | `juegos-pc/Residencia.html` | **NO LO DEJES ENTRAR.** Terror en primera persona a lo *Residence Massacre* (Roblox): casa de bloques de dos pisos amueblada cuarto por cuarto, de 4 PM a 12 te preparás (radio, linterna, tablas en las ventanas, cámaras, generador que da el aire, fusibles) y de 12 a 6 AM Larry (el bicho del original, a escala) da vueltas, respira detrás de una ventana antes de atacar, se espanta con la luz del cuarto y si entra te busca: placard con minijuego o susto. Tres dificultades, ES/EN/PT, three.js r128. Se juega apaisado. |
 | `herramientas/residencia/` | Fuentes de `Residencia.html` (`fuentes/`), `armar.sh` y el banco (`banco/`: noche entera con un jugador que reacciona, la preparación con la mano, alcance caminando, orden de los muebles, placard sin navegador, dedos, idiomas, fuzz, capturas, hoja de Larry). **Se edita la fuente.** |
 | `.claude/skills/juego-terror` | Receta del terror en primera persona: luz de adentro separada del sol, cuatro luces fijas, interacción por ángulo, bicho con estados y caminos, placard medido contra una persona, susto encuadrado. |
-| `juegos-pc/Ronin.html` | **EL ÚLTIMO RŌNIN.** Duelos 2D en tinta a lo *Ronin: The Last Samurai*: desvío con GUARDIA justo antes del golpe, 殺 rojo que no se bloquea y se contesta con el **contragolpe relámpago**, equilibrio, combo de tres, tres habilidades, 3 capítulos de 10 etapas con bendiciones, **batallas de yokai** aparte, herrería de 5 espadas y dojo. Los 10 personajes salen de **videos de Rezona** convertidos en cuadros. ES/EN/PT. Se juega apaisado. |
+| `juegos-pc/Ronin.html` | **EL ÚLTIMO RŌNIN.** Duelos 2D en tinta a lo *Ronin: The Last Samurai*: desvío con GUARDIA justo antes del golpe, 殺 rojo que no se bloquea y se contesta con el **contragolpe relámpago**, equilibrio, combo de tres, tres habilidades, 3 capítulos de 10 etapas con bendiciones, **batallas de yokai** aparte, herrería de 5 espadas, dojo y **5 mascotas** que acompañan y dan ventajas. Los personajes salen de **videos de Rezona** convertidos en cuadros. ES/EN/PT. Se juega apaisado. |
 | `herramientas/ronin/` | Fuentes de `Ronin.html` (`fuentes/`), la cadena de videos (`prompts.py`, `enviar.py`, `esperar.py`, `qa.sh`, `cuadros.py`, `hornear.py`, `procesar.py`), `armar.py` y el banco (`banco/`: bot que pelea como una persona, capítulos enteros, dedos, pantallas en tres idiomas, vitrina, acciones, 30 cuadros por segundo, GPU contra CPU, fuzz, audio). **Se edita la fuente.** |
 | `.claude/skills/sprites-video` | Receta de los sprites sacados de video: referencia sobre verde, un video por golpe, control cuadro por cuadro, alfa empaquetado al lado en H.264. |
 | `herramientas/mate/` | Fuentes de `Mate.html` por partes (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`). **Se edita la fuente, no el HTML.** |
@@ -2223,3 +2223,51 @@ Medido:
   (se le bajó el daño de 56 a 50 y el pesado de 118 a 104).
 - `banco/capitulo.js`: los capítulos 1 y 2 se terminan siempre; el 3, 6 de 8 veces (las otras 2 llegan al jefe).
 - Dedos de verdad, las pantallas en los tres idiomas (`TR_FALTA` vacío) y fuzz de 300 a 400 acciones: sin errores.
+
+### 2026-09-27 (bc) — EL ÚLTIMO RŌNIN: el maestro de frente y cinco mascotas
+**Pedido textual:** «Ey, el jefe del segundo mundo le está dando la espalda al jugador, es un error arreglalo. / Que yo recuerde en
+el juego original habían mascotas que ayudaban al jugador, agregalos».
+
+**El maestro de espaldas.** La referencia de Kageyama miraba a la IZQUIERDA. Los enemigos se dibujan espejados, así que todos sus
+videos salían dados vuelta: peleaba de espaldas al rōnin. Se hizo una referencia nueva mirando a la derecha y se rehicieron sus
+**10 animaciones** (sufijo `_d`, que `hornear.py` elige primero). Hubo que rehacer el ataque, que se ponía de frente a la cámara en
+la mitad del golpe. Con el golpe nuevo, que avisa más, el maestro quedó fácil (el bot le ganaba 8 de 8). Se le subió el daño de
+44 a 50, el pesado de 90 a 100 y se le acortó la espera entre ataques: quedó en 6 de 8, como antes.
+
+**Mascotas, como en el original**: no pelean, acompañan. Van detrás del rōnin, lo siguen con un poco de atraso y **festejan** cuando le
+sale algo bien (desvío, relámpago, remate, esquive, crítico, la baja). Cada una da una ventaja que sube con el nivel (1 a 5):
+
+| mascota | precio | ventaja (nivel 1 → 5) |
+|---|---|---|
+| Gato del cascabel | la primera, gratis | el equilibrio se recupera de un 30% a un 70% más rápido y aguanta de un 7% a un 19% más |
+| Shiba | 600 ryo | del 9% al 21% de esquivar solo un golpe normal, con su animación de esquive |
+| Cuervo | 900 ryo | del 24% al 60% más de oro |
+| Halcón | 1.500 ryo | del 12% al 28% de golpe crítico (daño ×1,8); vuela sobre el hombro |
+| Panda | 2.200 ryo | de un 12% a un 28% más de vida máxima |
+
+- Además, a un enemigo aturdido todo golpe tiene un 25% más de chance de salir crítico («¡CRÍTICO!»).
+- Pantalla **MASCOTAS** (友) en el título, con retrato, nivel, COMPRAR, LLEVAR y MEJORAR. La que llevás también se ve en el título, al
+  lado del rōnin.
+- Cada una sale de su referencia de Rezona y de dos videos (quieta en bucle y festejo): 10 videos, y se rehízo el festejo del
+  halcón, que se daba vuelta de espaldas.
+- Tienen voz sintetizada: maullido, ladrido, graznido, chillido y el gruñidito del panda.
+- Si los cuadros de la mascota puesta no están en el archivo, no hay mascota ni ventaja, y el juego sigue igual.
+
+Lo que costó una vuelta:
+- **La referencia manda la dirección de todos sus videos.** El prompt decía «mira a la derecha», pero Seedance sigue a la imagen de
+  arranque. Hay que mirar para dónde mira la referencia **antes** de mandar los videos.
+- A 74 de alto y 88 detrás, las mascotas quedaban tapadas por las piernas y la faja del rōnin, y el halcón a 165 se cortaba arriba.
+  Se agrandaron (70 a 96), se corrieron más atrás (120 a 150) y el halcón vuela a 118.
+
+Medido (`banco/masc.js`, nuevo):
+- El maestro mira al rōnin en quieto, ataque y provocación. En la sonda pega 40 de 40 golpes.
+- Las cinco mascotas se ven detrás del rōnin, con 45 cuadros de quieta y 30 de festejo cada una.
+- La ventaja de cada una, contada:
+  - halcón nivel 5: **107 críticos en 300 tajos** (sin él, 15, que es el 5% de base);
+  - shiba nivel 5: **33 esquives solos en 200 golpes** (sin él, 0);
+  - panda: vida 300 → 336 (nivel 1) → 384 (nivel 5);
+  - gato nivel 5: equilibrio 100 → 119 y recuperación ×1,7;
+  - cuervo nivel 5: +60% de oro.
+- El bot contra el maestro gana 6 de 8. El capítulo 2 se termina.
+- Pantallas en los tres idiomas con `TR_FALTA` vacío. Toques y fuzz de 300 en castellano, inglés y portugués: sin errores.
+- El HTML pesa 5,4 MB (antes 5,3).

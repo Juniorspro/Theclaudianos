@@ -7,7 +7,7 @@ const L = process.argv[2] || 'es';
   await p.goto('file:///tmp/ui/ronin/r.html'); await p.waitForFunction(() => window.__R && __R.PJ.heroe && __R.PJ.heroe.listo, null, {timeout:60000});
   await p.evaluate(L => { __R.ponerIdioma(L); __R.AJ.vistoIdioma = true; __R.PROG.oro = 5000; __R.PROG.capitulo = 2; __R.PROG.cap_hecho = {1:true}; }, L);
   const textos = new Set(); const juntar = async () => (await p.evaluate(() => { const t = []; const w = document.createTreeWalker(document.getElementById('ui') || document.body, NodeFilter.SHOW_TEXT); while(w.nextNode()){ const s = w.currentNode.textContent.trim(); if(s) t.push(s); } return t; })).forEach(s => textos.add(s));
-  const P = [['idioma', 'UI.idioma()'], ['titulo', 'UI.titulo()'], ['capitulos', 'UI.capitulos()'], ['yokai', 'UI.yokai()'], ['herreria', 'UI.herreria()'], ['dojo', 'UI.dojo()'], ['opciones', 'UI.opciones(false)'], ['como', 'UI.como()']];
+  const P = [['idioma', 'UI.idioma()'], ['titulo', 'UI.titulo()'], ['capitulos', 'UI.capitulos()'], ['yokai', 'UI.yokai()'], ['herreria', 'UI.herreria()'], ['dojo', 'UI.dojo()'], ['mascotas', 'UI.mascotas()'], ['opciones', 'UI.opciones(false)'], ['como', 'UI.como()']];
   for(const [n, f] of P){ await p.evaluate(f => { const UI = __R.UI; eval(f); }, f); await p.waitForTimeout(n === 'titulo' ? 2500 : 900); await juntar(); await p.screenshot({path:`/tmp/ui/ronin/cap/p_${L}_${n}.png`}); }
   await p.evaluate(() => { __R.PROG.tutorial = false; __R.empezarCapitulo(1); }); await p.waitForFunction(() => __R.JUEGO.modo === 'pelea'); await p.waitForTimeout(1200); await juntar(); await p.screenshot({path:`/tmp/ui/ronin/cap/p_${L}_pelea.png`});
   await p.evaluate(() => { const E = __R.LUCHA.enemigo; __R.textoGrande ? 0 : 0; }); 

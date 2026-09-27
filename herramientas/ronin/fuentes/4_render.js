@@ -50,9 +50,9 @@ function guardarResto(e){ const P = PJ[e.pj], q = P && cuadroDe(e); if(!q || !q.
   c.getContext('2d').drawImage(q.c, 0, 0); e.resto = {c, ox:q.ox, oy:q.oy, w:q.w, h:q.h, alto:P.meta.alto}; }
 function dibujarLuchador(e, cam){
   const P = PJ[e.pj], q = (P && cuadroDe(e)) || e.resto, alto = P ? P.meta.alto : e.resto && e.resto.alto; if(!q || !q.c || !alto) return;
-  const u = MED.u, s = e.T.alto*e.escala/alto*u, x = (e.x - cam)*u, y = PISO*u;
-  /* la sombra: más chica si salta o cae */
-  g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(x, y + 2*u, e.T.alto*0.26*e.escala*u, 7*u, 0, 0, 7); g.fill();
+  const u = MED.u, s = e.T.alto*e.escala/alto*u, x = (e.x - cam)*u, y = (PISO - (e.yOff || 0))*u;
+  /* la sombra: más chica si salta o cae (la del que vuela, chica y en el piso) */
+  g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(x, PISO*u + 2*u, e.T.alto*(e.yOff ? 0.16 : 0.26)*e.escala*u, (e.yOff ? 4 : 7)*u, 0, 0, 7); g.fill();
   /* sosteniendo la carga, el cuerpo tiembla un pelo: se ve que va a soltar */
   g.save(); g.translate(x + (e.animT < 0 ? Math.sin(RELOJ.real*62)*1.3*u : 0), y); if(e.dir < 0) g.scale(-1, 1);
   if(e.tint){ g.shadowColor = e.tint; g.shadowBlur = 16*u; }
@@ -152,6 +152,7 @@ function dibujarPelea(dt){
   g.save(); g.translate(sx, sy);
   dibujarFondo(W, H, L.cam); climaPaso(dt, W, H); climaDibujar(W, H); dibujarManchas(L.cam);
   const orden = [L.enemigo, L.heroe].filter(Boolean); if(L.heroe && L.heroe.estado === 'relampago') orden.reverse();
+  if(L.mascota) dibujarLuchador(L.mascota, L.cam);   /* detrás de los dos */
   for(const e of orden) dibujarLuchador(e, L.cam);
   dibujarFx(L.cam); dibujarNumeros(L.cam);
   g.restore();

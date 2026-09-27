@@ -43,8 +43,9 @@ function siguienteEtapa(primera){
 }
 async function arrancarPelea(tipo, extra, lugar, etiqueta, primera){
   JUEGO.modo = 'cargando'; UI.velo(true, tr('Afilando la hoja…'));
-  try { await cargarPJ(TIPOS[tipo].pj, k => UI.progreso(k)); } catch(e){ anotarError(e); }
-  for(const id in PJ) if(id !== 'heroe' && id !== TIPOS[tipo].pj) soltarPJ(id);
+  const mp = mascotaPuesta() && MASCOTAS[mascotaPuesta()].pj;
+  try { await cargarPJ(TIPOS[tipo].pj, k => UI.progreso(k)); if(mp) await cargarPJ(mp); } catch(e){ anotarError(e); }
+  for(const id in PJ) if(id !== 'heroe' && id !== TIPOS[tipo].pj && id !== mp) soltarPJ(id);
   LUGAR = lugar; JUEGO.etiqueta = etiqueta; CLIMA.length = 0;
   const conservar = LUCHA.heroe && !primera ? {vida:LUCHA.heroe.vida} : null;
   nuevaPelea(tipo, extra);
@@ -67,7 +68,7 @@ function pasoTutorial(){
 function finDePelea(){
   const L = LUCHA, E = L.enemigo, H = L.heroe;
   if(L.fin === 'victoria'){
-    const oro = Math.round(E.T.oro*(E.elite ? 2 : 1)*(E.mult || 1)*(L.bend.oro ? 1.5 : 1)*rv(0.9, 1.1)); JUEGO.oroRun += oro; PROG.oro += oro;
+    const oro = Math.round(E.T.oro*(E.elite ? 2 : 1)*(E.mult || 1)*(L.bend.oro ? 1.5 : 1)*(1 + ventaja('cuervo'))*rv(0.9, 1.1)); JUEGO.oroRun += oro; PROG.oro += oro;
     if(LUCHA.tutorial && !PROG.tutorial){ PROG.tutorial = true; }
     if(JUEGO.yokai){ const Y = JUEGO.yokai; PROG.oro += Y.premio; JUEGO.oroRun += Y.premio; PROG.yokai[Y.id] = (PROG.yokai[Y.id] || 0) + 1; guardarProg(); SON.musica('victoria_capitulo'); UI.resultado('yokai', oro + Y.premio); return; }
     const C = JUEGO.cap; JUEGO.etapa++;

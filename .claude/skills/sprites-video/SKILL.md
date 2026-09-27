@@ -8,6 +8,8 @@ description: Animaciones 2D de personajes sacadas de videos generados (Rezona/Se
 ## La cadena (herramientas/ronin/)
 1. **Referencia**: una imagen por personaje, cuerpo entero, **de perfil mirando a la DERECHA**, sobre verde plano #00FF00,
    ocupando ~55% del alto. El tamaño en cuadro de la referencia es el de todos sus videos: no se corrige después.
+   **Mirar la referencia antes de mandar los videos**: el video sigue a la imagen y no al prompt. Una referencia que
+   mira a la izquierda da un personaje entero de espaldas (el maestro tuvo que rehacerse con sus 10 videos).
 2. **Un video por animación** (`prompts.py` → `enviar.py`): Seedance, 4 s (acepta 4 a 15), 720p 16:9,
    `source_url` = la referencia y, si vuelve a la pose, **`last_frame_url` = la misma referencia**. `extra:{generate_audio:false}`
    (con audio, a veces lo rechaza por política). Caminar se pide «en el lugar, como en una cinta».

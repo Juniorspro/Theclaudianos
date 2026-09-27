@@ -15,10 +15,15 @@ PJ = {
  'e_shinobi': ('e_shinobi_ref-g1.png', 'The shinobi assassin', 'the ninjato sword'),
  'e_monje': ('e_monje_ref-g1.png', 'The warrior monk', 'the naginata'),
  'j_general': ('j_general_ref-g1.png', 'The armored samurai general', 'the huge nodachi'),
- 'j_maestro': ('j_maestro_ref-g1.png', 'The old sword master', 'the katana'),
+ 'j_maestro': ('j_maestro_ref2-g1.png', 'The old sword master', 'the katana'),
  'j_oni': ('j_oni_ref-g1.png', 'The giant red oni', 'the iron kanabo club'),
  'y_gashadokuro': ('y_gashadokuro_ref-g1.png', 'The giant skeleton yokai', 'its bony claws'),
  'y_oogama': ('y_oogama_ref-g1.png', 'The giant toad yokai', 'its tongue'),
+ 'm_gato': ('m_gato_ref-g1.png', 'The small bobtail cat with a red collar and a golden bell', 'its paws'),
+ 'm_shiba': ('m_shiba_ref-g1.png', 'The small Shiba Inu dog with a red bandana', 'its paws'),
+ 'm_halcon': ('m_halcon_ref-g1.png', 'The hawk with a red cord on its leg', 'its talons'),
+ 'm_cuervo': ('m_cuervo_ref-g1.png', 'The black crow holding a gold coin in its beak', 'its beak'),
+ 'm_panda': ('m_panda_ref-g1.png', 'The small panda cub holding a red bento box', 'its paws'),
 }
 # (animación, vuelve a la pose inicial, qué pasa)
 COMUN = [
@@ -59,9 +64,22 @@ YOKAI = [
  ('rugido', True, "Roar animation: {Q} rears its head back and lets out a terrifying roar toward the RIGHT, the whole body trembling with rage, then returns to the same pose as the first frame. Its head never rises higher than in the first frame and no part of the body ever leaves the frame."),
  ('aturdido', True, "Dazed animation loop: {Q} is stunned and exhausted, the body sagging low to the ground, swaying slowly and shuddering, the head drooping, staying on the same spot, then returns to the same pose as the first frame. No part of the body ever leaves the frame."),
 ]
+MASCOTA = {
+ 'quieto': "Idle animation loop: {Q} stays on exactly the same spot, breathing softly, blinking, with small natural movements of the head, ears and tail, never walking or moving away from the spot.",
+ 'festejo': "Happy cheering animation: {Q} gets excited and celebrates on the same spot with a lively happy gesture, then calms down and returns to the same pose as the first frame.",
+}
+MASCOTA_ESP = {
+ 'm_halcon': {'quieto': "Idle animation loop: {Q} hovers in the air on exactly the same spot, flapping its spread wings slowly and steadily, body horizontal, never flying away from the spot.",
+              'festejo': "Cheering animation: {Q}, hovering on the same spot, flaps its wings harder, opens its beak and screeches toward the right, then returns to the same hovering pose as the first frame."},
+ 'm_gato': {'festejo': "Happy animation: {Q} stands up on its four paws, arches its back in a happy stretch, flicks its tail and meows toward the right, then sits back down in the same pose as the first frame."},
+ 'm_shiba': {'festejo': "Happy animation: {Q} wags its curled tail fast, hops on its front paws and barks happily toward the right, then returns to the same standing pose as the first frame."},
+ 'm_cuervo': {'festejo': "Happy animation: {Q} hops once on the spot and flaps its wings a little, proudly showing the coin in its beak, then returns to the same pose as the first frame."},
+ 'm_panda': {'festejo': "Happy animation: {Q} puts the bento box on its lap, claps its paws happily and bounces a little on the spot, then picks the box up again in the same pose as the first frame."},
+}
 def lote(pj, solo=None):
     ref, Q, W = PJ[pj]; u = BASE + ref
-    anims = HEROE if pj == 'heroe' else YOKAI if pj.startswith('y_') else COMUN + (JEFE if pj.startswith('j_') else [])
+    if pj.startswith('m_'): anims = [(n, True, MASCOTA_ESP.get(pj, {}).get(n, t)) for n, t in MASCOTA.items()]
+    else: anims = HEROE if pj == 'heroe' else YOKAI if pj.startswith('y_') else COMUN + (JEFE if pj.startswith('j_') else [])
     L = []
     for nom, vuelve, txt in anims:
         if solo and nom not in solo: continue
