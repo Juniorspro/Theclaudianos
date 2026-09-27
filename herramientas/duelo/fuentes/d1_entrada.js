@@ -17,7 +17,9 @@ var Entrada={
         E.toques.push({x:p.x,y:p.y,id:id});
         var enBoton=!!(E.filtro&&E.filtro(p.x,p.y));
         E.dedos[id]={x0:p.x,y0:p.y,x:p.x,y:p.y,t0:performance.now(),usado:enBoton,boton:enBoton};
-        if(E.id===null&&!enBoton){E.id=id;E.tocando=true;E.x=E.x0=p.x;E.y=E.y0=p.y;E.hist=[{x:p.x,y:p.y,t:e.timeStamp||performance.now()}];}
+        if(E.id===null&&!enBoton){E.id=id;E.tocando=true;E.x=E.x0=p.x;E.y=E.y0=p.y;E.hist=[{x:p.x,y:p.y,t:e.timeStamp||performance.now()}];
+          /* el trazo entero (cada evento, con su hora): de acá sale el dibujo y la lectura del tiro */
+          E.traza=[{x:p.x,y:p.y,t:e.timeStamp||performance.now()}];}
       }
       if(e.cancelable)e.preventDefault();
     };
@@ -27,7 +29,8 @@ var Entrada={
         var t=ts[i], id=idDe(t), d=E.dedos[id];
         if(!d)continue;
         var p=Pantalla.aMundo(t.clientX,t.clientY);
-        if(id===E.id){E.acx+=p.x-E.x;E.acy+=p.y-E.y;E.x=p.x;E.y=p.y;E.hist.push({x:p.x,y:p.y,t:e.timeStamp||performance.now()});if(E.hist.length>12)E.hist.shift();}
+        if(id===E.id){E.acx+=p.x-E.x;E.acy+=p.y-E.y;E.x=p.x;E.y=p.y;var tt=e.timeStamp||performance.now();E.hist.push({x:p.x,y:p.y,t:tt});if(E.hist.length>12)E.hist.shift();
+          if(E.traza){var ul=E.traza[E.traza.length-1];if(!ul||Math.abs(ul.x-p.x)+Math.abs(ul.y-p.y)>0.4){E.traza.push({x:p.x,y:p.y,t:tt});if(E.traza.length>240)E.traza.splice(1,1);}}}
         d.x=p.x;d.y=p.y;
         var dx=p.x-d.x0, dy=p.y-d.y0;
         if(!d.usado&&dx*dx+dy*dy>26*26){
@@ -48,7 +51,7 @@ var Entrada={
           /* con la marca de tiempo del propio toque: el navegador ocupado los procesa todos juntos */
           var h=E.hist, ult=h[h.length-1]||{x:E.x,y:E.y,t:e.timeStamp||performance.now()}, ah=ult.t, k=h.length-1;while(k>0&&ah-h[k-1].t<120)k--;
           var q=h[Math.max(0,k-1)]||ult, dtt=Math.max(0.016,(ah-q.t)/1000);
-          E.suelta={dx:E.x-E.x0,dy:E.y-E.y0,x0:E.x0,y0:E.y0,x:E.x,y:E.y,vx:(E.x-q.x)/dtt,vy:(E.y-q.y)/dtt};
+          E.suelta={dx:E.x-E.x0,dy:E.y-E.y0,x0:E.x0,y0:E.y0,x:E.x,y:E.y,vx:(E.x-q.x)/dtt,vy:(E.y-q.y)/dtt,traza:E.traza||null};
           /* y lo recorrido en las últimas tres muestras (en un teléfono, ~50 ms): un tirón aunque el reloj mienta */
           var q3=h[Math.max(0,h.length-4)]||ult;E.suelta.tx=ult.x-q3.x;E.suelta.ty=ult.y-q3.y;
           E.id=null;E.tocando=false;

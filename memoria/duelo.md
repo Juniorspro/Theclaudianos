@@ -50,6 +50,18 @@ Nombre, arenas y jugadores propios (no se copia la marca). Primer juego 3D de la
     El viaje lateral sale de la trayectoria 2D; con cámara que sigue no hay viaje (se pone uno sintético).
   - `hornear_clips.mjs` saca el viaje de las estiradas (el juego lo escala hasta la pelota) y centra la
     cadera de los idles (el cuerpo queda donde el juego cree: antes estaba corrido 23 cm).
+- **Tiro preciso** (`leerTiro` en d7): la pelota va adonde termina el dedo, proyectado al plano del arco con
+  `rayoAPlanoZ` (perspectiva real). Trazo corto → se prolonga por la cuerda hasta la línea del arco y la fuerza lo
+  levanta. El trazo es `Entrada.traza` (cada evento con su `timeStamp`), no un punto por cuadro. Medido con
+  `pruebas/duelo/precision.mjs` (toques CDP, sin arquero): error medio **2 cm** (antes 2,87 m, peor 6 m).
+  Mientras se apunta se dibuja el trazo suavizado, la trayectoria con la misma física (`trayectoriaTiro`) y la mira.
+- Cámara de patear: detrás de la pelota (`sx, 2,8, sz+6,8`, mira a `sx·0,5`, fov 46), buscada por fuerza bruta
+  con la pelota en las esquinas: arco ~65 % más grande y pelota+pateador siempre en pantalla. Ojo: en pantalla
+  parada el campo horizontal es angosto; una cámara cerrada que no sigue a la pelota la deja afuera.
+- **Bucle**: un paso por cuadro dibujado, del largo real (partido en ≤1/60 s). Con pasos fijos de 1/60, a 90/120 Hz
+  había cuadros repetidos. La repetición se graba a 60 por segundo por tiempo (`grabar(dt)`).
+- Paso lateral del arquero: mocap de video (`arquero_paso_izq/der`, 1,12 m por ciclo) mezclado por velocidad
+  lateral; la fase avanza con la distancia (no patina). La velocidad se mide con `J.t` porque en vuelo se posa con dt=0.
 - Trampas (cada una costó una vuelta):
   - Los atributos de piel vienen **entrelazados** (así escribe gltf-transform): `.array` lee basura
     (puntitos de guante en el torso); se lee con `getX..getW`. Y `getComponent` no existe en r160.
@@ -59,6 +71,8 @@ Nombre, arenas y jugadores propios (no se copia la marca). Primer juego 3D de la
     cadera sale disparada de entrada; en la fase de vuelo el arquero se posa con dt=0, así que la estirada
     corre con su propio reloj `J.p`.
   - `AnimationMixer` no reescribe un hueso que no cambió: se restaura la pose limpia antes de cada update.
+  - En `__D.evalua` con números interpolados: `P.zArco-${z}` con z negativo da `--` (error de sintaxis): paréntesis.
+  - Una captura con `isMobile:true` recorta la escena: para fotos, sólo `hasTouch`.
 - Cancha: césped de 6 capas (conchas con alphaTest, 3 si baja la resolución) sobre textura con
   franjas y líneas pintadas en metros; bloom + viñeta + saturación (se apaga con escala < 0,75);
   banderines que flamean, LED que corren, bancos de suplentes, techos de tribuna, fotógrafos.

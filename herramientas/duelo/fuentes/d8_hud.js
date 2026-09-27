@@ -83,24 +83,36 @@ function dibujarApuntar(g,t){
     }
     return;
   }
-  g.save();g.lineCap='round';g.lineJoin='round';
-  g.globalCompositeOperation='lighter';
+  /* el trazo del dedo, suavizado y con la cola que se apaga: cada evento del toque, no un punto por cuadro */
+  var c=suavizarTrazo(cam), nC=c.length;
+  g.save();g.lineCap='round';g.lineJoin='round';g.globalCompositeOperation='lighter';
   for(var pass=0;pass<2;pass++){
-    g.strokeStyle=pass?'rgba(255,255,255,0.9)':'rgba(255,230,90,0.35)';g.lineWidth=pass?4:14;
-    g.beginPath();g.moveTo(cam[0].x,cam[0].y);for(var i=1;i<cam.length;i++)g.lineTo(cam[i].x,cam[i].y);g.stroke();
+    for(var i=1;i<nC;i++){
+      var a0=c[i-1], a1=c[i], m0x=i>1?(c[i-2].x+a0.x)/2:a0.x, m0y=i>1?(c[i-2].y+a0.y)/2:a0.y, m1x=(a0.x+a1.x)/2, m1y=(a0.y+a1.y)/2;
+      var al=0.25+0.75*i/nC;
+      g.strokeStyle=pass?'rgba(255,255,255,'+(0.95*al).toFixed(3)+')':'rgba(255,220,80,'+(0.4*al).toFixed(3)+')';g.lineWidth=pass?4.5:15;
+      g.beginPath();g.moveTo(m0x,m0y);g.quadraticCurveTo(a0.x,a0.y,m1x,m1y);if(i===nC-1)g.lineTo(a1.x,a1.y);g.stroke();
+    }
   }
   g.restore();
   var T=leerTiro(cam);
-  if(T){var q=aPantalla(new THREE.Vector3(T.tx,Math.min(T.ty,3),P.zArco));
-    var afuera=Math.abs(T.tx)>ARCO_W/2||T.ty>ARCO_H, c=afuera?'#ff5a4a':'#6aff8a';
-    g.save();g.translate(q.x,q.y);g.rotate(t*2);g.strokeStyle=c;g.lineWidth=3;
+  if(T){
+    /* por dónde va a ir la pelota: la misma física del tiro, dibujada con puntos que crecen hacia el arco */
+    var pl=planTiro(T,P.superArmado), tr=trayectoriaTiro(pl.v,pl.spin,16);
+    var afuera=Math.abs(T.tx)>ARCO_W/2||T.ty>ARCO_H, c1=afuera?'255,90,74':'120,255,150';
+    g.save();
+    for(var j=1;j<tr.length;j++){var sp=aPantalla(tr[j]);if(sp.atras)continue;var u=j/(tr.length-1);
+      g.fillStyle='rgba('+c1+','+(0.25+0.5*u).toFixed(3)+')';g.beginPath();g.arc(sp.x,sp.y,1.6+2.2*u,0,TAU);g.fill();}
+    g.restore();
+    var q=aPantalla(new THREE.Vector3(T.tx,Math.min(T.ty,3),P.zArco)), cc='#'+(afuera?'ff5a4a':'6aff8a');
+    g.save();g.translate(q.x,q.y);g.rotate(t*2);g.strokeStyle=cc;g.lineWidth=3;
     g.beginPath();g.arc(0,0,11,0,TAU);g.stroke();for(var k2=0;k2<4;k2++){g.rotate(TAU/4);g.beginPath();g.moveTo(14,0);g.lineTo(20,0);g.stroke();}g.restore();
     /* la fuerza */
     var fw=120, fx=ANCHO/2-fw/2, fy=ALTO-84;
     g.fillStyle='rgba(10,20,50,0.7)';redondo(g,fx,fy,fw,10,5);g.fill();
-    g.fillStyle=T.pot>1.05?'#ff5a4a':T.pot>0.8?'#ffd23a':'#6aff8a';redondo(g,fx,fy,fw*lim(T.pot/1.35,0,1),10,5);g.fill();
+    g.fillStyle=T.pot>1.1?'#ff5a4a':T.pot>0.8?'#ffd23a':'#6aff8a';redondo(g,fx,fy,fw*lim(T.pot/1.35,0,1),10,5);g.fill();
     texto(g,'FUERZA',ANCHO/2,fy-10,10,'#ffffff');
-    if(Math.abs(T.curva)>0.08)texto(g,'CON EFECTO',ANCHO/2,fy+24,11,'#fff35a');
+    if(Math.abs(T.curva)>0.06)texto(g,'CON EFECTO',ANCHO/2,fy+24,11,'#fff35a');
   }
 }
 function dibujarDedo(g,x,y){

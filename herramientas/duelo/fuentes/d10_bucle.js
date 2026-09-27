@@ -22,7 +22,10 @@ var Bucle={acum:0,ultimo:0,msCuadro:16,
     var dtR=Math.min(0.1,Math.max(0,(ts-(this.ultimo||ts))/1000));this.ultimo=ts;this.acum+=dtR;
     var t0=performance.now();
     if(J.congelado){this.acum=0;this.dibujar();return;}      /* el banco maneja el tiempo a mano */
-    var n=0;while(this.acum>=CUADRO&&n<4){this.acum-=CUADRO;n++;this.pasar(CUADRO);}
+    /* un paso por cuadro dibujado, del largo real del cuadro (partido en pasos de 1/60 s como mucho): con pasos
+       fijos de 1/60, un teléfono de 90 o 120 Hz dibujaba cuadros repetidos y salteaba otros (se veía a tirones) */
+    var d=Math.min(dtR,0.05);this.acum=0;
+    if(d>0){var n=Math.ceil(d/CUADRO-1e-6);for(var i=0;i<n;i++)this.pasar(d/n);}
     this.dibujar();
     /* la resolución del 3D se adapta: si el cuadro tarda, baja; si sobra, sube */
     var ms=performance.now()-t0;this.msCuadro=this.msCuadro*0.95+(dtR*1000)*0.05;

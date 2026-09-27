@@ -15,7 +15,7 @@ R.listAnimations().forEach(a=>a.dispose());
 const nodos=new Map(R.listNodes().map(n=>[n.getName(),n]));
 const hips=nodos.get('Hips'), rest=hips.getTranslation();
 // qué clips viajan (el viaje sale de la pista) y cuáles se centran (se les saca el promedio horizontal)
-const VIAJAN=/^(estirada_|vuelo_|atrapa|levantarse)/;
+const VIAJAN=/^(estirada_|vuelo_|atrapa|levantarse|arquero_paso)/;
 const CENTRAR=/^(quieto|parado|listo|carrera|sprint|caminar|arquero_)/;
 const viajes={};
 for(const f of fs.readdirSync(carpeta).filter(f=>f.endsWith('.json')).sort()){
@@ -40,7 +40,7 @@ for(const f of fs.readdirSync(carpeta).filter(f=>f.endsWith('.json')).sort()){
     // viaje = desplazamiento horizontal respecto del primer cuadro (en metros, en el marco del modelo: x izquierda, z adelante)
     const esc=hips.getParentNode?1:1;
     const v=[];
-    if(/^(estirada_|vuelo_)/.test(nom)){for(let i=0;i<n;i++)v.push([+c.raiz[i][0].toFixed(4),0]);
+    if(/^(estirada_|vuelo_|arquero_paso)/.test(nom)){for(let i=0;i<n;i++)v.push([+c.raiz[i][0].toFixed(4),0]);
       /* el video del «vuelo» tenía la cámara siguiendo al arquero: no hay viaje medido; se pone uno suave
          (paso lateral y salto: 1,3 m entre el 18 % y el 62 % del clip) */
       if(v.every(q=>Math.abs(q[0])<1e-3)){const D=/izq/.test(nom)?1.3:-1.3;

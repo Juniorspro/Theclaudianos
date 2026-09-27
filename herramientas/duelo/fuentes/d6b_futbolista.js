@@ -249,10 +249,13 @@ function posarFutbolista(J,dt){
   c=J.clip;act=J.acc[c];dur=act.getClip().duration;
   var tc=tiempoClip(J,dur);
   if(a==='patear'&&J.meta.patada&&!J.contacto&&tc>=J.meta.patada.tc)J.contacto=true;
-  /* fundidos */
-  var k=Math.min(1,dt*J.fundido);if(dt===0&&!J.pesos[c])k=1;
-  for(var n in J.acc){var ac=J.acc[n], obj=n===c?1:0;var w=J.pesos[n]+(obj-J.pesos[n])*k;if(w<0.002)w=0;J.pesos[n]=w;
-    ac.enabled=w>0;ac.setEffectiveWeight(w);if(w>0&&n!==c){/* el que se va sigue su propio tiempo */ac.time=Math.min(ac.getClip().duration-1e-4,ac.time+dt);}}
+  /* fundidos (y el paso lateral del arquero, mezclado según lo rápido que se corre) */
+  var sec=pasoLateral(J);
+  var k=Math.min(1,Math.max(dt,J.dtPaso||0)*J.fundido);if(dt===0&&!J.pesos[c]&&!J.dtPaso)k=1;
+  for(var n in J.acc){var ac=J.acc[n], obj=n===c?1-sec.w:(n===sec.clip?sec.w:0);var w=J.pesos[n]+(obj-J.pesos[n])*(n===sec.clip||n===c&&sec.w>0?Math.min(1,k*1.5):k);if(w<0.002)w=0;J.pesos[n]=w;
+    ac.enabled=w>0;ac.setEffectiveWeight(w);
+    if(w>0&&n!==c){if(/^arquero_paso/.test(n)){var dp=ac.getClip().duration;ac.time=((J.fasePaso%1)+1)%1*(dp-1e-4);}
+      else /* el que se va sigue su propio tiempo */ac.time=Math.min(ac.getClip().duration-1e-4,ac.time+dt);}}
   act.time=Math.min(dur-1e-4,Math.max(0,tc));
   /* el mezclador no reescribe un hueso que no cambió: se vuelve a la pose limpia antes (si no, las capas se acumulan) */
   for(var i=0;i<J.huesos.length;i++)J.huesos[i].quaternion.copy(J.limpio[i]);J.h.Hips.position.copy(J.limpioP);
@@ -263,13 +266,22 @@ function posarFutbolista(J,dt){
   J.raiz.position.set(J.x,J.y||0,J.z);J.raiz.rotation.set(0,J.giro||0,0);J.raiz.updateMatrixWorld(true);
   capas(J,dt);
 }
+/* el arquero corriéndose de costado: velocidad lateral medida por lo que se movió (en la fase de vuelo se posa
+   con dt=0, así que se usa el reloj J.t), y la fase del paso avanza con la distancia: los pies no patinan */
+function pasoLateral(J){
+  var dtt=J.t-(J.tPaso===undefined?J.t:J.tPaso), dx=J.x-(J.xPaso===undefined?J.x:J.xPaso);J.tPaso=J.t;J.xPaso=J.x;J.dtPaso=dtt;
+  if(dtt>0){var v=dx*(-Math.cos(J.giro||0))/dtt;J.vLat=(J.vLat||0)+(v-(J.vLat||0))*Math.min(1,dtt*12);}
+  J.fasePaso=(J.fasePaso||0)+Math.abs(dx)/1.12;
+  var sp=Math.abs(J.vLat||0), w=J.anim==='arquero'&&J.acc.arquero_paso_izq?Math.min(1,Math.max(0,(sp-0.12)/0.8)):0;
+  return {clip:(J.vLat||0)>0?'arquero_paso_izq':'arquero_paso_der',w:w};
+}
 /* ---------------- capas por código encima del clip ---------------- */
 function capas(J,dt){
   var a=J.anim;
   /* guantes sólo de arquero */
   ponerGuantes(J,a==='arquero'||a==='volada');
   /* arquero moviéndose de costado: pasitos (los pies se levantan alternados según lo recorrido) */
-  if(a==='arquero'){
+  if(a==='arquero'&&!J.acc.arquero_paso_izq){
     var dx=Math.abs(J.x-J.xPrev);J.fase+=dx*9;var paso=Math.min(1,dx/Math.max(dt,1e-3)/2.2);
     if(paso>0.05){levantarPie(J,'Left',Math.max(0,Math.sin(J.fase))*0.09*paso);levantarPie(J,'Right',Math.max(0,-Math.sin(J.fase))*0.09*paso);}
   }

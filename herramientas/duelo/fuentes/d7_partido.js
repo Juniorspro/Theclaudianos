@@ -40,7 +40,9 @@ function prepararTiro(){
   P.tirador=tirador;P.arquero=arquero;P.zArco=zArco;
   /* la cámara: atrás de tu arco; si pateás, un poco más adelante para ver el arco de arriba */
   var C=R3.camObj;
-  if(yoPatea){C.pos.set(sx*0.35,4.3,sz+9.5);C.mira.set(sx*0.15,0.7,Z_RIVAL+2);C.fov=58;}
+  /* más baja y más cerca que antes, siguiendo a la pelota: el arco se ve ~67 % más grande (apuntar es más preciso)
+     y la pelota y el arco entran siempre en la pantalla parada (buscado con la pelota en las esquinas) */
+  if(yoPatea){C.pos.set(sx,2.8,sz+6.8);C.mira.set(sx*0.5,1.1,Z_RIVAL+1);C.fov=46;}
   else{C.pos.set(0,4.2,Z_MIO+6.4);C.mira.set(0,0.5,-2);C.fov=62;}
 }
 /* ---------------- la pelota ---------------- */
@@ -114,27 +116,58 @@ function resolverTiro(p0,tx,ty,zObj,rapidez,spinY){
   }
   return v0;
 }
-/* ---------------- vos pateás: leer el deslizamiento ---------------- */
-function leerTiro(camino){
-  if(camino.length<2)return null;
-  var s=camino[0], e=camino[camino.length-1], dx=e.x-s.x, dy=e.y-s.y, L=Math.hypot(dx,dy), dur=Math.max(0.06,e.t-s.t);
+/* ---------------- vos pateás: leer el trazo del dedo ----------------
+   La pelota va adonde apunta el dedo: el final del trazo se proyecta sobre el arco con la perspectiva de la
+   cámara (un rayo desde la cámara que corta el plano del arco). Si el dedo no llegó hasta el arco, el trazo se
+   prolonga en su misma dirección hasta la línea del arco y la fuerza lo levanta un poco. La velocidad del final
+   del gesto da la fuerza; la panza del trazo (suavizado) da el efecto, y el tiro igual termina donde apuntó. */
+function suavizarTrazo(c){
+  if(c.length<5)return c;
+  var o=[c[0]];
+  for(var i=1;i<c.length-1;i++){var a=c[Math.max(0,i-2)],b=c[i-1],m=c[i],n=c[i+1],z=c[Math.min(c.length-1,i+2)];
+    o.push({x:(a.x+2*b.x+3*m.x+2*n.x+z.x)/9,y:(a.y+2*b.y+3*m.y+2*n.y+z.y)/9,t:m.t});}
+  o.push(c[c.length-1]);return o;
+}
+function leerTiro(traza){
+  if(!traza||traza.length<2)return null;
+  var c=suavizarTrazo(traza), s=c[0], e=c[c.length-1], dx=e.x-s.x, dy=e.y-s.y, L=Math.hypot(dx,dy);
   if(dy>-30||L<40)return null;
-  var vel=L/dur;
-  /* el efecto: cuánto se panza el camino respecto de la cuerda (derecha = +) */
-  var mx=0;for(var i=1;i<camino.length-1;i++){var q=camino[i], d=((q.x-s.x)*dy-(q.y-s.y)*dx)/L;if(Math.abs(d)>Math.abs(mx))mx=d;}
-  var curva=lim(-mx/L,-0.45,0.45);
+  var ms=Math.max(40,e.t-s.t);
+  /* la fuerza: pesa la velocidad del final del gesto (los últimos 90 ms), no sólo la media */
+  var k=c.length-1;while(k>0&&e.t-c[k-1].t<90)k--;var q=c[Math.max(0,k-1)];
+  var vFin=Math.hypot(e.x-q.x,e.y-q.y)/Math.max(0.016,(e.t-q.t)/1000), vel=Math.max(L/(ms/1000),vFin*0.85);
   var pot=lim(vel/1500*0.65+L/420*0.45,0.25,1.35);
-  var ang=Math.atan2(dx,-dy), dz=Math.abs(P.zArco-B.p.z);
-  var tx=B.p.x+Math.tan(lim(ang,-1.2,1.2))*dz*0.95, ty=0.15+(pot-0.25)*1.95;
-  return {tx:tx,ty:ty,pot:pot,curva:curva,vel:vel};
+  /* el efecto: cuánto se panza el trazo respecto de la cuerda (derecha = +); lo muy chico es temblor del dedo */
+  var mx=0;for(var i=1;i<c.length-1;i++){var d=((c[i].x-s.x)*dy-(c[i].y-s.y)*dx)/L;if(Math.abs(d)>Math.abs(mx))mx=d;}
+  var cu=-mx/L;cu=Math.abs(cu)<0.035?0:cu-sig(cu)*0.035;var curva=lim(cu*1.15,-0.45,0.45);
+  /* adónde apunta: el final del trazo sobre el arco */
+  var zA=P.zArco, lin=aPantalla(new THREE.Vector3(B.p.x*0.3,0,zA)), ex=e.x, ey=e.y, alza=0;
+  if(ey>lin.y){var f=(s.y-lin.y)/Math.max(1,s.y-ey);ex=s.x+dx*f;ey=lin.y;alza=Math.max(0,pot-0.55)*1.1;}
+  var hit=rayoAPlanoZ(ex,ey,zA);if(!hit)return null;
+  return {tx:hit.x,ty:Math.max(0.14,hit.y)+alza,pot:pot,curva:curva,vel:vel};
+}
+/* la salida del tiro (sin el error por pasarse de fuerza): la usan el tiro y la trayectoria que se dibuja */
+function planTiro(T,sup,tx,ty){
+  var rap=(16.5+11*Math.min(1.05,T.pot))*(sup?1.3:1), spin=lim(T.curva*70,-26,26)*(sup?1.4:1);
+  return {v:resolverTiro(B.p,tx===undefined?T.tx:tx,ty===undefined?T.ty:ty,P.zArco,rap,spin),spin:spin};
+}
+/* los puntos del vuelo hasta el arco (misma física que la pelota), para dibujarlos mientras se apunta */
+function trayectoriaTiro(v0,spinY,n){
+  var p=B.p.clone(), v=v0.clone(), w=new THREE.Vector3(0,spinY,0), dt=1/120, out=[p.clone()], zObj=P.zArco, cada=Math.max(1,Math.round(0.6/dt/(n||14)));
+  for(var i=1;i<400;i++){
+    var sp=v.length();v.y-=G_*dt;v.addScaledVector(v,-KD*sp*dt);_a.crossVectors(w,v).multiplyScalar(KM);v.addScaledVector(_a,dt);w.multiplyScalar(1-0.35*dt);
+    var za=p.z;p.addScaledVector(v,dt);if(p.y<R_PELOTA){p.y=R_PELOTA;v.y=Math.abs(v.y)*0.5;}
+    if(i%cada===0)out.push(p.clone());
+    if((zObj<0&&p.z<=zObj)||(zObj>0&&p.z>=zObj)){out.push(p.clone());break;}
+  }
+  return out;
 }
 function patearYo(T){
   var sup=P.superArmado;P.superArmado=false;if(sup)P.pod[0]=0;
-  var rap=(16.5+11*Math.min(1.05,T.pot))*(sup?1.3:1), spin=lim(T.curva*70,-26,26)*(sup?1.4:1);
-  /* pasarse de fuerza sale menos preciso */
-  var err=Math.max(0,T.pot-1.05)*1.6;
-  var tx=T.tx+(Math.random()-0.5)*err, ty=T.ty+Math.random()*err*0.6;
-  P.tiroYo={v:resolverTiro(B.p,tx,ty,P.zArco,rap,spin),spin:new THREE.Vector3(0,spin,0),sup:sup,tx:tx,ty:ty};
+  /* pasarse de fuerza sale menos preciso (lo demás va exactamente adonde apuntaste) */
+  var err=Math.max(0,T.pot-1.1)*1.4;
+  var tx=T.tx+(Math.random()-0.5)*err, ty=T.ty+Math.random()*err*0.6, pl=planTiro(T,sup,tx,ty);
+  P.tiroYo={v:pl.v,spin:new THREE.Vector3(0,pl.spin,0),sup:sup,tx:tx,ty:ty};
   YO.anim='patear';YO.p=0;P.fase='pateando';P.tf=0;
   if(Prog.tuto){Prog.tuto=false;guardarProg();}
 }
@@ -240,8 +273,9 @@ function pasarPartido(dtR){
   else if(F==='apunta'){
     correrReloj(dtR);
     var E=Entrada;
-    if(E.tocando){if(!P.camino.length||P.caminoId!==E.id){P.camino=[];P.caminoId=E.id;}P.camino.push({x:E.x,y:E.y,t:P.tf});if(P.camino.length>60)P.camino.splice(1,1);}
-    if(E.suelta&&P.camino.length){var T=leerTiro(P.camino);P.camino=[];if(T)patearYo(T);}
+    /* el trazo es el de la entrada (cada evento del dedo, con su hora): se dibuja y se lee de ahí */
+    if(E.tocando&&E.traza)P.camino=E.traza;
+    if(E.suelta&&(E.suelta.traza||P.camino.length)){var T=leerTiro(E.suelta.traza||P.camino);P.camino=[];if(T)patearYo(T);}
     if(P.tf>8&&P.fase==='apunta'){patearYo({tx:(Math.random()-0.5)*2,ty:0.4,pot:0.45,curva:0});}
   }
   else if(F==='pateando'){YO.p+=dt*1.8;
@@ -267,7 +301,7 @@ function pasarPartido(dtR){
     if(P.turno===1&&EL.anim==='patear'){EL.p=Math.min(1,EL.p+dt*1.4);if(patadaTerminada(EL))EL.anim='quieto';}
     posar(A,0);partesArquero(A,_partes);
     var n=4;for(var k=0;k<n;k++)pasoPelota(dt/n,_partes);
-    grabar();
+    grabar(dtR);
     if(!P.res){P.quieto+=dt;if(B.v.length()<0.6&&B.p.y<0.2)P.quieto+=dt*3;if(P.quieto>3.2)marcarRes('afuera');}
     else{P.tRes+=dtR;
       if(P.tRes>1.1){
@@ -319,7 +353,9 @@ function terminarPartido(){
 }
 /* ---------------- la grabación para la repetición ---------------- */
 function foto(J){return [J.x,J.y||0,J.z,J.giro,J.anim,J.p,J.dx||0,J.dy||0,J.t,J.te||0,J.var||0];}
-function grabar(){P.rec.push({b:[B.p.x,B.p.y,B.p.z],yo:foto(YO),el:foto(EL)});if(P.rec.length>240)P.rec.shift();}
+/* la repetición se graba a 60 cuadros por segundo de juego, sea cual sea el paso (la pantalla puede ir a 120 Hz) */
+function grabar(dt){P.tGrab=(P.tGrab||0)+(dt||CUADRO);if(P.tGrab<CUADRO*0.999&&P.rec.length)return;P.tGrab=Math.max(0,P.tGrab-CUADRO);
+  P.rec.push({b:[B.p.x,B.p.y,B.p.z],yo:foto(YO),el:foto(EL)});if(P.rec.length>240)P.rec.shift();}
 function aplicarFoto(f){
   B.p.set(f.b[0],f.b[1],f.b[2]);
   [[YO,f.yo],[EL,f.el]].forEach(function(q){var J=q[0],s=q[1];J.x=s[0];J.y=s[1];J.z=s[2];J.giro=s[3];J.anim=s[4];J.p=s[5];J.dx=s[6];J.dy=s[7];J.t=s[8];J.te=s[9];J.var=s[10];J.repe=true;});

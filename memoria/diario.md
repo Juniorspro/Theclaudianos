@@ -1,6 +1,11 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-27 — DUELO: tiro preciso y movimiento fluido
+La pelota va adonde termina el dedo (proyección real al arco): error medio 2 cm contra 2,87 m antes. Trazo por
+evento, trayectoria prevista, cámara de patear más cerca (arco ~65 % más grande), bucle de paso variable (fluido
+a 90/120 Hz) y paso lateral del arquero con mocap. Ver [duelo](duelo.md).
+
 ### 2026-09-26 — DUELO: animaciones de mocap y rig nuevo
 Los futbolistas pasaron al esqueleto de Meshy con 14 clips de su biblioteca de mocap (vía Higgsfield) y
 8 sacados de videos de referencia con MediaPipe (estiradas y postura del arquero). Arreglados: guantes
