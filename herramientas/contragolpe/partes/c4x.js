@@ -97,6 +97,32 @@ function vmResolverBrazo(brazo, hombro, polo, wPos, qMano, k){
   brazo.h2.position.set(0, BRAZO.b - PUNO, 0); brazo.h2.quaternion.setFromUnitVectors(V3(0, 1, 0), yM.clone().applyQuaternion(q1.invert()).normalize());
   return E;
 }
+/* el contacto (palma apoyada y dedos cerrados hasta tocar) sólo se recalcula si la mano se movió respecto de lo que toca o cambió
+   la pose: quieta en su enchufe da lo mismo cada cuadro, y eran cientos de distancias por cuadro (un tercio del JS del juego) */
+const _mF = new THREE.Matrix4();
+function contactoIgual(M, vols, pose, palma){
+  M.malla.updateMatrixWorld(true);
+  let n = 8; for(const v of vols) n += v.t === 'cap' ? 22 : 16;
+  const f = M._firma && M._firma.length === n ? M._firma : (M._firma = new Float64Array(n).fill(NaN));
+  let igual = true, i = 0; const pon = x=>{ if(!(Math.abs(f[i] - x) < 1e-7)){ igual = false; f[i] = x; } i++; };
+  for(const v of vols){ _mF.copy(v.obj.matrixWorld).invert().multiply(M.malla.matrixWorld); const e = _mF.elements; for(let k=0;k<16;k++) pon(e[k]);
+    if(v.t === 'cap'){ for(let k=0;k<3;k++){ pon(v.a[k]); pon(v.b[k]); } } }
+  for(let k=0;k<4;k++) pon(pose.d[k]); for(let k=0;k<3;k++) pon(pose.p[k]); pon(palma ? 1 : 0);
+  return igual && !!M._cont;
+}
+function huesosDedos(M){ return M._hd || (M._hd = [].concat(...M.dedos, M.pulgar)); }
+function guardarContacto(M, mov){ const h = huesosDedos(M); M._cont = {mov, q:h.map(o=> o.quaternion.clone()), caps:M.caps.slice(), curl:M.curl ? M.curl.slice() : null}; }
+function ponerContacto(M){ const c = M._cont; if(c.mov) M.malla.position.addScaledVector(V3(0, 0, -1).applyQuaternion(M.malla.quaternion), c.mov);
+  M.malla.updateMatrixWorld(true); huesosDedos(M).forEach((o, i)=> o.quaternion.copy(c.q[i])); M.caps.length = 0; for(const k of c.caps) M.caps.push(k); if(c.curl) M.curl = c.curl.slice(); return c.mov; }
+/* palma, brazo y dedos de una mano con contacto contra 'vols' */
+function vmMano(M, brazo, hombro, polo, k, mano, pose, vols){
+  const palma = (!mano.libre || mano.contacto) && vols.length;
+  if(vols.length && !VM.sinCache && contactoIgual(M, vols, pose, palma)){ const mov = ponerContacto(M); vmResolverBrazo(brazo, hombro, polo, M.malla.position, M.malla.quaternion, k); return mov; }
+  const mov = palma ? apoyarPalma(M, vols) : 0;
+  vmResolverBrazo(brazo, hombro, polo, M.malla.position, M.malla.quaternion, k);
+  ponerDedos(M, pose, vols); if(vols.length) guardarContacto(M, mov); else M._cont = null;
+  return mov;
+}
 /* un cuadro del arma: pose del arma (reposo + animación + capas), manos, brazos, dedos */
 function vmPoner(poseArma, manoD, manoI, dedosD, dedosI){
   const A = VM.arma; if(!A) return;
@@ -107,15 +133,12 @@ function vmPoner(poseArma, manoD, manoI, dedosD, dedosI){
   /* la mano que empuña: se apoya la palma contra el arma, se resuelve el brazo y los dedos se cierran hasta tocar */
   const volA = VM.contacto === false ? [] : (A.vol || []);
   VM.manoD.malla.position.copy(pD); VM.manoD.malla.quaternion.copy(qD);
-  VM.movD = (!manoD.libre || manoD.contacto) && volA.length ? apoyarPalma(VM.manoD, volA) : 0;
-  vmResolverBrazo(VM.brazoD, HOMBRO.d, HOMBRO.poloD, VM.manoD.malla.position, VM.manoD.malla.quaternion, VM.kD);
-  ponerDedos(VM.manoD, dedosD, volA);
+  VM.movD = vmMano(VM.manoD, VM.brazoD, HOMBRO.d, HOMBRO.poloD, VM.kD, manoD, dedosD, volA);
   const hayI = !!manoI; VM.manoI.malla.visible = VM.brazoI.malla.visible = hayI;
   if(hayI){ VM.manoI.malla.position.copy(pI); VM.manoI.malla.quaternion.copy(qI);
     /* la de apoyo también choca con la otra mano (en la pistola envuelve sus dedos) */
     const volI = volA.length ? volA.concat(volsDeMano(VM.manoD)) : volA;
-    VM.movI = (!manoI.libre || manoI.contacto) && volI.length ? apoyarPalma(VM.manoI, volI) : 0;
-    vmResolverBrazo(VM.brazoI, HOMBRO.i, HOMBRO.poloI, VM.manoI.malla.position, VM.manoI.malla.quaternion, VM.kI); ponerDedos(VM.manoI, dedosI, volI); }
+    VM.movI = vmMano(VM.manoI, VM.brazoI, HOMBRO.i, HOMBRO.poloI, VM.kI, manoI, dedosI, volI); }
 }
 function vmReposo(){ const r = VM_REPOSO[VM.id] || VM_REPOSO.ak47; return {pos:V3(r.p[0], r.p[1], r.p[2]), q:quatDeGrados(r.r)}; }
 </script>

@@ -540,7 +540,11 @@ const escVM = new THREE.Scene();                    /* el arma y las manos en pr
 const cam = new THREE.PerspectiveCamera(70, 2, 0.05, 600);
 const camVM = new THREE.PerspectiveCamera(54, 2, 0.05, 600);   /* mismos cortes que la cámara del mundo: así la profundidad se compara */
 escena.add(cam);
-let DPR = Math.min(window.devicePixelRatio || 1, 2.5), CALIDAD = 0.8, RH = 1;
+/* en un teléfono la pantalla tiene 2,5–3 píxeles por punto: el 3D se dibuja a 1,75 como mucho (con la tinta y el grano no se nota) y
+   el HUD sigue nítido. Pintar píxeles es lo que cuesta: con 2,5 eran el doble por cuadro. */
+const ES_TACTIL = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || navigator.maxTouchPoints > 0;
+const DPR0 = Math.min(window.devicePixelRatio || 1, 2.5);
+let DPR = Math.min(DPR0, ES_TACTIL ? 1.75 : 2.5), CALIDAD = 0.8, RH = 1;
 const hg = cvH.getContext('2d');
 /* escala de la interfaz: 1 salvo en la «versión de escritorio» de un teléfono (vista achicada a menos de 0,8) */
 const UI = {u:1};
@@ -554,8 +558,11 @@ function medir(){
   const pr = Math.max(0.5, DPR*lim(CALIDAD, 0.35, 1)*0.85);
   ren.setPixelRatio(pr); ren.setSize(w, h, false);
   cam.aspect = camVM.aspect = w/h; cam.updateProjectionMatrix(); camVM.updateProjectionMatrix();
-  RH = Math.min(DPR, 2)*(CALIDAD >= 0.55 ? 1 : 0.8); cvH.width = Math.round(w*RH); cvH.height = Math.round(h*RH);
+  RH = Math.min(DPR0, 2)*(CALIDAD >= 0.55 ? 1 : 0.8); cvH.width = Math.round(w*RH); cvH.height = Math.round(h*RH);
   if(typeof postMedir === 'function') postMedir();
+  /* con poca calidad: sombra de 512 y el mundo sin relieve */
+  const ts = CALIDAD >= 0.75 ? 1024 : 512; if(sol.shadow.mapSize.x !== ts){ sol.shadow.mapSize.set(ts, ts); if(sol.shadow.map){ sol.shadow.map.dispose(); sol.shadow.map = null; } }
+  if(typeof relieveMundo === 'function') relieveMundo(CALIDAD >= 0.7);
 }
 addEventListener('resize', ()=>{ escalaUI(); setTimeout(medir, 60); });
 /* calidad automática por el intervalo real entre cuadros (lo que cuesta es pintar píxeles, no el JS) */
@@ -811,13 +818,27 @@ POST.ok = !/[?&]sinpost/.test(location.search) && probarHDR();
 if(POST.ok){ POST.bitsProf = probarProfundidad(); if(POST.qSim) POST.bitsProf = Math.min(POST.bitsProf, -Math.log2(POST.qSim)); POST.qW = Math.pow(2, -POST.bitsProf)/cam.near; }
 if(!POST.ok){ POST.motivo = 'prueba'; ren.toneMapping = THREE.ACESFilmicToneMapping; ren.toneMappingExposure = POST.grado.expo; }
 /* guardia: si la pantalla sale negra tres veces seguidas (cinco puntos; cada medio segundo al principio, después cada 2 s), se pasa a dibujar directo */
-const GUARDIA = {n:0, negros:0, px:new Uint8Array(4)};
-function vigilarNegro(){
-  if(++GUARDIA.n % (GUARDIA.n < 900 ? 30 : 120)) return;   /* al principio más seguido: que una pantalla negra dure poco */ const gl = ren.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight; let negros = 0;
-  for(const [fx, fy] of [[0.5, 0.5], [0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]]){ gl.readPixels(Math.floor(w*fx), Math.floor(h*fy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, GUARDIA.px);
-    if(GUARDIA.px[0] + GUARDIA.px[1] + GUARDIA.px[2] < 8) negros++; }
+const GUARDIA = {n:0, negros:0, leidas:0, px:new Uint8Array(20), px1:new Uint8Array(4), pbo:null, sync:null, sinPbo:false};
+const PUNTOS_GUARDIA = [[0.5, 0.5], [0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]];
+function juzgarNegro(px){ let negros = 0; for(let i=0;i<5;i++) if(px[i*4] + px[i*4 + 1] + px[i*4 + 2] < 8) negros++;
   GUARDIA.negros = negros === 5 ? GUARDIA.negros + 1 : 0;
-  if(GUARDIA.negros >= 3){ console.warn('revelado: pantalla negra, dibujo directo'); sinRevelado('negro'); }
+  if(GUARDIA.negros >= 3){ console.warn('revelado: pantalla negra, dibujo directo'); sinRevelado('negro'); } }
+/* leer la pantalla frena el teléfono hasta que la placa termina el cuadro (en un Mali, decenas de ms): con WebGL2 se lee a un búfer
+   y se mira cuando la placa avisa que terminó, sin esperar */
+function vigilarNegro(){
+  const gl = ren.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, g2 = ren.capabilities.isWebGL2 && !GUARDIA.sinPbo;
+  if(g2 && GUARDIA.sync){ const st = gl.clientWaitSync(GUARDIA.sync, 0, 0); if(st === gl.TIMEOUT_EXPIRED) return;
+    gl.deleteSync(GUARDIA.sync); GUARDIA.sync = null; gl.bindBuffer(gl.PIXEL_PACK_BUFFER, GUARDIA.pbo); gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, GUARDIA.px); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+    GUARDIA.leidas++; juzgarNegro(GUARDIA.px); return; }
+  if(++GUARDIA.n % (GUARDIA.n < 900 ? 30 : 120)) return;   /* al principio más seguido: que una pantalla negra dure poco */
+  if(g2){ try{
+      if(!GUARDIA.pbo){ GUARDIA.pbo = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, GUARDIA.pbo); gl.bufferData(gl.PIXEL_PACK_BUFFER, 20, gl.STREAM_READ); }
+      else gl.bindBuffer(gl.PIXEL_PACK_BUFFER, GUARDIA.pbo);
+      PUNTOS_GUARDIA.forEach(([fx, fy], i)=> gl.readPixels(Math.floor(w*fx), Math.floor(h*fy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, i*4));
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null); GUARDIA.sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); return;
+    } catch(e){ gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null); GUARDIA.sinPbo = true; } }
+  PUNTOS_GUARDIA.forEach(([fx, fy], i)=>{ gl.readPixels(Math.floor(w*fx), Math.floor(h*fy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, GUARDIA.px1); GUARDIA.px.set(GUARDIA.px1, i*4); });
+  GUARDIA.leidas++; juzgarNegro(GUARDIA.px);
 }
 function postMedir(){
   if(!POST.ok) return;
@@ -1346,6 +1367,7 @@ function texMaterial(mat){
 }
 function matMundo(mat){
   if(MAT_MUNDO[mat]) return MAT_MUNDO[mat];
+  if(!MUNDO_PHONG) return MAT_MUNDO[mat] = matMundoLigero(mat);
   const M = MATS[mat] || MATS.gris, t = texMaterial(mat);
   /* tono: las fotos más claras que lo que se horneó (paredes blancas al sol) se bajan para que no se quemen */
   const m = new THREE.MeshPhongMaterial({map:t.map, color:new THREE.Color().setScalar(M.tono || 1), normalMap:t.normal, normalScale:new THREE.Vector2(t.ns*0.8, t.ns*0.8), vertexColors:true,
@@ -1353,6 +1375,90 @@ function matMundo(mat){
   if(M.cara && t.map){ t.map.wrapS = t.map.wrapT = THREE.ClampToEdgeWrapping; }
   parcheLuz(m); return MAT_MUNDO[mat] = m;
 }
+/* el mismo mundo con un sombreador propio: la cuenta del Phong con la luz horneada, sin lo que no se usa. La sombra en vivo (sólo la de
+   los personajes) va con 4 muestras y únicamente donde el mapa de sol dice que da el sol; el relieve se apaga en calidad baja. En un
+   teléfono el mundo es casi todo lo que se pinta: el Phong con la sombra de 17 muestras costaba cuatro veces un material plano. */
+const MUNDO_PHONG = /[?&]phong\b/.test(location.search);
+const VERT_MUNDO = `attribute vec2 uv2; varying vec2 vUv, vUv2; varying vec3 vNormal, vViewPosition;
+  #include <common>
+  #include <color_pars_vertex>
+  #include <fog_pars_vertex>
+  #include <shadowmap_pars_vertex>
+  void main(){ vUv = uv; vUv2 = uv2;
+    #include <color_vertex>
+    #include <beginnormal_vertex>
+    #include <defaultnormal_vertex>
+    vNormal = normalize(transformedNormal);
+    #include <begin_vertex>
+    #include <project_vertex>
+    vViewPosition = -mvPosition.xyz;
+    #include <worldpos_vertex>
+    #include <shadowmap_vertex>
+    #include <fog_vertex>
+  }`;
+const FRAG_MUNDO = `uniform sampler2D map, lightMap, solMap, nMap; uniform float tono, lmK, ambMin, ns, spec, brillo; varying vec2 vUv, vUv2; varying vec3 vNormal, vViewPosition;
+  #include <common>
+  #include <color_pars_fragment>
+  #include <packing>
+  #include <fog_pars_fragment>
+  #include <bsdfs>
+  #include <lights_pars_begin>
+  #include <shadowmap_pars_fragment>
+  float sombraSol(){
+  #if defined(USE_SHADOWMAP) && NUM_DIR_LIGHT_SHADOWS > 0
+    vec4 sc = vDirectionalShadowCoord[0]; sc.xyz /= sc.w; sc.z += directionalLightShadows[0].shadowBias;
+    if(sc.x < 0.0 || sc.x > 1.0 || sc.y < 0.0 || sc.y > 1.0 || sc.z > 1.0) return 1.0;
+    vec2 t = 0.75/directionalLightShadows[0].shadowMapSize;
+    return 0.25*(texture2DCompare(directionalShadowMap[0], sc.xy + vec2(-t.x, -t.y), sc.z) + texture2DCompare(directionalShadowMap[0], sc.xy + vec2(t.x, -t.y), sc.z)
+      + texture2DCompare(directionalShadowMap[0], sc.xy + vec2(-t.x, t.y), sc.z) + texture2DCompare(directionalShadowMap[0], sc.xy + vec2(t.x, t.y), sc.z));
+  #else
+    return 1.0;
+  #endif
+  }
+  void main(){
+    vec3 alb = sRGBToLinear(texture2D(map, vUv)).rgb*tono;
+    #ifdef USE_COLOR
+      alb *= vColor;
+    #endif
+    vec3 n = normalize(vNormal); if(!gl_FrontFacing) n = -n;
+    vec3 v = normalize(vViewPosition);
+    #ifdef RELIEVE
+      vec3 q0 = -vViewPosition, dx = dFdx(q0), dy = dFdy(q0); vec2 s0 = dFdx(vUv), s1 = dFdy(vUv);
+      vec3 S = normalize(dx*s1.t - dy*s0.t), T = normalize(-dx*s1.s + dy*s0.s);
+      vec3 mt = texture2D(nMap, vUv).xyz*2.0 - 1.0; mt.xy *= ns; n = normalize(mat3(S, T, n)*mt);
+    #endif
+    vec3 luz = sRGBToLinear(texture2D(lightMap, vUv2)).rgb*lmK + ambMin;
+    vec3 col = alb*luz;
+    #if NUM_DIR_LIGHTS > 0
+      float solLM = texture2D(solMap, vUv2).r; vec3 L = directionalLights[0].direction; float nl = saturate(dot(n, L));
+      if(solLM*nl > 0.002){
+        float k = solLM*nl*sombraSol(); vec3 irr = directionalLights[0].color*k;
+        vec3 h = normalize(L + v); float nh = saturate(dot(n, h)), lh = saturate(dot(L, h));
+        float fr = exp2((-5.55473*lh - 6.98316)*lh), F = (1.0 - spec)*fr + spec;
+        col += irr*(alb + F*0.25*(brillo*0.5 + 1.0)*pow(nh, brillo));
+      }
+    #endif
+    #if NUM_POINT_LIGHTS > 0
+      if(pointLights[0].color.r + pointLights[0].color.g > 0.0){ vec3 dl = pointLights[0].position + vViewPosition; float d = length(dl);
+        col += alb*pointLights[0].color*saturate(dot(n, dl/d))*punctualLightIntensityToIrradianceFactor(d, pointLights[0].distance, pointLights[0].decay); }
+    #endif
+    gl_FragColor = vec4(col, 1.0);
+    #include <tonemapping_fragment>
+    #include <encodings_fragment>
+    #include <fog_fragment>
+  }`;
+function matMundoLigero(mat){
+  const M = MATS[mat] || MATS.gris, t = texMaterial(mat);
+  const u = THREE.UniformsUtils.merge([THREE.UniformsLib.lights, THREE.UniformsLib.fog, {tono:{value:M.tono || 1}, lmK:{value:ESCALA_LM}, ns:{value:t.ns*0.8}, spec:{value:M.spec || 0.04}, brillo:{value:M.brillo || 12}}]);
+  u.map = {value:t.map}; u.nMap = {value:t.normal}; u.lightMap = {value:LUZ.tex}; u.solMap = U_SOLMAP; u.ambMin = U_AMB;
+  const m = new THREE.ShaderMaterial({uniforms:u, vertexShader:VERT_MUNDO, fragmentShader:FRAG_MUNDO, lights:true, fog:true, vertexColors:true, extensions:{derivatives:true}});
+  m.defines = t.normal ? {RELIEVE:''} : {}; m.userData.nMap = t.normal;
+  if(M.cara && t.map){ t.map.wrapS = t.map.wrapT = THREE.ClampToEdgeWrapping; }
+  return m;
+}
+/* el relieve del mundo según la calidad: con poca, sin mapa de normales (una lectura y las derivadas menos por píxel) */
+function relieveMundo(si){ for(const k in MAT_MUNDO){ const m = MAT_MUNDO[k]; if(!m.isShaderMaterial || !m.userData.nMap) continue; const tiene = 'RELIEVE' in m.defines;
+  if(tiene === si) continue; m.defines = si ? {RELIEVE:''} : {}; m.needsUpdate = true; } }
 
 /* ====================== horneado de luz ======================
    Por cada texel: sol (varios rayos dentro del disco solar: penumbra), cielo (rayos con peso coseno), lámparas con visibilidad
@@ -1443,7 +1549,7 @@ function texDeLuz(res){ return ponerLuz(res.px, res.ps, res.w, res.h); }
 function ponerLuz(px, ps, w, h){
   if(LUZ.tex) LUZ.tex.dispose(); if(LUZ.texSol) LUZ.texSol.dispose();
   LUZ.tex = texDatos(px, w, h, true); LUZ.texSol = texDatos(ps, w, h, false); LUZ.w = w; LUZ.h = h; LUZ.datos = px; LUZ.sol = ps; LUZ.lista = true; U_SOLMAP.value = LUZ.texSol;
-  for(const k in MAT_MUNDO){ MAT_MUNDO[k].lightMap = LUZ.tex; MAT_MUNDO[k].needsUpdate = true; }
+  for(const k in MAT_MUNDO){ const m = MAT_MUNDO[k]; if(m.isShaderMaterial) m.uniforms.lightMap.value = LUZ.tex; else { m.lightMap = LUZ.tex; m.needsUpdate = true; } }
   return LUZ.tex;
 }
 /* los mapas de luz horneados vienen en dos PNG opacos (luz y sol): se leen con un lienzo, que con imágenes opacas no pierde nada */
@@ -3054,6 +3160,32 @@ function vmResolverBrazo(brazo, hombro, polo, wPos, qMano, k){
   brazo.h2.position.set(0, BRAZO.b - PUNO, 0); brazo.h2.quaternion.setFromUnitVectors(V3(0, 1, 0), yM.clone().applyQuaternion(q1.invert()).normalize());
   return E;
 }
+/* el contacto (palma apoyada y dedos cerrados hasta tocar) sólo se recalcula si la mano se movió respecto de lo que toca o cambió
+   la pose: quieta en su enchufe da lo mismo cada cuadro, y eran cientos de distancias por cuadro (un tercio del JS del juego) */
+const _mF = new THREE.Matrix4();
+function contactoIgual(M, vols, pose, palma){
+  M.malla.updateMatrixWorld(true);
+  let n = 8; for(const v of vols) n += v.t === 'cap' ? 22 : 16;
+  const f = M._firma && M._firma.length === n ? M._firma : (M._firma = new Float64Array(n).fill(NaN));
+  let igual = true, i = 0; const pon = x=>{ if(!(Math.abs(f[i] - x) < 1e-7)){ igual = false; f[i] = x; } i++; };
+  for(const v of vols){ _mF.copy(v.obj.matrixWorld).invert().multiply(M.malla.matrixWorld); const e = _mF.elements; for(let k=0;k<16;k++) pon(e[k]);
+    if(v.t === 'cap'){ for(let k=0;k<3;k++){ pon(v.a[k]); pon(v.b[k]); } } }
+  for(let k=0;k<4;k++) pon(pose.d[k]); for(let k=0;k<3;k++) pon(pose.p[k]); pon(palma ? 1 : 0);
+  return igual && !!M._cont;
+}
+function huesosDedos(M){ return M._hd || (M._hd = [].concat(...M.dedos, M.pulgar)); }
+function guardarContacto(M, mov){ const h = huesosDedos(M); M._cont = {mov, q:h.map(o=> o.quaternion.clone()), caps:M.caps.slice(), curl:M.curl ? M.curl.slice() : null}; }
+function ponerContacto(M){ const c = M._cont; if(c.mov) M.malla.position.addScaledVector(V3(0, 0, -1).applyQuaternion(M.malla.quaternion), c.mov);
+  M.malla.updateMatrixWorld(true); huesosDedos(M).forEach((o, i)=> o.quaternion.copy(c.q[i])); M.caps.length = 0; for(const k of c.caps) M.caps.push(k); if(c.curl) M.curl = c.curl.slice(); return c.mov; }
+/* palma, brazo y dedos de una mano con contacto contra 'vols' */
+function vmMano(M, brazo, hombro, polo, k, mano, pose, vols){
+  const palma = (!mano.libre || mano.contacto) && vols.length;
+  if(vols.length && !VM.sinCache && contactoIgual(M, vols, pose, palma)){ const mov = ponerContacto(M); vmResolverBrazo(brazo, hombro, polo, M.malla.position, M.malla.quaternion, k); return mov; }
+  const mov = palma ? apoyarPalma(M, vols) : 0;
+  vmResolverBrazo(brazo, hombro, polo, M.malla.position, M.malla.quaternion, k);
+  ponerDedos(M, pose, vols); if(vols.length) guardarContacto(M, mov); else M._cont = null;
+  return mov;
+}
 /* un cuadro del arma: pose del arma (reposo + animación + capas), manos, brazos, dedos */
 function vmPoner(poseArma, manoD, manoI, dedosD, dedosI){
   const A = VM.arma; if(!A) return;
@@ -3064,15 +3196,12 @@ function vmPoner(poseArma, manoD, manoI, dedosD, dedosI){
   /* la mano que empuña: se apoya la palma contra el arma, se resuelve el brazo y los dedos se cierran hasta tocar */
   const volA = VM.contacto === false ? [] : (A.vol || []);
   VM.manoD.malla.position.copy(pD); VM.manoD.malla.quaternion.copy(qD);
-  VM.movD = (!manoD.libre || manoD.contacto) && volA.length ? apoyarPalma(VM.manoD, volA) : 0;
-  vmResolverBrazo(VM.brazoD, HOMBRO.d, HOMBRO.poloD, VM.manoD.malla.position, VM.manoD.malla.quaternion, VM.kD);
-  ponerDedos(VM.manoD, dedosD, volA);
+  VM.movD = vmMano(VM.manoD, VM.brazoD, HOMBRO.d, HOMBRO.poloD, VM.kD, manoD, dedosD, volA);
   const hayI = !!manoI; VM.manoI.malla.visible = VM.brazoI.malla.visible = hayI;
   if(hayI){ VM.manoI.malla.position.copy(pI); VM.manoI.malla.quaternion.copy(qI);
     /* la de apoyo también choca con la otra mano (en la pistola envuelve sus dedos) */
     const volI = volA.length ? volA.concat(volsDeMano(VM.manoD)) : volA;
-    VM.movI = (!manoI.libre || manoI.contacto) && volI.length ? apoyarPalma(VM.manoI, volI) : 0;
-    vmResolverBrazo(VM.brazoI, HOMBRO.i, HOMBRO.poloI, VM.manoI.malla.position, VM.manoI.malla.quaternion, VM.kI); ponerDedos(VM.manoI, dedosI, volI); }
+    VM.movI = vmMano(VM.manoI, VM.brazoI, HOMBRO.i, HOMBRO.poloI, VM.kI, manoI, dedosI, volI); }
 }
 function vmReposo(){ const r = VM_REPOSO[VM.id] || VM_REPOSO.ak47; return {pos:V3(r.p[0], r.p[1], r.p[2]), q:quatDeGrados(r.r)}; }
 </script>
@@ -4136,7 +4265,7 @@ let RUTAS_CUADRO = 0;
 function botSeguir(a, dt){
   const B = a.bot; if(!B.destino) return null; if(a.c.pos.distanceTo(B.destino) < 0.9){ B.ruta = null; return null; }
   B.repath -= dt;
-  if(!B.ruta && RUTAS_CUADRO < 2){ RUTAS_CUADRO++; B.ruta = navRuta(a.c.pos.x, a.c.pos.y, a.c.pos.z, B.destino.x, B.destino.y, B.destino.z); B.ri = 1; B.repath = 4 + Math.random()*2; if(!B.ruta){ B.destino = null; return null; } }
+  if(!B.ruta && RUTAS_CUADRO < 1){ RUTAS_CUADRO++; B.ruta = navRuta(a.c.pos.x, a.c.pos.y, a.c.pos.z, B.destino.x, B.destino.y, B.destino.z); B.ri = 1; B.repath = 4 + Math.random()*2; if(!B.ruta){ B.destino = null; return null; } }
   if(!B.ruta) return null;
   while(B.ri < B.ruta.length - 1){ const p = B.ruta[B.ri]; if(Math.hypot(p.x - a.c.pos.x, p.z - a.c.pos.z) < 0.55 && Math.abs(p.y - a.c.pos.y) < 1.2) B.ri++; else break; }
   const p = B.ruta[Math.min(B.ri, B.ruta.length - 1)]; if(B.repath <= 0 && RUTAS_CUADRO < 2){ B.ruta = null; }

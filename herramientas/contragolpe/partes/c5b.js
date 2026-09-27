@@ -150,7 +150,7 @@ let RUTAS_CUADRO = 0;
 function botSeguir(a, dt){
   const B = a.bot; if(!B.destino) return null; if(a.c.pos.distanceTo(B.destino) < 0.9){ B.ruta = null; return null; }
   B.repath -= dt;
-  if(!B.ruta && RUTAS_CUADRO < 2){ RUTAS_CUADRO++; B.ruta = navRuta(a.c.pos.x, a.c.pos.y, a.c.pos.z, B.destino.x, B.destino.y, B.destino.z); B.ri = 1; B.repath = 4 + Math.random()*2; if(!B.ruta){ B.destino = null; return null; } }
+  if(!B.ruta && RUTAS_CUADRO < 1){ RUTAS_CUADRO++; B.ruta = navRuta(a.c.pos.x, a.c.pos.y, a.c.pos.z, B.destino.x, B.destino.y, B.destino.z); B.ri = 1; B.repath = 4 + Math.random()*2; if(!B.ruta){ B.destino = null; return null; } }
   if(!B.ruta) return null;
   while(B.ri < B.ruta.length - 1){ const p = B.ruta[B.ri]; if(Math.hypot(p.x - a.c.pos.x, p.z - a.c.pos.z) < 0.55 && Math.abs(p.y - a.c.pos.y) < 1.2) B.ri++; else break; }
   const p = B.ruta[Math.min(B.ri, B.ruta.length - 1)]; if(B.repath <= 0 && RUTAS_CUADRO < 2){ B.ruta = null; }

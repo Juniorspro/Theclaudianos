@@ -12,7 +12,11 @@ const escVM = new THREE.Scene();                    /* el arma y las manos en pr
 const cam = new THREE.PerspectiveCamera(70, 2, 0.05, 600);
 const camVM = new THREE.PerspectiveCamera(54, 2, 0.05, 600);   /* mismos cortes que la cámara del mundo: así la profundidad se compara */
 escena.add(cam);
-let DPR = Math.min(window.devicePixelRatio || 1, 2.5), CALIDAD = 0.8, RH = 1;
+/* en un teléfono la pantalla tiene 2,5–3 píxeles por punto: el 3D se dibuja a 1,75 como mucho (con la tinta y el grano no se nota) y
+   el HUD sigue nítido. Pintar píxeles es lo que cuesta: con 2,5 eran el doble por cuadro. */
+const ES_TACTIL = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || navigator.maxTouchPoints > 0;
+const DPR0 = Math.min(window.devicePixelRatio || 1, 2.5);
+let DPR = Math.min(DPR0, ES_TACTIL ? 1.75 : 2.5), CALIDAD = 0.8, RH = 1;
 const hg = cvH.getContext('2d');
 /* escala de la interfaz: 1 salvo en la «versión de escritorio» de un teléfono (vista achicada a menos de 0,8) */
 const UI = {u:1};
@@ -26,8 +30,11 @@ function medir(){
   const pr = Math.max(0.5, DPR*lim(CALIDAD, 0.35, 1)*0.85);
   ren.setPixelRatio(pr); ren.setSize(w, h, false);
   cam.aspect = camVM.aspect = w/h; cam.updateProjectionMatrix(); camVM.updateProjectionMatrix();
-  RH = Math.min(DPR, 2)*(CALIDAD >= 0.55 ? 1 : 0.8); cvH.width = Math.round(w*RH); cvH.height = Math.round(h*RH);
+  RH = Math.min(DPR0, 2)*(CALIDAD >= 0.55 ? 1 : 0.8); cvH.width = Math.round(w*RH); cvH.height = Math.round(h*RH);
   if(typeof postMedir === 'function') postMedir();
+  /* con poca calidad: sombra de 512 y el mundo sin relieve */
+  const ts = CALIDAD >= 0.75 ? 1024 : 512; if(sol.shadow.mapSize.x !== ts){ sol.shadow.mapSize.set(ts, ts); if(sol.shadow.map){ sol.shadow.map.dispose(); sol.shadow.map = null; } }
+  if(typeof relieveMundo === 'function') relieveMundo(CALIDAD >= 0.7);
 }
 addEventListener('resize', ()=>{ escalaUI(); setTimeout(medir, 60); });
 /* calidad automática por el intervalo real entre cuadros (lo que cuesta es pintar píxeles, no el JS) */
@@ -283,13 +290,27 @@ POST.ok = !/[?&]sinpost/.test(location.search) && probarHDR();
 if(POST.ok){ POST.bitsProf = probarProfundidad(); if(POST.qSim) POST.bitsProf = Math.min(POST.bitsProf, -Math.log2(POST.qSim)); POST.qW = Math.pow(2, -POST.bitsProf)/cam.near; }
 if(!POST.ok){ POST.motivo = 'prueba'; ren.toneMapping = THREE.ACESFilmicToneMapping; ren.toneMappingExposure = POST.grado.expo; }
 /* guardia: si la pantalla sale negra tres veces seguidas (cinco puntos; cada medio segundo al principio, después cada 2 s), se pasa a dibujar directo */
-const GUARDIA = {n:0, negros:0, px:new Uint8Array(4)};
-function vigilarNegro(){
-  if(++GUARDIA.n % (GUARDIA.n < 900 ? 30 : 120)) return;   /* al principio más seguido: que una pantalla negra dure poco */ const gl = ren.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight; let negros = 0;
-  for(const [fx, fy] of [[0.5, 0.5], [0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]]){ gl.readPixels(Math.floor(w*fx), Math.floor(h*fy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, GUARDIA.px);
-    if(GUARDIA.px[0] + GUARDIA.px[1] + GUARDIA.px[2] < 8) negros++; }
+const GUARDIA = {n:0, negros:0, leidas:0, px:new Uint8Array(20), px1:new Uint8Array(4), pbo:null, sync:null, sinPbo:false};
+const PUNTOS_GUARDIA = [[0.5, 0.5], [0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]];
+function juzgarNegro(px){ let negros = 0; for(let i=0;i<5;i++) if(px[i*4] + px[i*4 + 1] + px[i*4 + 2] < 8) negros++;
   GUARDIA.negros = negros === 5 ? GUARDIA.negros + 1 : 0;
-  if(GUARDIA.negros >= 3){ console.warn('revelado: pantalla negra, dibujo directo'); sinRevelado('negro'); }
+  if(GUARDIA.negros >= 3){ console.warn('revelado: pantalla negra, dibujo directo'); sinRevelado('negro'); } }
+/* leer la pantalla frena el teléfono hasta que la placa termina el cuadro (en un Mali, decenas de ms): con WebGL2 se lee a un búfer
+   y se mira cuando la placa avisa que terminó, sin esperar */
+function vigilarNegro(){
+  const gl = ren.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, g2 = ren.capabilities.isWebGL2 && !GUARDIA.sinPbo;
+  if(g2 && GUARDIA.sync){ const st = gl.clientWaitSync(GUARDIA.sync, 0, 0); if(st === gl.TIMEOUT_EXPIRED) return;
+    gl.deleteSync(GUARDIA.sync); GUARDIA.sync = null; gl.bindBuffer(gl.PIXEL_PACK_BUFFER, GUARDIA.pbo); gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, GUARDIA.px); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+    GUARDIA.leidas++; juzgarNegro(GUARDIA.px); return; }
+  if(++GUARDIA.n % (GUARDIA.n < 900 ? 30 : 120)) return;   /* al principio más seguido: que una pantalla negra dure poco */
+  if(g2){ try{
+      if(!GUARDIA.pbo){ GUARDIA.pbo = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, GUARDIA.pbo); gl.bufferData(gl.PIXEL_PACK_BUFFER, 20, gl.STREAM_READ); }
+      else gl.bindBuffer(gl.PIXEL_PACK_BUFFER, GUARDIA.pbo);
+      PUNTOS_GUARDIA.forEach(([fx, fy], i)=> gl.readPixels(Math.floor(w*fx), Math.floor(h*fy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, i*4));
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null); GUARDIA.sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); return;
+    } catch(e){ gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null); GUARDIA.sinPbo = true; } }
+  PUNTOS_GUARDIA.forEach(([fx, fy], i)=>{ gl.readPixels(Math.floor(w*fx), Math.floor(h*fy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, GUARDIA.px1); GUARDIA.px.set(GUARDIA.px1, i*4); });
+  GUARDIA.leidas++; juzgarNegro(GUARDIA.px);
 }
 function postMedir(){
   if(!POST.ok) return;

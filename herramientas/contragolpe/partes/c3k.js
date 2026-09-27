@@ -207,6 +207,7 @@ function texMaterial(mat){
 }
 function matMundo(mat){
   if(MAT_MUNDO[mat]) return MAT_MUNDO[mat];
+  if(!MUNDO_PHONG) return MAT_MUNDO[mat] = matMundoLigero(mat);
   const M = MATS[mat] || MATS.gris, t = texMaterial(mat);
   /* tono: las fotos más claras que lo que se horneó (paredes blancas al sol) se bajan para que no se quemen */
   const m = new THREE.MeshPhongMaterial({map:t.map, color:new THREE.Color().setScalar(M.tono || 1), normalMap:t.normal, normalScale:new THREE.Vector2(t.ns*0.8, t.ns*0.8), vertexColors:true,
@@ -214,6 +215,90 @@ function matMundo(mat){
   if(M.cara && t.map){ t.map.wrapS = t.map.wrapT = THREE.ClampToEdgeWrapping; }
   parcheLuz(m); return MAT_MUNDO[mat] = m;
 }
+/* el mismo mundo con un sombreador propio: la cuenta del Phong con la luz horneada, sin lo que no se usa. La sombra en vivo (sólo la de
+   los personajes) va con 4 muestras y únicamente donde el mapa de sol dice que da el sol; el relieve se apaga en calidad baja. En un
+   teléfono el mundo es casi todo lo que se pinta: el Phong con la sombra de 17 muestras costaba cuatro veces un material plano. */
+const MUNDO_PHONG = /[?&]phong\b/.test(location.search);
+const VERT_MUNDO = `attribute vec2 uv2; varying vec2 vUv, vUv2; varying vec3 vNormal, vViewPosition;
+  #include <common>
+  #include <color_pars_vertex>
+  #include <fog_pars_vertex>
+  #include <shadowmap_pars_vertex>
+  void main(){ vUv = uv; vUv2 = uv2;
+    #include <color_vertex>
+    #include <beginnormal_vertex>
+    #include <defaultnormal_vertex>
+    vNormal = normalize(transformedNormal);
+    #include <begin_vertex>
+    #include <project_vertex>
+    vViewPosition = -mvPosition.xyz;
+    #include <worldpos_vertex>
+    #include <shadowmap_vertex>
+    #include <fog_vertex>
+  }`;
+const FRAG_MUNDO = `uniform sampler2D map, lightMap, solMap, nMap; uniform float tono, lmK, ambMin, ns, spec, brillo; varying vec2 vUv, vUv2; varying vec3 vNormal, vViewPosition;
+  #include <common>
+  #include <color_pars_fragment>
+  #include <packing>
+  #include <fog_pars_fragment>
+  #include <bsdfs>
+  #include <lights_pars_begin>
+  #include <shadowmap_pars_fragment>
+  float sombraSol(){
+  #if defined(USE_SHADOWMAP) && NUM_DIR_LIGHT_SHADOWS > 0
+    vec4 sc = vDirectionalShadowCoord[0]; sc.xyz /= sc.w; sc.z += directionalLightShadows[0].shadowBias;
+    if(sc.x < 0.0 || sc.x > 1.0 || sc.y < 0.0 || sc.y > 1.0 || sc.z > 1.0) return 1.0;
+    vec2 t = 0.75/directionalLightShadows[0].shadowMapSize;
+    return 0.25*(texture2DCompare(directionalShadowMap[0], sc.xy + vec2(-t.x, -t.y), sc.z) + texture2DCompare(directionalShadowMap[0], sc.xy + vec2(t.x, -t.y), sc.z)
+      + texture2DCompare(directionalShadowMap[0], sc.xy + vec2(-t.x, t.y), sc.z) + texture2DCompare(directionalShadowMap[0], sc.xy + vec2(t.x, t.y), sc.z));
+  #else
+    return 1.0;
+  #endif
+  }
+  void main(){
+    vec3 alb = sRGBToLinear(texture2D(map, vUv)).rgb*tono;
+    #ifdef USE_COLOR
+      alb *= vColor;
+    #endif
+    vec3 n = normalize(vNormal); if(!gl_FrontFacing) n = -n;
+    vec3 v = normalize(vViewPosition);
+    #ifdef RELIEVE
+      vec3 q0 = -vViewPosition, dx = dFdx(q0), dy = dFdy(q0); vec2 s0 = dFdx(vUv), s1 = dFdy(vUv);
+      vec3 S = normalize(dx*s1.t - dy*s0.t), T = normalize(-dx*s1.s + dy*s0.s);
+      vec3 mt = texture2D(nMap, vUv).xyz*2.0 - 1.0; mt.xy *= ns; n = normalize(mat3(S, T, n)*mt);
+    #endif
+    vec3 luz = sRGBToLinear(texture2D(lightMap, vUv2)).rgb*lmK + ambMin;
+    vec3 col = alb*luz;
+    #if NUM_DIR_LIGHTS > 0
+      float solLM = texture2D(solMap, vUv2).r; vec3 L = directionalLights[0].direction; float nl = saturate(dot(n, L));
+      if(solLM*nl > 0.002){
+        float k = solLM*nl*sombraSol(); vec3 irr = directionalLights[0].color*k;
+        vec3 h = normalize(L + v); float nh = saturate(dot(n, h)), lh = saturate(dot(L, h));
+        float fr = exp2((-5.55473*lh - 6.98316)*lh), F = (1.0 - spec)*fr + spec;
+        col += irr*(alb + F*0.25*(brillo*0.5 + 1.0)*pow(nh, brillo));
+      }
+    #endif
+    #if NUM_POINT_LIGHTS > 0
+      if(pointLights[0].color.r + pointLights[0].color.g > 0.0){ vec3 dl = pointLights[0].position + vViewPosition; float d = length(dl);
+        col += alb*pointLights[0].color*saturate(dot(n, dl/d))*punctualLightIntensityToIrradianceFactor(d, pointLights[0].distance, pointLights[0].decay); }
+    #endif
+    gl_FragColor = vec4(col, 1.0);
+    #include <tonemapping_fragment>
+    #include <encodings_fragment>
+    #include <fog_fragment>
+  }`;
+function matMundoLigero(mat){
+  const M = MATS[mat] || MATS.gris, t = texMaterial(mat);
+  const u = THREE.UniformsUtils.merge([THREE.UniformsLib.lights, THREE.UniformsLib.fog, {tono:{value:M.tono || 1}, lmK:{value:ESCALA_LM}, ns:{value:t.ns*0.8}, spec:{value:M.spec || 0.04}, brillo:{value:M.brillo || 12}}]);
+  u.map = {value:t.map}; u.nMap = {value:t.normal}; u.lightMap = {value:LUZ.tex}; u.solMap = U_SOLMAP; u.ambMin = U_AMB;
+  const m = new THREE.ShaderMaterial({uniforms:u, vertexShader:VERT_MUNDO, fragmentShader:FRAG_MUNDO, lights:true, fog:true, vertexColors:true, extensions:{derivatives:true}});
+  m.defines = t.normal ? {RELIEVE:''} : {}; m.userData.nMap = t.normal;
+  if(M.cara && t.map){ t.map.wrapS = t.map.wrapT = THREE.ClampToEdgeWrapping; }
+  return m;
+}
+/* el relieve del mundo según la calidad: con poca, sin mapa de normales (una lectura y las derivadas menos por píxel) */
+function relieveMundo(si){ for(const k in MAT_MUNDO){ const m = MAT_MUNDO[k]; if(!m.isShaderMaterial || !m.userData.nMap) continue; const tiene = 'RELIEVE' in m.defines;
+  if(tiene === si) continue; m.defines = si ? {RELIEVE:''} : {}; m.needsUpdate = true; } }
 
 /* ====================== horneado de luz ======================
    Por cada texel: sol (varios rayos dentro del disco solar: penumbra), cielo (rayos con peso coseno), lámparas con visibilidad
@@ -304,7 +389,7 @@ function texDeLuz(res){ return ponerLuz(res.px, res.ps, res.w, res.h); }
 function ponerLuz(px, ps, w, h){
   if(LUZ.tex) LUZ.tex.dispose(); if(LUZ.texSol) LUZ.texSol.dispose();
   LUZ.tex = texDatos(px, w, h, true); LUZ.texSol = texDatos(ps, w, h, false); LUZ.w = w; LUZ.h = h; LUZ.datos = px; LUZ.sol = ps; LUZ.lista = true; U_SOLMAP.value = LUZ.texSol;
-  for(const k in MAT_MUNDO){ MAT_MUNDO[k].lightMap = LUZ.tex; MAT_MUNDO[k].needsUpdate = true; }
+  for(const k in MAT_MUNDO){ const m = MAT_MUNDO[k]; if(m.isShaderMaterial) m.uniforms.lightMap.value = LUZ.tex; else { m.lightMap = LUZ.tex; m.needsUpdate = true; } }
   return LUZ.tex;
 }
 /* los mapas de luz horneados vienen en dos PNG opacos (luz y sol): se leen con un lienzo, que con imágenes opacas no pierde nada */

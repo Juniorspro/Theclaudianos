@@ -934,3 +934,27 @@ Medido: capturas de los seis personajes y de caminar, correr, agachado, atrás, 
 (deathmatch en ALMACÉN, bomba en DESIERTO) sin errores; toques, ESTILO, menús en 360×680, respaldo y guardia, sin red e idiomas como
 antes. Banco sin GPU: 12–16 cuadros por segundo, como antes.
 
+
+### 2026-09-27 (27) — CONTRAGOLPE: el lag en el teléfono (POCO X8 Pro)
+**Pedido textual:** «Se me hyper laguea en mi x8 pro poco».
+
+Medido antes de tocar nada (banco sin GPU, que cobra en proporción a los píxeles y al sombreador): el 3D es casi todo el cuadro y
+dentro del 3D, **el mundo**: con un material plano costaba la cuarta parte. Del lado del JS, un tercio se iba en los dedos.
+- **Mundo con sombreador propio** (`matMundoLigero`, c3k): la misma cuenta que el Phong con la luz horneada (albedo × color × tono ×
+  (mapa de luz + piso) + sol con relieve y brillo, × mapa de sol), sin lo que no se usa. La sombra en vivo (sólo la de los personajes) va
+  con **4 muestras en vez de las 17 del PCF de r128** y sólo donde el mapa de sol dice que da el sol; el fogonazo sigue iluminando.
+  Capturas iguales al Phong (brillo 131,1 / 131,1 en NUCLEAR, 116,9 / 116,9 en DESIERTO, sombras de los pies iguales). `?phong` vuelve al viejo.
+- **Teléfono (`ES_TACTIL`): el 3D se dibuja a 1,75 píxeles por punto como mucho** (antes 2,5 × 0,85): la mitad de píxeles. El HUD sigue nítido.
+  Con calidad < 0,75 la sombra baja a 512; con < 0,7 el mundo va sin relieve (`relieveMundo`).
+- **Dedos cacheados** (`vmMano`, c4x): el contacto palma/dedos contra el arma sólo se recalcula si la mano se movió respecto de lo que
+  toca o cambió la pose. Probado llamando cada cuadro las dos versiones: diferencia máxima 1e-16.
+- Bots: una ruta A* por paso (antes dos).
+- **La guardia de pantalla negra leía la pantalla con `readPixels` sincrónico** (en un Mali frena hasta que la placa termina el cuadro):
+  con WebGL2 lee a un búfer y mira el resultado cuando el `fenceSync` avisa. **Trampa del banco:** en un bucle sin ceder el control el
+  aviso no llega nunca; la prueba de la guardia tiene que ceder entre cuadros (`await setTimeout`). Pasa a dibujo directo a los 90 cuadros.
+- **Trampa otra vez:** `TACTIL` ya existía en c6h (los mandos): el `const` repetido rompe el script entero. Se llama `ES_TACTIL`.
+
+Medido en teléfono simulado (915×412, DPR 2,75, táctil), ms por cuadro en el banco: ALTOS 729 → **352** (lienzo 1944×875 → 1361×612),
+automático 465 → 223, MEDIOS 375 → 170, BAJOS 156 → 75 (NUCLEAR; ALMACÉN igual de proporción). Paso de simulación con 9 bots
+1,29 → **0,85 ms** (p95 3,9 → 2,1). Partidas simuladas (deathmatch en ALMACÉN, bomba en DESIERTO con rondas y bajas), toques, sin red,
+idiomas, ESTILO, GRÁFICOS, tinta y respaldo sin errores. En un teléfono de verdad no lo pude medir.
