@@ -18,10 +18,25 @@ description: Animaciones 2D de personajes sacadas de videos generados (Rezona/Se
    se sacan las colas quietas, se submuestrea guardando el cuadro del golpe (el de mayor alcance), y cada animación va a un
    **video con el alfa al lado**: izquierda el color premultiplicado sobre negro, derecha el alfa en gris.
    H.264 CRF 34, `-bf 0 -g 999`, yuv420p. A CRF 34 no se distingue de 30 (34,8 contra 36,8 dB) y pesa un 25% menos.
-6. **En el juego** (`3_assets.js`): un `<video>` por clip, se busca cada cuadro a (k + 0,5)/12, `drawImage`, `getImageData`,
-   se despremultiplica y se recorta. Tres clips en paralelo. Se decodifica cuando hace falta el personaje y se tira después.
+6. **30 cuadros por segundo en pantalla**: los videos vienen a 24; se extraen a 24 (`f24/`) y cada animación lleva
+   `max·30/fj` cuadros, donde `fj` es la velocidad a la que la pasa el juego. La ficha guarda `k` (cuántos cuadros de más
+   tiene) y el juego multiplica su velocidad por `k`: lo que dura cada golpe no cambia. `banco/fps30.js` lo mide.
+7. **En el juego** (`3_assets.js`): **WebCodecs** lee las muestras del MP4 (un lector de cajas propio: stsd/avcC o vpcC, stsz,
+   stco, stsc, stss) y el decodificador del teléfono las pasa todas seguidas. Cada cuadro sale como ImageBitmap recortado a la
+   caja que calculó el horneado, por GPU (un sombreador junta color y alfa) o por CPU; el juego mide los primeros cuadros de
+   cada camino y se queda con el más rápido. Respaldo: `<video>` buscando cuadro por cuadro. El enemigo que sigue se carga
+   mientras se elige la bendición.
 
 ## Lo que costó una vuelta cada uno
+- **Buscar cuadro por cuadro en un `<video>` vuelve a decodificar desde el cuadro clave**: con 3,3 veces más cuadros el héroe
+  tardaba 10 s en un celular simulado. Decodificar de corrido con WebCodecs son 0,17 s para 240 cuadros; lo que queda es pasar
+  cada cuadro a píxeles.
+- **Una cadena de promesas que espera a la variable que la contiene se espera a sí misma**: `turno.then(() => cadena)` cuando
+  `cadena` ya se reasignó. Se captura el turno anterior en el momento.
+- **Los huecos encerrados** (entre un brazo y una cadena) no tocan el borde: el relleno no llega y el verde en sombra
+  (18, 131, 16) queda opaco y el quitaverde lo pone negro. Segunda pasada: componentes claramente verdes, aunque estén adentro.
+- **Lo semitransparente trae verde mezclado** (la estela de una hoja): se lleva hacia el gris.
+- **En el banco no hay placa de video**: WebGL corre emulado y parece más lento que la CPU. Por eso el juego elige solo.
 - **El Chromium del banco no tiene H.264**: el armado sale doble (MP4 para el celular, WebM VP9 para el banco). El MP4 se
   prueba con un Google Chrome bajado y desempaquetado con `dpkg-deb -x` (sin instalar nada).
 - **Esperar `requestVideoFrameCallback` con el video en pausa se come el tope entero**: con 60 ms por cuadro el héroe tardaba 9 s.

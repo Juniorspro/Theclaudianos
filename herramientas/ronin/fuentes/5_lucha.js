@@ -16,10 +16,10 @@ const TIPOS = {
   maestro:{pj:'j_maestro', nombre:'Kageyama, el maestro de la espada', jefe:true, alto:204, vida:1250, post:240, vel:120, dano:44, pesado:90, alc:178, alcP:198, rapido:1.2, p:{ataque:0.55, pesado:0.25, especial:0.2, guardia:0.5, atras:0.15}, espera:[0.35, 0.9], oro:420},
   oni:{pj:'j_oni', nombre:'Shuten, el oni', jefe:true, alto:286, vida:1700, post:320, vel:70, dano:58, pesado:120, alc:203, alcP:233, p:{ataque:0.4, pesado:0.35, especial:0.25, guardia:0.15, atras:0.05}, espera:[0.7, 1.4], oro:650, armadura:0.5},
   gashadokuro:{pj:'y_gashadokuro', nombre:'Gashadokuro', yokai:true, cuerpo:150, jefe:true, alto:250, vida:2600, post:400, vel:40, dano:62, pesado:130, alc:300, alcP:330, p:{ataque:0.5, pesado:0.45, guardia:0, atras:0}, espera:[0.8, 1.6], oro:900, armadura:0.6, fijo:true},
-  oogama:{pj:'y_oogama', nombre:'Oogama', yokai:true, cuerpo:110, jefe:true, alto:230, vida:2200, post:360, vel:55, dano:56, pesado:118, alc:248, alcP:278, p:{ataque:0.55, pesado:0.4, guardia:0, atras:0}, espera:[0.7, 1.4], oro:800, armadura:0.55, fijo:true},
+  oogama:{pj:'y_oogama', nombre:'Oogama', yokai:true, cuerpo:110, jefe:true, alto:230, vida:2200, post:360, vel:55, dano:50, pesado:104, alc:248, alcP:278, p:{ataque:0.55, pesado:0.4, guardia:0, atras:0}, espera:[0.7, 1.4], oro:800, armadura:0.55, fijo:true},
 };
 /* los golpes del héroe: el combo va rápido, rápido, fuerte; cada uno con su alcance, daño y equilibrio que saca */
-const GOLPES = {tajo2:{alc:146, dano:1, post:14, fps:24, sig:'tajo3'}, tajo3:{alc:168, dano:1.1, post:16, fps:24, sig:'tajo'}, tajo:{alc:150, dano:1.55, post:26, fps:22, sig:null}};
+const GOLPES = {remate:{alc:176, dano:2.4, post:40, fps:20, sig:null}, tajo2:{alc:146, dano:1, post:14, fps:24, sig:'tajo3'}, tajo3:{alc:168, dano:1.1, post:16, fps:24, sig:'tajo'}, tajo:{alc:150, dano:1.55, post:26, fps:22, sig:null}};
 const ESPADAS = {
   sarashi:{nombre:'Katana sin nombre', rango:0, dano:30, hab:'aniquilacion', precio:0},
   kaze:{nombre:'Filo del viento', rango:1, dano:36, hab:'concentracion', precio:600},
@@ -42,14 +42,16 @@ function luchador(tipoId, x, dir, extra){
 }
 function anima(e, nombre, vel, reinicio){ if(e.anim !== nombre || reinicio !== false){ e.anim = nombre; e.animT = 0; } e.animVel = vel || 1; }
 function animDe(e){ const P = PJ[e.pj]; return P && P.anims[e.anim]; }
-function duracion(e, nombre, fps){ const P = PJ[e.pj], A = P && P.anims[nombre]; if(!A) return 0.6; return A.cuadros.length/(fps || A.fps || 12); }
+/* cada animación trae k: cuántos cuadros tiene de más para verse a 30 por segundo; la velocidad del juego se multiplica por k */
+const vel = (A, fps) => (fps || A.fps || 12)*(A.k || 1);
+function duracion(e, nombre, fps){ const P = PJ[e.pj], A = P && P.anims[nombre]; if(!A) return 0.6; return A.cuadros.length/vel(A, fps); }
 /* el cuadro que toca: loops dan la vuelta; el resto se queda en el último */
 function cuadroDe(e){
-  const A = animDe(e); if(!A || !A.cuadros.length) return null; const n = A.cuadros.length, f = Math.floor(e.animT*(e.fpsAnim || A.fps || 12)*(A.loop ? e.animVel || 1 : 1));
+  const A = animDe(e); if(!A || !A.cuadros.length) return null; const n = A.cuadros.length, f = Math.floor(e.animT*vel(A, e.fpsAnim)*(A.loop ? e.animVel || 1 : 1));
   return A.cuadros[A.loop ? ((f % n) + n) % n : lim(f, 0, n - 1)];
 }
 /* el instante del golpe dentro de la animación (en segundos, con su fps) */
-function tGolpe(e, nombre, fps){ const P = PJ[e.pj], A = P && P.anims[nombre]; if(!A) return 0.3; const k = A.golpe !== null && A.golpe !== undefined ? A.golpe : Math.floor(A.cuadros.length*0.45); return (k + 0.5)/(fps || A.fps || 12); }
+function tGolpe(e, nombre, fps){ const P = PJ[e.pj], A = P && P.anims[nombre]; if(!A) return 0.3; const k = A.golpe !== null && A.golpe !== undefined ? A.golpe : Math.floor(A.cuadros.length*0.45); return (k + 0.5)/vel(A, fps); }
 
 /* ---------------------------------------------------------------- la pelea en curso */
 const LUCHA = {heroe:null, enemigo:null, fx:[], manchas:[], numeros:[], cam:0, camObj:0, sacudida:0, congelado:0, lento:0, lentoT:0,
@@ -58,6 +60,7 @@ function nuevaPelea(tipoEnemigo, extra){
   const L = LUCHA, H = L.heroe || luchador('heroe', 380, 1);
   Object.assign(H, {x:ARENA.x0 + 300, dir:1, estado:'quieto', t:0, vivo:true, aturdido:0, flash:0, ivul:0, golpeo:false, empuje:0, sinPostT:9, animVel:1}); anima(H, 'quieto');
   H.post = H.postMax; L.heroe = H;
+  if(PJ.heroe && PJ.heroe.anims.chiburi){ ponerEstado(H, 'chiburi'); anima(H, 'chiburi'); H.fpsAnim = 16; }
   /* un dedo que quedó apoyado de la pelea anterior no pasa a esta */
   ENT.izq = ENT.der = ENT.guardia = false; ENT.dedos.clear(); ENT.ataque = ENT.esquive = ENT.habilidad = -9;
   const E = luchador(tipoEnemigo, H.x + 330, -1, extra); anima(E, 'quieto'); E.estado = 'entra'; E.t = 0; L.enemigo = E;
@@ -118,7 +121,7 @@ function ponerEstado(e, s){
   const T = e.T;
   if(s === 'quieto'){ anima(e, 'quieto'); }
   else if(s === 'golpeado'){ anima(e, 'golpeado'); e.fpsAnim = 20; }
-  else if(s === 'aturdido'){ anima(e, 'golpeado'); e.fpsAnim = 10; }
+  else if(s === 'aturdido'){ if(PJ[e.pj] && PJ[e.pj].anims.aturdido) anima(e, 'aturdido'); else { anima(e, 'golpeado'); e.fpsAnim = 10; } }
   else if(s === 'muerte'){ anima(e, 'muerte'); e.fpsAnim = 12; }
 }
 /* ================================================================ el héroe */
@@ -130,7 +133,7 @@ function pasoHeroe(H, E, dt){
   H.sinPostT += dt; if(H.sinPostT > 1.4 && H.estado !== 'guardia') H.post = Math.min(H.postMax, H.post + H.postMax*0.22*dt);
   if(H.empuje){ H.x += H.empuje*dt; H.empuje *= Math.pow(0.02, dt); if(Math.abs(H.empuje) < 4) H.empuje = 0; }
   const pedido = (k, ventana) => RELOJ.t - ENT[k] < (ventana || 0.28);
-  const libre = ['quieto', 'caminar', 'guardia'].includes(H.estado);
+  const libre = ['quieto', 'caminar', 'guardia', 'chiburi'].includes(H.estado);
   const encadenable = GOLPES[H.estado] && H.golpeo && H.t > tGolpe(H, H.estado, GOLPES[H.estado].fps) + 0.02;
   if(LUCHA.fin) { if(H.estado === 'caminar') ponerEstado(H, 'quieto'); }
   else if(H.estado === 'aturdido'){ H.aturdido -= dt; if(H.aturdido <= 0){ H.post = H.postMax*0.5; ponerEstado(H, 'quieto'); } }
@@ -143,13 +146,16 @@ function pasoHeroe(H, E, dt){
     /* ¿está por llegar un golpe imparable? atacar justo antes es el contragolpe relámpago */
     if(E.vivo && E.aviso === 'pesado' && E.tImpacto - E.t < 0.5 && E.tImpacto - E.t > 0.02 && Math.abs(E.x - H.x) < E.T.alcP + 60 + (E.T.cuerpo || 0)) relampago(H, E, false);
     else if(LUCHA.conc > 0 && E.vivo && Math.abs(E.x - H.x) < 260){ LUCHA.conc--; relampago(H, E, true); }
-    else { const sig = encadenable ? GOLPES[H.estado].sig || 'tajo2' : 'tajo2'; ponerEstado(H, sig); anima(H, sig); H.fpsAnim = GOLPES[sig].fps; SON.fx(sig === 'tajo3' ? 'estocada' : sig, {pan:panDe(H.x)}); }
+    else { let sig = encadenable ? GOLPES[H.estado].sig || 'tajo2' : 'tajo2';
+      /* el enemigo sin equilibrio se remata: un golpe propio, más lento y mucho más fuerte */
+      if(E.vivo && E.estado === 'aturdido' && PJ.heroe.anims.remate && Math.abs(E.x - H.x) < GOLPES.remate.alc + (E.T.cuerpo || 0)) sig = 'remate';
+      ponerEstado(H, sig); anima(H, sig); H.fpsAnim = GOLPES[sig].fps; SON.fx(sig === 'tajo3' ? 'estocada' : sig === 'remate' ? 'tajo_pesado' : sig, {pan:panDe(H.x)}); }
   }
   else if(libre){
     if(ENT.guardia){ if(H.estado !== 'guardia'){ ponerEstado(H, 'guardia'); anima(H, 'guardia'); H.fpsAnim = 26; } }
     else if(ENT.izq !== ENT.der){ const d = ENT.der ? 1 : -1; H.x += d*TIPOS.heroe.vel*dt; if(H.estado !== 'caminar'){ ponerEstado(H, 'caminar'); anima(H, 'caminar'); H.fpsAnim = 14; }
       H.animVel = d === H.dir ? 1 : -1; H.pasoT = (H.pasoT || 0) + dt; if(H.pasoT > 0.36){ H.pasoT = 0; SON.fx('paso', {vol:0.5, pan:panDe(H.x)}); } }
-    else if(H.estado !== 'quieto') ponerEstado(H, 'quieto');
+    else if(H.estado !== 'quieto' && H.estado !== 'chiburi') ponerEstado(H, 'quieto');
   }
   /* los golpes del combo: pegan en su cuadro */
   const G = GOLPES[H.estado];
@@ -157,14 +163,15 @@ function pasoHeroe(H, E, dt){
       if(E.vivo && Math.abs(E.x - H.x) < G.alc + (E.T.cuerpo || 0) && Math.sign(E.x - H.x) === H.dir){
         if(E.estado === 'guardiaE' || (E.estado === 'quieto' || E.estado === 'caminar') && !E.T.fijo && Math.random() < E.T.p.guardia*(E.aturdido > 0 ? 0 : 1)){
           bloqueaEnemigo(E, H, G); }
-        else { danar(E, H, st.dano*G.dano*rv(0.92, 1.08), G.post, {fuerte:H.estado === 'tajo', ang:H.estado === 'tajo2' ? -0.7 : H.estado === 'tajo3' ? 0 : 0.8}); LUCHA.stats.golpes++; pausaGolpe(H.estado === 'tajo' ? 0.08 : 0.05); }
+        else { danar(E, H, st.dano*G.dano*rv(0.92, 1.08), G.post, {fuerte:H.estado === 'tajo' || H.estado === 'remate', ang:H.estado === 'tajo2' ? -0.7 : H.estado === 'tajo3' ? 0 : 0.8}); LUCHA.stats.golpes++; pausaGolpe(H.estado === 'remate' ? 0.14 : H.estado === 'tajo' ? 0.08 : 0.05); if(H.estado === 'remate'){ camaraLenta(0.55, 0.7); textoGrande(tr('¡REMATE!'), '#ff3a2a', 1.0); sacudir(14); } }
       } }
     if(H.t >= duracion(H, H.estado, G.fps)) ponerEstado(H, 'quieto'); }
   else if(H.estado === 'esquive'){ const k = H.t/0.3; if(k < 1) H.x -= H.dir*300*dt*(1 - k); if(H.t >= duracion(H, 'esquive', 26)) ponerEstado(H, 'quieto'); }
   else if(H.estado === 'desvio'){ if(H.t >= duracion(H, 'desvio', 26)*0.8) ponerEstado(H, 'quieto'); }
   else if(H.estado === 'golpeado'){ if(H.t >= 0.42) ponerEstado(H, 'quieto'); }
+  else if(H.estado === 'chiburi' || H.estado === 'bloqueo' || H.estado === 'levantarse'){ if(H.t >= duracion(H, H.estado, H.fpsAnim)) ponerEstado(H, 'quieto'); }
   else if(H.estado === 'guardia'){ /* se queda en la pose de guardia: el cuadro del 40% */
-    const A = animDe(H); if(A){ const k = Math.floor(A.cuadros.length*0.4); if(H.animT*26 > k) H.animT = k/26; }
+    const A = animDe(H); if(A){ const k = Math.floor(A.cuadros.length*0.4), v = vel(A, 26); if(H.animT*v > k) H.animT = k/v; }
     if(!ENT.guardia) ponerEstado(H, 'quieto'); }
   else if(H.estado === 'relampago') pasoRelampago(H, E, dt);
   else if(H.estado === 'habilidad') pasoHabilidad(H, E, dt, st);
@@ -173,7 +180,7 @@ function pasoHeroe(H, E, dt){
   if(H.estado !== 'relampago' && E.vivo && ['quieto', 'caminar', 'guardia'].includes(H.estado)) H.dir = E.x >= H.x ? 1 : -1;
 }
 function bloqueaEnemigo(E, H, G){
-  E.post = Math.max(0, E.post - G.post*0.8); E.sinPostT = 0; ponerEstado(E, 'guardiaE'); E.guardiaT = 0.35;
+  E.post = Math.max(0, E.post - G.post*0.8); E.sinPostT = 0; ponerEstado(E, 'guardiaE'); E.guardiaT = 0.4; E.bloqueoT = 0.4; E.anim = '';
   const x = (E.x + H.x)/2, y = PISO - E.T.alto*0.6*E.escala; fx('chispas', x, y, {n:10}); SON.fx('choque', {pan:panDe(x)}); pausaGolpe(0.04); sacudir(3);
   if(E.post <= 0) aturdir(E, 2.0);
 }
@@ -217,10 +224,15 @@ function pasoEnemigo(E, H, dt){
   const dist = Math.abs(H.x - E.x), haciaH = H.x >= E.x ? 1 : -1;
   const puedeGirar = ['quieto', 'caminar', 'entra'].includes(E.estado); if(puedeGirar) E.dir = haciaH;
   switch(E.estado){
-    case 'entra': anima(E, T.fijo ? 'quieto' : 'caminar', 1, false); E.fpsAnim = 12; if(E.t > 0.9 || T.fijo){ ponerEstado(E, 'quieto'); E.espera = rv(0.6, 1.0); } break;
+    case 'entra': { const pr = PJ[E.pj].anims.burla ? 'burla' : PJ[E.pj].anims.rugido ? 'rugido' : null;
+      if(pr){ if(E.anim !== pr){ anima(E, pr); E.fpsAnim = 14; if(pr === 'rugido' || E.pj === 'j_oni') SON.fx(E.pj === 'j_oni' ? 'rugido_oni' : 'grito_yokai', {pan:panDe(E.x)}); }
+        if(E.t >= duracion(E, pr, 14)){ ponerEstado(E, 'quieto'); E.espera = rv(0.4, 0.8); } break; }
+      anima(E, T.fijo ? 'quieto' : 'caminar', 1, false); E.fpsAnim = 12; if(E.t > 0.9 || T.fijo){ ponerEstado(E, 'quieto'); E.espera = rv(0.6, 1.0); } break; }
+    case 'burla': if(E.t >= duracion(E, 'burla', 14)){ ponerEstado(E, 'quieto'); E.espera = rv(0.2, 0.5); } break;
     case 'quieto': case 'caminar': {
       if(!H.vivo || LUCHA.fin){ if(E.estado !== 'quieto') ponerEstado(E, 'quieto'); break; }
-      E.espera -= d; const quiere = T.alc - 14;
+      E.espera -= d; E.burlaCd = (E.burlaCd || 6) - d; const quiere = T.alc - 14;
+      if(PJ[E.pj].anims.burla && E.burlaCd <= 0 && E.espera > 0.3 && dist > 150 && H.estado !== 'relampago' && Math.random() < d*0.35){ E.burlaCd = rv(9, 15); ponerEstado(E, 'burla'); anima(E, 'burla'); E.fpsAnim = 14; break; }
       if(!T.fijo && dist > quiere + 20){ E.x += haciaH*T.vel*d; if(E.estado !== 'caminar'){ ponerEstado(E, 'caminar'); anima(E, 'caminar'); E.fpsAnim = 12; } }
       else if(!T.fijo && dist < 96){ E.x -= haciaH*T.vel*0.8*d; if(E.estado !== 'caminar'){ ponerEstado(E, 'caminar'); anima(E, 'caminar'); E.fpsAnim = 12; } E.animVel = -1; }
       else if(E.estado !== 'quieto') ponerEstado(E, 'quieto');
@@ -229,11 +241,13 @@ function pasoEnemigo(E, H, dt){
       if(E.espera <= 0 && dist < T.alcP + 30){ elegirAtaque(E, H); }
       else if(E.espera <= 0 && T.fijo && dist >= T.alcP + 30){ E.espera = 0.3; }
       break; }
-    case 'guardiaE': anima(E, 'quieto', 1, false); E.guardiaT -= d; if(E.guardiaT <= 0){ ponerEstado(E, 'quieto'); E.espera = rv(0.1, 0.4); } break;
+    case 'guardiaE': if(PJ[E.pj].anims.guardia){ anima(E, 'guardia', 1, false); E.fpsAnim = 22; const A = animDe(E), k = Math.floor(A.cuadros.length*0.3), v = vel(A, 22);
+        if(!(E.bloqueoT > 0) && E.animT*v > k) E.animT = k/v; E.bloqueoT = Math.max(0, (E.bloqueoT || 0) - d); } else anima(E, 'quieto', 1, false);
+      E.guardiaT -= d; if(E.guardiaT <= 0){ ponerEstado(E, 'quieto'); E.espera = rv(0.1, 0.4); } break;
     case 'ataque': case 'pesado': case 'especial': ataqueEnemigo(E, H, d); break;
     case 'sorprendido': if(E.t > 0.6){ ponerEstado(E, 'quieto'); E.espera = 0.4; } break;
     case 'golpeado': if(E.t > 0.45){ ponerEstado(E, 'quieto'); E.espera = rv(0.2, 0.6); if(Math.random() < T.p.atras && !T.fijo) E.empuje = -haciaH*260; } break;
-    case 'aturdido': E.aturdido -= dt; const A = animDe(E); if(A && E.animT*10 > A.cuadros.length - 1) E.animT = (A.cuadros.length - 1)/10;
+    case 'aturdido': E.aturdido -= dt; const A = animDe(E); if(A && E.anim === 'golpeado' && E.animT*vel(A, 10) > A.cuadros.length - 1) E.animT = (A.cuadros.length - 1)/vel(A, 10);
       if(E.aturdido <= 0){ E.post = E.postMax*0.6; ponerEstado(E, 'quieto'); E.espera = 0.3; } break;
   }
   E.x = lim(E.x, ARENA.x0 + 20, ARENA.x1 + 60);
@@ -262,15 +276,17 @@ function ataqueEnemigo(E, H, d){
     if(E.pj === 'y_oogama') SON.fx('lengua'); if(E.pj === 'y_gashadokuro') SON.fx('huesos');
     if(H.vivo && dist < alc + 10 && Math.sign(H.x - E.x) === E.dir && H.ivul <= 0){
       const st = heroeStats(), apretoHace = RELOJ.t - ENT.guardiaDesde;
-      if(aviso === 'ligero' && H.estado === 'guardia' && apretoHace < st.ventana*1.5 + 0.05){ desvio(H, E); }
-      else if(aviso === 'ligero' && H.estado === 'guardia'){
+      if(aviso === 'ligero' && guardando(H) && apretoHace < st.ventana*1.5 + 0.05){ desvio(H, E); }
+      else if(aviso === 'ligero' && guardando(H)){
         H.post = Math.max(0, H.post - danoB*0.8); H.sinPostT = 0; const x = (H.x + E.x)/2; fx('chispas', x, PISO - 120, {n:8}); SON.fx('choque', {pan:panDe(x)}); sacudir(4); H.empuje = -H.dir*90;
+        if(H.post > 0 && PJ.heroe.anims.bloqueo){ ponerEstado(H, 'bloqueo'); anima(H, 'bloqueo'); H.fpsAnim = 22; }
         if(H.post <= 0){ aturdir(H, 1.1); danar(H, E, danoB*0.5, 0, {sinReaccion:true}); } }
-      else { if(aviso === 'pesado' && H.estado === 'guardia'){ aturdir(H, 1.0); }
+      else { if(aviso === 'pesado' && guardando(H)){ aturdir(H, 1.0); }
         danar(H, E, danoB*rv(0.9, 1.1), aviso === 'pesado' ? 45 : 25, {fuerte:aviso === 'pesado'}); if(aviso === 'pesado'){ pausaGolpe(0.1); sacudir(14); } }
     } }
   if(E.t >= dur){ ponerEstado(E, 'quieto'); }
 }
+const guardando = H => H.estado === 'guardia' || H.estado === 'bloqueo';
 function desvio(H, E){
   ponerEstado(H, 'desvio'); anima(H, 'desvio'); H.fpsAnim = 26; H.ivul = 0.25; LUCHA.stats.desvios++;
   E.post = Math.max(0, E.post - 32 - E.postMax*0.08); E.sinPostT = 0; LUCHA.ki = Math.min(1, LUCHA.ki + 0.15*heroeStats().kiK);

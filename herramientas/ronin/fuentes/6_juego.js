@@ -74,9 +74,11 @@ function finDePelea(){
     PROG.mejor[C.id] = Math.max(PROG.mejor[C.id] || 0, JUEGO.etapa); guardarProg();
     if(JUEGO.etapa >= 10){ PROG.capitulo = Math.max(PROG.capitulo, Math.min(3, C.id + 1)); PROG.cap_hecho = Object.assign({}, PROG.cap_hecho, {[C.id]:true}); guardarProg();
       SON.musica('victoria_capitulo'); UI.resultado('capitulo', oro); return; }
+    /* mientras se elige la bendición, se carga el enemigo que sigue (y se suelta el que ya cayó) */
+    { const d = C.etapas[JUEGO.etapa], t = typeof d === 'string' ? d : d.t; if(TIPOS[t].pj !== E.pj){ guardarResto(E); soltarPJ(E.pj); } cargarPJ(TIPOS[t].pj).catch(anotarError); }
     UI.bendicion(oro, cartas());
   } else {
-    if(L.bend.resu && !L.resucito){ L.resucito = true; H.vivo = true; H.vida = H.vidaMax*0.5; ponerEstado(H, 'quieto'); L.fin = null; textoGrande(tr('¡RESURRECCIÓN!'), '#ffd24a', 1.4); SON.fx('ki_listo'); SON.musica(E.T.jefe ? 'jefe' : 'batalla'); return 'sigue'; }
+    if(L.bend.resu && !L.resucito){ L.resucito = true; H.vivo = true; H.vida = H.vidaMax*0.5; ponerEstado(H, 'quieto'); if(PJ.heroe.anims.levantarse){ ponerEstado(H, 'levantarse'); anima(H, 'levantarse'); H.fpsAnim = 14; H.ivul = 1.4; } L.fin = null; textoGrande(tr('¡RESURRECCIÓN!'), '#ffd24a', 1.4); SON.fx('ki_listo'); SON.musica(E.T.jefe ? 'jefe' : 'batalla'); return 'sigue'; }
     guardarProg(); SON.musica('derrota'); UI.derrota();
   }
 }

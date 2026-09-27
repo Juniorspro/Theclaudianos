@@ -4,19 +4,27 @@
 import sys, os, json, subprocess, glob
 from PIL import Image
 AQ = os.path.dirname(os.path.abspath(__file__)); DEST = os.path.join(AQ, 'assets')
-F = '/tmp/ronin/f'
+F = '/tmp/ronin/f24'   # los cuadros a 24 por segundo (los de 12 quedaron en /tmp/ronin/f)
 def ultimo(nom):   # la versión aprobada: _v2 pisa a la primera si existe
     for n in (nom + '_v3', nom + '_v2', nom):
         if os.path.isdir(os.path.join(F, n)) and glob.glob(os.path.join(F, n, 'a_*.png')): return n
     return None
-HEROE = {'quieto':{'loop':True, 'max':12, 'recortar':False, 'fps':8}, 'caminar':{'loop':True, 'max':12, 'recortar':False, 'fps':12},
-  'tajo':{'golpe':True, 'max':14}, 'tajo2':{'golpe':True, 'max':12}, 'tajo3':{'golpe':True, 'max':12}, 'guardia':{'max':10}, 'desvio':{'max':10},
-  'esquive':{'max':12}, 'golpeado':{'max':9}, 'muerte':{'max':14}, 'habilidad':{'max':18}, 'victoria':{'max':14}, 'relampago':{'max':16}}
-ENEM = {'quieto':{'loop':True, 'max':10, 'recortar':False, 'fps':8}, 'caminar':{'loop':True, 'max':10, 'recortar':False, 'fps':12},
-  'ataque':{'golpe':True, 'max':12}, 'pesado':{'golpe':True, 'max':14}, 'golpeado':{'max':8}, 'muerte':{'max':12}, 'especial':{'golpe':True, 'max':14}}
-YOK = {'quieto':{'loop':True, 'max':10, 'recortar':False, 'fps':8}, 'ataque':{'golpe':True, 'max':12}, 'pesado':{'golpe':True, 'max':14}, 'golpeado':{'max':8}, 'muerte':{'max':12}}
+# 'fj' es a cuántos cuadros por segundo pasa el juego esa animación (su fpsAnim): con eso procesar.py saca los cuadros que
+# hacen falta para verla a 30 por segundo sin cambiar lo que dura
+HEROE = {'quieto':{'loop':True, 'max':12, 'recortar':False, 'fps':8, 'fj':8}, 'caminar':{'loop':True, 'max':12, 'recortar':False, 'fps':12, 'fj':14},
+  'tajo':{'golpe':True, 'max':14, 'fj':22}, 'tajo2':{'golpe':True, 'max':12, 'fj':24}, 'tajo3':{'golpe':True, 'max':12, 'fj':24},
+  'guardia':{'max':10, 'fj':26}, 'desvio':{'max':10, 'fj':26}, 'esquive':{'max':12, 'fj':26}, 'golpeado':{'max':9, 'fj':20},
+  'muerte':{'max':14, 'fj':12}, 'habilidad':{'max':18, 'fj':16}, 'victoria':{'max':14, 'fj':12}, 'relampago':{'max':16, 'fj':26},
+  'chiburi':{'max':14, 'fj':16}, 'aturdido':{'loop':True, 'max':12, 'recortar':False, 'fps':10, 'fj':10}, 'bloqueo':{'max':9, 'fj':22},
+  'remate':{'golpe':True, 'max':16, 'fj':20}, 'levantarse':{'max':16, 'fj':14}}
+ENEM = {'quieto':{'loop':True, 'max':10, 'recortar':False, 'fps':8, 'fj':8}, 'caminar':{'loop':True, 'max':10, 'recortar':False, 'fps':12, 'fj':12},
+  'ataque':{'golpe':True, 'max':12, 'fj':16}, 'pesado':{'golpe':True, 'max':14, 'fj':13}, 'golpeado':{'max':8, 'fj':20}, 'muerte':{'max':12, 'fj':12},
+  'especial':{'golpe':True, 'max':14, 'fj':13}, 'guardia':{'max':9, 'fj':22}, 'aturdido':{'loop':True, 'max':12, 'recortar':False, 'fps':10, 'fj':10},
+  'burla':{'max':14, 'fj':14}}
+YOK = {'quieto':{'loop':True, 'max':10, 'recortar':False, 'fps':8, 'fj':8}, 'ataque':{'golpe':True, 'max':12, 'fj':16}, 'pesado':{'golpe':True, 'max':14, 'fj':13},
+  'golpeado':{'max':8, 'fj':20}, 'muerte':{'max':12, 'fj':12}, 'rugido':{'max':14, 'fj':14}, 'aturdido':{'loop':True, 'max':12, 'recortar':False, 'fps':10, 'fj':10}}
 ALTO = {'heroe':300, 'j_general':320, 'j_oni':330, 'y_gashadokuro':320, 'y_oogama':300}
-EXTRA = {('e_bandido', 'golpeado'):{'sinverde':True}}   # una mancha de sangre con verde de fondo adentro
+EXTRA = {('e_bandido', 'golpeado'):{'sinverde':True}, ('j_general', 'guardia'):{'solo_mayor':True}}   # una mancha de sangre con verde de fondo adentro
 SRC_HEROE = {'tajo':'heroe_tajo', 'quieto':'heroe_quieto', 'relampago':'heroe_relampago'}
 def pj(p):
     base = HEROE if p == 'heroe' else YOK if p.startswith('y_') else ENEM

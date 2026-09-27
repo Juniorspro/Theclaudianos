@@ -24,10 +24,12 @@ async function arrancar(){
   try { await cargarPJ('heroe', k => UI.progreso(k)); } catch(e){ anotarError(e); }
   requestAnimationFrame(cuadro);
   UI.velo(false);
+  setTimeout(() => cargarPJ('e_bandido').catch(anotarError), 1500);   /* el primer enemigo de la historia, de antemano */
   if(!AJ.vistoIdioma) UI.idioma(); else UI.titulo();
 }
 /* ================================================================ para el banco */
 window.__R = {JUEGO, LUCHA, PJ, PROG, AJ, ENT, RELOJ, ERRORES, TR_FALTA, TIPOS, CAPITULOS, BENDICIONES, UI, SON, MED, FONDOS,
   empezarCapitulo, empezarYokai, siguienteEtapa, arrancarPelea, pasoLucha, dibujarPelea, dibujarTitulo, cargarPJ, heroeStats, tomarBendicion, ponerIdioma, pausar, apretar,
-  comprarEspada, mejorarEspada, entrenar, finDePelea, ponerEstado, luchador, tr, est:() => ({fps:Math.round(_fps), modo:JUEGO.modo, pjs:Object.keys(PJ)})};
-arrancar();
+  comprarEspada, mejorarEspada, entrenar, finDePelea, ponerEstado, luchador, cuadroDe, tr, modoJS:v => { MODO_JS = !!v; }, modoWC:v => { MODO_WC = !!v; }, wc:() => ({MODO_WC, _wcTex, camino:CAMINO.elegido, gpu:CAMINO.gpu.map(Math.round), cpu:CAMINO.cpu.map(Math.round)}), camino:v => { CAMINO.elegido = v; }, est:() => ({fps:Math.round(_fps), modo:JUEGO.modo, pjs:Object.keys(PJ)})};
+window.__mp4 = mp4Muestras; window.__DATOS = DATOS;
+if(!window.__noArrancar) arrancar();

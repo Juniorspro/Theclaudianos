@@ -41,6 +41,7 @@ const FRASES = [
   ['DERROTADO', 'DEFEATED', 'DERROTADO'],
   ['¡CONTRAGOLPE RELÁMPAGO!', 'LIGHTNING COUNTER!', 'CONTRAGOLPE RELÂMPAGO!'],
   ['¡DESVÍO!', 'PARRY!', 'DESVIO!'],
+  ['¡REMATE!', 'FINISHER!', 'GOLPE FINAL!'],
   ['¡RESURRECCIÓN!', 'RESURRECTION!', 'RESSURREIÇÃO!'],
   /* capítulos y yokai */
   ['La aldea en llamas', 'The Burning Village', 'A aldeia em chamas'],

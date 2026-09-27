@@ -21,7 +21,7 @@ se prueba **en el celular, en vertical (412×892)**.
 | `herramientas/residencia/` | Fuentes de `Residencia.html` (`fuentes/`), `armar.sh` y el banco (`banco/`: noche entera con un jugador que reacciona, la preparación con la mano, alcance caminando, orden de los muebles, placard sin navegador, dedos, idiomas, fuzz, capturas, hoja de Larry). **Se edita la fuente.** |
 | `.claude/skills/juego-terror` | Receta del terror en primera persona: luz de adentro separada del sol, cuatro luces fijas, interacción por ángulo, bicho con estados y caminos, placard medido contra una persona, susto encuadrado. |
 | `juegos-pc/Ronin.html` | **EL ÚLTIMO RŌNIN.** Duelos 2D en tinta a lo *Ronin: The Last Samurai*: desvío con GUARDIA justo antes del golpe, 殺 rojo que no se bloquea y se contesta con el **contragolpe relámpago**, equilibrio, combo de tres, tres habilidades, 3 capítulos de 10 etapas con bendiciones, **batallas de yokai** aparte, herrería de 5 espadas y dojo. Los 10 personajes salen de **videos de Rezona** convertidos en cuadros. ES/EN/PT. Se juega apaisado. |
-| `herramientas/ronin/` | Fuentes de `Ronin.html` (`fuentes/`), la cadena de videos (`prompts.py`, `enviar.py`, `esperar.py`, `qa.sh`, `cuadros.py`, `hornear.py`, `procesar.py`), `armar.py` y el banco (`banco/`: bot que pelea como una persona, capítulos enteros, dedos, pantallas en tres idiomas, vitrina, fuzz, audio). **Se edita la fuente.** |
+| `herramientas/ronin/` | Fuentes de `Ronin.html` (`fuentes/`), la cadena de videos (`prompts.py`, `enviar.py`, `esperar.py`, `qa.sh`, `cuadros.py`, `hornear.py`, `procesar.py`), `armar.py` y el banco (`banco/`: bot que pelea como una persona, capítulos enteros, dedos, pantallas en tres idiomas, vitrina, acciones, 30 cuadros por segundo, GPU contra CPU, fuzz, audio). **Se edita la fuente.** |
 | `.claude/skills/sprites-video` | Receta de los sprites sacados de video: referencia sobre verde, un video por golpe, control cuadro por cuadro, alfa empaquetado al lado en H.264. |
 | `herramientas/mate/` | Fuentes de `Mate.html` por partes (`fuentes/`, con `niveles.py`), `armar.sh` y el banco (`banco/`). **Se edita la fuente, no el HTML.** |
 | `.claude/skills/juego-25d` | Receta del 2.5D pixel art: render, sprites, niveles verificados, cinemáticas, menús, idiomas. |
@@ -2163,3 +2163,63 @@ Medido:
 - Dibujar un cuadro de pelea: 0,18 a 0,31 ms. Todo efecto que pide el juego existe en el audio.
 
 Queda para decidir: la dificultad la tiene que probar una persona. El sapo sin mejoras es duro a propósito, porque es opcional.
+
+### 2026-09-27 (bb) — EL ÚLTIMO RŌNIN a 30 cuadros por segundo, y 30 acciones nuevas
+**Pedido textual:** «Agrega animaciones de 30fps si o si más animaciones también de diferentes tipos de acciones».
+
+**30 cuadros por segundo de verdad.** Los videos de Seedance vienen a 24, y antes se usaban 12 por segundo del video. Ahora se
+extrae todo a 24 y cada animación lleva los cuadros que hacen falta para verse a 30 a la velocidad del juego (un tajo va al
+doble de rápido que en el video, así que sobra material). Lo que dura cada golpe no cambió: la ficha de cada animación dice
+cuántos cuadros de más tiene y el juego la pasa más rápido en la misma medida. De 781 cuadros se pasó a **2.782**.
+
+**30 acciones nuevas** (35 videos, 5 rehechos):
+- **El héroe (5)**:
+  - **chiburi**: al empezar cada pelea gira la espada y sacude la sangre de la hoja, y se puede cortar con cualquier botón;
+  - **aturdido**: cuando se queda sin equilibrio, tambalea en bucle;
+  - **bloqueo**: con la guardia sostenida, el golpe lo empuja medio paso;
+  - **remate**: atacar a un enemigo aturdido sale un tajo vertical y otro horizontal que pega de 121 a 139 (un tajo común,
+    de 30 a 55), con cámara lenta y «¡REMATE!»;
+  - **levantarse**: con el pergamino de resurrección, se arrodilla apoyado en la espada y se levanta.
+- **Los 7 humanos (3 cada uno)**: la **guardia** con su impacto cuando te bloquean, **aturdido** en bucle y la **provocación**,
+  que hacen al entrar y cada 9 a 15 s en plena pelea (es una abertura: mientras provocan no atacan).
+- **Los 2 yokai (2 cada uno)**: **rugido** al entrar (con su grito) y **aturdido**.
+
+Rehechos por fallas: el chiburi y las provocaciones del maestro y del oni giraban de frente a la cámara, la guardia del
+general también, y la del lancero traía un rectángulo blanco suelto.
+
+**Para que no pese ni tarde**:
+- Los videos pasaron a compresión 36: a 38 ya se ablanda el detalle, a 36 no se nota. El HTML queda en 5,3 MB (antes 3,2 MB,
+  con 3,6 veces los cuadros).
+- **Carga con WebCodecs**: el juego lee las muestras del MP4 con un lector propio y el decodificador del teléfono las pasa de
+  corrido. Cada cuadro se arma por GPU o por CPU, y el juego mide los primeros cuadros de cada camino y se queda con el más
+  rápido. Si algo falla, vuelve al `<video>` de antes.
+- Los cuadros quedan como ImageBitmap (no cuentan en el tope de lienzos de iOS).
+- El enemigo que sigue se carga mientras se elige la bendición, y el bandido de la primera pelea mientras se ve el título.
+- Del enemigo muerto se guarda el último cuadro antes de soltarlo, así el cuerpo sigue en el piso detrás de las cartas.
+
+Lo que costó una vuelta cada uno:
+- **Buscar cuadro por cuadro en un `<video>` vuelve a decodificar desde el cuadro clave.** Con 3,3 veces más cuadros, el héroe
+  tardaba 9,9 s y cada enemigo 7,7 s en un celular simulado (la CPU frenada 4 veces). Pasar el desarmado a la GPU daba lo
+  mismo: la demora no era el desarmado sino la búsqueda. Decodificar de corrido con WebCodecs son 0,17 s para 240 cuadros.
+- **El decodificador se colgaba**: la cadena de turnos esperaba a una variable que, al evaluarse, ya apuntaba a sí misma.
+- **La cadena del oni dejaba una mancha negra**: el verde encerrado entre la cadena y el brazo no toca el borde, el relleno no
+  llega, y el quitaverde lo volvía negro. Ahora también se sacan los huecos claramente verdes aunque estén adentro.
+- **La estela de la espada del remate salía verdosa**: es semitransparente y tiene el fondo mezclado. Lo semitransparente se
+  lleva hacia el gris, como un barrido de acero.
+- La guardia del general dejaba pedacitos de hoja sueltos flotando (del 2 al 4% del cuerpo, contra el 8% de una katana caída):
+  por tamaño no se pueden separar sin riesgo, así que en esa animación queda sólo la pieza principal.
+- La muerte y la victoria del héroe se quedaban en 24 y 26 cuadros por segundo porque el video no tenía más: se acortaron un poco.
+
+Medido:
+- `banco/fps30.js`: **todas las animaciones de los 10 personajes muestran entre 30 y 38 cuadros distintos por segundo**.
+- `banco/gpu.js`: los dos caminos nuevos dan los mismos cuadros que el viejo (diferencia media de 1,1 a 1,7 sobre 255, la propia
+  de cada decodificador) y ningún cuadro vacío.
+- **Carga** en un Chrome con H.264 (este equipo no tiene placa de video): cada enemigo de 1 a 2,7 s, los 2.782 cuadros completos.
+  Con la CPU frenada 4 veces: el héroe 7,1 s (antes 9,9) y el bandido 3,0 s (antes 7,7).
+- **Memoria**: el héroe ocupa 149 MB y el enemigo más pesado (el esqueleto) 142 MB; se tiene cargado al héroe y a un enemigo.
+- `banco/acciones.js`: cada acción aparece cuando corresponde (chiburi y provocación al arrancar, rugido en los yokai, aturdido,
+  remate, bloqueo y levantarse).
+- `banco/bot.js`, sin mejoras: bandido, lancero, shinobi y general 4 de 4; monje, maestro, oni y esqueleto 3 de 4; el sapo 1 de 4
+  (se le bajó el daño de 56 a 50 y el pesado de 118 a 104).
+- `banco/capitulo.js`: los capítulos 1 y 2 se terminan siempre; el 3, 6 de 8 veces (las otras 2 llegan al jefe).
+- Dedos de verdad, las pantallas en los tres idiomas (`TR_FALTA` vacío) y fuzz de 300 a 400 acciones: sin errores.

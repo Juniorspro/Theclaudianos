@@ -45,9 +45,12 @@ function dibujarFondo(W, H, cam){
 
 /* ---------------------------------------------------------------- un luchador */
 let _blanco = null;
+/* el último cuadro de un luchador que se va a soltar de la memoria: el cuerpo sigue en el piso detrás de las cartas */
+function guardarResto(e){ const P = PJ[e.pj], q = P && cuadroDe(e); if(!q || !q.c) return; const c = document.createElement('canvas'); c.width = q.w; c.height = q.h;
+  c.getContext('2d').drawImage(q.c, 0, 0); e.resto = {c, ox:q.ox, oy:q.oy, w:q.w, h:q.h, alto:P.meta.alto}; }
 function dibujarLuchador(e, cam){
-  const q = cuadroDe(e), P = PJ[e.pj]; if(!q || !q.c || !P) return;
-  const u = MED.u, s = e.T.alto*e.escala/P.meta.alto*u, x = (e.x - cam)*u, y = PISO*u;
+  const P = PJ[e.pj], q = (P && cuadroDe(e)) || e.resto, alto = P ? P.meta.alto : e.resto && e.resto.alto; if(!q || !q.c || !alto) return;
+  const u = MED.u, s = e.T.alto*e.escala/alto*u, x = (e.x - cam)*u, y = PISO*u;
   /* la sombra: más chica si salta o cae */
   g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(x, y + 2*u, e.T.alto*0.26*e.escala*u, 7*u, 0, 0, 7); g.fill();
   /* sosteniendo la carga, el cuerpo tiembla un pelo: se ve que va a soltar */

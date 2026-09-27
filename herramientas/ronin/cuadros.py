@@ -28,6 +28,13 @@ def recortar(f):
     lab, n = ndimage.label(cand)
     toca = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
     fondoM = np.isin(lab, list(toca))
+    # los huecos encerrados (entre un brazo y una cadena) no tocan el borde: si son claramente verdes, aunque estén en
+    # sombra, también son fondo; el verde de un personaje nunca duplica al rojo y al azul
+    hueco = (verdor > ref*0.3) & (g > 2*np.maximum(r, b) + 20) & ~fondoM
+    lab3, n3 = ndimage.label(hueco)
+    if n3:
+        tam3 = ndimage.sum(np.ones_like(verdor), lab3, range(1, n3 + 1))
+        fondoM |= np.isin(lab3, [i + 1 for i, t in enumerate(tam3) if t >= 120])
     # alfa suave: en la franja del borde el alfa sale del verdor
     alfa = np.where(fondoM, 0.0, 1.0)
     borde_m = ndimage.binary_dilation(fondoM, iterations=2) & ~fondoM
