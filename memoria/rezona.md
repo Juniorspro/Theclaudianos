@@ -12,8 +12,10 @@ Ver también: [entrega](entrega.md).
 - 2026-09-29 (sesión chamaco): el modo auto frenó `npx rezona@latest login` por «código de afuera»;
   reintentado con el OK de quien pide en el chat, lo frenó como «bypass». Lo destraba sólo quien pide
   desde la app: modo de permisos que pregunte, o la regla `Bash(npx -y rezona@latest:*)`.
-- Proyecto descartable **único**: `tOMtshuHnZ` («tmp — descartable, borrar»). Créditos al
-  2026-09-16: 478.723.
+  Ese día anduvo así: pasó la sesión a **Accept edits**, aprobó el comando y el link, y volvió a Auto.
+  `npx rezona@latest status` lo confirma (endpoint `lab.rezona.ai/game/pgcserver`, 48 proyectos).
+- Proyecto descartable **único**: `tOMtshuHnZ` («tmp — descartable, borrar»). Créditos: 478.723 el
+  2026-09-16; 392.835 gastables (393.783 de saldo) el 2026-09-29.
 - Los `task_id` de todo lo pedido están en `herramientas/rezona/crudo/tareas.json` (versionado):
   perder un id es perder un asset pagado.
 

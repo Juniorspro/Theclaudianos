@@ -9,6 +9,7 @@ Rama `ccr-29311d97-jmb0eu`. Arena Nevada (el Madness 3D de otra sesión) llegó 
 del log. Sin Rezona hasta que quien pide lo habilite.
 «Neko PC» es m1k1o/neko (escritorio remoto por WebRTC): el modo auto frenó hasta el chequeo de red
 como «escape del contenedor», así que no se instaló.
+Rezona quedó logueado con el link de `login --no-browser` (sesión en Accept edits): 392.835 créditos.
 **Falta:** qué mejorar de Nevada y un banco propio para Nevada.
 
 ## 2026-09-23 — arranca la serie 2D; el Bosque queda en pausa
