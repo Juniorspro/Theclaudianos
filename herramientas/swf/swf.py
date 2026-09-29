@@ -97,7 +97,7 @@ class SWF:
         self.fps = b[pos + 1] + b[pos] / 256.0
         self.cuadros, = struct.unpack_from('<H', b, pos + 2)
         self.pos0 = pos + 4
-        self.sprites, self.formas, self.clases, self.abc = {}, {}, {}, []
+        self.sprites, self.formas, self.clases, self.abc, self.def_forma = {}, {}, {}, [], {}
         for codigo, p, largo in etiquetas(b, self.pos0, len(b)):
             if codigo == 39:
                 sid, n = struct.unpack_from('<HH', b, p)
@@ -105,6 +105,7 @@ class SWF:
             elif codigo in (2, 22, 32, 83):
                 fid, = struct.unpack_from('<H', b, p)
                 self.formas[fid] = rect(b, p + 2)[0]
+                self.def_forma[fid] = (codigo, p, largo)
             elif codigo in (76, 56):
                 n, = struct.unpack_from('<H', b, p); q = p + 2
                 for _ in range(n):
@@ -145,16 +146,19 @@ class SWF:
                         e = {'id': cid, 'm': e['m'], 'nombre': e['nombre'], 'ratio': 0}
                 if f & 0x04:
                     e['m'], q = matriz(b, q)
-                if f & 0x08:                                # transformacion de color: se saltea
+                if f & 0x08:                                # transformacion de color (con alfa)
                     r = Bits(b, q)
-                    sm, ad, nb = r.ub(1), r.ub(1), r.ub(4)
-                    for _ in range((4 if codigo == 70 else 4) * (sm + ad)):
-                        r.sb(nb)
+                    suma, mult, nb = r.ub(1), r.ub(1), r.ub(4)
+                    m = [r.sb(nb) / 256 for _ in range(4)] if mult else [1.0, 1.0, 1.0, 1.0]
+                    a = [r.sb(nb) for _ in range(4)] if suma else [0, 0, 0, 0]
+                    e['cx'] = m + a
                     r.alinear(); q = r.pos
                 if f & 0x10:
                     e['ratio'], = struct.unpack_from('<H', b, q); q += 2
                 if f & 0x20:
                     e['nombre'], q = cadena(b, q)
+                if f & 0x40:
+                    e['recorte'], = struct.unpack_from('<H', b, q); q += 2
                 lista[prof] = e
         return cuadros, rotulos
 
@@ -179,3 +183,84 @@ if __name__ == '__main__':
             for i in range(c0, sig):
                 print(i - c0, {k: (v['id'], v['nombre'], tuple(round(x, 3) for x in v['m'][:4]), v['m'][4:])
                                for k, v in sorted(cuadros[i].items())})
+
+
+def pools(s):
+    """Las cadenas del ActionScript 2 (ConstantPool de cada DoAction/DoInitAction), por etiqueta:
+    [(sprite o 0, id de DoInitAction o None, [cadenas])]."""
+    b, sal = s.b, []
+
+    def recorrer(ini, fin, dueño):
+        for codigo, p, largo in etiquetas(b, ini, fin):
+            if codigo == 39 and dueño == 0:
+                sid, _ = struct.unpack_from('<HH', b, p)
+                recorrer(p + 4, p + largo, sid)
+            elif codigo in (12, 59):
+                q, cid = p, None
+                if codigo == 59:
+                    cid, = struct.unpack_from('<H', b, q); q += 2
+                fin_a = p + largo
+                while q < fin_a:
+                    op = b[q]; q += 1
+                    if op == 0:
+                        break
+                    if op >= 0x80:
+                        n, = struct.unpack_from('<H', b, q); q += 2
+                        if op == 0x88:
+                            k, = struct.unpack_from('<H', b, q); r = q + 2
+                            cad = []
+                            for _ in range(k):
+                                c, r = cadena(b, r)
+                                cad.append(c)
+                            sal.append((dueño, cid, cad))
+                        q += n
+    recorrer(s.pos0, len(b), 0)
+    return sal
+
+
+def acciones(s, cid_init):
+    """El ActionScript 2 de un DoInitAction (por el id de su sprite), desarmado a medias: lista de
+    (desplazamiento, codigo, valores empujados o None). Los valores de ActionPush salen resueltos
+    (cadenas del ConstantPool, numeros, registros como ('r', n))."""
+    b = s.b
+    for codigo, p, largo in etiquetas(b, s.pos0, len(b)):
+        if codigo == 59 and struct.unpack_from('<H', b, p)[0] == cid_init:
+            q, fin = p + 2, p + largo
+            break
+    else:
+        return []
+    pool, sal = [], []
+    while q < fin:
+        ini, op = q, b[q]; q += 1
+        if op == 0:
+            sal.append((ini, 0, None)); continue
+        n = 0
+        if op >= 0x80:
+            n, = struct.unpack_from('<H', b, q); q += 2
+        dato = b[q:q + n]
+        vals = None
+        if op == 0x88:
+            k, = struct.unpack_from('<H', dato, 0); r = 2; pool = []
+            for _ in range(k):
+                c, r = cadena(dato, r); pool.append(c)
+        elif op == 0x96:
+            vals, r = [], 0
+            while r < n:
+                t = dato[r]; r += 1
+                if t == 0: c, r = cadena(dato, r); vals.append(c)
+                elif t == 1: vals.append(struct.unpack_from('<f', dato, r)[0]); r += 4
+                elif t in (2, 3): vals.append(None)
+                elif t == 4: vals.append(('r', dato[r])); r += 1
+                elif t == 5: vals.append(bool(dato[r])); r += 1
+                elif t == 6:
+                    hi, lo = struct.unpack_from('<II', dato, r); r += 8
+                    vals.append(struct.unpack('<d', struct.pack('<II', lo, hi))[0])
+                elif t == 7: vals.append(struct.unpack_from('<i', dato, r)[0]); r += 4
+                elif t == 8: vals.append(pool[dato[r]] if dato[r] < len(pool) else ('c', dato[r])); r += 1
+                elif t == 9:
+                    i, = struct.unpack_from('<H', dato, r); r += 2
+                    vals.append(pool[i] if i < len(pool) else ('c', i))
+                else: break
+        sal.append((ini, op, vals))
+        q += n
+    return sal

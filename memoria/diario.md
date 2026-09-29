@@ -12,7 +12,9 @@ como «escape del contenedor», así que no se instaló.
 Rezona quedó logueado con el link de `login --no-browser` (sesión en Accept edits): 392.835 créditos.
 Banco de Nevada en Node (`herramientas/banco/nevada.js`): 0 errores, 77 llamadas en partida.
 Marcha nueva desde el SWF (run/dash): cadencia sana con DEX y la bota ya no entra en el torso.
-**Falta:** que quien pide pruebe la marcha en el celu (la prueba de pelea la hace quien pide); ropa en la Shop.
+Ropa en la Shop: máscaras y trajes de los agentes con baldosas del SWF (conversor SWF→SVG propio),
+compra/poner/sacar y guardado en la ficha; banco de tienda con 0 errores.
+**Falta:** que quien pide pruebe marcha y ropa en el celu; que el Armor de la ropa proteja; cascos y boca.
 
 ## 2026-09-23 — arranca la serie 2D; el Bosque queda en pausa
 **Pedido textual:** «Cada juego 2D nuevo que hagas mejora un 100% más que el anterior con menús

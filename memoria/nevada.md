@@ -43,6 +43,18 @@ Fuente: `nevada/` → `juegos-pc/ArenaNevada.html`. Ver también: [banco](banco.
 - Medido con `node herramientas/banco/marcha.js`: bota dentro del torso 7-8 → 0-0,2 cm; patina
   0,70-0,79 (antes 0,66-0,74: el pie apoyado sigue deslizando, como en el SWF).
 
+## La ropa en la Shop (29/09)
+- MÁSCARAS: Agent Shades roja y negra ($900), ATP Mask ($1200, light: pide ARMOR 1 para ponerla) y
+  OBSV Goggles ($900), datos del SWF. ROPA: los trajes de agente, agent/agent2/agent3 ($900/1200/1200,
+  precio nuestro: el SWF no los vende). CASCOS y BOCA siguen vacíos: no hay 3D.
+- Baldosas: `herramientas/swf/iconos_ropa.py` → `nevada/js/ropa_swf.js` ([swf](swf.md)).
+- Vestir: `Chars.vestido(base, ropa, mascara)` = un tipo por combinación (`grunt|agent2|agent1_mask`)
+  con su malla; `Actor.vestir` cambia el cuerpo y recuelga arma y funda (`fundaObj = null` o no se
+  recuelga). Se guarda en `Progreso.ficha.ropa {tiene, mask, shirt}` y se pone en `Game.empezar`.
+- La vista previa tiñe el muñeco entero (la prenda va fundida en la malla). El Armor del SWF se ve en
+  el panel pero **todavía no protege**.
+- Banco: `node herramientas/banco/tienda.js` (pisa `Tienda.paso`, que cierra la tienda lejos del mostrador).
+
 ## Estado al cierre del log (29/09 05:31)
 - Lo último fue rehacer los íconos de los botones con piezas del SWF; USAR quedó con el dedo en
   diagonal y la sesión preguntó si lo quería más girado.

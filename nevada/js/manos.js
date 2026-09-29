@@ -36,7 +36,7 @@
      con las yemas blancas. */
   Manos.PIEL = { grunt: 'civ', agente: 'agent', agenteClasico: 'agent', agenteMk0: 'agent',
                  soldat: 'agent', hank: 'hank' };
-  Manos.pielDe = (tipo) => Manos.PIEL[tipo] || 'civ';
+  Manos.pielDe = (tipo) => Manos.PIEL[tipo] || Manos.PIEL[global.Chars && Chars.base ? Chars.base(tipo) : tipo] || 'civ';
 
   const _mats = Object.create(null);
   Manos.material = function (piel) {

@@ -1365,6 +1365,19 @@
     };
   };
 
+  /* LA ROPA DE LA TIENDA (tienda.js). La mascara y el traje van fundidos en
+     la malla del personaje, asi que cada combinacion es un tipo mas, con su
+     malla cacheada como los demas: 'grunt|agent|agent1_mask' es el grunt con
+     el traje de agente y las Agent Shades. Todo lo demas -nombre, escala,
+     colores, ficha del SWF- es el del tipo de base. */
+  Chars.vestido = function (base, ropa, mascara) {
+    if (!ropa && !mascara) return base;
+    const k = base + '|' + (ropa || '') + '|' + (mascara || '');
+    if (!Chars.TIPOS[k]) Chars.TIPOS[k] = Object.assign({}, Chars.TIPOS[base], { ropa: ropa || null, mascara: mascara || null, base: base });
+    return k;
+  };
+  Chars.base = (tipo) => (Chars.TIPOS[tipo] && Chars.TIPOS[tipo].base) || tipo;
+
   Chars.limpiar = function () {
     for (const k in _geos) {
       _geos[k].color.dispose();

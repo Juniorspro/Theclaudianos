@@ -67,7 +67,11 @@
                    desgaste), la ranura en mano y la ultima oleada
                    terminada (currentWave = esta + 1: generateArena la
                    retoma por ahi) */
-                myWeapons: [null, null], ranura: 0, arenaOla: 0 };
+                myWeapons: [null, null], ranura: 0, arenaOla: 0,
+                /* la ropa de la tienda (tienda.js): lo comprado y lo puesto en
+                   cada ranura del SWF que tenemos -mask y shirt-. Queda en la
+                   ficha: no se pierde al morir, como el dinero. */
+                ropa: { tiene: [], mask: null, shirt: null } };
     STATS.forEach((k) => { F['stat' + k] = 0; });
     SKILLS.forEach((k) => { F['skill' + k] = 0; });
     Progreso.assignPerks(F);

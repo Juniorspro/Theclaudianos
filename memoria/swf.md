@@ -20,3 +20,23 @@ Fuente: `herramientas/swf/swf.py` (lector sin dependencias) y `marcha.py`. Ver t
 - El dash son los pies del run cuadro por medio; cambia el torso (20°, +25 cm, −3,6 cm).
 - El personaje avanza 4,8 px/cuadro (2,36 m/s) y el pie apoyado retrocede 0,2 m por ciclo: el
   original **patina**.
+
+## Dibujar sin Ruffle (29/09)
+- `svg.py`: DefineShape 1-4 → SVG (lisos, degradados, líneas; cada borde al relleno de su derecha y
+  dado vuelta al de su izquierda) y sprites con matriz, color y recortes. Un `<clipPath>` no admite
+  `<g>`: el recorte va con caminos sueltos y la matriz compuesta (si no, tapa todo sin error).
+- `rasterizar.js` (Chromium, PNG transparente) e `imagen.js` (medir lo opaco, componer, pasar a webp).
+- Validado: el fondo de baldosa sale igual al de Ruffle (252×328 px de dibujo; píxel = 3·px + 6).
+- `hijos={'myMask': (id, cuadro[, matriz])}` hace lo que el código del SWF con `gotoAndStop`.
+
+## La tienda del SWF
+- `madness_item_portrait` 8254: cuadros guns/hat/mask/mouth/shirt/none; la capa 3 (8226) es un
+  recorte. La prenda: `myMask.gotoAndStop(myType)` sobre MasksAll 7358 (HatsAll 7363, MouthsAll
+  7318, `Outfit - Body - Core` 7295 para la ropa de la tienda).
+- Las máscaras con dos lados (`flipMe`: agent2_mask, agent3_mask) sólo tienen `_R`/`_L`: el original
+  mostraba otra máscara. Se usa la `_R`.
+- Catálogo: `ItemGenerator.createArmor` (initclip 8402), ~105 prendas con myName, myCat, myArmor,
+  myWeight (none/light/med/heavy) y myPrice; ponerse light/med/heavy pide perkArmor1/2/3.
+  `swf.acciones()` desarma los ActionPush del AS2.
+- `Parts - Body` 7289 (cuerpos): capas myBackup (arma a la espalda), bodySprite, myShirt (ropa
+  encima, cuadro 0 = armor1) y teamColor (el brazalete verde). Los trajes de agente son esto.

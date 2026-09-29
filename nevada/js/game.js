@@ -219,6 +219,9 @@
       if (!Progreso.ficha) Progreso.cargar();
       Progreso.aplicar(Game.jugador, Progreso.ficha, true);
       Progreso.ganado.xp = 0; Progreso.ganado.cash = 0;
+      // la ropa comprada que lleva puesta (tienda.js)
+      const R = Progreso.ficha.ropa;
+      if (R && (R.shirt || R.mask)) Actor.vestir(Game.jugador, R.shirt, R.mask);
     }
     HUD.nombre(Chars.TIPOS[Game.jugador.tipo].nombre);
     /* El retrato se pinta con el mismo muñeco y el mismo

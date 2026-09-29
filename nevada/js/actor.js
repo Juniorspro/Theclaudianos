@@ -311,6 +311,29 @@
     Actor.empuñar(A, o);
   };
 
+  /* LA ROPA DE LA TIENDA. La mascara y el traje van fundidos en la malla
+     (chars.js), asi que ponerse algo es cambiar de cuerpo: uno nuevo del tipo
+     vestido, en el mismo sitio y con el mismo animador -la fase del paso, la
+     accion en curso-, y el arma y la funda se vuelven a colgar de los huesos
+     nuevos. Devuelve si cambio algo. */
+  Actor.vestir = function (A, ropa, mascara) {
+    const tipo = Chars.vestido(Chars.base(A.tipo), ropa, mascara);
+    if (tipo === A.tipo) return false;
+    const viejo = A.cuerpo, padre = viejo.grupo.parent;
+    const nuevo = Chars.crear(tipo);
+    nuevo.grupo.position.copy(viejo.grupo.position);
+    nuevo.grupo.quaternion.copy(viejo.grupo.quaternion);
+    if (padre) { padre.remove(viejo.grupo); padre.add(nuevo.grupo); }
+    const anim = Anim.crear(nuevo);
+    for (const k in A.anim) if (k !== 'c' && k !== 'reposo') anim[k] = A.anim[k];
+    A.cuerpo = nuevo; A.grupo = nuevo.grupo; A.tipo = tipo; A.anim = anim;
+    // la funda se rehace aunque sea la misma arma: colgaba del torso viejo
+    if (A.mallaFunda) { A.mallaFunda.parent.remove(A.mallaFunda); A.mallaFunda = null; }
+    A.fundaObj = null;
+    Actor.empuñar(A, A.arma && A.arma.id !== 'puños' ? A.arma : null);
+    return true;
+  };
+
   /* Pone en la mano el arma o (el objeto de su ranura, con lo que le
      quede) o los puños si no hay. Solo la malla y el animador: las
      ranuras las lleva quien llama. */

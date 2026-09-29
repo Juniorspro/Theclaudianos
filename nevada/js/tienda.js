@@ -32,13 +32,16 @@
   /* Las categorias son los botones de mySubMenu del SWF, en su orden:
      buttonMain (armas largas), buttonSide (la pistola), el mismo
      buttonSide en su fotograma 'melee' (el cuchillo) y buttonHat,
-     buttonMask, buttonMouth y buttonShirt. La ropa aun no se vende: sus
-     casillas salen vacias, como las del SWF cuando no hay nada. */
+     buttonMask, buttonMouth y buttonShirt. De la ropa se vende lo que
+     llevan los enemigos y ya existe en 3D (accesorios.js, ropa.js): sus
+     mascaras y sus trajes. Cascos y boca siguen vacios, como las casillas
+     del SWF cuando no hay nada. */
   const SECCIONES = [
     ['ARMAS LARGAS', ['fusil', 'subfusil', 'escopeta', 'escopeta97']],
     ['PISTOLAS', ['pistola', 'revolver', 'magnum']],
     ['CUERPO A CUERPO', ['cuchillo', 'tubo', 'bate', 'megachette']],
-    ['CASCOS', []], ['MASCARAS', []], ['BOCA', []], ['ROPA', []]
+    ['CASCOS', []], ['MASCARAS', ['agent1_mask', 'agent1_mask_b', 'agent2_mask', 'agent3_mask']],
+    ['BOCA', []], ['ROPA', ['agent', 'agent2', 'agent3']]
   ];
   /* MadnessStoreItems pinta la grilla con casilleros fijos (6 x 3 de
      80 x 105 px en la pantalla de 800 x 600: cada casilla es el 10 % del
@@ -78,6 +81,35 @@
     megachette: ['Megachette', 'Megachette', 9, 130, 0, 0,
       'This mighty hack-n-slasher resembles the Full Tang of a bladed weapon, but with a tremendous amount of heft for that extra cleaving power.']
   };
+  /* LA ROPA DEL SWF: ItemGenerator.createArmor, tal cual -myName, myCat,
+     myArmor, myWeight y myPrice-, y la descripcion de su categoria. Los
+     trajes de agente no se venden en el SWF (son el cuerpo del agente,
+     'Parts - Body'): llevan precio nuestro, el de las mascaras del agente.
+     Sus baldosas salen de madness_item_portrait con la prenda dentro
+     (ropa_swf.js, herramientas/swf/iconos_ropa.py). */
+  const ROPA = {
+    agent1_mask:   ['Agent Shades', 'mask', 0, 'none', 900, 'LAS ROJAS DEL AGENTE'],
+    agent1_mask_b: ['Agent Shades', 'mask', 0, 'none', 900, 'LAS NEGRAS DEL AGENTE CLASICO'],
+    agent2_mask:   ['ATP Mask', 'mask', 0.5, 'light', 1200, 'LA DEL AGENTE MK1'],
+    agent3_mask:   ['OBSV Goggles', 'mask', 0, 'none', 900, 'LAS DEL AGENTE MK0'],
+    agent:  ['Agent Suit', 'shirt', 0, 'none', 900, 'EL DEL AGENTE'],
+    agent2: ['Agent Suit Mk1', 'shirt', 0, 'none', 1200, 'EL DEL AGENTE MK1, CON ARNES'],
+    agent3: ['Agent Suit Mk0', 'shirt', 0, 'none', 1200, 'EL DEL AGENTE MK0, CON BANDOLERA']
+  };
+  const DESC_ROPA = {
+    mask: "They couldn't see your eyes before, but now you can be extra certain of it.",
+    shirt: "Your head isn't the only vital point on your body that needs covering."
+  };
+  /* Para PONERSE algo con peso hace falta su ventaja (MadnessStoreItems:
+     light -> perkArmor1, med -> perkArmor2, heavy -> perkArmor3); sin ella
+     el boton dice por que no. Comprar se puede igual. */
+  const PERK_PESO = { light: ['perkArmor1', 'ARMOR 1'], med: ['perkArmor2', 'ARMOR 2'], heavy: ['perkArmor3', 'ARMOR 3'] };
+  const esRopa = (id) => !!ROPA[id];
+  const fichaRopa = () => (global.Progreso && Progreso.ficha && Progreso.ficha.ropa) || { tiene: [], mask: null, shirt: null };
+  const tieneRopa = (id) => fichaRopa().tiene.indexOf(id) >= 0;
+  const puesta = (id) => esRopa(id) && fichaRopa()[ROPA[id][1]] === id;
+  const faltaPerk = (id) => { const k = PERK_PESO[ROPA[id][3]]; return k && !Progreso.perk(Game.jugador, k[0]) ? k[1] : null; };
+
   /* Las barras, contra el extremo del catalogo del SWF: daño 12 (Colt),
      alcance 200 (AR-15), dispersion 2..10 (Colt..Snub, se invierte) y
      cargador 30. */
@@ -205,7 +237,7 @@
     skill: ['Pistol', 'SMG', 'Rifle', 'Shotgun', 'Melee', 'Unarmed']
   };
 
-  const item = (id) => Waves.TIENDA.find((t) => t.id === id);
+  const item = (id) => (ROPA[id] ? { id: id, precio: ROPA[id][4] } : Waves.TIENDA.find((t) => t.id === id));
   const T = () => global.TIENDA_SWF || { baldosa: {}, pestana: [] };
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
@@ -246,12 +278,13 @@
     for (let n = 0; n < CASILLAS; n++) {
       const id = ids[n], it = id && item(id);
       if (!it) { h += '<div class="bald vacia"><img src="' + (TS.vacia || '') + '" alt=""></div>'; continue; }
-      const cl = ['bald'];
-      if (W && W.dinero < it.precio && !(jug && jug.arma.id === id)) cl.push('cara');
-      h += '<button class="' + cl.join(' ') + '" data-id="' + id + '"><img src="' + (B[id] || '') + '" alt="">' +
+      const cl = ['bald'], ropa = esRopa(id), suya = ropa ? tieneRopa(id) : jug && jug.arma.id === id;
+      if (W && W.dinero < it.precio && !suya) cl.push('cara');
+      const img = ropa ? ((global.ROPA_SWF && ROPA_SWF.baldosa[id]) || '') : (B[id] || '');
+      h += '<button class="' + cl.join(' ') + '" data-id="' + id + '"><img src="' + img + '" alt="">' +
            (id === Tienda.sel ? '<img class="marco" src="' + TS.sel + '" alt="">' : '') +
-           (jug && jug.arma.id === id ? '<img class="marco" src="' + TS.estrella + '" alt="">' : '') +
-           '<b>' + esc(SWF[id][0]) + '</b><em>$' + it.precio + '</em></button>';
+           ((ropa ? puesta(id) : suya) ? '<img class="marco" src="' + TS.estrella + '" alt="">' : '') +
+           '<b>' + esc(ropa ? ROPA[id][0] : SWF[id][0]) + '</b><em>' + (ropa && suya ? 'TUYA' : '$' + it.precio) + '</em></button>';
     }
     $('tdLista').innerHTML = h + '</div>';
   }
@@ -269,6 +302,7 @@
 
   /* ---------------- el centro: el arma elegida ---------------- */
   function pintarArma() {
+    if (esRopa(Tienda.sel)) { pintarRopa(); return; }
     const id = Tienda.sel, s = SWF[id], it = item(id), W = Game.olas, jug = Game.jugador;
     const tuya = jug && jug.arma.id === id, puede = W && W.dinero >= it.precio;
     $('tdArma').innerHTML =
@@ -278,6 +312,47 @@
       '<button class="bt principal comprar" id="tdComprar"' + (tuya || !puede ? ' disabled' : '') + '><span>' +
       (tuya ? 'EQUIPADA' : (puede ? 'COMPRAR  ' : 'FALTA DINERO  ') + '$' + it.precio) + '</span></button>';
     $('tdDinero').textContent = '$' + (W ? W.dinero : 0);
+  }
+
+  /* La prenda elegida, como el SWF ensena una armadura: su nombre, la
+     descripcion de la categoria, y en las filas Armor y Weight (myArmor y
+     myWeight en mayusculas); Accuracy y Ammo, ' - '. El boton compra,
+     pone o saca. */
+  function pintarRopa() {
+    const id = Tienda.sel, r = ROPA[id], it = item(id), W = Game.olas;
+    const tuya = tieneRopa(id), lleva = puesta(id), falta = faltaPerk(id), puede = W && W.dinero >= it.precio;
+    const fila = (n, v, k) => '<div class="fila"><span>' + n + '</span><div class="barra"><i style="width:' +
+      (k === null ? 0 : Math.round(Math.max(0.04, Math.min(1, k)) * 100)) + '%"></i></div><b>' + v + '</b></div>';
+    const PESO = { none: 0, light: 0.34, med: 0.67, heavy: 1 };
+    let txt, off = false;
+    if (lleva) txt = 'SACAR';
+    else if (tuya) { txt = falta ? 'REQUIERE ' + falta : 'PONER'; off = !!falta; }
+    else { txt = (puede ? 'COMPRAR  ' : 'FALTA DINERO  ') + '$' + it.precio; off = !puede; }
+    $('tdArma').innerHTML =
+      '<small>' + SECCIONES[SECCION[id]][0] + '</small><h3>' + esc(r[0]) + '</h3><h6>' + esc(r[5]) + '</h6>' +
+      '<div class="grande"><div class="bald"><img src="' + ((global.ROPA_SWF && ROPA_SWF.baldosa[id]) || '') + '" alt=""><b>' + esc(r[0]) + '</b></div></div>' +
+      '<p>' + esc(DESC_ROPA[r[1]] || '') + '</p>' +
+      fila('Armor', r[2], r[2] / 3) + fila('Weight', r[3].toUpperCase(), PESO[r[3]]) + fila('Accuracy', ' - ', null) + fila('Ammo', ' - ', null) +
+      '<button class="bt principal comprar" id="tdComprar"' + (off ? ' disabled' : '') + '><span>' + txt + '</span></button>';
+    $('tdDinero').textContent = '$' + (W ? W.dinero : 0);
+  }
+
+  /* Comprar, poner o sacar la prenda elegida. Lo comprado es de la ficha
+     (progreso.js): se guarda al momento y sigue despues de morir. */
+  function botonRopa(id) {
+    const F = Progreso.ficha, R = F.ropa, r = ROPA[id], W = Game.olas, jug = Game.jugador;
+    if (puesta(id)) R[r[1]] = null;
+    else if (tieneRopa(id)) { if (faltaPerk(id)) return false; R[r[1]] = id; }
+    else {
+      if (!W || W.dinero < r[4]) return false;
+      W.dinero -= r[4];
+      R.tiene.push(id);
+      if (!faltaPerk(id)) R[r[1]] = id;
+    }
+    Actor.vestir(jug, R.shirt, R.mask);
+    HUD.retrato(Game.ren, jug.tipo);
+    Progreso.guardar();
+    return true;
   }
 
   /* ---------------- la izquierda: la ficha ---------------- */
@@ -434,8 +509,19 @@
     const sel = Tienda.sel && Weapons.CAT[Tienda.sel] && Tienda.sel !== 'puños' ? Tienda.sel : null;
     const enMano = jug.arma && jug.arma.id !== 'puños' ? jug.arma.id : 'puños';
     const armaFig = sel || enMano;
+    /* LA ROPA SE PRUEBA IGUAL (applyAlpha sobre myHead o myBody): el muñeco
+       con la prenda elegida en su ranura y, si no es suya, en azul y
+       translucido. Aca la prenda va fundida en la malla, asi que el tinte va
+       al muñeco entero, como en el SWF va a la cabeza o al cuerpo entero. */
+    let tipoFig = jug.tipo, probar = false;
+    if (esRopa(Tienda.sel)) {
+      const R = fichaRopa(), r = ROPA[Tienda.sel], p = { mask: R.mask, shirt: R.shirt };
+      p[r[1]] = Tienda.sel;
+      tipoFig = Chars.vestido(Chars.base(jug.tipo), p.shirt, p.mask);
+      probar = !tieneRopa(Tienda.sel);
+    }
     try {
-      t = Actor.crear({ tipo: jug.tipo, arma: armaFig, x: 0, z: 0, mirando: 1 });
+      t = Actor.crear({ tipo: tipoFig, arma: armaFig, x: 0, z: 0, mirando: 1 });
       t.sinTope = true; t.guion = true;
       t.rumbo = t.rumboObj = Math.PI / 2 - 0.45;     // tres cuartos, como HUD.retrato
       for (let i = 0; i < 40; i++) Actor.actualizar(t, 1 / 60, i / 60);
@@ -450,6 +536,10 @@
     // con la luz y el tono de las fichas (Art.matFicha / Art.tonoFicha), no con la de la sala
     const matF = Art.matFicha();
     grupo.traverse((o) => { if (o.material === Art.mats.cuerpo) o.material = matF; });
+    // la prenda a prueba: el muñeco entero en azul translucido, menos su tinta y el arma
+    if (probar && t) t.cuerpo.grupo.traverse((o) => {
+      if (o.isMesh && o.material !== Art.mats.contornoPiel && !(t.mallaArma && o.parent && esDe(o, t.mallaArma))) o.material = materialPrueba(o.material);
+    });
     const sube = new THREE.Group(); sube.position.y = h1 + h2; sube.add(grupo); esc3.add(sube);
     const B = U.builder();
     B.addCyl(r2, r2, h2, 40, 0, h2 / 2, 0, 0x8c8c8c, {});
@@ -520,6 +610,7 @@
     }
     return r;
   }
+  const esDe = (o, raiz) => { for (let p = o; p; p = p.parent) if (p === raiz) return true; return false; };
   function vistaPrevia(t) {
     const manos = new Set();
     const mu = t.mallaArma.userData && t.mallaArma.userData.manos;
@@ -600,6 +691,10 @@
         /* displayStatInfo no llama a init3: el destello de lo comprado ya se
            apago y no vuelve a salir al tocar otro escalon */
         Tienda.perk = [st, +n]; Tienda.pulso = st + ',' + n; Tienda.recien = ''; pintarStats(); pintarRecuadro();
+      }
+      else if (b.id === 'tdComprar' && esRopa(Tienda.sel)) {
+        const compra = !tieneRopa(Tienda.sel);
+        if (botonRopa(Tienda.sel)) { suena(compra ? 'ui_compra' : 'ui_pulsar'); pintarFigura(); pintarFicha(); pintarDerecha(); pintarArma(); }
       }
       else if (b.id === 'tdComprar' && Waves.comprar(Game.olas, Game.jugador, Tienda.sel)) {
         suena('ui_compra');
