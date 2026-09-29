@@ -1291,6 +1291,8 @@
       const tapas = [F.sombrero, F.boca, F.mascara].map((id) => id && Accesorios.CUBRE && Accesorios.CUBRE[id]).filter(Boolean);
       const GRA = 180 / Math.PI;
       const enRango = (L, i) => L && L.some(([a, z]) => i >= a && i < z);
+      // lo que envuelve la cabeza entera adelanta la cara de fuera de su tinta como el ovalo (prendas3d.js: lamina)
+      const adOv = bs.adelantoOvalo ? new Set(bs.adelantoOvalo) : null;
       for (let i = 0; i < co.count; i++) {
         const b = si.getX(i);
         /* La cabeza se adelanta solo en el OVALO: las mascaras y el
@@ -1314,7 +1316,7 @@
         // la tinta de las mascaras con dibujo, tan adelantada como ellas (Accesorios.ADELANTO)
         if (enRango(bs.adelante, i)) ade = Accesorios.ADELANTO;
         // la del sombrero y la boca, con su profundidad (sin adelanto)
-        if (enRango(bs.prendaCabeza, i)) ade = 0.01;
+        if (enRango(bs.prendaCabeza, i)) ade = adOv && adOv.has(i) ? 0.15 : 0.01;
         if (enRango(bs.ropa, i)) ade = 0;
         co.setXYZ(i, manosH.has(b) ? Chars.TINTA_MANO : 1, capa(b), ade);
       }

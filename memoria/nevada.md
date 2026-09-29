@@ -59,6 +59,27 @@ Fuente: `nevada/` → `juegos-pc/ArenaNevada.html`. Ver también: [banco](banco.
   el panel pero **todavía no protege**.
 - Banco: `node herramientas/banco/tienda.js` (pisa `Tienda.paso`, que cierra la tienda lejos del mostrador).
 
+## La ropa de la cabeza en 3D (29/09, chamaco)
+- `nevada/js/prendas.js` (catálogo del SWF, precios, `armadura()`, `cargaEnemigo()`) y `prendas3d.js`
+  (sombreros, anteojos, bocas, Tricky). Armadura del SWF (`checkDamage`) en `Actor.danoSWF`: Beretta
+  al cuerpo 7 / Padded 4 / Metal 0 (rebota); casco Soldier 5, Blast 4 ([swf](swf.md) › as2.py).
+- Zoom: `node herramientas/banco/zoom_prendas.js ids cat pre "az:el,..."` (6 vistas ampliadas) y
+  `difpng.js con.png sin.png dif.png` (modo `sin` esconde la tinta: lo rojo es tinta de más).
+- **La cabeza es una malla 16×12**: entre vértices sus caras quedan hasta 1 cm dentro del óvalo, y la
+  tinta de las prendas se adelanta 1 cm. Toda tinta a menos de ~2 cm dentro del óvalo asoma a rayitas:
+  la cara de dentro de lo que toca la cabeza baja `HUNDE` (queda a 2,8 cm).
+- **Un borde que apoya en la cabeza no es silueta**: el trazo va PINTADO (franja negra en la grilla,
+  `filas()`) y el canto baja 1,2 cm dentro; solo el borde suelto estira la tinta (`lamina`, `apoyo`).
+- Lo que va pegado (correas, hebillas) no estira la tinta a lo largo de la cabeza, solo hacia fuera:
+  si no, desde arriba se ve su cara de abajo suelta (tira de piel + raya). Piezas chicas: tinta 4,5 mm.
+- Tinta de piezas facetadas: vértices compartidos con la normal promediada (`tubo3`, `caja`, placa);
+  con caras sueltas el empuje en pantalla abre las aristas y sale raya doble.
+- Tela que cuelga: baja pegada hasta la TANGENTE a su punto de abajo y sigue derecha (`panuelo`): sin
+  quiebre no hay arruga que doble la tinta. Lo que envuelve la cabeza entera (pasamontañas) deja el
+  óvalo adelantado salvo junto a la ventana y adelanta solo la cara de FUERA de su tinta.
+- Luz de la sala (0,44, 0,74, 0,51); escalones en 0,50/0,62/0,88: para que se lea un pliegue (Tricky,
+  placa en V de 30°) cada cara tiene que caer en un escalón distinto (medido: 71 y 79).
+
 ## Estado al cierre del log (29/09 05:31)
 - Lo último fue rehacer los íconos de los botones con piezas del SWF; USAR quedó con el dedo en
   diagonal y la sesión preguntó si lo quería más girado.

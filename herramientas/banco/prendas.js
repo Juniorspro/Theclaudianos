@@ -56,7 +56,7 @@ const CHROME = process.env.CHROME_BIN || '/opt/pw-browsers/chromium-1194/chrome-
       const ren = Game.ren, W = 300, H = 300;
       const rt = new THREE.WebGLRenderTarget(W, H, { depthBuffer: true, colorSpace: THREE.SRGBColorSpace });
       const cabeza = c.cat !== 'shirt' && c.cat !== 'traje';
-      const yM = cabeza ? 1.5 : 0.78, dist = cabeza ? 2.5 : 3.2, fov = 30;
+      const yM = cabeza ? ({ hat: 1.55, mask: 1.42, mouth: 1.25 }[c.cat] || 1.5) : 0.78, dist = cabeza ? 2.5 : 3.2, fov = 30;
       const vistas = [[0, 12], [40, 12], [90, 12], [150, 12], [70, 26]];
       const cvs = document.createElement('canvas'); cvs.width = W * vistas.length; cvs.height = H;
       const g2 = cvs.getContext('2d');
