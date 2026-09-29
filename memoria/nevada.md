@@ -31,6 +31,18 @@ Fuente: `nevada/` → `juegos-pc/ArenaNevada.html`. Ver también: [banco](banco.
   95 mil triángulos**, 68 geometrías, 29 texturas; lienzo interno 802×370 (resolución AUTO).
 - El jugador arranca en la puerta del fondo; la oleada se abre con ATACAR en el panel.
 
+## La marcha (29/09, sesión chamaco)
+- Sale del SWF ([swf](swf.md)): `herramientas/swf/marcha.py` → `nevada/js/marcha_swf.js` (pie, torso
+  de run y de dash, cabeza y manos, simetrizados); la usa `anim.js § LA MARCHA DEL SWF`.
+- Cadencia por velocidad, no por distancia: 1,40 ciclos/s a 3,5 m/s, 2,14 a 6,4, 2,69 a 10,7 (DEX 30).
+  Antes (zancada fija) daba 9 / 13 / 22 pasos/s: el "aleteo" que se veía feo al subir DEX.
+- Adaptado al 3D, cada cosa por un choque medido: sin la agachada del dash (el bajo del torso a
+  16 cm, la bota mide 15,5); torso a la mitad de adelantado y a 2/3 de echado (13°) porque las
+  botas quedaban lejos del cuerpo (lo pidió quien pide); paso ×1,3; apoyo al 30% del ciclo;
+  talón y punta; `dentroTorso` baja la bota o sube el torso; puños que bombean al esprintar.
+- Medido con `node herramientas/banco/marcha.js`: bota dentro del torso 7-8 → 0-0,2 cm; patina
+  0,70-0,79 (antes 0,66-0,74: el pie apoyado sigue deslizando, como en el SWF).
+
 ## Estado al cierre del log (29/09 05:31)
 - Lo último fue rehacer los íconos de los botones con piezas del SWF; USAR quedó con el dedo en
   diagonal y la sesión preguntó si lo quería más girado.

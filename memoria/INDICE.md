@@ -26,6 +26,7 @@
 | [banco](banco.md) | vas a probar o medir algo |
 | [entrega](entrega.md) | pushear, el link para el celular, el CDN de los assets |
 | [nevada](nevada.md) | tocás Arena Nevada (Madness 3D): de dónde viene, cómo se arma, qué quedó pendiente |
+| [swf](swf.md) | vas a sacar algo del SWF de Madness: cómo leerlo sin Ruffle, qué hay en cada sprite |
 | [juegos2d](juegos2d.md) | vas a hacer o tocar un juego 2D en pixel art (la serie nueva) |
 | [diario](diario.md) | qué pasó en cada sesión y qué quedó sin resolver |
 
@@ -36,7 +37,8 @@
 | `nevada/` | fuentes de Arena Nevada: plantilla, js, css, audio y `armar.py` | [nevada](nevada.md) |
 | `assets/` | lo generado que el juego baja por CDN (texturas, GLB, cielo) | [entrega](entrega.md) |
 | `herramientas/rezona/` | cliente stdio `rz.py`, pedidos y horneados, `crudo/tareas.json` | [rezona](rezona.md) |
-| `herramientas/banco/` | `correr.py` (Bosque), `nevada.js` (Nevada) y `ver_glb.py` / `ver_anim.py` (modelos) | [banco](banco.md) |
+| `herramientas/swf/` | lector de SWF en Python puro y los extractores (`marcha.py`) | [swf](swf.md) |
+| `herramientas/banco/` | `correr.py` (Bosque), `nevada.js` y `marcha.js` (Nevada) y `ver_glb.py` / `ver_anim.py` (modelos) | [banco](banco.md) |
 | `.claude/skills/` | graficos, assets-ia, banco: las reglas largas heredadas | — |
 | `docs/` | `MANUAL_JUEGOS.md`, `GUIA-JUEGOS.md`, `MEMORIA.md`, traspaso | referencia, no plan |
 | `crudo/` | descargas y capturas de trabajo, **fuera de git** | — |
