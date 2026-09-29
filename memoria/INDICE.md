@@ -10,7 +10,7 @@
 - Ahorrar tokens: nada de barridos exploratorios ni narración larga.
 - Castellano rioplatense.
 - Rezona: todo en **un** proyecto descartable; `publish_to_rezona_app` jamás sin pedido explícito.
-- Si el modo auto frena algo, no se busca otro camino: se dice y decide quien pide.
+- Si el modo auto frena algo, no se busca otro camino: se dice y decide quien pide (el OK en el chat no lo destraba).
 
 ## Quién pide
 - Juega **en el celular**, en vertical (412×892), con el marco girado 90°.

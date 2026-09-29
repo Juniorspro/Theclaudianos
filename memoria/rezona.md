@@ -9,8 +9,9 @@ Ver también: [entrega](entrega.md).
   `https://rezona.ai/api-keys?code=XXXX-…`; el PAT queda en `~/.rezona/credentials.json`.
   **El contenedor es efímero: cada sesión nueva puede necesitar login nuevo** (2026-09-22: la
   credencial seguía viva).
-- 2026-09-29 (sesión chamaco): el modo auto frenó `npx rezona@latest login` por «código de afuera».
-  Sin una regla de permiso que ponga quien pide, no hay Rezona en esa sesión.
+- 2026-09-29 (sesión chamaco): el modo auto frenó `npx rezona@latest login` por «código de afuera»;
+  reintentado con el OK de quien pide en el chat, lo frenó como «bypass». Lo destraba sólo quien pide
+  desde la app: modo de permisos que pregunte, o la regla `Bash(npx -y rezona@latest:*)`.
 - Proyecto descartable **único**: `tOMtshuHnZ` («tmp — descartable, borrar»). Créditos al
   2026-09-16: 478.723.
 - Los `task_id` de todo lo pedido están en `herramientas/rezona/crudo/tareas.json` (versionado):
