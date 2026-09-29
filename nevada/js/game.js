@@ -220,8 +220,7 @@
       Progreso.aplicar(Game.jugador, Progreso.ficha, true);
       Progreso.ganado.xp = 0; Progreso.ganado.cash = 0;
       // la ropa comprada que lleva puesta (tienda.js)
-      const R = Progreso.ficha.ropa;
-      if (R && (R.shirt || R.mask)) Actor.vestir(Game.jugador, R.shirt, R.mask);
+      Actor.vestir(Game.jugador, Progreso.atuendo());
     }
     HUD.nombre(Chars.TIPOS[Game.jugador.tipo].nombre);
     /* El retrato se pinta con el mismo muñeco y el mismo
@@ -715,6 +714,7 @@
   Game.paso = function (dt) {
     if (!Game.enMarcha || Game.pausa) return;
     Game.tiempo += dt;
+    Chars.precalentar();         // una malla de vestido por cuadro, si hay encargadas
 
     const jug = Game.jugador;
     const W = Game.olas;
@@ -814,6 +814,9 @@
       if (Arena.panel && Arena.panel.tocado) {
         W.estado = 'anuncio';
         const n = W.oleada + 1;
+        /* las escuadras se montan YA, con su ropa: las mallas de los
+           vestidos se arman durante el cartel (Chars.precalentar) */
+        Waves.preparar(W, n);
         Cartel.espera(10);
         Cartel.lines('WAVE ' + n, 90, () => Game.soltarOleada(n));
       }

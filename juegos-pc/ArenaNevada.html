@@ -1004,6 +1004,11 @@ body.enTienda #mandos{display:none !important}
 .bald.cara img:first-child{filter:brightness(.55)}
 .bald.cara em{color:#7d7772}
 .bald:hover img:first-child{filter:brightness(1.12)}
+/* pagePrev / pageNext del SWF, cuando la categoria tiene mas de seis */
+.tdPags{flex:none;display:flex;justify-content:center;align-items:center;gap:calc(var(--u)*10);font-family:'Arial SWF',sans-serif;
+  font-size:calc(var(--u)*11);color:#d8a0a0}
+.tdPags button{border:0;background:none;color:#555;font-size:calc(var(--u)*16);cursor:pointer;padding:0 calc(var(--u)*6)}
+.tdPags button:not(:disabled){color:#ccc}
 
 /* --- las vistas de los tres botones: GEAR (tienda), SQUAD y STATS ocupan el centro y la derecha --- */
 .tdCuerpo.v1 .tdArma,.tdCuerpo.v2 .tdArma{display:none}
@@ -4197,6 +4202,13 @@ window.MANOS_SWF = {"K":0.016385911179173047,"W":1280,"H":640,"tex":{"civ":"data
       Ropa.construir(B, F.ropa, g, silueta, A, F.cara);
       (B.ropa = B.ropa || []).push([n0, B.n]);
     }
+    /* EL CHALECO (la ranura shirt del SWF, prendas.js): va ENCIMA del
+       cuerpo o del traje, con las mismas reglas de adelanto que la ropa. */
+    if (F.camisa && Ropa.construirCamisa) {
+      const n0 = B.n;
+      Ropa.construirCamisa(B, F.camisa, g, silueta, A, !!F.ropa);
+      (B.ropa = B.ropa || []).push([n0, B.n]);
+    }
     if (!silueta && F.venda) {
       B.addBox(0.452, 0.032, 0.014, -0.012, 0.740, 0.232, 0xb5afa1, TINTA);
       B.addBox(0.452, 0.026, 0.014, 0.014, 0.686, 0.233, 0xa49e92, TINTA);
@@ -4292,6 +4304,19 @@ window.MANOS_SWF = {"K":0.016385911179173047,"W":1280,"H":640,"tex":{"civ":"data
     if (F.mascara && (silueta || !Accesorios.enMallaAparte(F.mascara))) {
       B.skin(H.CABEZA);
       Accesorios.construir(B, F.mascara, g, silueta);
+    }
+    /* EL SOMBRERO Y LA BOCA (prendas3d.js) van con su profundidad de
+       verdad, sin adelantar: adelantados, lo que queda detras de la cabeza
+       -la vuelta de una vincha por la nuca, el fondo de una gorra- asomaba
+       a traves de ella. Lo que se toca es la tinta del ovalo, que va
+       adelantada 15 cm y cruzaba la prenda por el borde de la cabeza: donde
+       la prenda la tapa, no se adelanta (ver geoDe). */
+    for (const id of [F.boca, F.sombrero]) {
+      if (!id) continue;
+      B.skin(H.CABEZA);
+      const n0 = B.n;
+      Accesorios.construir(B, id, g, silueta, F);
+      (B.prendaCabeza = B.prendaCabeza || []).push([n0, B.n]);
     }
 
     /* LAS MANOS -> ver POSE_MANO y barrerMano(), mas abajo. Se
@@ -5081,6 +5106,10 @@ window.MANOS_SWF = {"K":0.016385911179173047,"W":1280,"H":640,"tex":{"civ":"data
     {
       const si = gs.attributes.skinIndex, co = gs.attributes.color, P = gs.attributes.position;
       const manosH = new Set(Chars.MANOS_I.concat(Chars.MANOS_D));
+      // lo que tapan el sombrero y la boca (prendas3d.js: Accesorios.CUBRE)
+      const tapas = [F.sombrero, F.boca, F.mascara].map((id) => id && Accesorios.CUBRE && Accesorios.CUBRE[id]).filter(Boolean);
+      const GRA = 180 / Math.PI;
+      const enRango = (L, i) => L && L.some(([a, z]) => i >= a && i < z);
       for (let i = 0; i < co.count; i++) {
         const b = si.getX(i);
         /* La cabeza se adelanta solo en el OVALO: las mascaras y el
@@ -5089,13 +5118,23 @@ window.MANOS_SWF = {"K":0.016385911179173047,"W":1280,"H":640,"tex":{"civ":"data
         let ade = b === H.CUERPO ? 0.12 : (b === H.PIE_I || b === H.PIE_D) ? 0.06 : 0;
         if (b === H.CABEZA) {
           const G = 0.016;
-          const q = Math.hypot(P.getX(i) / (CARA_RX + G), (P.getY(i) - CARA_Y) / (CARA_RY + G),
-                               (P.getZ(i) - Chars.CABEZA_Z) / (CARA_RZ + G));
+          const nx = P.getX(i) / (CARA_RX + G), ny = (P.getY(i) - CARA_Y) / (CARA_RY + G), nz = (P.getZ(i) - Chars.CABEZA_Z) / (CARA_RZ + G);
+          const q = Math.hypot(nx, ny, nz);
           ade = Math.abs(q - 1) < 0.02 ? 0.15 : 0.01;
+          /* DEBAJO DE UNA PRENDA, EL CONTORNO DEL OVALO NO SE ADELANTA: la
+             prenda va delante con su profundidad de verdad, y adelantado le
+             pasaba por encima en el borde de la cabeza (una raya negra
+             cruzando la vincha, el gorro, el pañuelo). */
+          if (ade > 0.1 && tapas.length) {
+            const n = [nx / q, ny / q, nz / q], az = Math.atan2(n[0], n[2]) * GRA, el = Math.asin(Math.max(-1, Math.min(1, n[1]))) * GRA;
+            if (tapas.some((t) => t(az, el, n))) ade = 0.01;
+          }
         }
         // la tinta de las mascaras con dibujo, tan adelantada como ellas (Accesorios.ADELANTO)
-        if (bs.adelante && bs.adelante.some(([a, z]) => i >= a && i < z)) ade = Accesorios.ADELANTO;
-        if (bs.ropa && bs.ropa.some(([a, z]) => i >= a && i < z)) ade = 0;
+        if (enRango(bs.adelante, i)) ade = Accesorios.ADELANTO;
+        // la del sombrero y la boca, con su profundidad (sin adelanto)
+        if (enRango(bs.prendaCabeza, i)) ade = 0.01;
+        if (enRango(bs.ropa, i)) ade = 0;
         co.setXYZ(i, manosH.has(b) ? Chars.TINTA_MANO : 1, capa(b), ade);
       }
     }
@@ -5184,13 +5223,41 @@ window.MANOS_SWF = {"K":0.016385911179173047,"W":1280,"H":640,"tex":{"civ":"data
      malla cacheada como los demas: 'grunt|agent|agent1_mask' es el grunt con
      el traje de agente y las Agent Shades. Todo lo demas -nombre, escala,
      colores, ficha del SWF- es el del tipo de base. */
-  Chars.vestido = function (base, ropa, mascara) {
-    if (!ropa && !mascara) return base;
-    const k = base + '|' + (ropa || '') + '|' + (mascara || '');
-    if (!Chars.TIPOS[k]) Chars.TIPOS[k] = Object.assign({}, Chars.TIPOS[base], { ropa: ropa || null, mascara: mascara || null, base: base });
+  /* 'at' es un atuendo con las ranuras del SWF (Prendas.RANURAS: traje,
+     shirt, mask, hat, mouth): las que trae cambian las del tipo de base
+     (null = nada) y las que no, se quedan como estan -el agente sigue con
+     su traje y sus gafas aunque le toque un chaleco-. La clave lleva las
+     cinco: 'grunt|agent|armor1|agent1_mask|hat1|' es el grunt con el traje
+     de agente, un chaleco, las Agent Shades y la gorra. */
+  Chars.vestido = function (base, at) {
+    base = Chars.base(base);
+    const B0 = Chars.TIPOS[base], F = {};
+    for (const r of Prendas.RANURAS) {
+      const c = Prendas.CAMPO[r];
+      F[c] = at && r in at ? (at[r] || null) : (B0[c] || null);
+    }
+    if (Prendas.RANURAS.every((r) => F[Prendas.CAMPO[r]] === (B0[Prendas.CAMPO[r]] || null))) return base;
+    const k = base + '|' + Prendas.RANURAS.map((r) => F[Prendas.CAMPO[r]] || '').join('|');
+    if (!Chars.TIPOS[k]) Chars.TIPOS[k] = Object.assign({}, B0, F, { base: base });
     return k;
   };
   Chars.base = (tipo) => (Chars.TIPOS[tipo] && Chars.TIPOS[tipo].base) || tipo;
+
+  /* LAS MALLAS DE LOS VESTIDOS, POR ADELANTADO. Cada combinacion es un
+     tipo con su malla, y armarla lleva su tiempo: la oleada pide las suyas
+     al montarse y se van armando de a una por cuadro, antes de que salga
+     el primero (Game llama a Chars.precalentar). */
+  const _pend = [];
+  Chars.encargar = function (tipos) {
+    for (const t of tipos) if (!_geos[t] && _pend.indexOf(t) < 0) _pend.push(t);
+  };
+  Chars.precalentar = function () {
+    while (_pend.length) {
+      const t = _pend.shift();
+      if (!_geos[t] && Chars.TIPOS[t]) { geoDe(t); return true; }
+    }
+    return false;
+  };
 
   Chars.limpiar = function () {
     for (const k in _geos) {
@@ -6308,7 +6375,9 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
   };
 
   Acc.MODELOS = MODELOS;
-  Acc._h = { banda, barrido, barridoTinta, caminoPoli, caminoOvalo, loft, prisma, cara };   // para las pruebas
+  // las herramientas, para las pruebas y para prendas3d.js
+  Acc._h = { banda, barrido, barridoTinta, caminoPoli, caminoOvalo, loft, prisma, cara,
+             cascara, losaCurva, tubo, punto, hinchar, centroCruz, cab, recortar, cristalDegrade, densificar };
   Acc.NOMBRES = {
     agent1_mask: 'Agent Shades', agent1_mask_b: 'Agent Shades',
     agent2_mask: 'ATP Mask', agent3_mask: 'OBSV Goggles'
@@ -6316,9 +6385,9 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
 
   /* Pone el accesorio 'id' en el constructor B, en coordenadas del
      modelo del personaje (con el hueso ya elegido: la cabeza). */
-  Acc.construir = function (B, id, g, silueta) {
+  Acc.construir = function (B, id, g, silueta, F) {
     const m = MODELOS[id];
-    if (m) m(B, g || 0, !!silueta);
+    if (m) m(B, g || 0, !!silueta, F || {});
     return B;
   };
 
@@ -7008,6 +7077,874 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
   global.Ropa = Ropa;
 })(window);
 
+</script>
+<script>
+/* ---- js/prendas.js ---- */
+/* =============================================================
+   prendas.js -> LA ROPA DEL SWF COMO DATOS: el catalogo, la armadura
+   que da cada prenda y con que ropa salen los enemigos. Los modelos 3D
+   estan en accesorios.js (cabeza), ropa.js (torso) y prendas3d.js.
+
+   EL CATALOGO: ItemGenerator.createArmor, tal cual. Cada prenda tiene
+   myName, myCat (hat / mask / mouth / shirt), myArmor, myWeight (none /
+   light / med / heavy) y myPrice, y al final de la funcion:
+
+     myPrice = myPrice + myArmor * 100        (lo que cobra la tienda)
+     myNameFull = myName
+
+   Los trajes de agente no estan en createArmor: son el CUERPO del agente
+   ('Parts - Body', 7289), la ropa va encima (myShirt). Aca son la ranura
+   'traje', sin armadura, con precio nuestro.
+
+   LA ARMADURA (MadnessCharacter.refreshArmor y checkDamage):
+     myHeadArmor = armor del sombrero + la mascara + la boca
+     myBodyArmor = armor de la camisa (shirt)
+   y en cada impacto, ANTES que ningun multiplicador:
+     cabeza:  si (!atacante.perkArmorPierce || sombrero heavy) d -= myHeadArmor
+     cuerpo:  si (!atacante.perkArmorPierce || camisa heavy)   d -= myBodyArmor
+   (ver Actor.danoSWF). El peso solo pide su ventaja para ponerse la
+   prenda (light -> perkArmor1, med -> perkArmor2, heavy -> perkArmor3,
+   MadnessStoreItems) y hace que la perforacion no la atraviese si es
+   heavy.
+   ============================================================= */
+(function (global) {
+  'use strict';
+
+  const P = {};
+
+  /* id -> [myName, myCat, myArmor, myWeight, myPrice (el de createArmor), bajada]
+     La bajada es nuestra: el SWF repite el nombre (myNameFull = myName), y
+     con cuatro 'Armored Vest' o dos 'Agent Shades' hace falta decir cual. */
+  const C = {
+    // ---- CASCOS (hat): HatsAll, 7363
+    hat1:       ['SWAT Cap',       'hat', 0.5, 'light', 200, 'GORRA TACTICA DE VISERA'],
+    hat2:       ['Leon Cap',       'hat', 0.5, 'light', 200, 'GORRO DE LANA CAIDO'],
+    hat3:       ['Sweatband',      'hat', 0.5, 'light', 200, 'VINCHA DE TELA'],
+    hat4:       ['Ballcap',        'hat', 0.5, 'light', 200, 'GORRA DE BEISBOL'],
+    hat5:       ['Desperado',      'hat', 0, 'none', 100, 'SOMBRERO DE ALA PLANA'],
+    hat6:       ['Bowler',         'hat', 0, 'none', 100, 'BOMBIN'],
+    headphones: ['Headphones',     'hat', 0, 'none', 100, 'AURICULARES'],
+    top:        ['Tophat',         'hat', 0, 'none', 100, 'GALERA'],
+    fedora:     ['Fedora',         'hat', 0, 'none', 100, 'SOMBRERO DE FIELTRO'],
+    hat9:       ['Sombrero',       'hat', 0, 'none', 100, 'SOMBRERO MEXICANO'],
+    helmet1:    ['Soldier Helm',   'hat', 2, 'med', 500, 'CASCO DE SOLDADO'],
+    helmet3:    ['Blast Helm',     'hat', 3, 'heavy', 1200, 'CASCO CON PANTALLA DE SOLDAR'],
+    // ---- MASCARAS (mask): MasksAll, 7358
+    agent1_mask:   ['Agent Shades',   'mask', 0, 'none', 900, 'LAS ROJAS DEL AGENTE'],
+    agent1_mask_b: ['Agent Shades',   'mask', 0, 'none', 900, 'LAS NEGRAS DEL AGENTE CLASICO'],
+    agent2_mask:   ['ATP Mask',       'mask', 0.5, 'light', 1200, 'LA DEL AGENTE MK1'],
+    agent3_mask:   ['OBSV Goggles',   'mask', 0, 'none', 900, 'LAS DEL AGENTE MK0'],
+    shades1:       ['Radio-Shades',   'mask', 0, 'none', 100, 'LENTES NEGROS DE PASTA'],
+    shades3:       ['State Troopers', 'mask', 0, 'none', 100, 'LENTES DE AVIADOR'],
+    shades5:       ['Professionals',  'mask', 0, 'none', 100, 'LENTES REDONDOS OSCUROS'],
+    shades8:       ['3-D',            'mask', 0, 'none', 100, 'LENTES DE CINE 3-D'],
+    shades12:      ['Coolguys',       'mask', 0, 'none', 100, 'LENTES CUADRADOS NEGROS'],
+    goggles1:      ['Dr. Horrible',   'mask', 0, 'none', 100, 'ANTIPARRAS DE SOLDADOR'],
+    paintball1:    ['Paintball Mask', 'mask', 0.8, 'light', 400, 'VISOR DE PAINTBALL'],
+    tricky:        ['Iron Slab',      'mask', 1.2, 'med', 9000, 'LA PLANCHA DE HIERRO'],
+    // ---- BOCA (mouth): MouthsAll, 7318
+    mouth3:  ['Bandana 1',  'mouth', 0.5, 'light', 200, 'PAÑUELO NEGRO'],
+    mouth6:  ['Bandana 2',  'mouth', 0.5, 'light', 200, 'PAÑUELO GRIS'],
+    mask1:   ['Skimask',    'mouth', 0, 'none', 100, 'PASAMONTAÑAS'],
+    mouth10: ['SARS Guard', 'mouth', 0, 'none', 100, 'BARBIJO'],
+    mouth1:  ['Breather',   'mouth', 0.5, 'light', 200, 'RESPIRADOR'],
+    // ---- ROPA (shirt): Outfit - Body - Core, 7295
+    armor1: ['Padded Vest',  'shirt', 3, 'light', 200, 'CHALECO ACOLCHADO'],
+    armor2: ['Utility Vest', 'shirt', 2, 'light', 200, 'CHALECO CON CARGADORES'],
+    armor3: ['Armored Vest', 'shirt', 3, 'light', 200, 'CHALECO DE PLACA'],
+    armor4: ['Armored Vest', 'shirt', 3, 'light', 200, 'CHALECO DE PLACA, DOS CORREAS'],
+    armor5: ['Armored Vest', 'shirt', 5, 'med', 500, 'CHALECO DE PLACA ACHAFLANADA'],
+    armor6: ['Metal Vest',   'shirt', 10, 'heavy', 1200, 'CHALECO DE CHAPA REMACHADA'],
+    // ---- los trajes de agente: 'Parts - Body', no createArmor (precio nuestro)
+    agent:  ['Agent Suit',     'traje', 0, 'none', 900, 'EL DEL AGENTE'],
+    agent2: ['Agent Suit Mk1', 'traje', 0, 'none', 1200, 'EL DEL AGENTE MK1, CON ARNES'],
+    agent3: ['Agent Suit Mk0', 'traje', 0, 'none', 1200, 'EL DEL AGENTE MK0, CON BANDOLERA']
+  };
+  /* El precio de la tienda: el de createArmor mas la armadura (x 100). Los
+     trajes, tal cual. */
+  P.CAT = {};
+  for (const id in C) {
+    const c = C[id];
+    P.CAT[id] = { id, nombre: c[0], cat: c[1], armor: c[2], peso: c[3],
+                  precio: c[1] === 'traje' ? c[4] : c[4] + c[2] * 100, bajada: c[5] };
+  }
+  P.de = (id) => (id && P.CAT[id]) || null;
+
+  /* La descripcion de cada categoria (el final de createArmor). */
+  P.DESC = {
+    hat: 'Cover up that pretty skull with something your enemies can take aim at.',
+    mask: "They couldn't see your eyes before, but now you can be extra certain of it.",
+    mouth: 'Take your inner badass to the next level with some sweet gob gear.',
+    shirt: "Your head isn't the only vital point on your body that needs covering.",
+    traje: "Your head isn't the only vital point on your body that needs covering."
+  };
+
+  /* LAS RANURAS del muñeco: traje (el cuerpo), camisa (shirt, encima),
+     mascara, sombrero y boca. En la ficha (progreso.js) van con el nombre
+     de la categoria del SWF; en el tipo de personaje (chars.js), con el
+     suyo. */
+  P.RANURAS = ['traje', 'shirt', 'mask', 'hat', 'mouth'];
+  P.CAMPO = { traje: 'ropa', shirt: 'camisa', mask: 'mascara', hat: 'sombrero', mouth: 'boca' };
+
+  /* El atuendo de un tipo de personaje: las cinco ranuras. */
+  P.atuendoDe = function (F) {
+    F = F || {};
+    return { traje: F.ropa || null, shirt: F.camisa || null, mask: F.mascara || null,
+             hat: F.sombrero || null, mouth: F.boca || null };
+  };
+
+  /* refreshArmor: lo que suma cada ranura. */
+  P.armadura = function (at) {
+    const a = (id) => { const c = P.de(id); return c ? c.armor : 0; };
+    const hat = P.de(at && at.hat), shirt = P.de(at && at.shirt);
+    return {
+      cabeza: a(at && at.hat) + a(at && at.mask) + a(at && at.mouth),
+      cuerpo: a(at && at.shirt),
+      pesoCasco: hat ? hat.peso : 'none',
+      pesoCamisa: shirt ? shirt.peso : 'none'
+    };
+  };
+
+  /* La ventaja que pide cada peso para ponerse (MadnessStoreItems). */
+  P.PERK_PESO = { light: ['perkArmor1', 'ARMOR 1'], med: ['perkArmor2', 'ARMOR 2'], heavy: ['perkArmor3', 'ARMOR 3'] };
+
+  /* LO QUE ESTA MODELADO EN 3D. Lo que el SWF le da a un enemigo y aca no
+     tiene modelo sale como si no le tocara nada (el hueco 'undefined' de
+     sus listas): la probabilidad de lo que si esta no cambia. */
+  P.modelada = function (id) {
+    if (!id || !P.CAT[id]) return false;
+    const c = P.CAT[id].cat;
+    if (c === 'traje') return !!(global.Ropa && Ropa.MODELOS[id]);
+    if (c === 'shirt') return !!(global.Ropa && Ropa.CHALECOS && Ropa.CHALECOS[id]);
+    return !!(global.Accesorios && Accesorios.MODELOS[id]);
+  };
+
+  /* =============================================================
+     CON QUE ROPA SALE CADA ENEMIGO: ItemGenerator.equipLoadout
+
+       civ (el grunt), del bando enemigo:
+         hat    [-, -, hat1, hat2, hat3, hat4, hat5, headphones, hat6,
+                 helmet1, helmet2, helmet3]
+                 i = randomNumber(min(-3, L - 15), min(n, max(4, L * 1,5)))
+         shirt  [-, -, armor1, armor2, armor3, armor4, armor5, armor8,
+                 armor9, armor10, armor11, armor6, armor7, armor12]
+                 i = randomNumber(min(-3, L - 20), min(n, L * 1,5))
+         mouth  [-, -, mask1, mouth6, mouth3]
+                 i = randomNumber(min(-3, L - 15), min(n, L))
+         mask   [-, -, shades1, shades3, shades5, paintball1, paintball2,
+                 goggles1, hi1 ... hi8]
+                 i = randomNumber(min(-3, L - 15), min(n, max(3, L * 1,5)))
+       agent, agent2, agent3 (y sus zombis):
+         shirt  la misma lista, i = randomNumber(min(-3, L - 25), min(n, L * 1,5))
+         mouth  [-, -, mouth1, mouth2, mouth4, mouth5, mouth8]
+                 i = randomNumber(min(-3, L - 25), min(n, L))
+
+     randomNumber(a, b) = floor(random * (b - a + 1)) + a, con a y b sin
+     redondear (L * 1,5). Un indice negativo o fuera de la lista es 'nada':
+     por eso a nivel bajo casi nadie lleva nada y al subir la ventana se
+     corre hacia las prendas duras. L es el nivel de la escuadra, el mismo
+     que elige su lista (Waves.listaEscuadra). El agent2 no lleva nada en la
+     boca aca: su ATP Mask ya trae la barbillera.
+     ============================================================= */
+  const L_HAT = [null, null, 'hat1', 'hat2', 'hat3', 'hat4', 'hat5', 'headphones', 'hat6', 'helmet1', 'helmet2', 'helmet3'];
+  const L_SHIRT = [null, null, 'armor1', 'armor2', 'armor3', 'armor4', 'armor5', 'armor8', 'armor9', 'armor10', 'armor11', 'armor6', 'armor7', 'armor12'];
+  const L_MOUTH = [null, null, 'mask1', 'mouth6', 'mouth3'];
+  const L_MASK = [null, null, 'shades1', 'shades3', 'shades5', 'paintball1', 'paintball2', 'goggles1', 'hi1', 'hi2', 'hi3', 'hi4', 'hi5', 'hi6', 'hi7', 'hi8'];
+  const L_MOUTH_AG = [null, null, 'mouth1', 'mouth2', 'mouth4', 'mouth5', 'mouth8'];
+  const randomNumber = (rng, a, b) => Math.floor(rng() * (b - a + 1)) + a;
+  function tirada(rng, lista, bajo, alto) {
+    const id = lista[randomNumber(rng, Math.min(-3, bajo), alto)];
+    return id && P.modelada(id) ? id : null;
+  }
+  /* 'swf' es el personaje del SWF que hace el tipo (civ, agent, agent2,
+     agent3). Devuelve solo las ranuras que le toca cambiar. */
+  P.cargaEnemigo = function (swf, L, rng) {
+    const n = (a) => a.length;
+    if (swf === 'civ') {
+      return {
+        hat: tirada(rng, L_HAT, L - 15, Math.min(n(L_HAT), Math.max(4, L * 1.5))),
+        shirt: tirada(rng, L_SHIRT, L - 20, Math.min(n(L_SHIRT), L * 1.5)),
+        mouth: tirada(rng, L_MOUTH, L - 15, Math.min(n(L_MOUTH), L)),
+        mask: tirada(rng, L_MASK, L - 15, Math.min(n(L_MASK), Math.max(3, L * 1.5)))
+      };
+    }
+    if (swf && swf.slice(0, 5) === 'agent') {
+      const shirt = tirada(rng, L_SHIRT, L - 25, Math.min(n(L_SHIRT), L * 1.5));
+      const mouth = tirada(rng, L_MOUTH_AG, L - 25, Math.min(n(L_MOUTH_AG), L));
+      return swf === 'agent2' ? { shirt } : { shirt, mouth };
+    }
+    return {};
+  };
+
+  global.Prendas = P;
+})(window);
+</script>
+<script>
+/* ---- js/prendas3d.js ---- */
+/* =============================================================
+   prendas3d.js -> LA ROPA NUEVA DE LA CABEZA, EN 3D: sombreros,
+   anteojos y lo que va en la boca. Como las mascaras de accesorios.js,
+   cada prenda es un objeto propio con el nombre del SWF (HatsAll 7363,
+   MasksAll 7358, MouthsAll 7318) y se le pone a quien la lleve: el
+   jugador desde la tienda, los enemigos segun equipLoadout (prendas.js).
+
+   NO SON DIBUJOS PEGADOS. Del SWF sale la referencia -cada prenda sobre
+   la cabeza del civ ('Parts - Head', 2708, con myHat / myMask / myMouth
+   en su cuadro): donde apoya, cuanto baja, cuanto sale la visera, sus
+   grises-, y el objeto se arma con volumen:
+
+     casquete  lo que sigue la cabeza a unos milimetros: gorras, cascos,
+               vinchas, pañuelos. Una malla sobre el ovalo entre dos
+               lineas de elevacion, con su canto.
+     torno     lo que se gira alrededor de un eje: galeras, bombines,
+               alas. Un perfil (radio, altura) dado vuelta, con planta
+               eliptica, inclinado y con el ala alabeada si hace falta.
+     visera    la de las gorras: sale del borde del casquete hacia
+               delante, afinando a los costados.
+     lente     anteojos rigidos delante de los ojos (no pintados sobre
+               la cara), con su marco, su puente y sus patillas.
+
+   LOS GRISES son los del SWF pasados al juego como el resto del muñeco:
+   x 0,77 (el peto del civ: 153 -> 118). Coordenadas del modelo del
+   personaje: la cabeza es el ovalo de Chars.CARA con centro en
+   (0, CARA.y, CABEZA_Z), la cara mira a +z y +x es su izquierda.
+   ============================================================= */
+(function (global) {
+  'use strict';
+
+  const Acc = global.Accesorios, MOD = Acc.MODELOS, Hh = Acc._h;
+  const RAD = Math.PI / 180;
+  const C = () => { const K = Chars.CARA; return { rx: K.rx, ry: K.ry, rz: K.rz, cy: K.y, cz: Chars.CABEZA_Z }; };
+  // un gris del SWF (0-255) pasado al juego; y un color, igual
+  const sw = (v) => { const g = Math.round(v * 0.77); return (g << 16) | (g << 8) | g; };
+  const swc = (r, g, b) => (Math.round(r * 0.77) << 16) | (Math.round(g * 0.77) << 8) | Math.round(b * 0.77);
+  const NEGRO = 0x0a0a0a;
+
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const cruz = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const uni = (a) => { const L = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / L, a[1] / L, a[2] / L]; };
+  const suave = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  // un triangulo con la cara hacia 'f'
+  function tri(B, i0, i1, i2, P0, P1, P2, f) {
+    const n = cruz(sub(P1, P0), sub(P2, P0));
+    if (dot(n, f) >= 0) B.idx.push(i0, i1, i2); else B.idx.push(i0, i2, i1);
+  }
+
+  /* LA CABEZA: el punto del ovalo en (az, el) -grados: az 0 delante y +
+     hacia +x, el 0 en el ecuador-, 'd' metros por fuera (sumados a cada
+     radio). e < 1 lo hace mas cuadrado (superelipsoide). */
+  function sobre(az, el, d, e) {
+    const c = C(), a = az * RAD, t = el * RAD;
+    const p = (v) => Math.sign(v) * Math.pow(Math.abs(v), e || 1);
+    const ce = Math.cos(t);
+    return [(c.rx + d) * p(ce) * p(Math.sin(a)), c.cy + (c.ry + d) * p(Math.sin(t)), c.cz + (c.rz + d) * p(ce) * p(Math.cos(a))];
+  }
+  // el radio de la cabeza a la altura y (en x y en z)
+  const radioA = (y) => { const c = C(), k = Math.sqrt(Math.max(0, 1 - Math.pow((y - c.cy) / c.ry, 2))); return [c.rx * k, c.rz * k]; };
+  const elDeY = (y) => Math.asin(Math.max(-1, Math.min(1, (y - C().cy) / C().ry))) / RAD;
+  const centro = () => [0, C().cy, C().cz];
+
+  /* =============================================================
+     CASQUETE: lo que sigue la cabeza.
+       o.lo(az), o.hi(az)   de que elevacion a cual (grados); sin hi, hasta
+                            la coronilla
+       o.a0, o.a1           de que azimut a cual; sin ellos, la vuelta
+       o.d(az, el) o o.d    a cuanto de la cabeza (m)
+       o.color(az, el)      el gris de cada punto (o o.hex)
+       o.e                  superelipsoide (< 1: mas cuadrado)
+     Su canto -negro, como el trazo del SWF- baja hasta 1,2 cm dentro de
+     la cabeza. La tinta: la misma pieza g mas afuera, g mas larga por los
+     bordes, con los vertices compartidos (sin grietas).
+     ============================================================= */
+  function casquete(B, o, g, silueta) {
+    const c = C(), vuelta = o.a0 === undefined;
+    const a0 = vuelta ? -180 : o.a0, a1 = vuelta ? 180 : o.a1;
+    const M = o.M || 40, N = o.N || 12, e = o.e || 1;
+    const dD = typeof o.d === 'function' ? o.d : () => (o.d === undefined ? 0.012 : o.d);
+    /* LA TINTA NO SE ESTIRA POR LOS BORDES: los bordes de un casquete
+       apoyan en la cabeza, no son silueta. Estirada 1,6 cm, su canto caia
+       corrido del borde de la pieza y quedaba una raya suelta, con una
+       franja clara entre las dos (la vincha, arriba y abajo). Solo se
+       infla hacia fuera: su canto coincide con el de la pieza y se suma
+       al trazo negro del borde. */
+    const gE = silueta ? g : 0, ext = 0;
+    const hiF = o.hi || (() => 90), abierto = !!o.hi;
+    const cols = vuelta ? M : M + 1;
+    const azDe = (i) => a0 + (a1 - a0) * i / M;
+    const P = [], A = [];
+    for (let j = 0; j <= N; j++) {
+      const fila = [], fa = [];
+      for (let i = 0; i < cols; i++) {
+        const az = azDe(i);
+        const l = o.lo(az) - ext, h = abierto ? hiF(az) + ext : 90;
+        // mas apretado cerca del borde de abajo (ahi se curva lo que importa)
+        const t = j / N, el = l + (h - l) * (abierto ? t : Math.sin(t * Math.PI / 2));
+        fila.push(sobre(az, el, dD(az, el) + gE, e)); fa.push([az, el]);
+      }
+      P.push(fila); A.push(fa);
+    }
+    const O = centro();
+    const nor = (j, i) => {
+      const iL = vuelta ? (i - 1 + cols) % cols : Math.max(0, i - 1), iR = vuelta ? (i + 1) % cols : Math.min(cols - 1, i + 1);
+      const jD = Math.max(0, j - 1), jU = Math.min(N, j + 1);
+      let n = cruz(sub(P[j][iR], P[j][iL]), sub(P[jU][i], P[jD][i]));
+      const L = Math.hypot(n[0], n[1], n[2]);
+      if (L < 1e-9) n = sub(P[j][i], O);
+      n = uni(n);
+      if (dot(n, sub(P[j][i], O)) < 0) n = [-n[0], -n[1], -n[2]];
+      return n;
+    };
+    const ids = P.map((fila, j) => fila.map((p, i) => {
+      const n = nor(j, i), [az, el] = A[j][i];
+      const k = silueta ? [0, 0, 0] : B._rgb(o.color ? o.color(az, el) : o.hex, 1);
+      return B._vert(p[0], p[1], p[2], n[0], n[1], n[2], k[0], k[1], k[2]);
+    }));
+    for (let j = 0; j < N; j++) {
+      for (let i = 0; i < (vuelta ? cols : cols - 1); i++) {
+        const i2 = (i + 1) % cols;
+        const f = sub(P[j][i], O);
+        tri(B, ids[j][i], ids[j][i2], ids[j + 1][i2], P[j][i], P[j][i2], P[j + 1][i2], f);
+        tri(B, ids[j][i], ids[j + 1][i2], ids[j + 1][i], P[j][i], P[j + 1][i2], P[j + 1][i], f);
+      }
+    }
+    // los cantos: del borde de fuera a dentro de la cabeza
+    const dIn = (o.dentro === undefined ? -0.012 : o.dentro) - gE;
+    const kc = silueta ? [0, 0, 0] : B._rgb(o.canto === undefined ? NEGRO : o.canto, 1);
+    const canto = (bordes, fuera) => {
+      let prev = null;
+      for (const [j, i] of bordes) {
+        const [az, el] = A[j][i], pf = P[j][i], pi = sobre(az, el, dIn, e);
+        const n = fuera(j, i);
+        const par = silueta ? [ids[j][i], B._vert(pi[0], pi[1], pi[2], n[0], n[1], n[2], 0, 0, 0)]
+          : [B._vert(pf[0], pf[1], pf[2], n[0], n[1], n[2], kc[0], kc[1], kc[2]), B._vert(pi[0], pi[1], pi[2], n[0], n[1], n[2], kc[0], kc[1], kc[2])];
+        if (prev) {
+          tri(B, prev[2][0], par[0], par[1], prev[0], pf, pi, n);
+          tri(B, prev[2][0], par[1], prev[2][1], prev[0], pi, prev[1], n);
+        }
+        prev = [pf, pi, par];
+      }
+    };
+    const abajo = (j, i) => { const u = sub(P[0][i], P[1][i]); return uni(u); };
+    const arriba = (j, i) => { const u = sub(P[N][i], P[N - 1][i]); return uni(u); };
+    const filaDe = (j) => { const L = []; for (let i = 0; i < cols; i++) L.push([j, i]); if (vuelta) L.push([j, 0]); return L; };
+    canto(filaDe(0), abajo);
+    if (abierto) canto(filaDe(N), arriba);
+    if (!vuelta) {
+      const lado = (i, s) => (j) => { const q = sub(P[j][i], P[j][i - s]); return uni(q); };
+      const colDe = (i) => { const L = []; for (let j = 0; j <= N; j++) L.push([j, i]); return L; };
+      canto(colDe(0), (j) => lado(0, -1)(j));
+      canto(colDe(cols - 1), (j) => lado(cols - 1, 1)(j));
+    }
+  }
+
+  /* =============================================================
+     TORNO: un perfil girado alrededor de un eje vertical.
+       perfil [[r, y, hex], ...]: r desde el eje e y hacia arriba, en el
+         marco del sombrero; hex pinta el tramo que SALE de ese punto. Se
+         recorre de la coronilla hacia fuera y abajo, asi la normal de la
+         izquierda del recorrido mira hacia fuera.
+       o.x, o.y, o.z   donde va el pie del eje
+       o.sx, o.sz      la planta eliptica (el radio por sx en x, por sz en z)
+       o.incl, o.ladeo grados hacia delante (giro en x) y de costado (en z)
+       o.alabeo(az, r, y) -> dy: el ala que sube o baja segun el lado
+       o.M             lados
+     Los tramos del perfil van con aristas vivas (el canto del ala, la
+     esquina de la copa); alrededor del eje, suave. La tinta: el perfil
+     corrido g hacia fuera, con los vertices compartidos.
+     ============================================================= */
+  function torno(B, perfil, o, g, silueta) {
+    const M = o.M || 36, sx = o.sx || 1, sz = o.sz || 1;
+    let pf = perfil;
+    if (silueta) {
+      // el perfil corrido g por la normal de cada punto (promedio de sus dos tramos)
+      const nT = (a, b) => { const dr = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dr, dy) || 1; return [-dy / L, dr / L]; };
+      pf = perfil.map((p, k) => {
+        const na = k > 0 ? nT(perfil[k - 1], p) : null, nb = k < perfil.length - 1 ? nT(p, perfil[k + 1]) : null;
+        let n = na && nb ? [na[0] + nb[0], na[1] + nb[1]] : (na || nb);
+        const L = Math.hypot(n[0], n[1]) || 1; n = [n[0] / L, n[1] / L];
+        /* el inglete, corto: en la punta de un ala fina (una vuelta de casi
+           180 grados) uno largo sacaba el vertice 5 cm y la cascara negra se
+           doblaba por encima del ala, pintandola entera */
+        const cs = na && nb ? Math.max(0.8, (n[0] * na[0] + n[1] * na[1])) : 1;
+        return [Math.max(0, p[0] + n[0] * g / cs), p[1] + n[1] * g / cs, p[2]];
+      });
+    }
+    const al = o.alabeo || (() => 0);
+    const loc = (r, y, az) => { const a = az * RAD; return [sx * r * Math.sin(a), y + al(az, r, y), sz * r * Math.cos(a)]; };
+    B.push();
+    B.translate(o.x || 0, o.y || 0, o.z || 0);
+    if (o.giro) B.rotateY(o.giro * RAD);
+    if (o.incl) B.rotateX(o.incl * RAD);
+    if (o.ladeo) B.rotateZ(-o.ladeo * RAD);
+    const azs = []; for (let j = 0; j < M; j++) azs.push(360 * j / M);
+    const nPerfil = (a, b, az) => {
+      // la normal de fuera del tramo a->b en 3D (la izquierda del recorrido)
+      const dr = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dr, dy) || 1, nr = -dy / L, ny = dr / L, s = Math.sin(az * RAD), c2 = Math.cos(az * RAD);
+      return uni([nr * s / sx, ny, nr * c2 / sz]);
+    };
+    if (silueta) {
+      // vertices compartidos: uno por punto del perfil y lado
+      const ids = pf.map((p, k) => azs.map((az, j) => {
+        const a = pf[Math.max(0, k - 1)], b = pf[Math.min(pf.length - 1, k + 1)];
+        let n = nPerfil(a, b, az);
+        if (p[0] < 1e-6) n = [0, Math.sign(n[1]) || 1, 0];
+        const q = loc(p[0], p[1], az);
+        return { i: B._vert(q[0], q[1], q[2], n[0], n[1], n[2], 0, 0, 0), q, n };
+      }));
+      for (let k = 0; k < pf.length - 1; k++) {
+        for (let j = 0; j < M; j++) {
+          const j2 = (j + 1) % M, a = ids[k][j], b = ids[k][j2], cc = ids[k + 1][j2], d = ids[k + 1][j];
+          const f = nPerfil(pf[k], pf[k + 1], azs[j] + 180 / M);
+          tri(B, a.i, b.i, cc.i, a.q, b.q, cc.q, f);
+          tri(B, a.i, cc.i, d.i, a.q, cc.q, d.q, f);
+        }
+      }
+      B.pop();
+      return;
+    }
+    /* LAS CURVAS, SUAVES: donde dos tramos del perfil siguen casi la misma
+       direccion (menos de 35 grados), la normal del punto es una sola. Con
+       aristas vivas en todos, una cupula de ocho tramos salia en bandas y los
+       escalones de la luz la dibujaban dentada. Las esquinas de verdad (el
+       canto del ala, la tapa de la copa) siguen vivas. */
+    const suaveEn = pf.map((p, k) => {
+      if (k === 0 || k === pf.length - 1) return false;
+      const a = pf[k - 1], b = pf[k + 1], d1 = [p[0] - a[0], p[1] - a[1]], d2 = [b[0] - p[0], b[1] - p[1]];
+      return (d1[0] * d2[0] + d1[1] * d2[1]) / ((Math.hypot(d1[0], d1[1]) * Math.hypot(d2[0], d2[1])) || 1) > Math.cos(35 * RAD);
+    });
+    for (let k = 0; k < pf.length - 1; k++) {
+      const p0 = pf[k], p1 = pf[k + 1], hex = p0[2] === undefined ? o.hex : p0[2];
+      const kc = B._rgb(hex, 1), luz = o.plano && o.plano(k) ? U.LUZ_PLANA : undefined;
+      const f0 = [], f1 = [];
+      for (let j = 0; j < M; j++) {
+        const az = azs[j];
+        // la normal de la cara, de sus dos direcciones (alrededor y a lo largo)
+        const q0 = loc(p0[0], p0[1], az), q1 = loc(p1[0], p1[1], az);
+        const e = 0.5, t0 = sub(loc(p0[0], p0[1], az + e), loc(p0[0], p0[1], az - e)), t1 = sub(loc(p1[0], p1[1], az + e), loc(p1[0], p1[1], az - e));
+        const nf = nPerfil(p0, p1, az), a = sub(q1, q0);
+        // en una curva (la cupula de una copa) la direccion a lo largo es la del punto, no la del tramo
+        const lq = (m) => loc(pf[m][0], pf[m][1], az);
+        const a0 = suaveEn[k] ? sub(lq(k + 1), lq(k - 1)) : a, a1 = suaveEn[k + 1] ? sub(lq(k + 2), lq(k)) : a;
+        let n0 = p0[0] > 1e-6 ? uni(cruz(t0, a0)) : nf, n1 = p1[0] > 1e-6 ? uni(cruz(t1, a1)) : nf;
+        if (dot(n0, nf) < 0) n0 = [-n0[0], -n0[1], -n0[2]];
+        if (dot(n1, nf) < 0) n1 = [-n1[0], -n1[1], -n1[2]];
+        f0.push({ i: B._vert(q0[0], q0[1], q0[2], n0[0], n0[1], n0[2], kc[0], kc[1], kc[2], luz), q: q0 });
+        f1.push({ i: B._vert(q1[0], q1[1], q1[2], n1[0], n1[1], n1[2], kc[0], kc[1], kc[2], luz), q: q1 });
+      }
+      for (let j = 0; j < M; j++) {
+        const j2 = (j + 1) % M, f = nPerfil(p0, p1, azs[j] + 180 / M);
+        tri(B, f0[j].i, f0[j2].i, f1[j2].i, f0[j].q, f0[j2].q, f1[j2].q, f);
+        tri(B, f0[j].i, f1[j2].i, f1[j].i, f0[j].q, f1[j2].q, f1[j].q, f);
+      }
+    }
+    B.pop();
+  }
+
+  /* =============================================================
+     VISERA: la de las gorras. Sale del borde de delante del casquete
+     (o.lo, o.d: los del casquete) entre az0 y az1, 'largo' hacia delante
+     en el medio y afinando a los costados; baja 'caida' grados; las
+     puntas se curvan 'curva' metros hacia abajo. Arriba hex, abajo
+     hexAbajo, el canto negro.
+     ============================================================= */
+  function visera(B, o, g, silueta) {
+    const c = C(), NU = 16, NV = 5, gr = o.grueso || 0.014;
+    const gE = silueta ? g : 0;
+    const dD = typeof o.d === 'function' ? o.d : () => (o.d === undefined ? 0.012 : o.d);
+    const fr = o.frente === undefined ? 0.85 : o.frente;
+    /* NACE DEBAJO DEL CASQUETE, no en su canto: 2,5 grados mas arriba y
+       1,2 cm por dentro. Arrancando en el canto, el grueso de la visera
+       quedaba a la vista como un escalon suelto en cada punta. */
+    const pt = (u, v, arriba) => {
+      const az = lerp(o.az0, o.az1, u), el = o.lo(az) + 2.5 * (1 - v), b = sobre(az, el, dD(az, el) - 0.012, o.e);
+      const a = az * RAD;
+      /* hacia DELANTE, no hacia fuera: una visera sale derecha de la frente
+         (radial, a los costados salia de canto hacia las orejas) */
+      let dx = Math.sin(a) / c.rx * (1 - fr), dz = Math.cos(a) / c.rz * (1 - fr) + fr * 3;
+      const L = Math.hypot(dx, dz); dx /= L; dz /= L;
+      /* la tinta se afina con la visera: en las puntas, que se meten bajo
+         la gorra, no hay silueta que rodear (con el grueso entero quedaba
+         una cuña negra suelta en cada punta) */
+      const s = 2 * u - 1, f = Math.max(0, 1 - s * s), largo = o.largo * Math.pow(f, o.punta || 0.5) + gE * Math.sqrt(f);
+      const cd = (o.caida || 0) * RAD, r = largo * v;
+      // el grueso tambien se va a cero en las puntas: ahi entra bajo el canto
+      const tk = Math.min(1, 3 * f), gEf = gE * Math.sqrt(f);
+      const y = b[1] - Math.sin(cd) * r - (o.curva || 0) * s * s * v * v + (arriba ? gEf : -gr * tk - gEf);
+      return [b[0] + dx * Math.cos(cd) * r, y, b[2] + dz * Math.cos(cd) * r];
+    };
+    const kA = silueta ? [0, 0, 0] : B._rgb(o.hex, 1), kB = silueta ? [0, 0, 0] : B._rgb(o.hexAbajo === undefined ? o.hex : o.hexAbajo, 1);
+    const kN = silueta ? [0, 0, 0] : B._rgb(NEGRO, 1);
+    const cara = (arriba, k) => {
+      const G = [];
+      for (let j = 0; j <= NV; j++) {
+        const fila = [];
+        for (let i = 0; i <= NU; i++) {
+          const u = i / NU, v = j / NV, p = pt(u, v, arriba);
+          const n = uni(cruz(sub(pt(Math.min(1, u + 0.02), v, arriba), pt(Math.max(0, u - 0.02), v, arriba)),
+                             sub(pt(u, Math.min(1, v + 0.05), arriba), pt(u, Math.max(0, v - 0.05), arriba))));
+          const nn = (n[1] >= 0) === arriba ? n : [-n[0], -n[1], -n[2]];
+          fila.push({ i: B._vert(p[0], p[1], p[2], nn[0], nn[1], nn[2], k[0], k[1], k[2]), p, n: nn });
+        }
+        G.push(fila);
+      }
+      for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) {
+        const a = G[j][i], b = G[j][i + 1], cc = G[j + 1][i + 1], d = G[j + 1][i];
+        tri(B, a.i, b.i, cc.i, a.p, b.p, cc.p, a.n); tri(B, a.i, cc.i, d.i, a.p, cc.p, d.p, a.n);
+      }
+      return G;
+    };
+    const T = cara(true, kA), Bo = cara(false, kB);
+    // el canto de fuera (v = 1)
+    for (let i = 0; i < NU; i++) {
+      const u0 = i / NU, u1 = (i + 1) / NU;
+      const q = [pt(u0, 1, true), pt(u1, 1, true), pt(u1, 1, false), pt(u0, 1, false)];
+      const m = [(q[0][0] + q[1][0]) / 2, (q[0][1] + q[1][1]) / 2, (q[0][2] + q[1][2]) / 2];
+      const f = sub(m, pt((u0 + u1) / 2, 0.8, true));
+      if (silueta) {
+        const a = T[NV][i], b = T[NV][i + 1], cc = Bo[NV][i + 1], d = Bo[NV][i];
+        tri(B, a.i, b.i, cc.i, a.p, b.p, cc.p, f); tri(B, a.i, cc.i, d.i, a.p, cc.p, d.p, f);
+      } else {
+        const n = uni(f), v = q.map((p) => B._vert(p[0], p[1], p[2], n[0], n[1], n[2], kN[0], kN[1], kN[2]));
+        tri(B, v[0], v[1], v[2], q[0], q[1], q[2], f); tri(B, v[0], v[2], v[3], q[0], q[2], q[3], f);
+      }
+    }
+  }
+
+  /* Una pieza de revolucion chica en cualquier eje (botones, perillas,
+     copas de auriculares): un perfil (r, t) a lo largo de 'eje' desde p. */
+  function pieza(B, perfil, p, eje, hex, g, silueta, M) {
+    const e = uni(eje), ang = Math.acos(Math.max(-1, Math.min(1, e[1])));
+    B.push();
+    B.translate(p[0], p[1], p[2]);
+    // el eje del torno (y) se lleva a 'e'
+    const ax = uni([e[2], 0, -e[0]]);
+    if (Math.hypot(e[0], e[2]) > 1e-6) B._m.multiply(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(ax[0], ax[1], ax[2]), ang));
+    else if (e[1] < 0) B.rotateX(Math.PI);
+    B._useM = true;
+    torno(B, perfil, { M: M || 18, hex }, g, silueta);
+    B.pop();
+  }
+
+  /* =============================================================
+     LOS SOMBREROS (HatsAll, 7363; puestos en 'Parts - Head' con myHat)
+     ============================================================= */
+
+  /* Las gorras: el casquete hasta la linea de la frente -mas baja atras-,
+     el de la SWAT (hat1) con la copa cuadrada y la visera recta; la de
+     beisbol (hat4) redonda, clara, con la visera curva y el boton. */
+  const bordeGorra = (fr, at) => (az) => lerp(at, fr, (1 + Math.cos(az * RAD)) / 2);
+  function gorra(o) {
+    return function (B, g, silueta) {
+      const lo = bordeGorra(o.frente, o.atras);
+      const d = (az, el) => 0.012 + o.copa * suave(10, 80, el) * (0.6 + 0.4 * Math.cos(az * RAD * 0.5));
+      casquete(B, { lo, d, e: o.e, color: o.color, hex: o.hex, M: 44, N: 14 }, g, silueta);
+      visera(B, { az0: -o.ancho, az1: o.ancho, lo, d, e: o.e, largo: o.largo, caida: o.caida, curva: o.curva, punta: o.punta,
+                  hex: o.hexVisera, hexAbajo: o.hexAbajo, grueso: 0.016 }, g, silueta);
+      if (!silueta && o.boton) {
+        const p = sobre(0, 90, d(0, 90) - 0.004, o.e);
+        pieza(B, [[0, 0.018], [0.02, 0.012], [0.024, 0]], p, [0, 1, 0], o.boton, 0, false, 12);
+      }
+    };
+  }
+  // SWAT Cap: 49 la tela, 83 el panel de arriba, 44/60 la visera (hat1)
+  MOD.hat1 = gorra({ frente: 21, atras: 5, copa: 0.03, e: 0.72, ancho: 52, largo: 0.2, caida: 6, curva: 0.012, punta: 0.6,
+                     color: (az, el) => (el > 66 ? sw(83) : sw(49)), hexVisera: sw(60), hexAbajo: sw(44) });
+  // Ballcap: 153 la copa, 102 la visera, 87 abajo (hat4)
+  MOD.hat4 = gorra({ frente: 20, atras: 4, copa: 0.022, e: 0.95, ancho: 54, largo: 0.22, caida: 9, curva: 0.045, punta: 0.5,
+                     color: () => sw(153), hexVisera: sw(102), hexAbajo: sw(87), boton: sw(120) });
+
+  /* Sweatband (hat3): una vincha de 60, abombada, que cruza la frente por
+     encima de los ojos y sube hacia la nuca. */
+  MOD.hat3 = function (B, g, silueta) {
+    const lo = (az) => lerp(46, 22, (1 + Math.cos(az * RAD)) / 2), hi = (az) => lo(az) + 17;
+    casquete(B, { lo, hi, d: (az, el) => 0.006 + 0.014 * Math.sin(Math.PI * Math.max(0, Math.min(1, (el - lo(az)) / 17))),
+                  hex: sw(60), M: 48, N: 6 }, g, silueta);
+  };
+
+  /* Leon Cap (hat2): gorro de lana de 69, caido hacia atras -un bulto que
+     cuelga sobre la nuca- con el puño de abajo mas oscuro (51). */
+  MOD.hat2 = function (B, g, silueta) {
+    const lo = bordeGorra(24, 0);
+    // lo caido: un bulto detras, entre la coronilla y la nuca, que la lana hace colgar
+    const bulto = (az, el) => {
+      const atras = Math.max(0, -Math.cos(az * RAD)), costado = Math.pow(Math.abs(Math.sin(az * RAD)), 2);
+      return 0.13 * Math.pow(atras, 1.2) * Math.exp(-Math.pow((el - 38) / 28, 2)) * (1 - 0.35 * costado);
+    };
+    /* el cuerpo arranca 1 grado DEBAJO del puño (que es mas grueso): su canto
+       queda tapado y el borde que se ve es uno solo, el del puño. Con los
+       dos cantos a la vista salian dos rayas y una franja clara entre ellas. */
+    casquete(B, { lo: (az) => lo(az) + 5, d: (az, el) => 0.018 + (bulto(az, el) + 0.012 * suave(40, 90, el)) * suave(lo(az) + 6, lo(az) + 14, el),
+                  hex: sw(69), M: 44, N: 14 }, g, silueta);
+    // el puño: una banda mas gruesa y oscura
+    casquete(B, { lo, hi: (az) => lo(az) + 6, d: () => 0.028, hex: sw(51), M: 44, N: 3 }, g, silueta);
+  };
+
+  /* EL ALA: de r0 (la copa) a r1 (el borde), su cara de arriba a la altura
+     y, el canto redondo (medio circulo de 'gr' de grueso) y la de abajo de
+     vuelta hasta dentro de la cabeza (rIn). Con el canto afilado, la tinta
+     se doblaba en la punta. */
+  function ala(r0, r1, y, gr, hexA, hexC, hexB, rIn) {
+    const P = [[r0, y, hexA]], rc = gr / 2;
+    for (let k = 0; k <= 4; k++) {
+      const a = Math.PI / 2 - Math.PI * k / 4;
+      P.push([r1 - rc + rc * Math.cos(a), y - rc + rc * Math.sin(a), k < 4 ? hexC : hexB]);
+    }
+    P[0][2] = hexA; P[1][2] = hexC;
+    P.push([rIn, y - gr + 0.002]);
+    return P;
+  }
+  /* LOS DE COPA: la copa CALZA en la cabeza. Su base mide lo que la cabeza
+     a esa altura mas 1,2 cm: mas angosta, la cabeza la atravesaba y asomaba
+     en astillas claras sobre el ala (sobre todo detras, con el sombrero
+     inclinado). Los perfiles se dibujan para una base de 0,232 y se escalan
+     a la de verdad (K); apoyan a 1,62 m, casi derechos (2 grados atras). */
+  const yApoyo = 1.62, INCL = -2;
+  const BASE = radioA(yApoyo - 0.022)[0] + 0.012, K = BASE / 0.232;
+  const esc = (P) => P.map((p) => [p[0] * K, p[1], p[2]]);
+  function sombreroSobre(perfil, o, B, g, silueta) {
+    const [rx, rz] = radioA(yApoyo);
+    torno(B, perfil, Object.assign({ x: 0, y: yApoyo, z: C().cz, M: 40, incl: INCL, sx: 1, sz: rz / rx * 1.01 }, o), g, silueta);
+  }
+  // el ala de un sombrero de copa: la de ala(), escalada, y su cara de abajo hasta dentro de la cabeza
+  const alaK = (r0, r1, y, gr, a, c2, b) => ala(r0 * K, r1 * K, y, gr, a, c2, b, BASE - 0.06);
+
+  /* Desperado (hat5): copa baja de tapa plana (48) con su cinta (60) y el
+     ala ancha y plana (48 arriba, con el filo mas claro, 95). */
+  MOD.hat5 = function (B, g, silueta) {
+    sombreroSobre(esc([
+      [0, 0.155, sw(48)], [0.205, 0.155, sw(48)], [0.215, 0.14, sw(48)], [0.228, 0.05, sw(60)]
+    ]).concat(alaK(0.232, 0.47, 0.012, 0.024, sw(48), sw(95), sw(40))),
+    { alabeo: (az, r) => 0.012 * Math.max(0, (r - 0.25 * K) / 0.2) * Math.cos(2 * az * RAD) }, B, g, silueta);
+  };
+
+  /* Bowler (hat6): la copa redonda (108), la cinta oscura (46) y el ala
+     corta curvada hacia arriba a los costados (51). */
+  MOD.hat6 = function (B, g, silueta) {
+    const copa = [];
+    for (let i = 0; i <= 8; i++) { const t = i / 8 * Math.PI / 2; copa.push([0.232 * Math.sin(t) * (1 + 0.04 * Math.sin(2 * t)), 0.03 + 0.2 * Math.cos(t), sw(108)]); }
+    sombreroSobre(esc(copa.concat([[0.236, 0.052, sw(46)]])).concat(alaK(0.238, 0.34, 0.016, 0.022, sw(51), sw(62), sw(40))),
+      { alabeo: (az, r) => 0.028 * Math.max(0, (r - 0.24 * K) / 0.1) * Math.pow(Math.sin(az * RAD), 2) }, B, g, silueta);
+  };
+
+  /* Tophat (top): la copa alta y apenas acampanada (102), la cinta negra,
+     y el ala (72) con los costados levantados. */
+  MOD.top = function (B, g, silueta) {
+    sombreroSobre(esc([
+      [0, 0.42, sw(102)], [0.235, 0.42, sw(102)], [0.244, 0.405, sw(102)], [0.232, 0.1, 0x0c0c0c]
+    ]).concat(alaK(0.232, 0.37, 0.018, 0.022, sw(72), sw(90), sw(55))),
+    { alabeo: (az, r) => 0.035 * Math.max(0, (r - 0.23 * K) / 0.13) * Math.pow(Math.sin(az * RAD), 2) }, B, g, silueta);
+  };
+
+  /* Fedora: la copa (51) con el hundido de arriba y los pellizcos de
+     delante, la cinta clara (153), y el ala (51) baja delante y alta
+     atras. */
+  MOD.fedora = function (B, g, silueta) {
+    sombreroSobre(esc([
+      [0, 0.18, sw(62)], [0.1, 0.215, sw(51)], [0.19, 0.225, sw(51)], [0.232, 0.18, sw(51)], [0.238, 0.085, sw(153)],
+      [0.24, 0.035, sw(51)]
+    ]).concat(alaK(0.244, 0.41, 0.012, 0.02, sw(51), sw(72), sw(40))), { sz: radioA(yApoyo)[1] / radioA(yApoyo)[0] * 1.03,
+         alabeo: (az, r, y) => {
+           const ala = Math.max(0, (r - 0.245 * K) / 0.16), c2 = Math.cos(az * RAD);
+           // el ala: abajo delante, arriba atras y a los costados; la copa, pellizcada delante
+           return ala * (-0.05 * Math.max(0, c2) + 0.04 * Math.max(0, -c2) + 0.02 * Math.pow(Math.sin(az * RAD), 2)) -
+                  (y > 0.15 && r > 0.12 ? 0.03 * Math.pow(Math.max(0, c2), 3) * (r - 0.12) / 0.12 : 0);
+         } }, B, g, silueta);
+  };
+
+  /* Sombrero (hat9): la copa alta y redondeada, de paja (174 / 204), el
+     ala enorme con el filo alzado, y la guarda roja en zigzag (255, 0, 0)
+     cerca del borde. */
+  MOD.hat9 = function (B, g, silueta) {
+    const s = radioA(yApoyo)[1] / radioA(yApoyo)[0] * 1.01;
+    // la copa: su ultimo punto ES el pie de la cinta (sin repetirlo: un tramo de largo cero le daba vuelta la tinta)
+    const copa = [];
+    for (let i = 0; i < 8; i++) { const t = i / 8 * Math.PI / 2; copa.push([0.2 * Math.pow(Math.sin(t), 0.8) + 0.032 * Math.sin(t), 0.06 + 0.3 * Math.cos(t), sw(204)]); }
+    /* EL ALA SE LEVANTA EN EL FILO, suave (3 cm en los ultimos 22): mas
+       empinado, del lado de la camara su cara de arriba quedaba de espaldas
+       y se veia la tinta de adentro. Y la cara de abajo sigue la MISMA curva
+       que la de arriba, tramo por tramo: recta, en el rulo el ala quedaba
+       gruesa como una rueda. */
+    const alabeo = (az, r) => 0.03 * Math.pow(Math.max(0, (r - 0.45) / 0.22), 2) - 0.015 * Math.max(0, (r - 0.24) / 0.2) * Math.max(0, Math.cos(az * RAD));
+    const radios = [0.235 * K, 0.35, 0.45, 0.52, 0.58, 0.63], gr = 0.024, rc = gr / 2, r1 = 0.655 * K, y = 0.016;
+    const ala2 = radios.map((r) => [r, y, sw(174)]);
+    for (let k = 0; k <= 4; k++) {
+      const a = Math.PI / 2 - Math.PI * k / 4;
+      ala2.push([r1 - rc + rc * Math.cos(a), y - rc + rc * Math.sin(a), k < 4 ? sw(204) : sw(145)]);
+    }
+    for (let k = radios.length - 1; k >= 1; k--) ala2.push([radios[k], y - gr, sw(145)]);
+    ala2.push([BASE - 0.06, y - gr + 0.002]);
+    sombreroSobre(esc(copa.concat([[0.232, 0.06, swc(170, 0, 0)]])).concat(ala2), { alabeo }, B, g, silueta);
+    if (silueta) return;
+    // la guarda: una cinta roja en zigzag sobre el ala
+    B.push(); B.translate(0, yApoyo, C().cz); B.rotateX(INCL * RAD);
+    const kr = B._rgb(swc(255, 0, 0), 1), N = 120, zA = 0.44, zB = 0.57, w = 0.022;
+    const zz = (t) => { const f = (t * 18) % 1; return zA + (zB - zA) * (f < 0.5 ? f * 2 : 2 - f * 2); };
+    // 4 mm sobre la cara de arriba del ala (y = 0,016 mas su alabeo)
+    const P = (t, dr) => { const a = t * 2 * Math.PI, r = zz(t) + dr; return [r * Math.sin(a), 0.023 + alabeo(t * 360, r), s * r * Math.cos(a)]; };
+    let prev = null;
+    for (let i = 0; i <= N * 4; i++) {
+      const t = i / (N * 4), a = P(t, -w), b = P(t, w);
+      const pa = { i: B._vert(a[0], a[1], a[2], 0, 1, 0, kr[0], kr[1], kr[2]), p: a }, pb = { i: B._vert(b[0], b[1], b[2], 0, 1, 0, kr[0], kr[1], kr[2]), p: b };
+      if (prev) { tri(B, prev[0].i, pa.i, pb.i, prev[0].p, pa.p, pb.p, [0, 1, 0]); tri(B, prev[0].i, pb.i, prev[1].i, prev[0].p, pb.p, prev[1].p, [0, 1, 0]); }
+      prev = [pa, pb];
+    }
+    B.pop();
+  };
+
+  /* Headphones: el arco por encima de la cabeza (51) y las dos copas en
+     las orejas (40, con la almohadilla 62 contra la cabeza). */
+  MOD.headphones = function (B, g, silueta) {
+    const c = C(), yC = c.cy + 0.01, zc = c.cz - 0.02;
+    /* EL ARCO: una curva de verdad (60 tramos), el ovalo de la cabeza 3 cm
+       por fuera en el plano de las copas, de ecuador a ecuador pasando por la
+       coronilla: baja VERTICAL y entra por arriba en el centro de cada copa.
+       Su seccion, un rectangulo de cantos redondos; la tinta, la misma
+       seccion g mas grande en cada anillo. Hecho de pocos tramos rectos y
+       entrando en angulo, su contorno salia quebrado y con un escalon suelto
+       sobre la copa. */
+    /* Va a 2,2 cm de la cabeza: a 3, su tinta llegaba a 2 mm de la tapa de
+       la copa por dentro y la atravesaba en rayitas negras. Termina a 84
+       grados, adentro de la copa; y su tinta se afina hasta el tamaño del
+       arco justo donde entra (76 grados): entera, formaba un collar con dos
+       puntitas sobre el borde de la copa. */
+    const N = 60, d = 0.022, W = 0.022, T = 0.008, TOPE = 84;
+    const X = c.rx + d, Y = c.ry + d, esq = [];
+    for (let k = 0; k < 12; k++) {
+      const a = k / 12 * 2 * Math.PI, cs = Math.cos(a), sn = Math.sin(a);
+      esq.push([Math.sign(cs) * Math.pow(Math.abs(cs), 0.4), Math.sign(sn) * Math.pow(Math.abs(sn), 0.4)]);   // un rectangulo redondeado
+    }
+    const anillos = [];
+    for (let i = 0; i <= N; i++) {
+      const thG = -TOPE + 2 * TOPE * i / N, th = thG * RAD, s = Math.sin(th), co = Math.cos(th);
+      const gE = silueta ? g * (1 - suave(73, 77.5, Math.abs(thG))) : 0;
+      const p = [X * s, c.cy + Y * co, zc];
+      const n = uni([s / X, co / Y, 0]);        // hacia fuera del arco
+      anillos.push(esq.map(([u, v]) => { const r = u * (T + gE), z = v * (W + gE); return [p[0] + n[0] * r, p[1] + n[1] * r, p[2] + z]; }));
+    }
+    if (silueta) Hh.barridoTinta(B, anillos); else Hh.barrido(B, anillos, sw(51));
+    /* LAS COPAS: almohadillas redondeadas, encastradas 3 cm en la cabeza.
+       Con la tapa de atras en su superficie, la cabeza se curva y entre el
+       borde de la copa y ella quedaba una medialuna clara. Y el costado se
+       cierra hacia la cabeza (la almohadilla, 62): un cilindro recto metido
+       en la cabeza curva dejaba su borde de abajo corriendo rasante sobre
+       ella, y su tinta acababa en una colita negra en punta. */
+    for (const s of [1, -1]) {
+      const x0 = s * (c.rx - 0.03);
+      pieza(B, [[0, 0.077, sw(40)], [0.05, 0.074, sw(40)], [0.074, 0.064, sw(40)], [0.087, 0.047, sw(40)], [0.088, 0.034, sw(62)],
+                [0.08, 0.016, sw(62)], [0.066, 0.004, sw(62)], [0.05, 0.0, sw(62)], [0, 0.0]],
+            [x0, yC, zc], [s, 0, 0], sw(40), g, silueta, 28);
+      /* LA JUNTA: la linea de la copa donde apoya en la cabeza. La silueta
+         solo sale donde la copa se recorta contra el fondo; contra la cabeza,
+         la almohadilla se juntaba sin trazo y el redondo se veia incompleto,
+         flotando. En el SWF la copa lleva su linea entera. La almohadilla
+         entra en la cabeza a 8,1-8,6 cm del eje: 14,4 grados vista desde el
+         centro de la cabeza. */
+      if (!silueta) junta(B, [s * c.rx, yC - c.cy, zc - c.cz], 13.6, 16.6);
+    }
+  };
+
+  /* UNA JUNTA: un anillo negro pintado sobre la cabeza, entre los angulos
+     b0 y b1 (grados) alrededor de la direccion 'eje' (desde el centro de la
+     cabeza), 2,5 mm por encima de ella. Es el trazo del SWF donde una pieza
+     apoya en la cabeza y no hay silueta que lo dibuje. */
+  function junta(B, eje, b0, b1, hex) {
+    const cc = C(), e = uni(eje), K2 = 56;
+    const u = uni(Math.abs(e[1]) < 0.9 ? cruz(e, [0, 1, 0]) : cruz(e, [1, 0, 0])), v = cruz(e, u);
+    const k = B._rgb(hex === undefined ? NEGRO : hex, 1);
+    const punto = (fi, b) => {
+      const sb = Math.sin(b * RAD), cb = Math.cos(b * RAD);
+      const d = [0, 1, 2].map((i) => e[i] * cb + (u[i] * Math.cos(fi) + v[i] * Math.sin(fi)) * sb);
+      const s2 = 1 / Math.sqrt(Math.pow(d[0] / cc.rx, 2) + Math.pow(d[1] / cc.ry, 2) + Math.pow(d[2] / cc.rz, 2));
+      const p = [d[0] * s2, cc.cy + d[1] * s2, cc.cz + d[2] * s2];
+      const n = uni([p[0] / (cc.rx * cc.rx), (p[1] - cc.cy) / (cc.ry * cc.ry), (p[2] - cc.cz) / (cc.rz * cc.rz)]);
+      return { p: [p[0] + n[0] * 0.0025, p[1] + n[1] * 0.0025, p[2] + n[2] * 0.0025], n };
+    };
+    let prev = null;
+    for (let i = 0; i <= K2; i++) {
+      const fi = i / K2 * 2 * Math.PI, a = punto(fi, b0), b = punto(fi, b1);
+      const par = [a, b].map((q) => ({ i: B._vert(q.p[0], q.p[1], q.p[2], q.n[0], q.n[1], q.n[2], k[0], k[1], k[2], U.LUZ_PLANA), p: q.p, n: q.n }));
+      if (prev) {
+        tri(B, prev[0].i, par[0].i, par[1].i, prev[0].p, par[0].p, par[1].p, prev[0].n);
+        tri(B, prev[0].i, par[1].i, prev[1].i, prev[0].p, par[1].p, prev[1].p, prev[0].n);
+      }
+      prev = par;
+    }
+  }
+
+  /* Soldier Helm (helmet1): el casco de 87, grueso, hasta la frente por
+     delante y hasta la mitad de la oreja por detras, con el reborde
+     acampanado (78) y un remache al costado (102). */
+  MOD.helmet1 = function (B, g, silueta) {
+    const lo = (az) => lerp(8, 30, Math.pow((1 + Math.cos(az * RAD)) / 2, 1.4));
+    casquete(B, { lo, d: (az, el) => 0.03 + 0.012 * suave(60, 90, el) + 0.018 * (1 - suave(0, 12, el - lo(az))),
+                  color: (az, el) => (el - lo(az) < 5 ? sw(78) : sw(87)), M: 48, N: 14 }, g, silueta);
+    if (silueta) return;
+    for (const s of [1, -1]) {
+      const p = sobre(s * 100, 20, 0.045);
+      pieza(B, [[0, 0.01], [0.016, 0.006], [0.018, 0]], p, uni(sub(p, [0, C().cy, C().cz])), sw(102), 0, false, 10);
+    }
+  };
+
+  /* Blast Helm (helmet3): el casco (102/69) con la pantalla de soldar
+     levantada encima de la frente -una caja negra remachada- y la
+     correa de los costados (78). */
+  MOD.helmet3 = function (B, g, silueta) {
+    const lo = (az) => lerp(4, 24, Math.pow((1 + Math.cos(az * RAD)) / 2, 1.2));
+    casquete(B, { lo, d: (az, el) => 0.032 + 0.01 * suave(60, 90, el), color: (az, el) => (el - lo(az) < 4 ? sw(69) : sw(102)), M: 48, N: 14 }, g, silueta);
+    /* la pantalla levantada: una placa negra gruesa que sigue el casco por
+       delante y arriba (subida, como se lleva sin soldar), de canto a canto
+       entre las bisagras */
+    casquete(B, { a0: -38, a1: 38, lo: () => 34, hi: () => 64, d: () => 0.078, dentro: 0.036, hex: sw(34), canto: sw(22), M: 16, N: 6 }, g, silueta);
+    if (silueta) return;
+    // sus remaches y las bisagras a los costados
+    for (const [az, el] of [[-28, 40], [28, 40], [-28, 58], [28, 58]]) {
+      const p = sobre(az, el, 0.078);
+      pieza(B, [[0, 0.008], [0.011, 0.004], [0.012, 0]], p, uni(sub(p, centro())), sw(92), 0, false, 8);
+    }
+    for (const s of [1, -1]) {
+      const p = sobre(s * 42, 42, 0.05);
+      pieza(B, [[0, 0.03], [0.03, 0.02], [0.032, 0]], p, uni(sub(p, centro())), sw(78), 0, false, 12);
+    }
+  };
+
+  Object.assign(Acc.NOMBRES, {
+    hat1: 'SWAT Cap', hat2: 'Leon Cap', hat3: 'Sweatband', hat4: 'Ballcap', hat5: 'Desperado', hat6: 'Bowler',
+    headphones: 'Headphones', top: 'Tophat', fedora: 'Fedora', hat9: 'Sombrero', helmet1: 'Soldier Helm', helmet3: 'Blast Helm'
+  });
+
+  /* =============================================================
+     LO QUE TAPA CADA PRENDA: (az, el, n) -> si ese punto del ovalo queda
+     debajo, con un margen de 6 grados. Ahi el contorno de la cabeza no se
+     adelanta (chars.js, geoDe): la prenda lo cubre con su profundidad de
+     verdad y el trazo del ovalo no la cruza.
+     ============================================================= */
+  const MARGEN = 6;
+  const CUBRE = Acc.CUBRE = Acc.CUBRE || {};
+  const desde = (lo) => (az, el) => el > lo(az) - MARGEN;
+  const entre = (lo, hi) => (az, el) => el > lo(az) - MARGEN && el < hi(az) + MARGEN;
+  CUBRE.hat1 = desde(bordeGorra(21, 5));
+  CUBRE.hat4 = desde(bordeGorra(20, 4));
+  CUBRE.hat2 = desde(bordeGorra(24, 0));
+  CUBRE.hat3 = entre((az) => lerp(46, 22, (1 + Math.cos(az * RAD)) / 2), (az) => lerp(46, 22, (1 + Math.cos(az * RAD)) / 2) + 17);
+  // los de copa: desde el ala (inclinada hacia atras, un poco mas baja por detras)
+  for (const id of ['hat5', 'hat6', 'top', 'fedora', 'hat9']) CUBRE[id] = (az, el) => el > elDeY(yApoyo) - 4 - 4 * Math.max(0, -Math.cos(az * RAD)) - MARGEN;
+  CUBRE.helmet1 = desde((az) => lerp(8, 30, Math.pow((1 + Math.cos(az * RAD)) / 2, 1.4)));
+  CUBRE.helmet3 = desde((az) => lerp(4, 24, Math.pow((1 + Math.cos(az * RAD)) / 2, 1.2)));
+  /* los auriculares: las copas y el arco. Las copas salen 5,6 cm de la
+     cabeza y de costado tapan su contorno bastante mas alla de donde apoyan:
+     con 20 grados, el contorno adelantado de la cabeza les pasaba por encima
+     del borde de abajo y se cortaba de golpe (una colita negra suelta). */
+  /* La cuenta: un punto del contorno a un angulo a del eje de la copa queda
+     detras de ella si 0,378 cos a + 0,088 sen a > 0,33 (la tapa a 37,8 cm
+     del centro, radio 8,8, la cabeza 33): hasta unos 45 grados. Con 50 de
+     margen; el arco, a 2,2 cm de la cabeza y 4,4 de ancho, tapa una franja
+     de |n_z| < 0,35 de costado. */
+  CUBRE.headphones = (az, el, n) => Math.abs(n[0]) > Math.cos(50 * RAD) || (n[1] > -0.1 && Math.abs(n[2]) < 0.35);
+
+  global.Prendas3D = { casquete, torno, visera, pieza, sobre, sw, swc };
+})(window);
 </script>
 <script>
 /* ---- js/golpes_swf.js ---- */
@@ -16505,6 +17442,8 @@ window.CIUDAD_SWF = {"ancho":860,"alto":540,"capas":{"fondo":{"src":"data:image/
       /* modDmg = 1 + STR/15 y modArmor = 1 + END/15 (Actor.danoSWF). */
       modDmg: 1 + est('str', 0) / 15,
       modArmor: 1 + est('end', 0) / 15,
+      /* myHeadArmor / myBodyArmor (refreshArmor): lo que suma su ropa. */
+      armadura: Prendas.armadura(Prendas.atuendoDe(ficha)),
       vivo: true,
       muerte: 0,
       aturdido: 0,
@@ -16676,8 +17615,9 @@ window.CIUDAD_SWF = {"ancho":860,"alto":540,"capas":{"fondo":{"src":"data:image/
      vestido, en el mismo sitio y con el mismo animador -la fase del paso, la
      accion en curso-, y el arma y la funda se vuelven a colgar de los huesos
      nuevos. Devuelve si cambio algo. */
-  Actor.vestir = function (A, ropa, mascara) {
-    const tipo = Chars.vestido(Chars.base(A.tipo), ropa, mascara);
+  Actor.vestir = function (A, at) {
+    const tipo = Chars.vestido(Chars.base(A.tipo), at);
+    A.armadura = Prendas.armadura(Prendas.atuendoDe(Chars.TIPOS[tipo]));
     if (tipo === A.tipo) return false;
     const viejo = A.cuerpo, padre = viejo.grupo.parent;
     const nuevo = Chars.crear(tipo);
@@ -17182,9 +18122,29 @@ window.CIUDAD_SWF = {"ancho":860,"alto":540,"capas":{"fondo":{"src":"data:image/
        ya mataba de un golpe a un grunt de nivel 1 (vida 7); en el SWF
        hacen falta dos.
      ============================================================= */
+  /* LA ARMADURA VA PRIMERO (checkDamage): se RESTA del daño del arma
+     antes que cualquier multiplicador. En la cabeza, sombrero + mascara +
+     boca; en el cuerpo, la camisa (Prendas.armadura). Con perkArmorPierce
+     el atacante la atraviesa, salvo que la pieza que manda -el sombrero en
+     la cabeza, la camisa en el cuerpo- sea 'heavy':
+       if (!havePerk('perkArmorPierce', atacante) || myHat.myWeight == 'heavy')
+         r3 -= myHeadArmor
+     Y lo que quede, nunca por debajo de 0 ('if (r3 < 0) r3 = 0'). Un
+     chaleco de 3 deja una Beretta (7) en 4; uno de metal (10) para las
+     pistolas enteras. Con 0 el golpe no entra: rebota (Actor.golpear). */
   Actor.danoSWF = function (A, base, quien, info) {
     let d = base;
     const arma = info && info.arma, f = arma && arma.ficha;
+    const Ar = A.armadura;
+    if (Ar) {
+      const perfora = !!(quien && Progreso.perk(quien, 'perkArmorPierce'));
+      if (info && info.cabeza) { if (!perfora || Ar.pesoCasco === 'heavy') d -= Ar.cabeza; }
+      else if (!perfora || Ar.pesoCamisa === 'heavy') d -= Ar.cuerpo;
+    }
+    /* perkShotgunDamage (61107..61201): escopeta a menos de 120 px, x1,3. */
+    if (f && f.cat === 'shotgun' && quien && Progreso.perk(quien, 'perkShotgunDamage') &&
+        Math.hypot(A.x - quien.x, (A.z || 0) - (quien.z || 0)) < 120 * Weapons.PX) d *= 1.3;
+    if (d < 0) d = 0;
     if (f && quien && arma.id === 'puños') d *= (quien.modDmg || 1) / 3;
     if (info && info.enRango === false) d *= 0.5;
     d *= (A.modArmor || 1);
@@ -17194,9 +18154,6 @@ window.CIUDAD_SWF = {"ancho":860,"alto":540,"capas":{"fondo":{"src":"data:image/
        lo cuelga de perkStunProof1 y perkImmuneLowDmg no se mira en
        ningun sitio: se hace como el bytecode. */
     if (Progreso.perk(A, 'perkStunProof1') && d > 0 && d <= 6) d = 1;
-    /* perkShotgunDamage (61107..61201): escopeta a menos de 120 px, x1,3. */
-    if (f && f.cat === 'shotgun' && quien && Progreso.perk(quien, 'perkShotgunDamage') &&
-        Math.hypot(A.x - quien.x, (A.z || 0) - (quien.z || 0)) < 120 * Weapons.PX) d *= 1.3;
     /* perkHeadshotCrits (61828..62881): en la cabeza, x r18, al azar
        entre 1,2 y 2 -r18 = randomNumber(120, 200) / 100-, salvo contra
        un principal (amSpecial) o con arma blanca, que r18 = 1. */
@@ -17290,6 +18247,17 @@ window.CIUDAD_SWF = {"ancho":860,"alto":540,"capas":{"fondo":{"src":"data:image/
       if (A.vida < 50 && !A.jefe) { A.vida = 0; dano = 1; remate = true; }
     }
     dano = Actor.danoSWF(A, dano, quien, info);
+    /* LA ARMADURA LO PARO ENTERO (checkDamage con r3 = 0): ni vida, ni
+       sangre, ni aturdimiento, ni derribo. Suena 'blockmelee' si fue un
+       golpe cuerpo a cuerpo y 'ricochet' si fue un tiro (el 'clang' es de
+       las prendas que se rompen, que en la tienda no hay), y saltan
+       chispas donde pego. */
+    if (dano <= 0 && !remate) {
+      if (info) { info.bloqueado = true; info.blindado = true; }
+      Sonido.tocar(fi && fi.tipo === 'melee' ? 'bloqueo' : 'rebote', { x: A.x, cam: Game.camX, vol: 0.6 });
+      if (global.Combat && Combat.chispas) Combat.chispas(hx, hy, A.z || 0);
+      return false;
+    }
     A.vida -= dano;
     if (remate) A.vida = Math.min(A.vida, 0);
     saludGuardia(A, quien);
@@ -20576,17 +21544,25 @@ window.RETICULA_SWF = {"esc":3.0,"corchete":{"png":"data:image/png;base64,iVBORw
      dentro -en el original la lista viene ordenada de mas fuerte a
      mas flojo- pero el ORDEN de las escuadras no se toca: es el
      'arenanum' y es lo que marca el ritmo de la oleada. */
+  /* El personaje del SWF que hace cada tipo: con el se elige su ropa. */
+  const PERSONAJE = { grunt: 'civ', agente: 'agent', agenteClasico: 'agent', soldat: 'agent2', agenteMk0: 'agent3' };
   Waves.montarCola = function (W, n) {
     const esc = [];
     for (let e = 1; e <= Waves.ESCUADRAS; e++) {
       const lista = Waves.listaEscuadra(n, e);
+      // el inLevel de equipLoadout: el nivel de la escuadra (ver arena_1_waves)
+      const nivel = Math.max(1, Waves.nivelDe(n) - Math.floor(e / 5));
       const grupo = [];
       for (let i = 0; i < lista.length; i++) {
         let tipo = T[lista[i]] || 'grunt';
         /* El agent sale en sus dos versiones del SWF: 'agent', con las
            gafas rojas, y 'agent_classic', con las negras. */
         if (tipo === 'agente' && W.rng() < 0.5) tipo = 'agenteClasico';
-        grupo.push({ tipo: tipo, arma: armaDe(W, n, e) });
+        const arma = armaDe(W, n, e);
+        /* Y SU ROPA (equipLoadout, ver prendas.js): gorras, anteojos,
+           pañuelos y chalecos que van apareciendo al subir de nivel. */
+        if (global.Prendas) tipo = Chars.vestido(tipo, Prendas.cargaEnemigo(PERSONAJE[tipo], nivel, W.rng));
+        grupo.push({ tipo: tipo, arma: arma });
       }
       for (let i = grupo.length - 1; i > 0; i--) {
         const j = Math.floor(W.rng() * (i + 1));
@@ -20597,6 +21573,14 @@ window.RETICULA_SWF = {"esc":3.0,"corchete":{"png":"data:image/png;base64,iVBORw
     return esc;
   };
 
+  /* Las escuadras de la oleada n, montadas antes de soltarla (al salir el
+     cartel de WAVE n): las mallas de los vestidos se arman de a una por
+     cuadro (Chars.precalentar), las de la primera escuadra primero. */
+  Waves.preparar = function (W, n) {
+    W.previa = { n: n, esc: Waves.montarCola(W, n) };
+    Chars.encargar([].concat(...W.previa.esc.map((g) => g.map((q) => q.tipo))));
+  };
+
   Waves.empezar = function (W, n) {
     W.oleada = n;
     /* EL CERROJO DE LA PUERTA 0 (la de la armeria) y del panel: se echa
@@ -20605,7 +21589,8 @@ window.RETICULA_SWF = {"esc":3.0,"corchete":{"png":"data:image/png;base64,iVBORw
        arena_1_START del activador. Entre el ultimo muerto y esa ventana
        no se puede ni cruzar ni pulsar. */
     W.cerrojo = true;
-    W.escuadras = Waves.montarCola(W, n);
+    if (!W.previa || W.previa.n !== n) Waves.preparar(W, n);
+    W.escuadras = W.previa.esc; W.previa = null;
     W.iEsc = 0;
     W.cola = W.escuadras[0].slice();     // la escuadra que esta saliendo
     W.total = Waves.fichaDe(n).n;
@@ -21347,6 +22332,9 @@ window.RETICULA_SWF = {"esc":3.0,"corchete":{"png":"data:image/png;base64,iVBORw
     puno:          { bus:'juego', vol:0.55, guardia: 40, f:[['S_Melee_Blunt7',1.023,0.076], ['S_Melee_Blunt8',0.684,0.074]] },
     bloqueo:       { bus:'juego', vol:0.70, guardia: 60, f:[['S_Melee_Block1',1.281,0.090], ['S_Melee_Block2',1.185,0.090], ['S_Melee_Block3',1.086,0.090]] },
     metal:         { bus:'juego', vol:0.55, guardia: 50, f:[['S_Gun_Ricochet',1.116,0.073], ['S_Clang1',0.559,0.072], ['S_Clang2',0.542,0.075]] },
+    /* 'ricochet' del SWF: S_Gun_Ricochet a x0,6 (returnVolume). Es el tiro
+       que la armadura para entero (checkDamage, Actor.golpear). */
+    rebote:        { bus:'juego', vol:0.60, guardia: 50, f:[['S_Gun_Ricochet',1.116,0.073]] },
     tac:           { bus:'juego', vol:0.60, guardia: 55, f:[['S_MetalBang',1.072,0.086], ['S_Clang3',0.396,0.072]] },
     caida:         { bus:'juego', vol:0.70, guardia: 70, f:[['S_Land1',0.688,0.076], ['S_Land2',0.726,0.078], ['S_Land3',0.675,0.090]] },
     caidaDura:     { bus:'juego', vol:0.85, guardia: 90, f:[['S_LandHard',0.907,0.074]] },
@@ -22962,8 +23950,7 @@ window.ICONOS_SWF = {
       Progreso.aplicar(Game.jugador, Progreso.ficha, true);
       Progreso.ganado.xp = 0; Progreso.ganado.cash = 0;
       // la ropa comprada que lleva puesta (tienda.js)
-      const R = Progreso.ficha.ropa;
-      if (R && (R.shirt || R.mask)) Actor.vestir(Game.jugador, R.shirt, R.mask);
+      Actor.vestir(Game.jugador, Progreso.atuendo());
     }
     HUD.nombre(Chars.TIPOS[Game.jugador.tipo].nombre);
     /* El retrato se pinta con el mismo muñeco y el mismo
@@ -23457,6 +24444,7 @@ window.ICONOS_SWF = {
   Game.paso = function (dt) {
     if (!Game.enMarcha || Game.pausa) return;
     Game.tiempo += dt;
+    Chars.precalentar();         // una malla de vestido por cuadro, si hay encargadas
 
     const jug = Game.jugador;
     const W = Game.olas;
@@ -23556,6 +24544,9 @@ window.ICONOS_SWF = {
       if (Arena.panel && Arena.panel.tocado) {
         W.estado = 'anuncio';
         const n = W.oleada + 1;
+        /* las escuadras se montan YA, con su ropa: las mallas de los
+           vestidos se arman durante el cartel (Chars.precalentar) */
+        Waves.preparar(W, n);
         Cartel.espera(10);
         Cartel.lines('WAVE ' + n, 90, () => Game.soltarOleada(n));
       }
@@ -24525,9 +25516,10 @@ window.ICONOS_SWF = {
                    retoma por ahi) */
                 myWeapons: [null, null], ranura: 0, arenaOla: 0,
                 /* la ropa de la tienda (tienda.js): lo comprado y lo puesto en
-                   cada ranura del SWF que tenemos -mask y shirt-. Queda en la
-                   ficha: no se pierde al morir, como el dinero. */
-                ropa: { tiene: [], mask: null, shirt: null } };
+                   cada ranura (Prendas.RANURAS: traje, shirt, mask, hat,
+                   mouth). Queda en la ficha: no se pierde al morir, como el
+                   dinero. */
+                ropa: Progreso.ropaVacia() };
     STATS.forEach((k) => { F['stat' + k] = 0; });
     SKILLS.forEach((k) => { F['skill' + k] = 0; });
     Progreso.assignPerks(F);
@@ -24540,9 +25532,29 @@ window.ICONOS_SWF = {
     const G = global.U && U.store ? U.store.get(CLAVE, null) : null;
     const F = Progreso.nueva();
     if (G && typeof G === 'object') for (const k in F) if (k !== 'perks' && G[k] !== undefined) F[k] = G[k];
+    F.ropa = Progreso.ropaAlDia(F.ropa);
     Progreso.assignPerks(F);
     Progreso.ficha = F;
     return F;
+  };
+  Progreso.ropaVacia = () => ({ tiene: [], traje: null, shirt: null, mask: null, hat: null, mouth: null });
+  /* Las partidas de antes guardaban solo mask y shirt, y en shirt iba el
+     traje de agente: pasa a su ranura (traje) y la camisa queda para los
+     chalecos. */
+  Progreso.ropaAlDia = function (R) {
+    const N = Progreso.ropaVacia();
+    if (!R || typeof R !== 'object') return N;
+    N.tiene = Array.isArray(R.tiene) ? R.tiene.filter((id) => global.Prendas && Prendas.de(id)) : [];
+    for (const r of ['traje', 'shirt', 'mask', 'hat', 'mouth']) {
+      const id = R[r], c = global.Prendas && Prendas.de(id);
+      if (c && N.tiene.indexOf(id) >= 0) N[c.cat] = id;
+    }
+    return N;
+  };
+  /* Lo que lleva puesto el jugador, para Actor.vestir. */
+  Progreso.atuendo = function () {
+    const R = (Progreso.ficha && Progreso.ficha.ropa) || Progreso.ropaVacia();
+    return { traje: R.traje, shirt: R.shirt, mask: R.mask, hat: R.hat, mouth: R.mouth };
   };
   Progreso.guardar = function () {
     const F = Progreso.ficha;
@@ -24974,24 +25986,38 @@ window.TIENDA_SWF = {"baldosa": {"pistola": "data:image/webp;base64,UklGRowUAABX
   /* Las categorias son los botones de mySubMenu del SWF, en su orden:
      buttonMain (armas largas), buttonSide (la pistola), el mismo
      buttonSide en su fotograma 'melee' (el cuchillo) y buttonHat,
-     buttonMask, buttonMouth y buttonShirt. De la ropa se vende lo que
-     llevan los enemigos y ya existe en 3D (accesorios.js, ropa.js): sus
-     mascaras y sus trajes. Cascos y boca siguen vacios, como las casillas
-     del SWF cuando no hay nada. */
+     buttonMask, buttonMouth y buttonShirt. La ropa sale del catalogo del
+     SWF (prendas.js): lo que ya esta modelado en 3D, en el orden de
+     createArmor; en ROPA, primero los trajes de agente y despues los
+     chalecos. */
   const SECCIONES = [
     ['ARMAS LARGAS', ['fusil', 'subfusil', 'escopeta', 'escopeta97']],
     ['PISTOLAS', ['pistola', 'revolver', 'magnum']],
     ['CUERPO A CUERPO', ['cuchillo', 'tubo', 'bate', 'megachette']],
-    ['CASCOS', []], ['MASCARAS', ['agent1_mask', 'agent1_mask_b', 'agent2_mask', 'agent3_mask']],
-    ['BOCA', []], ['ROPA', ['agent', 'agent2', 'agent3']]
+    ['CASCOS', ['hat']], ['MASCARAS', ['mask']], ['BOCA', ['mouth']], ['ROPA', ['traje', 'shirt']]
   ];
+  const ROPA_DESDE = 3;
   /* MadnessStoreItems pinta la grilla con casilleros fijos (6 x 3 de
      80 x 105 px en la pantalla de 800 x 600: cada casilla es el 10 % del
-     ancho). Aca van dos filas de tres -la categoria mas larga tiene
-     cuatro-, y asi la casilla queda del mismo tamaño que en el SWF. */
+     ancho). Aca van dos filas de tres, y asi la casilla queda del mismo
+     tamaño que en el SWF; lo que no entra va en paginas (pagePrev /
+     pageNext del SWF). */
   const CASILLAS = 6;
-  const SECCION = {};
-  SECCIONES.forEach(([, ids], i) => ids.forEach((id) => { SECCION[id] = i; }));
+  let _ids = null;
+  function idsDe(i) {
+    if (!_ids) {
+      _ids = SECCIONES.map(([, L], k) => (k < ROPA_DESDE ? L
+        : [].concat(...L.map((cat) => Object.keys(Prendas.CAT).filter((id) => Prendas.CAT[id].cat === cat && Prendas.modelada(id))))));
+    }
+    return _ids[i];
+  }
+  const SECCION = new Proxy({}, { get: (o, id) => {
+    for (let i = 0; i < SECCIONES.length; i++) if (idsDe(i).indexOf(id) >= 0) return i;
+    return undefined;
+  } });
+  const paginas = (i) => Math.max(1, Math.ceil(idsDe(i).length / CASILLAS));
+  // la pagina de cada categoria; al elegir algo, la suya
+  const paginaDe = (id) => Math.floor(Math.max(0, idsDe(SECCION[id]).indexOf(id)) / CASILLAS);
 
   /* LOS DATOS DEL SWF: ItemGenerator.createWeapon, tal cual (el daño es
      el mismo que usa el juego: Weapons.CAT.dano). mySpread es lo que el
@@ -25023,34 +26049,19 @@ window.TIENDA_SWF = {"baldosa": {"pistola": "data:image/webp;base64,UklGRowUAABX
     megachette: ['Megachette', 'Megachette', 9, 130, 0, 0,
       'This mighty hack-n-slasher resembles the Full Tang of a bladed weapon, but with a tremendous amount of heft for that extra cleaving power.']
   };
-  /* LA ROPA DEL SWF: ItemGenerator.createArmor, tal cual -myName, myCat,
-     myArmor, myWeight y myPrice-, y la descripcion de su categoria. Los
-     trajes de agente no se venden en el SWF (son el cuerpo del agente,
-     'Parts - Body'): llevan precio nuestro, el de las mascaras del agente.
-     Sus baldosas salen de madness_item_portrait con la prenda dentro
-     (ropa_swf.js, herramientas/swf/iconos_ropa.py). */
-  const ROPA = {
-    agent1_mask:   ['Agent Shades', 'mask', 0, 'none', 900, 'LAS ROJAS DEL AGENTE'],
-    agent1_mask_b: ['Agent Shades', 'mask', 0, 'none', 900, 'LAS NEGRAS DEL AGENTE CLASICO'],
-    agent2_mask:   ['ATP Mask', 'mask', 0.5, 'light', 1200, 'LA DEL AGENTE MK1'],
-    agent3_mask:   ['OBSV Goggles', 'mask', 0, 'none', 900, 'LAS DEL AGENTE MK0'],
-    agent:  ['Agent Suit', 'shirt', 0, 'none', 900, 'EL DEL AGENTE'],
-    agent2: ['Agent Suit Mk1', 'shirt', 0, 'none', 1200, 'EL DEL AGENTE MK1, CON ARNES'],
-    agent3: ['Agent Suit Mk0', 'shirt', 0, 'none', 1200, 'EL DEL AGENTE MK0, CON BANDOLERA']
-  };
-  const DESC_ROPA = {
-    mask: "They couldn't see your eyes before, but now you can be extra certain of it.",
-    shirt: "Your head isn't the only vital point on your body that needs covering."
-  };
-  /* Para PONERSE algo con peso hace falta su ventaja (MadnessStoreItems:
+  /* LA ROPA DEL SWF: el catalogo de createArmor (prendas.js) -myName,
+     myCat, myArmor, myWeight y el precio de la tienda, que es myPrice +
+     myArmor x 100-, y la descripcion de su categoria. Sus baldosas salen
+     de madness_item_portrait con la prenda dentro (ropa_swf.js,
+     herramientas/swf/iconos_ropa.py).
+     Para PONERSE algo con peso hace falta su ventaja (MadnessStoreItems:
      light -> perkArmor1, med -> perkArmor2, heavy -> perkArmor3); sin ella
      el boton dice por que no. Comprar se puede igual. */
-  const PERK_PESO = { light: ['perkArmor1', 'ARMOR 1'], med: ['perkArmor2', 'ARMOR 2'], heavy: ['perkArmor3', 'ARMOR 3'] };
-  const esRopa = (id) => !!ROPA[id];
-  const fichaRopa = () => (global.Progreso && Progreso.ficha && Progreso.ficha.ropa) || { tiene: [], mask: null, shirt: null };
+  const esRopa = (id) => !!Prendas.de(id);
+  const fichaRopa = () => (global.Progreso && Progreso.ficha && Progreso.ficha.ropa) || Progreso.ropaVacia();
   const tieneRopa = (id) => fichaRopa().tiene.indexOf(id) >= 0;
-  const puesta = (id) => esRopa(id) && fichaRopa()[ROPA[id][1]] === id;
-  const faltaPerk = (id) => { const k = PERK_PESO[ROPA[id][3]]; return k && !Progreso.perk(Game.jugador, k[0]) ? k[1] : null; };
+  const puesta = (id) => esRopa(id) && fichaRopa()[Prendas.de(id).cat] === id;
+  const faltaPerk = (id) => { const k = Prendas.PERK_PESO[Prendas.de(id).peso]; return k && !Progreso.perk(Game.jugador, k[0]) ? k[1] : null; };
 
   /* Las barras, contra el extremo del catalogo del SWF: daño 12 (Colt),
      alcance 200 (AR-15), dispersion 2..10 (Colt..Snub, se invierte) y
@@ -25179,7 +26190,7 @@ window.TIENDA_SWF = {"baldosa": {"pistola": "data:image/webp;base64,UklGRowUAABX
     skill: ['Pistol', 'SMG', 'Rifle', 'Shotgun', 'Melee', 'Unarmed']
   };
 
-  const item = (id) => (ROPA[id] ? { id: id, precio: ROPA[id][4] } : Waves.TIENDA.find((t) => t.id === id));
+  const item = (id) => (esRopa(id) ? { id: id, precio: Prendas.de(id).precio } : Waves.TIENDA.find((t) => t.id === id));
   const T = () => global.TIENDA_SWF || { baldosa: {}, pestana: [] };
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
@@ -25216,9 +26227,10 @@ window.TIENDA_SWF = {"baldosa": {"pistola": "data:image/webp;base64,UklGRowUAABX
            '"><img src="' + src + '" alt="' + SECCIONES[i][0] + '"></button>';
     });
     h += '</div><div class="baldosas">';
-    const ids = SECCIONES[Tienda.cat][1];
+    const ids = idsDe(Tienda.cat), np = paginas(Tienda.cat);
+    const pg = Math.min(np - 1, Tienda.lpag[Tienda.cat] || 0);
     for (let n = 0; n < CASILLAS; n++) {
-      const id = ids[n], it = id && item(id);
+      const id = ids[pg * CASILLAS + n], it = id && item(id);
       if (!it) { h += '<div class="bald vacia"><img src="' + (TS.vacia || '') + '" alt=""></div>'; continue; }
       const cl = ['bald'], ropa = esRopa(id), suya = ropa ? tieneRopa(id) : jug && jug.arma.id === id;
       if (W && W.dinero < it.precio && !suya) cl.push('cara');
@@ -25226,9 +26238,15 @@ window.TIENDA_SWF = {"baldosa": {"pistola": "data:image/webp;base64,UklGRowUAABX
       h += '<button class="' + cl.join(' ') + '" data-id="' + id + '"><img src="' + img + '" alt="">' +
            (id === Tienda.sel ? '<img class="marco" src="' + TS.sel + '" alt="">' : '') +
            ((ropa ? puesta(id) : suya) ? '<img class="marco" src="' + TS.estrella + '" alt="">' : '') +
-           '<b>' + esc(ropa ? ROPA[id][0] : SWF[id][0]) + '</b><em>' + (ropa && suya ? 'TUYA' : '$' + it.precio) + '</em></button>';
+           '<b>' + esc(ropa ? Prendas.de(id).nombre : SWF[id][0]) + '</b><em>' + (ropa && suya ? 'TUYA' : '$' + it.precio) + '</em></button>';
     }
-    $('tdLista').innerHTML = h + '</div>';
+    h += '</div>';
+    // pagePrev / pageNext: solo si la categoria no entra en una pagina
+    if (np > 1) {
+      h += '<div class="tdPags"><button data-lpag="-1"' + (pg > 0 ? '' : ' disabled') + '>&#9664;</button><span>PAGE ' + (pg + 1) + ' / ' + np +
+           '</span><button data-lpag="1"' + (pg < np - 1 ? '' : ' disabled') + '>&#9654;</button></div>';
+    }
+    $('tdLista').innerHTML = h;
   }
 
   /* Damage / Range / Accuracy / Ammo como las cuatro filas del SWF. */
@@ -25260,8 +26278,10 @@ window.TIENDA_SWF = {"baldosa": {"pistola": "data:image/webp;base64,UklGRowUAABX
      descripcion de la categoria, y en las filas Armor y Weight (myArmor y
      myWeight en mayusculas); Accuracy y Ammo, ' - '. El boton compra,
      pone o saca. */
+  /* La barra de Armor, contra lo mas duro que se vende: el Metal Vest (10). */
+  const ARMOR_TOPE = 10;
   function pintarRopa() {
-    const id = Tienda.sel, r = ROPA[id], it = item(id), W = Game.olas;
+    const id = Tienda.sel, r = Prendas.de(id), it = item(id), W = Game.olas;
     const tuya = tieneRopa(id), lleva = puesta(id), falta = faltaPerk(id), puede = W && W.dinero >= it.precio;
     const fila = (n, v, k) => '<div class="fila"><span>' + n + '</span><div class="barra"><i style="width:' +
       (k === null ? 0 : Math.round(Math.max(0.04, Math.min(1, k)) * 100)) + '%"></i></div><b>' + v + '</b></div>';
@@ -25271,27 +26291,29 @@ window.TIENDA_SWF = {"baldosa": {"pistola": "data:image/webp;base64,UklGRowUAABX
     else if (tuya) { txt = falta ? 'REQUIERE ' + falta : 'PONER'; off = !!falta; }
     else { txt = (puede ? 'COMPRAR  ' : 'FALTA DINERO  ') + '$' + it.precio; off = !puede; }
     $('tdArma').innerHTML =
-      '<small>' + SECCIONES[SECCION[id]][0] + '</small><h3>' + esc(r[0]) + '</h3><h6>' + esc(r[5]) + '</h6>' +
-      '<div class="grande"><div class="bald"><img src="' + ((global.ROPA_SWF && ROPA_SWF.baldosa[id]) || '') + '" alt=""><b>' + esc(r[0]) + '</b></div></div>' +
-      '<p>' + esc(DESC_ROPA[r[1]] || '') + '</p>' +
-      fila('Armor', r[2], r[2] / 3) + fila('Weight', r[3].toUpperCase(), PESO[r[3]]) + fila('Accuracy', ' - ', null) + fila('Ammo', ' - ', null) +
+      '<small>' + SECCIONES[SECCION[id]][0] + '</small><h3>' + esc(r.nombre) + '</h3><h6>' + esc(r.bajada) + '</h6>' +
+      '<div class="grande"><div class="bald"><img src="' + ((global.ROPA_SWF && ROPA_SWF.baldosa[id]) || '') + '" alt=""><b>' + esc(r.nombre) + '</b></div></div>' +
+      '<p>' + esc(Prendas.DESC[r.cat] || '') + '</p>' +
+      fila('Armor', r.armor, r.armor / ARMOR_TOPE) + fila('Weight', r.peso.toUpperCase(), PESO[r.peso]) + fila('Accuracy', ' - ', null) + fila('Ammo', ' - ', null) +
       '<button class="bt principal comprar" id="tdComprar"' + (off ? ' disabled' : '') + '><span>' + txt + '</span></button>';
     $('tdDinero').textContent = '$' + (W ? W.dinero : 0);
   }
 
   /* Comprar, poner o sacar la prenda elegida. Lo comprado es de la ficha
-     (progreso.js): se guarda al momento y sigue despues de morir. */
+     (progreso.js): se guarda al momento y sigue despues de morir. Cada
+     prenda va a la ranura de su categoria (traje, shirt, mask, hat,
+     mouth) y la armadura del jugador se rehace (Actor.vestir). */
   function botonRopa(id) {
-    const F = Progreso.ficha, R = F.ropa, r = ROPA[id], W = Game.olas, jug = Game.jugador;
-    if (puesta(id)) R[r[1]] = null;
-    else if (tieneRopa(id)) { if (faltaPerk(id)) return false; R[r[1]] = id; }
+    const F = Progreso.ficha, R = F.ropa, r = Prendas.de(id), W = Game.olas, jug = Game.jugador;
+    if (puesta(id)) R[r.cat] = null;
+    else if (tieneRopa(id)) { if (faltaPerk(id)) return false; R[r.cat] = id; }
     else {
-      if (!W || W.dinero < r[4]) return false;
-      W.dinero -= r[4];
+      if (!W || W.dinero < r.precio) return false;
+      W.dinero -= r.precio;
       R.tiene.push(id);
-      if (!faltaPerk(id)) R[r[1]] = id;
+      if (!faltaPerk(id)) R[r.cat] = id;
     }
-    Actor.vestir(jug, R.shirt, R.mask);
+    Actor.vestir(jug, Progreso.atuendo());
     HUD.retrato(Game.ren, jug.tipo);
     Progreso.guardar();
     return true;
@@ -25457,9 +26479,9 @@ window.TIENDA_SWF = {"baldosa": {"pistola": "data:image/webp;base64,UklGRowUAABX
        al muñeco entero, como en el SWF va a la cabeza o al cuerpo entero. */
     let tipoFig = jug.tipo, probar = false;
     if (esRopa(Tienda.sel)) {
-      const R = fichaRopa(), r = ROPA[Tienda.sel], p = { mask: R.mask, shirt: R.shirt };
-      p[r[1]] = Tienda.sel;
-      tipoFig = Chars.vestido(Chars.base(jug.tipo), p.shirt, p.mask);
+      const p = Progreso.atuendo();
+      p[Prendas.de(Tienda.sel).cat] = Tienda.sel;
+      tipoFig = Chars.vestido(Chars.base(jug.tipo), p);
       probar = !tieneRopa(Tienda.sel);
     }
     try {
@@ -25560,7 +26582,12 @@ window.TIENDA_SWF = {"baldosa": {"pistola": "data:image/webp;base64,UklGRowUAABX
     t.mallaArma.traverse((o) => { if (o.isMesh && !manos.has(o)) o.material = materialPrueba(o.material); });
   }
 
-  function elegir(id) { Tienda.sel = id; pintarLista(); pintarArma(); pintarFigura(); }
+  function elegir(id) {
+    Tienda.sel = id;
+    if (SECCION[id] !== undefined) Tienda.lpag[SECCION[id]] = paginaDe(id);
+    pintarLista(); pintarArma(); pintarFigura();
+  }
+  Tienda.lpag = {};
   Tienda.elegir = elegir;
 
   Tienda.abrir = function () {
@@ -25613,8 +26640,15 @@ window.TIENDA_SWF = {"baldosa": {"pistola": "data:image/webp;base64,UklGRowUAABX
       if (b.dataset.id) { elegir(b.dataset.id); suena('ui_pulsar'); }
       else if (b.dataset.cat) {
         Tienda.cat = +b.dataset.cat;
-        if (SECCIONES[Tienda.cat][1].length) elegir(SECCIONES[Tienda.cat][1][0]); else pintarLista();
+        const L = idsDe(Tienda.cat), pg = Math.min(paginas(Tienda.cat) - 1, Tienda.lpag[Tienda.cat] || 0);
+        if (L.length) elegir(L[pg * CASILLAS]); else pintarLista();
         suena('ui_pulsar');
+      }
+      else if (b.dataset.lpag) {
+        // pressPrev / pressNext de MadnessStoreItems: menu2
+        const i = Tienda.cat;
+        Tienda.lpag[i] = Math.max(0, Math.min(paginas(i) - 1, (Tienda.lpag[i] || 0) + +b.dataset.lpag));
+        pintarLista(); suena('ui_pulsar');
       }
       else if (b.dataset.pest) {
         Tienda.pest = +b.dataset.pest; Tienda.perk = null; pintarRecuadro(); pintarDerecha();

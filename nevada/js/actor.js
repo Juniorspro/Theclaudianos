@@ -145,6 +145,8 @@
       /* modDmg = 1 + STR/15 y modArmor = 1 + END/15 (Actor.danoSWF). */
       modDmg: 1 + est('str', 0) / 15,
       modArmor: 1 + est('end', 0) / 15,
+      /* myHeadArmor / myBodyArmor (refreshArmor): lo que suma su ropa. */
+      armadura: Prendas.armadura(Prendas.atuendoDe(ficha)),
       vivo: true,
       muerte: 0,
       aturdido: 0,
@@ -316,8 +318,9 @@
      vestido, en el mismo sitio y con el mismo animador -la fase del paso, la
      accion en curso-, y el arma y la funda se vuelven a colgar de los huesos
      nuevos. Devuelve si cambio algo. */
-  Actor.vestir = function (A, ropa, mascara) {
-    const tipo = Chars.vestido(Chars.base(A.tipo), ropa, mascara);
+  Actor.vestir = function (A, at) {
+    const tipo = Chars.vestido(Chars.base(A.tipo), at);
+    A.armadura = Prendas.armadura(Prendas.atuendoDe(Chars.TIPOS[tipo]));
     if (tipo === A.tipo) return false;
     const viejo = A.cuerpo, padre = viejo.grupo.parent;
     const nuevo = Chars.crear(tipo);
@@ -822,9 +825,29 @@
        ya mataba de un golpe a un grunt de nivel 1 (vida 7); en el SWF
        hacen falta dos.
      ============================================================= */
+  /* LA ARMADURA VA PRIMERO (checkDamage): se RESTA del daño del arma
+     antes que cualquier multiplicador. En la cabeza, sombrero + mascara +
+     boca; en el cuerpo, la camisa (Prendas.armadura). Con perkArmorPierce
+     el atacante la atraviesa, salvo que la pieza que manda -el sombrero en
+     la cabeza, la camisa en el cuerpo- sea 'heavy':
+       if (!havePerk('perkArmorPierce', atacante) || myHat.myWeight == 'heavy')
+         r3 -= myHeadArmor
+     Y lo que quede, nunca por debajo de 0 ('if (r3 < 0) r3 = 0'). Un
+     chaleco de 3 deja una Beretta (7) en 4; uno de metal (10) para las
+     pistolas enteras. Con 0 el golpe no entra: rebota (Actor.golpear). */
   Actor.danoSWF = function (A, base, quien, info) {
     let d = base;
     const arma = info && info.arma, f = arma && arma.ficha;
+    const Ar = A.armadura;
+    if (Ar) {
+      const perfora = !!(quien && Progreso.perk(quien, 'perkArmorPierce'));
+      if (info && info.cabeza) { if (!perfora || Ar.pesoCasco === 'heavy') d -= Ar.cabeza; }
+      else if (!perfora || Ar.pesoCamisa === 'heavy') d -= Ar.cuerpo;
+    }
+    /* perkShotgunDamage (61107..61201): escopeta a menos de 120 px, x1,3. */
+    if (f && f.cat === 'shotgun' && quien && Progreso.perk(quien, 'perkShotgunDamage') &&
+        Math.hypot(A.x - quien.x, (A.z || 0) - (quien.z || 0)) < 120 * Weapons.PX) d *= 1.3;
+    if (d < 0) d = 0;
     if (f && quien && arma.id === 'puños') d *= (quien.modDmg || 1) / 3;
     if (info && info.enRango === false) d *= 0.5;
     d *= (A.modArmor || 1);
@@ -834,9 +857,6 @@
        lo cuelga de perkStunProof1 y perkImmuneLowDmg no se mira en
        ningun sitio: se hace como el bytecode. */
     if (Progreso.perk(A, 'perkStunProof1') && d > 0 && d <= 6) d = 1;
-    /* perkShotgunDamage (61107..61201): escopeta a menos de 120 px, x1,3. */
-    if (f && f.cat === 'shotgun' && quien && Progreso.perk(quien, 'perkShotgunDamage') &&
-        Math.hypot(A.x - quien.x, (A.z || 0) - (quien.z || 0)) < 120 * Weapons.PX) d *= 1.3;
     /* perkHeadshotCrits (61828..62881): en la cabeza, x r18, al azar
        entre 1,2 y 2 -r18 = randomNumber(120, 200) / 100-, salvo contra
        un principal (amSpecial) o con arma blanca, que r18 = 1. */
@@ -930,6 +950,17 @@
       if (A.vida < 50 && !A.jefe) { A.vida = 0; dano = 1; remate = true; }
     }
     dano = Actor.danoSWF(A, dano, quien, info);
+    /* LA ARMADURA LO PARO ENTERO (checkDamage con r3 = 0): ni vida, ni
+       sangre, ni aturdimiento, ni derribo. Suena 'blockmelee' si fue un
+       golpe cuerpo a cuerpo y 'ricochet' si fue un tiro (el 'clang' es de
+       las prendas que se rompen, que en la tienda no hay), y saltan
+       chispas donde pego. */
+    if (dano <= 0 && !remate) {
+      if (info) { info.bloqueado = true; info.blindado = true; }
+      Sonido.tocar(fi && fi.tipo === 'melee' ? 'bloqueo' : 'rebote', { x: A.x, cam: Game.camX, vol: 0.6 });
+      if (global.Combat && Combat.chispas) Combat.chispas(hx, hy, A.z || 0);
+      return false;
+    }
     A.vida -= dano;
     if (remate) A.vida = Math.min(A.vida, 0);
     saludGuardia(A, quien);

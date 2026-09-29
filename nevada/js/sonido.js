@@ -133,6 +133,9 @@
     puno:          { bus:'juego', vol:0.55, guardia: 40, f:[['S_Melee_Blunt7',1.023,0.076], ['S_Melee_Blunt8',0.684,0.074]] },
     bloqueo:       { bus:'juego', vol:0.70, guardia: 60, f:[['S_Melee_Block1',1.281,0.090], ['S_Melee_Block2',1.185,0.090], ['S_Melee_Block3',1.086,0.090]] },
     metal:         { bus:'juego', vol:0.55, guardia: 50, f:[['S_Gun_Ricochet',1.116,0.073], ['S_Clang1',0.559,0.072], ['S_Clang2',0.542,0.075]] },
+    /* 'ricochet' del SWF: S_Gun_Ricochet a x0,6 (returnVolume). Es el tiro
+       que la armadura para entero (checkDamage, Actor.golpear). */
+    rebote:        { bus:'juego', vol:0.60, guardia: 50, f:[['S_Gun_Ricochet',1.116,0.073]] },
     tac:           { bus:'juego', vol:0.60, guardia: 55, f:[['S_MetalBang',1.072,0.086], ['S_Clang3',0.396,0.072]] },
     caida:         { bus:'juego', vol:0.70, guardia: 70, f:[['S_Land1',0.688,0.076], ['S_Land2',0.726,0.078], ['S_Land3',0.675,0.090]] },
     caidaDura:     { bus:'juego', vol:0.85, guardia: 90, f:[['S_LandHard',0.907,0.074]] },

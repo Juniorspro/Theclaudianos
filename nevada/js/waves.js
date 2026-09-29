@@ -267,17 +267,25 @@
      dentro -en el original la lista viene ordenada de mas fuerte a
      mas flojo- pero el ORDEN de las escuadras no se toca: es el
      'arenanum' y es lo que marca el ritmo de la oleada. */
+  /* El personaje del SWF que hace cada tipo: con el se elige su ropa. */
+  const PERSONAJE = { grunt: 'civ', agente: 'agent', agenteClasico: 'agent', soldat: 'agent2', agenteMk0: 'agent3' };
   Waves.montarCola = function (W, n) {
     const esc = [];
     for (let e = 1; e <= Waves.ESCUADRAS; e++) {
       const lista = Waves.listaEscuadra(n, e);
+      // el inLevel de equipLoadout: el nivel de la escuadra (ver arena_1_waves)
+      const nivel = Math.max(1, Waves.nivelDe(n) - Math.floor(e / 5));
       const grupo = [];
       for (let i = 0; i < lista.length; i++) {
         let tipo = T[lista[i]] || 'grunt';
         /* El agent sale en sus dos versiones del SWF: 'agent', con las
            gafas rojas, y 'agent_classic', con las negras. */
         if (tipo === 'agente' && W.rng() < 0.5) tipo = 'agenteClasico';
-        grupo.push({ tipo: tipo, arma: armaDe(W, n, e) });
+        const arma = armaDe(W, n, e);
+        /* Y SU ROPA (equipLoadout, ver prendas.js): gorras, anteojos,
+           pañuelos y chalecos que van apareciendo al subir de nivel. */
+        if (global.Prendas) tipo = Chars.vestido(tipo, Prendas.cargaEnemigo(PERSONAJE[tipo], nivel, W.rng));
+        grupo.push({ tipo: tipo, arma: arma });
       }
       for (let i = grupo.length - 1; i > 0; i--) {
         const j = Math.floor(W.rng() * (i + 1));
@@ -288,6 +296,14 @@
     return esc;
   };
 
+  /* Las escuadras de la oleada n, montadas antes de soltarla (al salir el
+     cartel de WAVE n): las mallas de los vestidos se arman de a una por
+     cuadro (Chars.precalentar), las de la primera escuadra primero. */
+  Waves.preparar = function (W, n) {
+    W.previa = { n: n, esc: Waves.montarCola(W, n) };
+    Chars.encargar([].concat(...W.previa.esc.map((g) => g.map((q) => q.tipo))));
+  };
+
   Waves.empezar = function (W, n) {
     W.oleada = n;
     /* EL CERROJO DE LA PUERTA 0 (la de la armeria) y del panel: se echa
@@ -296,7 +312,8 @@
        arena_1_START del activador. Entre el ultimo muerto y esa ventana
        no se puede ni cruzar ni pulsar. */
     W.cerrojo = true;
-    W.escuadras = Waves.montarCola(W, n);
+    if (!W.previa || W.previa.n !== n) Waves.preparar(W, n);
+    W.escuadras = W.previa.esc; W.previa = null;
     W.iEsc = 0;
     W.cola = W.escuadras[0].slice();     // la escuadra que esta saliendo
     W.total = Waves.fichaDe(n).n;

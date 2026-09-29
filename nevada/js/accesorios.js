@@ -1092,7 +1092,9 @@
   };
 
   Acc.MODELOS = MODELOS;
-  Acc._h = { banda, barrido, barridoTinta, caminoPoli, caminoOvalo, loft, prisma, cara };   // para las pruebas
+  // las herramientas, para las pruebas y para prendas3d.js
+  Acc._h = { banda, barrido, barridoTinta, caminoPoli, caminoOvalo, loft, prisma, cara,
+             cascara, losaCurva, tubo, punto, hinchar, centroCruz, cab, recortar, cristalDegrade, densificar };
   Acc.NOMBRES = {
     agent1_mask: 'Agent Shades', agent1_mask_b: 'Agent Shades',
     agent2_mask: 'ATP Mask', agent3_mask: 'OBSV Goggles'
@@ -1100,9 +1102,9 @@
 
   /* Pone el accesorio 'id' en el constructor B, en coordenadas del
      modelo del personaje (con el hueso ya elegido: la cabeza). */
-  Acc.construir = function (B, id, g, silueta) {
+  Acc.construir = function (B, id, g, silueta, F) {
     const m = MODELOS[id];
-    if (m) m(B, g || 0, !!silueta);
+    if (m) m(B, g || 0, !!silueta, F || {});
     return B;
   };
 

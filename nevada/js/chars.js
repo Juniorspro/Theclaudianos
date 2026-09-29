@@ -383,6 +383,13 @@
       Ropa.construir(B, F.ropa, g, silueta, A, F.cara);
       (B.ropa = B.ropa || []).push([n0, B.n]);
     }
+    /* EL CHALECO (la ranura shirt del SWF, prendas.js): va ENCIMA del
+       cuerpo o del traje, con las mismas reglas de adelanto que la ropa. */
+    if (F.camisa && Ropa.construirCamisa) {
+      const n0 = B.n;
+      Ropa.construirCamisa(B, F.camisa, g, silueta, A, !!F.ropa);
+      (B.ropa = B.ropa || []).push([n0, B.n]);
+    }
     if (!silueta && F.venda) {
       B.addBox(0.452, 0.032, 0.014, -0.012, 0.740, 0.232, 0xb5afa1, TINTA);
       B.addBox(0.452, 0.026, 0.014, 0.014, 0.686, 0.233, 0xa49e92, TINTA);
@@ -478,6 +485,19 @@
     if (F.mascara && (silueta || !Accesorios.enMallaAparte(F.mascara))) {
       B.skin(H.CABEZA);
       Accesorios.construir(B, F.mascara, g, silueta);
+    }
+    /* EL SOMBRERO Y LA BOCA (prendas3d.js) van con su profundidad de
+       verdad, sin adelantar: adelantados, lo que queda detras de la cabeza
+       -la vuelta de una vincha por la nuca, el fondo de una gorra- asomaba
+       a traves de ella. Lo que se toca es la tinta del ovalo, que va
+       adelantada 15 cm y cruzaba la prenda por el borde de la cabeza: donde
+       la prenda la tapa, no se adelanta (ver geoDe). */
+    for (const id of [F.boca, F.sombrero]) {
+      if (!id) continue;
+      B.skin(H.CABEZA);
+      const n0 = B.n;
+      Accesorios.construir(B, id, g, silueta, F);
+      (B.prendaCabeza = B.prendaCabeza || []).push([n0, B.n]);
     }
 
     /* LAS MANOS -> ver POSE_MANO y barrerMano(), mas abajo. Se
@@ -1267,6 +1287,10 @@
     {
       const si = gs.attributes.skinIndex, co = gs.attributes.color, P = gs.attributes.position;
       const manosH = new Set(Chars.MANOS_I.concat(Chars.MANOS_D));
+      // lo que tapan el sombrero y la boca (prendas3d.js: Accesorios.CUBRE)
+      const tapas = [F.sombrero, F.boca, F.mascara].map((id) => id && Accesorios.CUBRE && Accesorios.CUBRE[id]).filter(Boolean);
+      const GRA = 180 / Math.PI;
+      const enRango = (L, i) => L && L.some(([a, z]) => i >= a && i < z);
       for (let i = 0; i < co.count; i++) {
         const b = si.getX(i);
         /* La cabeza se adelanta solo en el OVALO: las mascaras y el
@@ -1275,13 +1299,23 @@
         let ade = b === H.CUERPO ? 0.12 : (b === H.PIE_I || b === H.PIE_D) ? 0.06 : 0;
         if (b === H.CABEZA) {
           const G = 0.016;
-          const q = Math.hypot(P.getX(i) / (CARA_RX + G), (P.getY(i) - CARA_Y) / (CARA_RY + G),
-                               (P.getZ(i) - Chars.CABEZA_Z) / (CARA_RZ + G));
+          const nx = P.getX(i) / (CARA_RX + G), ny = (P.getY(i) - CARA_Y) / (CARA_RY + G), nz = (P.getZ(i) - Chars.CABEZA_Z) / (CARA_RZ + G);
+          const q = Math.hypot(nx, ny, nz);
           ade = Math.abs(q - 1) < 0.02 ? 0.15 : 0.01;
+          /* DEBAJO DE UNA PRENDA, EL CONTORNO DEL OVALO NO SE ADELANTA: la
+             prenda va delante con su profundidad de verdad, y adelantado le
+             pasaba por encima en el borde de la cabeza (una raya negra
+             cruzando la vincha, el gorro, el pañuelo). */
+          if (ade > 0.1 && tapas.length) {
+            const n = [nx / q, ny / q, nz / q], az = Math.atan2(n[0], n[2]) * GRA, el = Math.asin(Math.max(-1, Math.min(1, n[1]))) * GRA;
+            if (tapas.some((t) => t(az, el, n))) ade = 0.01;
+          }
         }
         // la tinta de las mascaras con dibujo, tan adelantada como ellas (Accesorios.ADELANTO)
-        if (bs.adelante && bs.adelante.some(([a, z]) => i >= a && i < z)) ade = Accesorios.ADELANTO;
-        if (bs.ropa && bs.ropa.some(([a, z]) => i >= a && i < z)) ade = 0;
+        if (enRango(bs.adelante, i)) ade = Accesorios.ADELANTO;
+        // la del sombrero y la boca, con su profundidad (sin adelanto)
+        if (enRango(bs.prendaCabeza, i)) ade = 0.01;
+        if (enRango(bs.ropa, i)) ade = 0;
         co.setXYZ(i, manosH.has(b) ? Chars.TINTA_MANO : 1, capa(b), ade);
       }
     }
@@ -1370,13 +1404,41 @@
      malla cacheada como los demas: 'grunt|agent|agent1_mask' es el grunt con
      el traje de agente y las Agent Shades. Todo lo demas -nombre, escala,
      colores, ficha del SWF- es el del tipo de base. */
-  Chars.vestido = function (base, ropa, mascara) {
-    if (!ropa && !mascara) return base;
-    const k = base + '|' + (ropa || '') + '|' + (mascara || '');
-    if (!Chars.TIPOS[k]) Chars.TIPOS[k] = Object.assign({}, Chars.TIPOS[base], { ropa: ropa || null, mascara: mascara || null, base: base });
+  /* 'at' es un atuendo con las ranuras del SWF (Prendas.RANURAS: traje,
+     shirt, mask, hat, mouth): las que trae cambian las del tipo de base
+     (null = nada) y las que no, se quedan como estan -el agente sigue con
+     su traje y sus gafas aunque le toque un chaleco-. La clave lleva las
+     cinco: 'grunt|agent|armor1|agent1_mask|hat1|' es el grunt con el traje
+     de agente, un chaleco, las Agent Shades y la gorra. */
+  Chars.vestido = function (base, at) {
+    base = Chars.base(base);
+    const B0 = Chars.TIPOS[base], F = {};
+    for (const r of Prendas.RANURAS) {
+      const c = Prendas.CAMPO[r];
+      F[c] = at && r in at ? (at[r] || null) : (B0[c] || null);
+    }
+    if (Prendas.RANURAS.every((r) => F[Prendas.CAMPO[r]] === (B0[Prendas.CAMPO[r]] || null))) return base;
+    const k = base + '|' + Prendas.RANURAS.map((r) => F[Prendas.CAMPO[r]] || '').join('|');
+    if (!Chars.TIPOS[k]) Chars.TIPOS[k] = Object.assign({}, B0, F, { base: base });
     return k;
   };
   Chars.base = (tipo) => (Chars.TIPOS[tipo] && Chars.TIPOS[tipo].base) || tipo;
+
+  /* LAS MALLAS DE LOS VESTIDOS, POR ADELANTADO. Cada combinacion es un
+     tipo con su malla, y armarla lleva su tiempo: la oleada pide las suyas
+     al montarse y se van armando de a una por cuadro, antes de que salga
+     el primero (Game llama a Chars.precalentar). */
+  const _pend = [];
+  Chars.encargar = function (tipos) {
+    for (const t of tipos) if (!_geos[t] && _pend.indexOf(t) < 0) _pend.push(t);
+  };
+  Chars.precalentar = function () {
+    while (_pend.length) {
+      const t = _pend.shift();
+      if (!_geos[t] && Chars.TIPOS[t]) { geoDe(t); return true; }
+    }
+    return false;
+  };
 
   Chars.limpiar = function () {
     for (const k in _geos) {

@@ -977,6 +977,11 @@ body.enTienda #mandos{display:none !important}
 .bald.cara img:first-child{filter:brightness(.55)}
 .bald.cara em{color:#7d7772}
 .bald:hover img:first-child{filter:brightness(1.12)}
+/* pagePrev / pageNext del SWF, cuando la categoria tiene mas de seis */
+.tdPags{flex:none;display:flex;justify-content:center;align-items:center;gap:calc(var(--u)*10);font-family:'Arial SWF',sans-serif;
+  font-size:calc(var(--u)*11);color:#d8a0a0}
+.tdPags button{border:0;background:none;color:#555;font-size:calc(var(--u)*16);cursor:pointer;padding:0 calc(var(--u)*6)}
+.tdPags button:not(:disabled){color:#ccc}
 
 /* --- las vistas de los tres botones: GEAR (tienda), SQUAD y STATS ocupan el centro y la derecha --- */
 .tdCuerpo.v1 .tdArma,.tdCuerpo.v2 .tdArma{display:none}

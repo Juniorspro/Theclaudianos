@@ -69,9 +69,10 @@
                    retoma por ahi) */
                 myWeapons: [null, null], ranura: 0, arenaOla: 0,
                 /* la ropa de la tienda (tienda.js): lo comprado y lo puesto en
-                   cada ranura del SWF que tenemos -mask y shirt-. Queda en la
-                   ficha: no se pierde al morir, como el dinero. */
-                ropa: { tiene: [], mask: null, shirt: null } };
+                   cada ranura (Prendas.RANURAS: traje, shirt, mask, hat,
+                   mouth). Queda en la ficha: no se pierde al morir, como el
+                   dinero. */
+                ropa: Progreso.ropaVacia() };
     STATS.forEach((k) => { F['stat' + k] = 0; });
     SKILLS.forEach((k) => { F['skill' + k] = 0; });
     Progreso.assignPerks(F);
@@ -84,9 +85,29 @@
     const G = global.U && U.store ? U.store.get(CLAVE, null) : null;
     const F = Progreso.nueva();
     if (G && typeof G === 'object') for (const k in F) if (k !== 'perks' && G[k] !== undefined) F[k] = G[k];
+    F.ropa = Progreso.ropaAlDia(F.ropa);
     Progreso.assignPerks(F);
     Progreso.ficha = F;
     return F;
+  };
+  Progreso.ropaVacia = () => ({ tiene: [], traje: null, shirt: null, mask: null, hat: null, mouth: null });
+  /* Las partidas de antes guardaban solo mask y shirt, y en shirt iba el
+     traje de agente: pasa a su ranura (traje) y la camisa queda para los
+     chalecos. */
+  Progreso.ropaAlDia = function (R) {
+    const N = Progreso.ropaVacia();
+    if (!R || typeof R !== 'object') return N;
+    N.tiene = Array.isArray(R.tiene) ? R.tiene.filter((id) => global.Prendas && Prendas.de(id)) : [];
+    for (const r of ['traje', 'shirt', 'mask', 'hat', 'mouth']) {
+      const id = R[r], c = global.Prendas && Prendas.de(id);
+      if (c && N.tiene.indexOf(id) >= 0) N[c.cat] = id;
+    }
+    return N;
+  };
+  /* Lo que lleva puesto el jugador, para Actor.vestir. */
+  Progreso.atuendo = function () {
+    const R = (Progreso.ficha && Progreso.ficha.ropa) || Progreso.ropaVacia();
+    return { traje: R.traje, shirt: R.shirt, mask: R.mask, hat: R.hat, mouth: R.mouth };
   };
   Progreso.guardar = function () {
     const F = Progreso.ficha;
