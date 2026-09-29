@@ -7379,15 +7379,32 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
     const gE = silueta ? g : 0, ext = 0;
     const hiF = o.hi || (() => 90), abierto = !!o.hi;
     const cols = vuelta ? M : M + 1;
-    const azDe = (i) => a0 + (a1 - a0) * i / M;
+    // o.azDe(t): el azimut de la columna t (0..1), para apretarlas donde el borde cambia rapido
+    const azDe = o.azDe ? (i) => o.azDe(i / M) : (i) => a0 + (a1 - a0) * i / M;
+    /* o.trazo (m): EL BORDE QUE APOYA LLEVA SU TRAZO PINTADO. De canto, el
+       canto negro se ve de un pixel y se corta; las dos primeras filas (y las
+       dos ultimas si es una vincha) encierran una franja negra de ese ancho
+       sobre la propia pieza. */
+    const W = o.trazo || 0;
+    const tasa = (az, el) => dist(sobre(az, el - 0.5, dD(az, el), e), sobre(az, el + 0.5, dD(az, el), e));
+    const filasEl = (az) => {
+      const l = o.lo(az) - ext, h = abierto ? hiF(az) + ext : 90;
+      // mas apretado cerca del borde de abajo (ahi se curva lo que importa)
+      const reparto = (t) => (abierto ? t : Math.sin(t * Math.PI / 2));
+      if (!W) return Array.from({ length: N + 1 }, (_, j) => l + (h - l) * reparto(j / N));
+      const dl = W / tasa(az, l), dh = abierto ? W / tasa(az, h) : 0, eps = 0.02;
+      const a = l + dl + eps, b = abierto ? h - dh - eps : 90, nIn = abierto ? N - 3 : N - 1, out = [l, l + dl];
+      for (let k = 0; k < nIn; k++) out.push(a + (b - a) * reparto(k / (nIn - 1)));
+      if (abierto) out.push(h - dh, h);
+      return out;
+    };
+    const enTrazo = (j) => W > 0 && (j <= 1 || (abierto && j >= N - 1));
+    const FE = []; for (let i = 0; i < cols; i++) FE.push(filasEl(azDe(i)));
     const P = [], A = [];
     for (let j = 0; j <= N; j++) {
       const fila = [], fa = [];
       for (let i = 0; i < cols; i++) {
-        const az = azDe(i);
-        const l = o.lo(az) - ext, h = abierto ? hiF(az) + ext : 90;
-        // mas apretado cerca del borde de abajo (ahi se curva lo que importa)
-        const t = j / N, el = l + (h - l) * (abierto ? t : Math.sin(t * Math.PI / 2));
+        const az = azDe(i), el = FE[i][j];
         fila.push(sobre(az, el, dD(az, el) + gE, e)); fa.push([az, el]);
       }
       P.push(fila); A.push(fa);
@@ -7405,7 +7422,7 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
     };
     const ids = P.map((fila, j) => fila.map((p, i) => {
       const n = nor(j, i), [az, el] = A[j][i];
-      const k = silueta ? [0, 0, 0] : B._rgb(o.color ? o.color(az, el) : o.hex, 1);
+      const k = silueta ? [0, 0, 0] : B._rgb(enTrazo(j) ? NEGRO : (o.color ? o.color(az, el) : o.hex), 1);
       return B._vert(p[0], p[1], p[2], n[0], n[1], n[2], k[0], k[1], k[2]);
     }));
     for (let j = 0; j < N; j++) {
@@ -7475,7 +7492,9 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
            180 grados) uno largo sacaba el vertice 5 cm y la cascara negra se
            doblaba por encima del ala, pintandola entera */
         const cs = na && nb ? Math.max(0.8, (n[0] * na[0] + n[1] * na[1])) : 1;
-        return [Math.max(0, p[0] + n[0] * g / cs), p[1] + n[1] * g / cs, p[2]];
+        // p[3]: cuanto de la tinta lleva ese punto (la cara de abajo de un ala la pierde hacia la cabeza)
+        const gk = g * (p[3] === undefined ? 1 : p[3]);
+        return [Math.max(0, p[0] + n[0] * gk / cs), p[1] + n[1] * gk / cs, p[2]];
       });
     }
     const al = o.alabeo || (() => 0);
@@ -7501,6 +7520,8 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
         return { i: B._vert(q[0], q[1], q[2], n[0], n[1], n[2], 0, 0, 0), q, n };
       }));
       for (let k = 0; k < pf.length - 1; k++) {
+        // un tramo sin tinta en sus dos puntas no lleva cascara (aun pegada, el empuje en pantalla la despega)
+        if (perfil[k][3] === 0 && perfil[k + 1][3] === 0) continue;
         for (let j = 0; j < M; j++) {
           const j2 = (j + 1) % M, a = ids[k][j], b = ids[k][j2], cc = ids[k + 1][j2], d = ids[k + 1][j];
           const f = nPerfil(pf[k], pf[k + 1], azs[j] + 180 / M);
@@ -7638,217 +7659,427 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
      LOS SOMBREROS (HatsAll, 7363; puestos en 'Parts - Head' con myHat)
      ============================================================= */
 
-  /* Las gorras: el casquete hasta la linea de la frente -mas baja atras-,
-     el de la SWAT (hat1) con la copa cuadrada y la visera recta; la de
-     beisbol (hat4) redonda, clara, con la visera curva y el boton. */
+  /* LAS GORRAS: el borde de la tela, en grados, delante (fr) y detras (at). */
   const bordeGorra = (fr, at) => (az) => lerp(at, fr, (1 + Math.cos(az * RAD)) / 2);
-  function gorra(o) {
-    return function (B, g, silueta) {
-      const lo = bordeGorra(o.frente, o.atras);
-      const d = (az, el) => 0.012 + o.copa * suave(10, 80, el) * (0.6 + 0.4 * Math.cos(az * RAD * 0.5));
-      casquete(B, { lo, d, e: o.e, color: o.color, hex: o.hex, M: 44, N: 14 }, g, silueta);
-      visera(B, { az0: -o.ancho, az1: o.ancho, lo, d, e: o.e, largo: o.largo, caida: o.caida, curva: o.curva, punta: o.punta,
-                  hex: o.hexVisera, hexAbajo: o.hexAbajo, grueso: 0.016 }, g, silueta);
-      if (!silueta && o.boton) {
-        const p = sobre(0, 90, d(0, 90) - 0.004, o.e);
-        pieza(B, [[0, 0.018], [0.02, 0.012], [0.024, 0]], p, [0, 1, 0], o.boton, 0, false, 12);
-      }
-    };
-  }
-  // SWAT Cap: 49 la tela, 83 el panel de arriba, 44/60 la visera (hat1)
-  MOD.hat1 = gorra({ frente: 21, atras: 5, copa: 0.03, e: 0.72, ancho: 52, largo: 0.2, caida: 6, curva: 0.012, punta: 0.6,
-                     color: (az, el) => (el > 66 ? sw(83) : sw(49)), hexVisera: sw(60), hexAbajo: sw(44) });
-  // Ballcap: 153 la copa, 102 la visera, 87 abajo (hat4)
-  MOD.hat4 = gorra({ frente: 20, atras: 4, copa: 0.022, e: 0.95, ancho: 54, largo: 0.22, caida: 9, curva: 0.045, punta: 0.5,
-                     color: () => sw(153), hexVisera: sw(102), hexAbajo: sw(87), boton: sw(120) });
 
-  /* Sweatband (hat3): una vincha de 60, abombada, que cruza la frente por
-     encima de los ojos y sube hacia la nuca. */
-  MOD.hat3 = function (B, g, silueta) {
-    const lo = (az) => lerp(46, 22, (1 + Math.cos(az * RAD)) / 2), hi = (az) => lo(az) + 17;
-    casquete(B, { lo, hi, d: (az, el) => 0.006 + 0.014 * Math.sin(Math.PI * Math.max(0, Math.min(1, (el - lo(az)) / 17))),
-                  hex: sw(60), M: 48, N: 6 }, g, silueta);
+  /* LA VISERA, DE SU DIBUJO (SWAT Cap y Ballcap): una placa que sale de
+     debajo del borde de delante de la gorra, hacia delante y apenas hacia
+     abajo, y en su ultimo tramo SE DOBLA hacia abajo (el pico, mas oscuro).
+     Es una lamina: la raiz (j = 0) queda metida bajo la gorra -apoya- y la
+     punta y los costados son silueta, con la tinta en el plano de la placa
+     (con la de siempre, bajo la visera quedaba una raya suelta y en las
+     puntas unas cuñas negras). Por debajo, el mismo gris mas oscuro. */
+  function visera2(B, o, g, silueta) {
+    const c = C(), MI = 26, tp = o.pico, fr = 0.85;
+    const ts = [0, 0.16, 0.32, 0.48, tp, tp + 0.004, tp + (1 - tp) * 0.35, tp + (1 - tp) * 0.7, 1];
+    const cd = o.caida * RAD, cp = o.caidaPico * RAD, P = [];
+    for (let i = 0; i <= MI; i++) {
+      const u = i / MI, az = lerp(o.az0, o.az1, u), s = 2 * u - 1, f = Math.max(0, 1 - s * s);
+      const L = o.largo * Math.pow(f, o.forma || 0.5), root = sobre(az, o.lo(az) + 2, o.d0(az) - 0.006), a = az * RAD;
+      // hacia DELANTE, no hacia fuera: una visera sale derecha de la frente
+      let dx = Math.sin(a) / c.rx * (1 - fr), dz = Math.cos(a) / c.rz * (1 - fr) + fr * 3;
+      const Lh = Math.hypot(dx, dz); dx /= Lh; dz /= Lh;
+      P.push(ts.map((t) => {
+        const t1 = Math.min(t, tp), t2 = Math.max(0, t - tp);
+        const fwd = L * (t1 * Math.cos(cd) + t2 * Math.cos(cp)), down = L * (t1 * Math.sin(cd) + t2 * Math.sin(cp)) + (o.curva || 0) * s * s * t * t;
+        return [root[0] + dx * fwd, root[1] - down, root[2] + dz * fwd];
+      }));
+    }
+    lamina(B, P, { gr: o.gr || 0.012, tintaN: 0.25, sinHundir: true, color: (i, j) => (ts[j] > tp + 0.001 ? o.hexPico : o.hex),
+                   apoyo: (i, j) => (j === 0 ? 1 : 0), apoyoLado: () => 0 }, g, silueta);
+  }
+
+  /* UNA COPA POR COLUMNAS: lo que no sigue la cabeza a distancia fija (la
+     gorra de tapa plana). Cada columna es un camino en el plano de su
+     meridiano, del apoyo en la cabeza hacia arriba hasta el eje; la grilla
+     es una lamina: el borde de abajo apoya (trazo pintado y canto hundido)
+     y arriba todas se juntan. o.camino(az, m) -> {pts: [[rho, y], ...]};
+     o.color(az, j, s, columna) -> gris. */
+  function copa(B, o, g, silueta) {
+    const cols = o.azs.map((az) => {
+      const m = meridiano(az, o.D0), cam = o.camino(az, m), cm = camino(cam.pts.map(([r, y]) => enMeridiano(m, r, y)));
+      // o.cortes(cam): filas de mas donde el color cambia de golpe (las mismas en cada columna)
+      const S = filas(cm.L, o.N, o.W, 0).concat(o.cortes ? o.cortes(cam) : []).sort((a, b) => a - b);
+      return Object.assign(cam, { az, m, cm, S, P: S.map((s) => cm.en(s)) });
+    });
+    lamina(B, cols.map((c2) => c2.P), { vuelta: true, gr: o.gr, apoyo: () => 1,
+      color: (i, j) => (j <= 1 ? NEGRO : o.color(cols[i].az, j, cols[i].S[j], cols[i])) }, g, silueta);
+    return cols;
+  }
+
+  /* SWAT CAP (hat1), DE SU DIBUJO: gorra de TAPA PLANA -apenas sobre la
+     coronilla- con las paredes casi derechas que se cierran hacia arriba, un
+     panel delantero mas claro (83) entre dos pliegues, la costura de la
+     franja atras y la visera con el pico doblado. La tela, 49. */
+  const LO_HAT1 = bordeGorra(15, 9), D0_HAT1 = 0.012;
+  function caminoHat1(az, m) {
+    const c = C(), yT = c.cy + c.ry + 0.014, RC = 0.035, PE = 4, RX = 0.228, RZ = 0.218;   // tapa de esquinas marcadas: el frente, una cara plana
+    const f = Math.atan2(m.u[0], m.u[1]);
+    const rk = 1 / Math.pow(Math.pow(Math.abs(Math.sin(f)) / RX, PE) + Math.pow(Math.abs(Math.cos(f)) / RZ, PE), 1 / PE);
+    const e = LO_HAT1(az) * RAD, p0 = [m.A * Math.cos(e), m.cy + m.Bv * Math.sin(e)];
+    const t0 = (yT - RC - p0[1]) / (yT - p0[1]), q0 = [lerp(p0[0], rk, t0), yT - RC], q2 = [rk - RC, yT], pts = [p0, q0];
+    // la esquina redonda: de la pared a la tapa, tangente a las dos
+    for (let k = 1; k <= 8; k++) { const t = k / 8, a = (1 - t) * (1 - t), b = 2 * t * (1 - t), d = t * t; pts.push([a * q0[0] + b * rk + d * q2[0], a * q0[1] + b * yT + d * q2[1]]); }
+    pts.push([0, yT]);
+    return { pts, pared: Math.hypot(q0[0] - p0[0], q0[1] - p0[1]) };
+  }
+  MOD.hat1 = function (B, g, silueta) {
+    // el panel ocupa TODA la cara de delante, de esquina a esquina (a ±36 salia una tira angosta y alta)
+    const PANEL = 48, azs = [];
+    for (let k = 0; k < 60; k++) azs.push(-180 + 6 * k);
+    for (const s of [1, -1]) for (const d of [-1.1, -0.9, 0.9, 1.1]) azs.push(s * PANEL + d);
+    azs.sort((a, b) => a - b);
+    copa(B, { azs, camino: caminoHat1, D0: D0_HAT1, N: 22, W: 0.010, gr: 0.006, cortes: (cam) => [cam.pared - 0.0006, cam.pared + 0.0006],
+      color: (az, j, s, col) => {
+        if (s > col.pared) return sw(49);                            // la tapa y su esquina
+        if (Math.abs(Math.abs(az) - PANEL) <= 0.95) return NEGRO;    // los pliegues del panel, del grueso del trazo
+        return Math.abs(az) < PANEL ? sw(83) : sw(49);
+      } }, g, silueta);
+    /* ANCHA COMO EL FRENTE DE LA GORRA y casi plana; el pico, corto y poco
+       caido. Con ±50 grados y el pico a 42 desde la mitad, de frente salia
+       una repisa angosta y alta. */
+    visera2(B, { az0: -66, az1: 66, lo: LO_HAT1, d0: () => D0_HAT1, largo: 0.2, caida: 4, pico: 0.66, caidaPico: 26,
+                 curva: 0.008, forma: 0.22, gr: 0.01, hex: sw(66), hexPico: sw(51) }, g, silueta);
+    if (silueta) return;
+    /* LA ARISTA DE LA TAPA: la linea negra donde la pared dobla hacia la tapa
+       plana. En el dibujo cierra el panel claro por arriba; sin ella, la
+       esquina redonda lo fundia con la tapa y el borde salia borroso. */
+    const col = (az) => { const m = meridiano(az, D0_HAT1), cam = caminoHat1(az, m); return { cam, cm: camino(cam.pts.map(([r, y]) => enMeridiano(m, r, y))) }; };
+    const ar = [], an = [];
+    for (let q = 0; q <= 120; q++) {
+      const az = -180 + 3 * q, c0 = col(az), s0 = c0.cam.pared + 0.004, p = c0.cm.en(s0);
+      const tu = sub(col(az + 0.5).cm.en(s0), col(az - 0.5).cm.en(s0)), tv = sub(c0.cm.en(s0 + 0.004), c0.cm.en(s0 - 0.004));
+      let n = uni(cruz(tu, tv)); if (dot(n, normalCab(p)) < 0) n = n.map((v) => -v);
+      ar.push(mas(p, n, 0.0045)); an.push(n);
+    }
+    trazo(B, ar, an, 0.012);
+    // la costura de la franja, atras, 3,6 cm sobre el borde
+    const pts = [], nrm = [];
+    for (let q = 0; q <= 24; q++) {
+      const azN = ((110 + 140 * q / 24 + 540) % 360) - 180, m = meridiano(azN, D0_HAT1);
+      const p = camino(caminoHat1(azN, m).pts.map(([r, y]) => enMeridiano(m, r, y))).en(0.036), n = normalCab(p);
+      pts.push(mas(p, n, 0.0045)); nrm.push(n);
+    }
+    trazo(B, pts, nrm, 0.007);
   };
 
-  /* Leon Cap (hat2): gorro de lana de 69, caido hacia atras -un bulto que
-     cuelga sobre la nuca- con el puño de abajo mas oscuro (51). */
+  /* BALLCAP (hat4), DE SU DIBUJO: la copa redonda y alta (153; en su dibujo
+     se levanta 6 cm sobre la cabeza) con sus costuras y el boton, el borde
+     pintado, y la visera (102) con el pico doblado hacia abajo. */
+  const LO_HAT4 = bordeGorra(25, 12);
+  const dHat4 = (az, el) => 0.012 + 0.05 * suave(12, 86, el) * (0.72 + 0.28 * Math.cos(az * RAD * 0.5));
+  MOD.hat4 = function (B, g, silueta) {
+    casquete(B, { lo: LO_HAT4, d: dHat4, e: 0.95, hex: sw(153), M: 56, N: 16, trazo: 0.010 }, g, silueta);
+    visera2(B, { az0: -66, az1: 66, lo: LO_HAT4, d0: (az) => dHat4(az, LO_HAT4(az)), largo: 0.23, caida: 4, pico: 0.64, caidaPico: 24,
+                 curva: 0.02, forma: 0.28, gr: 0.01, hex: sw(102), hexPico: sw(90) }, g, silueta);
+    const top = sobre(0, 90, dHat4(0, 90) - 0.004, 0.95);
+    pieza(B, [[0, 0.018, sw(120)], [0.02, 0.013, sw(120)], [0.026, 0]], top, [0, 1, 0], sw(120), g * 0.4, silueta, 14);
+    if (silueta) return;
+    // las costuras: de la coronilla al borde, cada 60 grados
+    const S = (az, el) => sobre(az, el, dHat4(az, el), 0.95);
+    for (let k = 0; k < 6; k++) {
+      const az = k * 60 - 180, pts = [], nrm = [];
+      for (let q = 0; q <= 16; q++) {
+        const el = lerp(85, LO_HAT4(az) + 3.5, q / 16), n = normalDe(S, az, el);
+        pts.push(mas(S(az, el), n, 0.0015)); nrm.push(n);
+      }
+      trazo(B, pts, nrm, 0.004, sw(118));
+    }
+  };
+
+  /* SWEATBAND (hat3), DE SU DIBUJO: una vincha de 60, de unos 7 cm, ALTA
+     delante -en la frente, muy por encima de la cruz- y baja detras, con
+     su trazo pintado arriba y abajo. (Estaba al reves.) */
+  const LO_HAT3 = (az) => lerp(16, 47, (1 + Math.cos(az * RAD)) / 2), ANCHO_HAT3 = 10.5;
+  MOD.hat3 = function (B, g, silueta) {
+    casquete(B, { lo: LO_HAT3, hi: (az) => LO_HAT3(az) + ANCHO_HAT3, trazo: 0.009,
+                  d: (az, el) => 0.005 + 0.008 * Math.sin(Math.PI * Math.max(0, Math.min(1, (el - LO_HAT3(az)) / ANCHO_HAT3))),
+                  hex: sw(60), M: 64, N: 9 }, g, silueta);
+  };
+
+  /* LEON CAP (hat2), DE SU DIBUJO: gorro de lana (69) CAIDO hacia atras: el
+     borde cruza la frente alto (30 grados) y baja por los costados hasta la
+     nuca (-12); arriba y detras la lana se abomba y cuelga. El borde, un
+     poco enrollado, con su trazo; los pliegues, pintados (51). Una sola
+     pieza: el puño aparte dejaba dos rayas con una franja clara en medio. */
+  const LO_HAT2 = (az) => lerp(-12, 30, Math.pow((1 + Math.cos(az * RAD)) / 2, 1.1));
+  const dHat2 = (az, el) => {
+    const t = el - LO_HAT2(az), atras = Math.max(0, -Math.cos(az * RAD));
+    return 0.02 + 0.008 * Math.sin(Math.PI * Math.max(0, Math.min(1, t / 7))) + 0.018 * suave(15, 80, el) +
+           0.085 * Math.pow(atras, 1.3) * Math.exp(-Math.pow((el - 42) / 30, 2)) * suave(0, 14, t);
+  };
   MOD.hat2 = function (B, g, silueta) {
-    const lo = bordeGorra(24, 0);
-    // lo caido: un bulto detras, entre la coronilla y la nuca, que la lana hace colgar
-    const bulto = (az, el) => {
-      const atras = Math.max(0, -Math.cos(az * RAD)), costado = Math.pow(Math.abs(Math.sin(az * RAD)), 2);
-      return 0.13 * Math.pow(atras, 1.2) * Math.exp(-Math.pow((el - 38) / 28, 2)) * (1 - 0.35 * costado);
-    };
-    /* el cuerpo arranca 1 grado DEBAJO del puño (que es mas grueso): su canto
-       queda tapado y el borde que se ve es uno solo, el del puño. Con los
-       dos cantos a la vista salian dos rayas y una franja clara entre ellas. */
-    casquete(B, { lo: (az) => lo(az) + 5, d: (az, el) => 0.018 + (bulto(az, el) + 0.012 * suave(40, 90, el)) * suave(lo(az) + 6, lo(az) + 14, el),
-                  hex: sw(69), M: 44, N: 14 }, g, silueta);
-    // el puño: una banda mas gruesa y oscura
-    casquete(B, { lo, hi: (az) => lo(az) + 6, d: () => 0.028, hex: sw(51), M: 44, N: 3 }, g, silueta);
+    casquete(B, { lo: LO_HAT2, d: dHat2, hex: sw(69), M: 56, N: 16, trazo: 0.010 }, g, silueta);
+    if (silueta) return;
+    const S = (az, el) => sobre(az, el, dHat2(az, el));
+    const pliegues = [[[60, 40], [95, 30], [125, 18]], [[70, 56], [110, 45], [140, 30]], [[100, 66], [140, 52], [165, 36]]];
+    for (const sg of [1, -1]) {
+      for (const L of pliegues) {
+        const pts = [], nrm = [];
+        for (let q = 0; q <= 14; q++) {
+          const t = q / 14, k = t < 0.5 ? 0 : 1, u = t < 0.5 ? t * 2 : (t - 0.5) * 2;
+          const az = sg * lerp(L[k][0], L[k + 1][0], u), el = lerp(L[k][1], L[k + 1][1], u), n = normalDe(S, az, el);
+          pts.push(mas(S(az, el), n, 0.0015)); nrm.push(n);
+        }
+        trazo(B, pts, nrm, (t) => 0.0075 * Math.sin(Math.PI * (0.1 + 0.8 * t)), sw(51));
+      }
+    }
   };
 
   /* EL ALA: de r0 (la copa) a r1 (el borde), su cara de arriba a la altura
      y, el canto redondo (medio circulo de 'gr' de grueso) y la de abajo de
-     vuelta hasta dentro de la cabeza (rIn). Con el canto afilado, la tinta
-     se doblaba en la punta. */
+     vuelta hasta la cabeza, donde se hunde derecho (rIn). Con el canto
+     afilado, la tinta se doblaba en la punta. Arriba y abajo van en cuatro
+     tramos: con uno solo el alabeo (la vuelta hacia arriba) salia en cono.
+     LA TINTA DE ABAJO SE PIERDE HACIA LA CABEZA: entera en el canto, 12%
+     en la raiz. Con la cascara g por debajo de toda el ala, entre el ala
+     levantada y la cabeza asomaba una cuña negra suelta, con una franja
+     clara de cabeza entre ella y el ala (el Bowler de costado). */
   function ala(r0, r1, y, gr, hexA, hexC, hexB, rIn) {
-    const P = [[r0, y, hexA]], rc = gr / 2;
+    const rc = gr / 2, P = [];
+    for (let k = 0; k < 4; k++) P.push([lerp(r0, r1 - rc, k / 4), y, hexA]);
     for (let k = 0; k <= 4; k++) {
       const a = Math.PI / 2 - Math.PI * k / 4;
       P.push([r1 - rc + rc * Math.cos(a), y - rc + rc * Math.sin(a), k < 4 ? hexC : hexB]);
     }
-    P[0][2] = hexA; P[1][2] = hexC;
-    P.push([rIn, y - gr + 0.002]);
+    const yB = (r) => y - gr + 0.0015 * (r1 - rc - r) / (r1 - rc - rIn);
+    for (const [t, tk] of [[0.3, 0], [0.6, 0], [0.85, 0]]) { const r = lerp(r1 - rc, rIn, t); P.push([r, yB(r), hexB, tk]); }
+    P.push([rIn, yB(rIn), hexB, 0], [rIn - 0.035, yB(rIn) - 0.02, hexB, 0]);
     return P;
   }
-  /* LOS DE COPA: la copa CALZA en la cabeza. Su base mide lo que la cabeza
-     a esa altura mas 1,2 cm: mas angosta, la cabeza la atravesaba y asomaba
-     en astillas claras sobre el ala (sobre todo detras, con el sombrero
-     inclinado). Los perfiles se dibujan para una base de 0,232 y se escalan
-     a la de verdad (K); apoyan a 1,62 m, casi derechos (2 grados atras). */
-  const yApoyo = 1.62, INCL = -2;
-  const BASE = radioA(yApoyo - 0.022)[0] + 0.012, K = BASE / 0.232;
-  const esc = (P) => P.map((p) => [p[0] * K, p[1], p[2]]);
-  function sombreroSobre(perfil, o, B, g, silueta) {
-    const [rx, rz] = radioA(yApoyo);
-    torno(B, perfil, Object.assign({ x: 0, y: yApoyo, z: C().cz, M: 40, incl: INCL, sx: 1, sz: rz / rx * 1.01 }, o), g, silueta);
+  /* LOS DE COPA: la copa CALZA en la cabeza: su base mide lo que la cabeza a
+     la altura de apoyo mas 1,2 cm (mas angosta, la cabeza la atravesaba y
+     asomaba en astillas claras). CADA UNO APOYA DONDE LO PONE SU DIBUJO: la
+     altura sale del ancho de su copa (una copa ancha baja hasta la frente).
+     Inclinados 2 grados hacia atras. */
+  const INCL = -2, Y_COPA = { hat5: 1.60, hat6: 1.535, top: 1.585, fedora: 1.55, hat9: 1.555 };
+  function ajuste(yA) {
+    const BASE = radioA(yA - 0.022)[0] + 0.012;
+    return { yA, BASE, poner: (perfil, o, B, g, silueta) => {
+      const [rx, rz] = radioA(yA), oo = Object.assign({ x: 0, y: yA, z: C().cz, M: 44, incl: INCL, sx: 1, sz: rz / rx * 1.01 }, o);
+      torno(B, perfil, oo, g, silueta);
+      if (!silueta) juntaAla(B, perfil, oo);
+    } };
   }
-  // el ala de un sombrero de copa: la de ala(), escalada, y su cara de abajo hasta dentro de la cabeza
-  const alaK = (r0, r1, y, gr, a, c2, b) => ala(r0 * K, r1 * K, y, gr, a, c2, b, BASE - 0.06);
-
-  /* Desperado (hat5): copa baja de tapa plana (48) con su cinta (60) y el
-     ala ancha y plana (48 arriba, con el filo mas claro, 95). */
-  MOD.hat5 = function (B, g, silueta) {
-    sombreroSobre(esc([
-      [0, 0.155, sw(48)], [0.205, 0.155, sw(48)], [0.215, 0.14, sw(48)], [0.228, 0.05, sw(60)]
-    ]).concat(alaK(0.232, 0.47, 0.012, 0.024, sw(48), sw(95), sw(40))),
-    { alabeo: (az, r) => 0.012 * Math.max(0, (r - 0.25 * K) / 0.2) * Math.cos(2 * az * RAD) }, B, g, silueta);
-  };
-
-  /* Bowler (hat6): la copa redonda (108), la cinta oscura (46) y el ala
-     corta curvada hacia arriba a los costados (51). */
-  MOD.hat6 = function (B, g, silueta) {
-    const copa = [];
-    for (let i = 0; i <= 8; i++) { const t = i / 8 * Math.PI / 2; copa.push([0.232 * Math.sin(t) * (1 + 0.04 * Math.sin(2 * t)), 0.03 + 0.2 * Math.cos(t), sw(108)]); }
-    sombreroSobre(esc(copa.concat([[0.236, 0.052, sw(46)]])).concat(alaK(0.238, 0.34, 0.016, 0.022, sw(51), sw(62), sw(40))),
-      { alabeo: (az, r) => 0.028 * Math.max(0, (r - 0.24 * K) / 0.1) * Math.pow(Math.sin(az * RAD), 2) }, B, g, silueta);
-  };
-
-  /* Tophat (top): la copa alta y apenas acampanada (102), la cinta negra,
-     y el ala (72) con los costados levantados. */
-  MOD.top = function (B, g, silueta) {
-    sombreroSobre(esc([
-      [0, 0.42, sw(102)], [0.235, 0.42, sw(102)], [0.244, 0.405, sw(102)], [0.232, 0.1, 0x0c0c0c]
-    ]).concat(alaK(0.232, 0.37, 0.018, 0.022, sw(72), sw(90), sw(55))),
-    { alabeo: (az, r) => 0.035 * Math.max(0, (r - 0.23 * K) / 0.13) * Math.pow(Math.sin(az * RAD), 2) }, B, g, silueta);
-  };
-
-  /* Fedora: la copa (51) con el hundido de arriba y los pellizcos de
-     delante, la cinta clara (153), y el ala (51) baja delante y alta
-     atras. */
-  MOD.fedora = function (B, g, silueta) {
-    sombreroSobre(esc([
-      [0, 0.18, sw(62)], [0.1, 0.215, sw(51)], [0.19, 0.225, sw(51)], [0.232, 0.18, sw(51)], [0.238, 0.085, sw(153)],
-      [0.24, 0.035, sw(51)]
-    ]).concat(alaK(0.244, 0.41, 0.012, 0.02, sw(51), sw(72), sw(40))), { sz: radioA(yApoyo)[1] / radioA(yApoyo)[0] * 1.03,
-         alabeo: (az, r, y) => {
-           const ala = Math.max(0, (r - 0.245 * K) / 0.16), c2 = Math.cos(az * RAD);
-           // el ala: abajo delante, arriba atras y a los costados; la copa, pellizcada delante
-           return ala * (-0.05 * Math.max(0, c2) + 0.04 * Math.max(0, -c2) + 0.02 * Math.pow(Math.sin(az * RAD), 2)) -
-                  (y > 0.15 && r > 0.12 ? 0.03 * Math.pow(Math.max(0, c2), 3) * (r - 0.12) / 0.12 : 0);
-         } }, B, g, silueta);
-  };
-
-  /* Sombrero (hat9): la copa alta y redondeada, de paja (174 / 204), el
-     ala enorme con el filo alzado, y la guarda roja en zigzag (255, 0, 0)
-     cerca del borde. */
-  MOD.hat9 = function (B, g, silueta) {
-    const s = radioA(yApoyo)[1] / radioA(yApoyo)[0] * 1.01;
-    // la copa: su ultimo punto ES el pie de la cinta (sin repetirlo: un tramo de largo cero le daba vuelta la tinta)
-    const copa = [];
-    for (let i = 0; i < 8; i++) { const t = i / 8 * Math.PI / 2; copa.push([0.2 * Math.pow(Math.sin(t), 0.8) + 0.032 * Math.sin(t), 0.06 + 0.3 * Math.cos(t), sw(204)]); }
-    /* EL ALA SE LEVANTA EN EL FILO, suave (3 cm en los ultimos 22): mas
-       empinado, del lado de la camara su cara de arriba quedaba de espaldas
-       y se veia la tinta de adentro. Y la cara de abajo sigue la MISMA curva
-       que la de arriba, tramo por tramo: recta, en el rulo el ala quedaba
-       gruesa como una rueda. */
-    const alabeo = (az, r) => 0.03 * Math.pow(Math.max(0, (r - 0.45) / 0.22), 2) - 0.015 * Math.max(0, (r - 0.24) / 0.2) * Math.max(0, Math.cos(az * RAD));
-    const radios = [0.235 * K, 0.35, 0.45, 0.52, 0.58, 0.63], gr = 0.024, rc = gr / 2, r1 = 0.655 * K, y = 0.016;
-    const ala2 = radios.map((r) => [r, y, sw(174)]);
-    for (let k = 0; k <= 4; k++) {
-      const a = Math.PI / 2 - Math.PI * k / 4;
-      ala2.push([r1 - rc + rc * Math.cos(a), y - rc + rc * Math.sin(a), k < 4 ? sw(204) : sw(145)]);
+  /* LA JUNTA DEL ALA CON LA CABEZA, PINTADA: una franja negra sobre la
+     cabeza desde donde entra la cara de abajo del ala hasta 1,1 cm mas
+     abajo. La tinta del ala no sirve ahi: su cascara, g por debajo, llenaba
+     el hueco entre el ala levantada y la cabeza (una cuña negra suelta), y
+     sin cascara el empuje en pantalla la despegaba igual (un hilo claro
+     entre el ala y la raya). La franja nace en la juntura: no deja hueco. */
+  function juntaAla(B, perfil, o) {
+    const c = C(), al = o.alabeo || (() => 0), ci = Math.cos(o.incl * RAD), si = Math.sin(o.incl * RAD);
+    const mundo = (r, y, az) => {
+      const a = az * RAD, lx = o.sx * r * Math.sin(a), ly = y + al(az, r, y), lz = o.sz * r * Math.cos(a);
+      return [o.x + lx, o.y + ly * ci - lz * si, o.z + ly * si + lz * ci];
+    };
+    const q = (p) => Math.hypot(p[0] / c.rx, (p[1] - c.cy) / c.ry, (p[2] - c.cz) / c.rz);
+    const pts = [], nrm = [];
+    for (let k = 0; k <= 90; k++) {
+      const az = k * 4;
+      // desde la punta de adentro (hundida) hacia fuera: el primer tramo que sale de la cabeza
+      let P = null;
+      for (let m = perfil.length - 1; m > 0 && !P; m--) {
+        const A = perfil[m], Z = perfil[m - 1], en = (t) => mundo(lerp(A[0], Z[0], t), lerp(A[1], Z[1], t), az);
+        if (q(en(0)) >= 1 || q(en(1)) < 1) continue;
+        let lo = 0, hi = 1;
+        for (let it = 0; it < 24; it++) { const t = (lo + hi) / 2; if (q(en(t)) < 1) lo = t; else hi = t; }
+        P = en(lo);
+      }
+      if (!P) continue;
+      const azH = Math.atan2(P[0] / c.rx, (P[2] - c.cz) / c.rz) / RAD, p = sobre(azH, elDeY(P[1]) - 0.46, 0.0025);
+      pts.push(p); nrm.push(normalCab(p));
     }
-    for (let k = radios.length - 1; k >= 1; k--) ala2.push([radios[k], y - gr, sw(145)]);
-    ala2.push([BASE - 0.06, y - gr + 0.002]);
-    sombreroSobre(esc(copa.concat([[0.232, 0.06, swc(170, 0, 0)]])).concat(ala2), { alabeo }, B, g, silueta);
+    trazo(B, pts, nrm, 0.016, NEGRO);
+  }
+
+  /* DESPERADO (hat5), DE SU DIBUJO: la copa corta, un cilindro de tapa plana
+     (48), y el ala enorme y plana (48, el filo 80), el doble de ancha que la
+     cabeza. */
+  MOD.hat5 = function (B, g, silueta) {
+    const f = ajuste(Y_COPA.hat5), R = f.BASE;
+    f.poner([[0, 0.158, sw(48)], [R - 0.03, 0.158, sw(48)], [R - 0.008, 0.148, sw(48)], [R + 0.002, 0.12, sw(48)], [R + 0.002, 0.03, sw(48)]]
+      .concat(ala(R + 0.003, 0.53, 0.012, 0.022, sw(48), sw(80), sw(40), R - 0.016)),
+      { alabeo: (az, r) => 0.01 * Math.max(0, (r - R) / 0.25) * Math.cos(2 * az * RAD) }, B, g, silueta);
+  };
+
+  /* BOWLER (hat6), DE SU DIBUJO: la copa redonda y alta (58), la cinta clara
+     (115) y el ala (51) doblada hacia arriba a los costados. Apoya baja: la
+     copa es tan ancha como la cabeza. */
+  MOD.hat6 = function (B, g, silueta) {
+    const f = ajuste(Y_COPA.hat6), R = f.BASE, copa6 = [];
+    for (let i = 0; i <= 8; i++) { const t = i / 8 * Math.PI / 2; copa6.push([(R - 0.014) * Math.pow(Math.sin(t), 0.7), 0.125 + 0.175 * Math.pow(Math.cos(t), 0.9), sw(58)]); }
+    f.poner(copa6.concat([[R - 0.006, 0.115, sw(115)], [R + 0.002, 0.036, sw(58)]])
+      .concat(ala(R + 0.004, R + 0.125, 0.016, 0.022, sw(51), sw(66), sw(40), R - 0.016)),
+      { alabeo: (az, r) => { const t = Math.max(0, (r - R) / 0.125); return 0.06 * Math.pow(t, 1.4) * Math.pow(Math.sin(az * RAD), 2) - 0.012 * t * Math.max(0, Math.cos(az * RAD)); } },
+      B, g, silueta);
+  };
+
+  /* TOPHAT (top), DE SU DIBUJO: la copa alta y apenas acampanada (102) con
+     la tapa clara (153), la cinta negra, y el ala clara (150; por debajo 80)
+     con los costados levantados. */
+  MOD.top = function (B, g, silueta) {
+    const f = ajuste(Y_COPA.top), R = f.BASE;
+    f.poner([[0, 0.46, sw(153)], [R + 0.004, 0.46, sw(153)], [R + 0.016, 0.448, sw(102)], [R - 0.003, 0.1, 0x0c0c0c], [R + 0.001, 0.028, sw(102)]]
+      .concat(ala(R + 0.002, R + 0.1, 0.018, 0.022, sw(150), sw(110), sw(80), R - 0.016)),
+      { alabeo: (az, r) => 0.035 * Math.max(0, (r - R) / 0.1) * Math.pow(Math.sin(az * RAD), 2) }, B, g, silueta);
+  };
+
+  /* FEDORA, DE SU DIBUJO: la copa (51) alta que se cierra hacia arriba, con
+     el hundido de la tapa y el pellizco de delante, la cinta clara y ancha
+     (153), y el ala baja delante y levantada atras. */
+  MOD.fedora = function (B, g, silueta) {
+    const f = ajuste(Y_COPA.fedora), R = f.BASE;
+    f.poner([[0, 0.255, sw(51)], [0.07, 0.268, sw(51)], [R - 0.085, 0.3, sw(51)], [R - 0.05, 0.278, sw(51)], [R - 0.022, 0.2, sw(51)],
+             [R - 0.006, 0.125, sw(153)], [R + 0.003, 0.036, sw(51)]]
+      .concat(ala(R + 0.005, R + 0.15, 0.012, 0.02, sw(51), sw(72), sw(40), R - 0.016)), {
+        sz: radioA(f.yA)[1] / radioA(f.yA)[0] * 1.03,
+        alabeo: (az, r, y) => {
+          const t = Math.max(0, (r - R - 0.005) / 0.145), c2 = Math.cos(az * RAD);
+          // el ala: abajo delante, arriba atras y a los costados; la copa, pellizcada delante (suave: con un corte, salia una arista)
+          return t * (-0.06 * Math.max(0, c2) + 0.05 * Math.max(0, -c2) + 0.02 * Math.pow(Math.sin(az * RAD), 2)) -
+                 0.035 * Math.pow(Math.max(0, c2), 3) * suave(0.16, 0.24, y) * suave(0.1, 0.2, r);
+        } }, B, g, silueta);
+  };
+
+  /* SOMBRERO (hat9), DE SU DIBUJO: la copa alta y en punta redondeada, de
+     paja (204) con su trama (153); el ala enorme que sube en el filo como
+     un plato, clara arriba (190) y oscura abajo (102), con la guarda roja en
+     zigzag (255, 0, 0, filete oscuro) cerca del borde y el filo blanco. */
+  MOD.hat9 = function (B, g, silueta) {
+    const f = ajuste(Y_COPA.hat9), R = f.BASE, H = 0.4, s = radioA(f.yA)[1] / radioA(f.yA)[0] * 1.01;
+    const copa9 = [];
+    for (let i = 0; i <= 10; i++) { const y = H - (H - 0.03) * i / 10; copa9.push([R * Math.pow(Math.max(0, 1 - Math.pow(y / H, 1.8)), 0.55), y, sw(204)]); }
+    copa9[0][0] = 0;
+    const alabeo = (az, r) => 0.075 * Math.pow(Math.max(0, (r - 0.44) / 0.22), 2) - 0.012 * Math.max(0, (r - R) / 0.2) * Math.max(0, Math.cos(az * RAD));
+    const radios = [R + 0.004, 0.36, 0.44, 0.5, 0.56, 0.61], gr = 0.024, rc = gr / 2, r1 = 0.66, y = 0.016;
+    const ala9 = radios.map((r) => [r, y, sw(190)]);
+    for (let k = 0; k <= 4; k++) { const a = Math.PI / 2 - Math.PI * k / 4; ala9.push([r1 - rc + rc * Math.cos(a), y - rc + rc * Math.sin(a), k < 4 ? sw(230) : sw(102)]); }
+    // la cara de abajo, con la tinta que se pierde hacia la cabeza (ver ala())
+    for (let k = radios.length - 1; k >= 1; k--) ala9.push([radios[k], y - gr, sw(102), Math.max(0, (radios[k] - radios[2]) / (radios[radios.length - 1] - radios[2]))]);
+    ala9.push([R - 0.016, y - gr + 0.0015, sw(102), 0], [R - 0.051, y - gr - 0.02, sw(102), 0]);
+    f.poner(copa9.concat(ala9), { alabeo }, B, g, silueta);
     if (silueta) return;
-    // la guarda: una cinta roja en zigzag sobre el ala
-    B.push(); B.translate(0, yApoyo, C().cz); B.rotateX(INCL * RAD);
-    const kr = B._rgb(swc(255, 0, 0), 1), N = 120, zA = 0.44, zB = 0.57, w = 0.022;
-    const zz = (t) => { const f = (t * 18) % 1; return zA + (zB - zA) * (f < 0.5 ? f * 2 : 2 - f * 2); };
-    // 4 mm sobre la cara de arriba del ala (y = 0,016 mas su alabeo)
-    const P = (t, dr) => { const a = t * 2 * Math.PI, r = zz(t) + dr; return [r * Math.sin(a), 0.023 + alabeo(t * 360, r), s * r * Math.cos(a)]; };
-    let prev = null;
-    for (let i = 0; i <= N * 4; i++) {
-      const t = i / (N * 4), a = P(t, -w), b = P(t, w);
-      const pa = { i: B._vert(a[0], a[1], a[2], 0, 1, 0, kr[0], kr[1], kr[2]), p: a }, pb = { i: B._vert(b[0], b[1], b[2], 0, 1, 0, kr[0], kr[1], kr[2]), p: b };
-      if (prev) { tri(B, prev[0].i, pa.i, pb.i, prev[0].p, pa.p, pb.p, [0, 1, 0]); tri(B, prev[0].i, pb.i, prev[1].i, prev[0].p, pb.p, prev[1].p, [0, 1, 0]); }
-      prev = [pa, pb];
+    // lo pintado: en el marco del sombrero (el mismo que el torno)
+    B.push(); B.translate(0, f.yA, C().cz); B.rotateX(INCL * RAD);
+    const enAla = (az, r, dy) => { const a = az * RAD; return [r * Math.sin(a), y + 0.004 + dy + alabeo(az, r), s * r * Math.cos(a)]; };
+    const nAla = (az, r) => { const q0 = enAla(az, r - 0.01, 0), q1 = enAla(az, r + 0.01, 0), t = uni(sub(q1, q0)), l = [Math.cos(az * RAD), 0, -Math.sin(az * RAD)]; return uni(cruz(t, l)).map((v) => v * (cruz(t, l)[1] >= 0 ? 1 : -1)); };
+    // el filo blanco
+    { const pts = [], nrm = []; for (let k = 0; k <= 120; k++) { const az = k * 3; pts.push(enAla(az, 0.635, 0.001)); nrm.push(nAla(az, 0.635)); } trazo(B, pts, nrm, 0.014, swc(255, 255, 255)); }
+    // la guarda: el zigzag con su filete oscuro debajo
+    const zz = (t) => { const fz = (t * 20) % 1; return 0.47 + 0.11 * (fz < 0.5 ? fz * 2 : 2 - fz * 2); };
+    for (const [w, hex, dy] of [[0.034, swc(64, 0, 0), 0.0006], [0.022, swc(255, 0, 0), 0.0014]]) {
+      const pts = [], nrm = [];
+      for (let k = 0; k <= 400; k++) { const t = k / 400, az = t * 360, r = zz(t); pts.push(enAla(az, r, dy)); nrm.push(nAla(az, r)); }
+      trazo(B, pts, nrm, w, hex);
+    }
+    B.pop();
+    // la trama de la paja en la copa: dos familias de rayas en diagonal
+    B.push(); B.translate(0, f.yA, C().cz); B.rotateX(INCL * RAD);
+    const enCopa = (az, yy, dr) => { const r = R * Math.pow(Math.max(0, 1 - Math.pow(yy / H, 1.8)), 0.55) + dr, a = az * RAD; return [r * Math.sin(a), yy, s * r * Math.cos(a)]; };
+    for (const sg of [1, -1]) {
+      for (let k = 0; k < 14; k++) {
+        const pts = [], nrm = [];
+        for (let q = 0; q <= 10; q++) {
+          const t = q / 10, yy = lerp(0.06, 0.33, t), az = k * (360 / 14) + sg * 70 * t;
+          const p = enCopa(az, yy, 0.0025), n = uni(sub(enCopa(az, yy, 0.02), enCopa(az, yy, 0)));
+          pts.push(p); nrm.push(n);
+        }
+        trazo(B, pts, nrm, (t) => 0.0045 * Math.sin(Math.PI * (0.08 + 0.84 * t)), sw(150));
+      }
     }
     B.pop();
   };
 
-  /* Headphones: el arco por encima de la cabeza (51) y las dos copas en
-     las orejas (40, con la almohadilla 62 contra la cabeza). */
+  /* HEADPHONES, DE SU DIBUJO (medido en la hoja del SWF a 22x): las copas
+     son grandes -un tercio del alto de la cabeza- y van un poco por delante
+     del costado (76 grados): de tres cuartos quedan en la mitad de atras y
+     el arco sube hacia la frente. La cara de la copa clara (62, aqui 76 por
+     la luz) con su arco negro en la mitad de abajo, el costado oscuro (40)
+     de 6 cm, el yugo claro (204) de 14 cm y el arco ancho (51) de 8,4.
+     EL ARCO Y EL YUGO VAN APOYADOS, como las correas: laminas sobre la
+     cabeza con la franja negra de cada borde pintada y el canto metido en
+     ella. Sueltos a 2-3 cm, bajo el arco asomaba la cabeza en rayitas, el
+     yugo de canto era un palito claro con una tinta finita y tapaba la
+     parte de abajo de la tinta de la copa (una medialuna clara entre los
+     dos). El yugo pasa por detras del reborde de la copa. */
+  const AUR = { az: 76, y: -0.015, W: 0.042, GR: 0.008, TOPE: 66, YW: 0.07, YGR: 0.01, FIN: 84 };
+  const aurCopa = (s) => {
+    const c = C(), p0 = sobre(s * AUR.az, elDeY(c.cy + AUR.y), 0), eje = normalCab(p0);
+    const up = uni(sub([0, 1, 0], eje.map((v) => v * eje[1]))), lado = cruz(eje, up);
+    return { p0, eje, up, lado };
+  };
   MOD.headphones = function (B, g, silueta) {
-    const c = C(), yC = c.cy + 0.01, zc = c.cz - 0.02;
-    /* EL ARCO: una curva de verdad (60 tramos), el ovalo de la cabeza 3 cm
-       por fuera en el plano de las copas, de ecuador a ecuador pasando por la
-       coronilla: baja VERTICAL y entra por arriba en el centro de cada copa.
-       Su seccion, un rectangulo de cantos redondos; la tinta, la misma
-       seccion g mas grande en cada anillo. Hecho de pocos tramos rectos y
-       entrando en angulo, su contorno salia quebrado y con un escalon suelto
-       sobre la copa. */
-    /* Va a 2,2 cm de la cabeza: a 3, su tinta llegaba a 2 mm de la tapa de
-       la copa por dentro y la atravesaba en rayitas negras. Termina a 84
-       grados, adentro de la copa; y su tinta se afina hasta el tamaño del
-       arco justo donde entra (76 grados): entera, formaba un collar con dos
-       puntitas sobre el borde de la copa. */
-    const N = 60, d = 0.022, W = 0.022, T = 0.008, TOPE = 84;
-    const X = c.rx + d, Y = c.ry + d, esq = [];
-    for (let k = 0; k < 12; k++) {
-      const a = k / 12 * 2 * Math.PI, cs = Math.cos(a), sn = Math.sin(a);
-      esq.push([Math.sign(cs) * Math.pow(Math.abs(cs), 0.4), Math.sign(sn) * Math.pow(Math.abs(sn), 0.4)]);   // un rectangulo redondeado
-    }
-    const anillos = [];
-    for (let i = 0; i <= N; i++) {
-      const thG = -TOPE + 2 * TOPE * i / N, th = thG * RAD, s = Math.sin(th), co = Math.cos(th);
-      const gE = silueta ? g * (1 - suave(73, 77.5, Math.abs(thG))) : 0;
-      const p = [X * s, c.cy + Y * co, zc];
-      const n = uni([s / X, co / Y, 0]);        // hacia fuera del arco
-      anillos.push(esq.map(([u, v]) => { const r = u * (T + gE), z = v * (W + gE); return [p[0] + n[0] * r, p[1] + n[1] * r, p[2] + z]; }));
-    }
-    if (silueta) Hh.barridoTinta(B, anillos); else Hh.barrido(B, anillos, sw(51));
-    /* LAS COPAS: almohadillas redondeadas, encastradas 3 cm en la cabeza.
-       Con la tapa de atras en su superficie, la cabeza se curva y entre el
-       borde de la copa y ella quedaba una medialuna clara. Y el costado se
-       cierra hacia la cabeza (la almohadilla, 62): un cilindro recto metido
-       en la cabeza curva dejaba su borde de abajo corriendo rasante sobre
-       ella, y su tinta acababa en una colita negra en punta. */
+    const c = C(), zB = aurCopa(1).p0[2];
+    // el punto de la cabeza en el plano z = zB + w, a th grados de la coronilla, h por fuera (por su normal)
+    const enPlano = (th, w, h) => {
+      const z = zB + w, k = Math.sqrt(Math.max(0, 1 - Math.pow((z - c.cz) / c.rz, 2))), a = th * RAD;
+      const p = [c.rx * k * Math.sin(a), c.cy + c.ry * k * Math.cos(a), z];
+      return mas(p, normalCab(p), h);
+    };
+    /* EL ARCO, de yugo a yugo: termina dentro de la franja negra de arriba
+       del yugo. Metido debajo, su tinta (adelantada 1 cm, como toda la de la
+       ropa de la cabeza) atravesaba la cara del yugo en rayitas negras. */
+    const thY = AUR.TOPE - 5, dth = 0.007 / (c.ry * RAD), thF = thY + dth / 2;   // el borde de arriba del yugo, su franja, el fin del arco
+    const NB = 66, fB = filas(2 * AUR.W, 9, 0.007, 0.007), thB = (i) => -thF + 2 * thF * i / NB, PB = [];
+    for (let i = 0; i <= NB; i++) PB.push(fB.map((w) => enPlano(thB(i), w - AUR.W, AUR.GR / 2)));
+    // su tinta de fuera baja a un tercio en el ultimo centimetro: entera, asomaba sobre el yugo como una aleta
+    lamina(B, PB, { gr: AUR.GR, dentro: 0.022, color: (i, j) => (j <= 1 || j >= 8 ? NEGRO : sw(51)),
+                    tintaEn: (i) => 1 - 0.7 * suave(thY - 2, thF, Math.abs(thB(i))) }, g, silueta);
+    /* el yugo apoya en la cabeza, 2 mm mas alto que el arco (una vaina):
+       montado encima del arco, de frente su borde de arriba sobresalia como
+       una solapa y su costado claro quedaba en una rendija */
+    const hY = AUR.YGR / 2;
     for (const s of [1, -1]) {
-      const x0 = s * (c.rx - 0.03);
-      pieza(B, [[0, 0.077, sw(40)], [0.05, 0.074, sw(40)], [0.074, 0.064, sw(40)], [0.087, 0.047, sw(40)], [0.088, 0.034, sw(62)],
-                [0.08, 0.016, sw(62)], [0.066, 0.004, sw(62)], [0.05, 0.0, sw(62)], [0, 0.0]],
-            [x0, yC, zc], [s, 0, 0], sw(40), g, silueta, 28);
-      /* LA JUNTA: la linea de la copa donde apoya en la cabeza. La silueta
-         solo sale donde la copa se recorta contra el fondo; contra la cabeza,
-         la almohadilla se juntaba sin trazo y el redondo se veia incompleto,
-         flotando. En el SWF la copa lleva su linea entera. La almohadilla
-         entra en la cabeza a 8,1-8,6 cm del eje: 14,4 grados vista desde el
-         centro de la cabeza. */
-      if (!silueta) junta(B, [s * c.rx, yC - c.cy, zc - c.cz], 13.6, 16.6);
+      const cp = aurCopa(s);
+      /* EL YUGO: del borde de arriba (donde termina el arco) hasta el
+         contorno de la copa, con una franja negra en cada borde. NO PASA POR DEBAJO DE LA
+         COPA: a su misma profundidad tapaba la parte de adentro de la tinta
+         de la copa y entre copa y contorno quedaba una medialuna clara. Su
+         borde de abajo sigue el redondo de la copa a 6 mm de ella, debajo de
+         su contorno. */
+      const fY = filas(2 * AUR.YW, 11, 0.007, 0.007), NY = 14, R0 = 0.131;
+      const aEje = (q) => { const v = sub(q, cp.p0), t = dot(v, cp.eje); return Math.hypot(v[0] - cp.eje[0] * t, v[1] - cp.eje[1] * t, v[2] - cp.eje[2] * t); };
+      const PY = [];
+      for (let i = 0; i <= NY + 2; i++) PY.push([]);
+      fY.forEach((w) => {
+        // donde esa columna llega a R0 del eje de la copa
+        let lo = thY, hi = AUR.FIN;
+        for (let it = 0; it < 30; it++) { const m = (lo + hi) / 2; if (aEje(enPlano(s * m, w - AUR.YW, hY)) > R0) lo = m; else hi = m; }
+        /* las esquinas de arriba, redondas (1,5 cm): vivas, de sesgo el empuje
+           de la tinta en pantalla las sacaba como un pico */
+        const RC = 0.015, u = Math.max(0, Math.abs(w - AUR.YW) - (AUR.YW - RC)) / RC;
+        const thT = thY + (RC / (c.ry * RAD)) * (1 - Math.sqrt(Math.max(0, 1 - u * u)));
+        const thE = lo, ths = [thT, thT + dth];
+        for (let k = 0; k < NY - 3; k++) ths.push(lerp(thT + dth + 0.06, thE - dth - 0.06, k / (NY - 4)));
+        ths.push(thE - dth, thE);
+        ths.forEach((th, i) => PY[i].push(enPlano(s * th, w - AUR.YW, hY)));
+      });
+      PY.length = NY + 1;
+      // su tinta de fuera, a la mitad: entera (1,6 cm sobre una placa de 1), de sesgo sobresalia de las esquinas como un pico
+      lamina(B, PY, { gr: AUR.YGR, dentro: 0.024, tintaN: 0.5, color: (i, j) => (i <= 1 || i >= NY - 1 || j <= 1 || j >= 10 ? NEGRO : sw(204)) }, g, silueta);
+      /* LAS COPAS: la cara apenas abombada, el reborde, y la almohadilla que
+         se cierra hacia la cabeza y se mete en ella. Su tinta se pierde en la
+         almohadilla (ver ala()): entera, bajaba 1,6 cm por fuera del costado
+         y asomaba separada de la copa. */
+      const cara = [[0, 0.092], [0.06, 0.09], [0.095, 0.084], [0.115, 0.074]];
+      const perfilCopa = cara.map(([r, h]) => [r, h, sw(76)]).concat([[0.124, 0.064, sw(36)], [0.125, 0.052, sw(36)], [0.125, 0.04, sw(36)],
+                [0.124, 0.032, sw(36), 0.5], [0.12, 0.018, sw(36), 0], [0.11, 0.0, sw(36), 0], [0.08, -0.012, sw(36), 0], [0, -0.012, undefined, 0]]);
+      const base = mas(cp.p0, cp.eje, -0.03);
+      pieza(B, perfilCopa, base, cp.eje, sw(36), g, silueta, 32);
+      if (silueta) continue;
+      // LA JUNTA: la linea de la copa donde apoya en la cabeza (sin ella el redondo se veia flotando)
+      juntaPieza(B, perfilCopa, base, cp.eje);
+      /* EL ARCO DE LA TAPA, como en el SWF: una n en la mitad de abajo de la
+         cara, de lado a lado casi (3/4 del radio) */
+      const alto = (r) => { for (let q = 1; q < cara.length; q++) if (r <= cara[q][0]) return lerp(cara[q - 1][1], cara[q][1], (r - cara[q - 1][0]) / (cara[q][0] - cara[q - 1][0])); return cara[cara.length - 1][1]; };
+      const Rf = 0.112, pts = [], nrm = [];
+      for (let q = 0; q <= 24; q++) {
+        const t = 2 * q / 24 - 1, du = 0.16 * Rf - 0.5 * Rf * t * t, dl = s * 0.75 * Rf * t;
+        const h = alto(Math.hypot(du, dl)) + 0.0015;
+        pts.push([0, 1, 2].map((e) => base[e] + cp.eje[e] * h + cp.up[e] * du + cp.lado[e] * dl)); nrm.push(cp.eje);
+      }
+      trazo(B, pts, nrm, 0.01);
     }
   };
 
@@ -7880,39 +8111,107 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
     }
   }
 
-  /* Soldier Helm (helmet1): el casco de 87, grueso, hasta la frente por
-     delante y hasta la mitad de la oreja por detras, con el reborde
-     acampanado (78) y un remache al costado (102). */
+  /* LA JUNTA DE UNA PIEZA TORNEADA (pieza()) CON LA CABEZA, medida: por
+     cada direccion alrededor del eje, donde su perfil entra en el ovalo; la
+     franja negra (1,2 cm) nace en esa linea y va hacia fuera. Con
+     angulos a ojo quedaba corrida y entre la pieza y la raya asomaba una
+     medialuna de cabeza. */
+  function juntaPieza(B, perfil, p, eje, ancho) {
+    const c = C(), e = uni(eje), u = uni(Math.abs(e[1]) < 0.9 ? cruz(e, [0, 1, 0]) : cruz(e, [1, 0, 0])), v = cruz(e, u);
+    const q = (x) => Math.hypot(x[0] / c.rx, (x[1] - c.cy) / c.ry, (x[2] - c.cz) / c.rz);
+    const pts = [], nrm = [], W = ancho || 0.012;
+    for (let k = 0; k <= 72; k++) {
+      const fi = k / 72 * 2 * Math.PI, rad = [0, 1, 2].map((i) => u[i] * Math.cos(fi) + v[i] * Math.sin(fi));
+      const en = (r, h) => [0, 1, 2].map((i) => p[i] + e[i] * h + rad[i] * r);
+      let P = null;
+      for (let m = 1; m < perfil.length && !P; m++) {
+        const A = perfil[m - 1], Z = perfil[m], f = (t) => en(lerp(A[0], Z[0], t), lerp(A[1], Z[1], t));
+        if (q(f(0)) < 1 || q(f(1)) >= 1) continue;
+        let lo = 0, hi = 1;
+        for (let it = 0; it < 24; it++) { const t = (lo + hi) / 2; if (q(f(t)) >= 1) lo = t; else hi = t; }
+        P = f(lo);
+      }
+      if (!P) continue;
+      /* corrida hacia fuera (lejos del eje) sobre la cabeza, W/2 + 0,5 mm, y
+         2,5 mm por encima: con el borde de adentro 2 mm bajo la pieza, de
+         atras asomaba a rayitas entre las caras de la almohadilla */
+      const n = normalCab(P), t = uni(sub(rad, n.map((x) => x * dot(rad, n))));
+      const Q = mas(P, t, W / 2 + 0.0005), s2 = 1 / q(Q), R = [Q[0] * s2, c.cy + (Q[1] - c.cy) * s2, c.cz + (Q[2] - c.cz) * s2], nR = normalCab(R);
+      pts.push(mas(R, nR, 0.0025)); nrm.push(nR);
+    }
+    trazo(B, pts, nrm, W);
+  }
+
+  /* EL CASCO ABIERTO DE CARA (helmet1 y helmet3), DE SU DIBUJO: tapa la
+     cabeza por arriba y por detras hasta la mandibula (-30 grados), con la
+     visera de la frente (29) y el FRENTE DERECHO por delante de la oreja; el
+     reborde acampanado y oscuro, con su trazo. Las columnas se aprietan
+     donde el borde baja casi vertical (sin eso el frente salia dentado). */
+  const azCasco = (() => {
+    const L = [];
+    for (let a = -180; a < -70; a += 8) L.push(a);
+    for (let a = -70; a < -44; a += 1.25) L.push(a);
+    for (let a = -44; a < 44; a += 4) L.push(a);
+    for (let a = 44; a < 70; a += 1.25) L.push(a);
+    for (let a = 70; a < 180; a += 8) L.push(a);
+    return L;
+  })();
+  const loCasco = (az) => { const a = Math.abs(((az + 540) % 360) - 180); return lerp(29, -30, suave(50, 64, a)); };
+  function casco(B, o, g, silueta) {
+    const M = azCasco.length;
+    const d = (az, el) => 0.034 + 0.008 * suave(50, 90, el) + 0.014 * (1 - suave(0, 7, el - loCasco(az)));
+    casquete(B, { lo: loCasco, d, azDe: (t) => azCasco[Math.min(M - 1, Math.round(t * M))], M, N: 16, trazo: 0.012,
+                  color: (az, el) => (el - loCasco(az) < 5 ? o.hexBorde : o.hex) }, g, silueta);
+    return d;
+  }
   MOD.helmet1 = function (B, g, silueta) {
-    const lo = (az) => lerp(8, 30, Math.pow((1 + Math.cos(az * RAD)) / 2, 1.4));
-    casquete(B, { lo, d: (az, el) => 0.03 + 0.012 * suave(60, 90, el) + 0.018 * (1 - suave(0, 12, el - lo(az))),
-                  color: (az, el) => (el - lo(az) < 5 ? sw(78) : sw(87)), M: 48, N: 14 }, g, silueta);
-    if (silueta) return;
+    const d = casco(B, { hex: sw(106), hexBorde: sw(78) }, g, silueta);
+    // el remache de cada costado: un disco claro con su trazo
     for (const s of [1, -1]) {
-      const p = sobre(s * 100, 20, 0.045);
-      pieza(B, [[0, 0.01], [0.016, 0.006], [0.018, 0]], p, uni(sub(p, [0, C().cy, C().cz])), sw(102), 0, false, 10);
+      const p = sobre(s * 104, 4, d(s * 104, 4) - 0.001), n = normalCab(p);
+      pieza(B, [[0, 0.007, sw(153)], [0.02, 0.006, sw(153)], [0.024, 0.0]], p, n, sw(153), g * 0.45, silueta, 16);
     }
   };
-
-  /* Blast Helm (helmet3): el casco (102/69) con la pantalla de soldar
-     levantada encima de la frente -una caja negra remachada- y la
-     correa de los costados (78). */
+  /* BLAST HELM (helmet3), DE SU DIBUJO: el mismo casco (110) con la pantalla
+     de soldar levantada: una CAJA negra (34) grande delante de la frente,
+     con sus cuatro tornillos, colgada de dos brazos (78) que bajan a una
+     bisagra a cada lado, y la correa (68) con su hebilla hasta el borde. */
   MOD.helmet3 = function (B, g, silueta) {
-    const lo = (az) => lerp(4, 24, Math.pow((1 + Math.cos(az * RAD)) / 2, 1.2));
-    casquete(B, { lo, d: (az, el) => 0.032 + 0.01 * suave(60, 90, el), color: (az, el) => (el - lo(az) < 4 ? sw(69) : sw(102)), M: 48, N: 14 }, g, silueta);
-    /* la pantalla levantada: una placa negra gruesa que sigue el casco por
-       delante y arriba (subida, como se lleva sin soldar), de canto a canto
-       entre las bisagras */
-    casquete(B, { a0: -38, a1: 38, lo: () => 34, hi: () => 64, d: () => 0.078, dentro: 0.036, hex: sw(34), canto: sw(22), M: 16, N: 6 }, g, silueta);
-    if (silueta) return;
-    // sus remaches y las bisagras a los costados
-    for (const [az, el] of [[-28, 40], [28, 40], [-28, 58], [28, 58]]) {
-      const p = sobre(az, el, 0.078);
-      pieza(B, [[0, 0.008], [0.011, 0.004], [0.012, 0]], p, uni(sub(p, centro())), sw(92), 0, false, 8);
+    const d = casco(B, { hex: sw(110), hexBorde: sw(80) }, g, silueta);
+    const Cc = [0, 1.69, 0.475], E0 = [1, 0, 0], E1 = uni([0, 0.8, -0.6]), E2 = cruz(E0, E1), H = [0.17, 0.1, 0.06];
+    caja(B, Cc, [E0, E1, E2], H, sw(34), g, silueta);
+    if (!silueta) {
+      // los tornillos de la cara de delante
+      for (const [u, v] of [[-0.125, 0.06], [0.125, 0.06], [-0.125, -0.06], [0.125, -0.06]]) {
+        const p = mas(mas(mas(Cc, E0, u), E1, v), E2, H[2] + 0.0008);
+        mancha(B, superLente(0.012, 0.016, 2.2, 12).map(([a, b]) => [a, b]), (a, b) => mas(mas(p, E0, a), E1, b), E2, sw(70));
+        trazo(B, Array.from({ length: 13 }, (_, k) => { const a = k / 12 * 2 * Math.PI; return mas(mas(p, E0, 0.012 * Math.cos(a)), E1, 0.016 * Math.sin(a)); }),
+              Array.from({ length: 13 }, () => E2), 0.004);
+      }
     }
     for (const s of [1, -1]) {
-      const p = sobre(s * 42, 42, 0.05);
-      pieza(B, [[0, 0.03], [0.03, 0.02], [0.032, 0]], p, uni(sub(p, centro())), sw(78), 0, false, 12);
+      // el brazo: de la esquina de atras de la caja, por fuera del casco, a la bisagra
+      const a0 = mas(mas(mas(Cc, E0, s * (H[0] - 0.03)), E1, -H[1] * 0.4), E2, -H[2]);
+      const bis = sobre(s * 80, 14, d(s * 80, 14) + 0.006), cen = [a0];
+      for (let k = 1; k <= 12; k++) { const t = k / 12, az = lerp(s * 40, s * 80, t), el = lerp(46, 14, Math.pow(t, 0.9)); cen.push(k === 12 ? bis : sobre(az, el, d(az, el) + 0.008)); }
+      const an = cen.map((p, k) => {
+        const n = normalCab(p), tg = uni(sub(cen[Math.min(12, k + 1)], cen[Math.max(0, k - 1)])), b2 = uni(cruz(n, tg));
+        return [[1, 1], [-1, 1], [-1, -1], [1, -1]].map(([x, y]) => mas(mas(p, b2, x * 0.02), n, y * 0.005));
+      });
+      tubo3(B, an, () => sw(78), g, silueta, true);
+      // la bisagra: un disco con su tornillo
+      const nb = normalCab(bis);
+      pieza(B, [[0, 0.012, sw(90)], [0.03, 0.01, sw(90)], [0.034, 0.0]], bis, nb, sw(90), g * 0.45, silueta, 16);
+      // la correa: de la bisagra al borde, con su hebilla
+      const P = [];
+      for (let k = 0; k <= 10; k++) {
+        const el = lerp(10, loCasco(s * 84) + 1, k / 10), az = s * lerp(80, 88, k / 10);
+        const tasaA = dist(sobre(az - 0.5, el, d(az, el) + 0.004), sobre(az + 0.5, el, d(az, el) + 0.004));
+        P.push(filas(0.036, 7, 0.005, 0.005).map((w) => sobre(az + (w - 0.018) / tasaA, el, d(az, el) + 0.004)));
+      }
+      lamina(B, P, { gr: 0.005, color: (i, j) => (j <= 1 || j >= 6 ? NEGRO : sw(68)) }, g, silueta);
+      const ph = sobre(s * 82, 1, d(s * 82, 1) + 0.011), th = uni(sub(sobre(s * 82, -3, 0.05), sobre(s * 82, 5, 0.05)));
+      hebilla(B, ph, th, normalCab(ph), 0.03, 0.05, 0.008, sw(150), sw(68), g, silueta);
     }
   };
 
@@ -7926,29 +8225,39 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
      debajo, con un margen de 6 grados. Ahi el contorno de la cabeza no se
      adelanta (chars.js, geoDe): la prenda lo cubre con su profundidad de
      verdad y el trazo del ovalo no la cruza.
+     (Se probo dejar con luz plana la cabeza bajo el sombrero, para apagar
+     el brillo de la frente bajo el ala: el muñeco gira y la luz no, asi que
+     de espaldas a la luz esa franja salia mas clara que la nuca. Lo que lo
+     arregla es que cada sombrero apoye donde lo pone su dibujo, mas abajo.)
      ============================================================= */
   const MARGEN = 6;
   const CUBRE = Acc.CUBRE = Acc.CUBRE || {};
   const desde = (lo) => (az, el) => el > lo(az) - MARGEN;
   const entre = (lo, hi) => (az, el) => el > lo(az) - MARGEN && el < hi(az) + MARGEN;
-  CUBRE.hat1 = desde(bordeGorra(21, 5));
-  CUBRE.hat4 = desde(bordeGorra(20, 4));
-  CUBRE.hat2 = desde(bordeGorra(24, 0));
-  CUBRE.hat3 = entre((az) => lerp(46, 22, (1 + Math.cos(az * RAD)) / 2), (az) => lerp(46, 22, (1 + Math.cos(az * RAD)) / 2) + 17);
+  CUBRE.hat1 = desde(LO_HAT1);
+  CUBRE.hat4 = desde(LO_HAT4);
+  CUBRE.hat2 = desde(LO_HAT2);
+  CUBRE.hat3 = entre(LO_HAT3, (az) => LO_HAT3(az) + ANCHO_HAT3);
   // los de copa: desde el ala (inclinada hacia atras, un poco mas baja por detras)
-  for (const id of ['hat5', 'hat6', 'top', 'fedora', 'hat9']) CUBRE[id] = (az, el) => el > elDeY(yApoyo) - 4 - 4 * Math.max(0, -Math.cos(az * RAD)) - MARGEN;
-  CUBRE.helmet1 = desde((az) => lerp(8, 30, Math.pow((1 + Math.cos(az * RAD)) / 2, 1.4)));
-  CUBRE.helmet3 = desde((az) => lerp(4, 24, Math.pow((1 + Math.cos(az * RAD)) / 2, 1.2)));
-  /* los auriculares: las copas y el arco. Las copas salen 5,6 cm de la
-     cabeza y de costado tapan su contorno bastante mas alla de donde apoyan:
-     con 20 grados, el contorno adelantado de la cabeza les pasaba por encima
-     del borde de abajo y se cortaba de golpe (una colita negra suelta). */
-  /* La cuenta: un punto del contorno a un angulo a del eje de la copa queda
-     detras de ella si 0,378 cos a + 0,088 sen a > 0,33 (la tapa a 37,8 cm
-     del centro, radio 8,8, la cabeza 33): hasta unos 45 grados. Con 50 de
-     margen; el arco, a 2,2 cm de la cabeza y 4,4 de ancho, tapa una franja
-     de |n_z| < 0,35 de costado. */
-  CUBRE.headphones = (az, el, n) => Math.abs(n[0]) > Math.cos(50 * RAD) || (n[1] > -0.1 && Math.abs(n[2]) < 0.35);
+  for (const id of ['hat5', 'hat6', 'top', 'fedora', 'hat9']) {
+    const elA = elDeY(Y_COPA[id]);
+    CUBRE[id] = (az, el) => el > elA - 4 - 4 * Math.max(0, -Math.cos(az * RAD)) - MARGEN;
+  }
+  CUBRE.helmet1 = CUBRE.helmet3 = desde(loCasco);
+  /* los auriculares: las copas, los yugos y el arco. Las copas salen 6 cm
+     de la cabeza y de costado tapan su contorno bastante mas alla de donde
+     apoyan: con 20 grados, el contorno adelantado de la cabeza les pasaba
+     por encima del borde de abajo (una colita negra suelta). Un punto del
+     contorno a un angulo a del eje de la copa queda detras de ella si
+     0,39 cos a + 0,125 sen a > 0,33: hasta unos 54 grados; con 55 (con 58
+     el contorno de la cara salia fino y la punta de la cruz, suelta). El arco,
+     a 2 cm de la cabeza en el plano de las copas, tapa una franja de 0,35
+     a cada lado de ese plano (n_z = cos 76). */
+  CUBRE.headphones = (az, el, n) => {
+    const a = AUR.az * RAD, ny = AUR.y / C().ry, L = Math.hypot(1, ny);
+    const eje = [Math.sign(n[0]) * Math.sin(a) / L, ny / L, Math.cos(a) / L], zB = Math.cos(a);
+    return dot(n, eje) > Math.cos(55 * RAD) || (n[1] > -0.1 && Math.abs(n[2] - zB) < 0.35);
+  };
 
   /* =============================================================
      LOS ANTEOJOS (MasksAll, 7358; puestos en 'Parts - Head' con myMask)
@@ -8121,6 +8430,7 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
      largo, cerrada si o.vuelta; j de un borde al otro).
        o.gr            el grueso (m)
        o.color(i, j)   el gris de fuera (dentro, el mismo mas oscuro)
+       o.tintaEn(i, j) cuanto de la tinta de sus caras lleva ese punto (1)
        o.apoyo(i, j)   en las filas de borde (j = 0 y j = N): 1 si ese borde
                        APOYA en la cabeza, 0 si queda suelto, y en medio;
                        o.apoyoLado(i, j), lo mismo en los costados
@@ -8155,7 +8465,12 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
     const dirL = (i, j) => (i === 0 ? uni(sub(at(0, j), at(1, j))) : uni(sub(at(M - 1, j), at(M - 2, j))));
     const cara = (s) => P.map((col, i) => col.map((p, j) => {
       const n = NR[i][j], f = s > 0 ? n : [-n[0], -n[1], -n[2]];
-      let q = mas(p, n, s * (gr / 2 + gE + (silueta && s < 0 ? HUNDE * cerca(p) : 0))), nn = f;
+      /* o.tintaN: una PLACA FINA SUELTA (visera, ala) lleva la tinta en su
+         plano -el borde estirado g- y apenas por sus caras: hinchada g arriba
+         y abajo, vista desde arriba su cara de abajo quedaba 1,6 cm por
+         debajo del borde y salia como una raya suelta bajo la visera. */
+      const gN = gE * (o.tintaN === undefined ? 1 : o.tintaN) * (o.tintaEn ? o.tintaEn(i, j) : 1);
+      let q = mas(p, n, s * (gr / 2 + gN + (silueta && s < 0 && !o.sinHundir ? HUNDE * cerca(p) : 0))), nn = f;
       if (silueta) {
         let e = [0, 0, 0];
         if (j === 0 || j === N) e = mas(e, dirB(i, j), gE * (1 - apoyo(i, j)));

@@ -79,6 +79,17 @@ Fuente: `nevada/` → `juegos-pc/ArenaNevada.html`. Ver también: [banco](banco.
   óvalo adelantado salvo junto a la ventana y adelanta solo la cara de FUERA de su tinta.
 - Luz de la sala (0,44, 0,74, 0,51); escalones en 0,50/0,62/0,88: para que se lea un pliegue (Tricky,
   placa en V de 30°) cada cara tiene que caer en un escalón distinto (medido: 71 y 79).
+- **La tinta de la ropa de la cabeza va adelantada 1 cm**: toda cáscara a menos de 1 cm detrás de
+  otra superficie la atraviesa (el arco bajo el yugo salía en rayitas). Lo que se mete bajo otra pieza
+  termina en la franja negra de esa pieza.
+- Alas (`torno`): la cáscara de la cara de abajo llenaba el hueco entre el ala levantada y la cabeza
+  (cuña negra + franja clara). `p[3]` = cuánta tinta lleva cada punto del perfil (0 en los dos extremos
+  de un tramo = sin cáscara) y la junta con la cabeza va pintada (`juntaAla`, `juntaPieza`: medidas
+  donde el perfil entra en el óvalo; a ojo quedaban corridas y asomaba una medialuna de cabeza).
+- Lo que apoya en la cabeza (arco y yugo de los auriculares) va como `lamina`: suelto a 2-3 cm dejaba
+  rayitas de cabeza y una tinta finita. Una pieza que pasa detrás del contorno de otra a su misma
+  profundidad le tapa la tinta de adentro: se corta en el contorno. Esquinas vivas de una placa → pico
+  de tinta de sesgo: redondas. `CUBRE` de más adelgaza el contorno de la cara donde se ve.
 
 ## Estado al cierre del log (29/09 05:31)
 - Lo último fue rehacer los íconos de los botones con piezas del SWF; USAR quedó con el dedo en
