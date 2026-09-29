@@ -2,6 +2,13 @@
 Una entrada por sesión: qué quedó y qué falta. Lo largo de cada vuelta está en el mensaje del
 commit; acá va lo que otra sesión necesita saber.
 
+## 2026-09-29 — chamaco: Nevada entra al repo
+Rama `ccr-29311d97-jmb0eu`. Arena Nevada (el Madness 3D de otra sesión) llegó como un HTML de
+7,29 MB: se partió en `nevada/` (53 fuentes + plantilla) y `armar.py` lo rearma idéntico (sha256).
+**Frenado por el modo auto:** `npx rezona@latest login`, enganchar `goshumio/juegardos` y un grep
+del log. Sin Rezona hasta que quien pide lo habilite.
+**Falta:** qué mejorar de Nevada, qué es «Neko PC» y un banco propio para Nevada.
+
 ## 2026-09-23 — arranca la serie 2D; el Bosque queda en pausa
 **Pedido textual:** «Cada juego 2D nuevo que hagas mejora un 100% más que el anterior con menús
 botones animaciones aún mejores y diferentes historia y eso entre si okey? Deja este proyecto para

@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0203">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>MADNESS · PROJECT ALPHA 2</title>
+<style>{{css/fuentes_swf.css}}</style>
+<style>{{css/titulo_swf.css}}</style>
+<style>{{css/ui.css}}</style>
+<script>{{audio/sonidos.js}}</script>
+<script>{{audio/musica.js}}</script>
+</head>
+<body class="pc">
+<!-- Version autocontenida: motor 3D, estilos, fuente y
+     codigo van dentro. Generado con "node madness/build.js". -->
+
+<!-- El escenario: en un telefono en vertical, este div se gira 90
+     grados y el juego se ve apaisado sin pedir nada al jugador. -->
+<div id="escenario">
+
+  <canvas id="lienzo"></canvas>
+  <!-- el contador de FPS de los ajustes (Ajustes.cuadro) -->
+  <div id="contFps" hidden></div>
+
+  <!-- ================= HUD ================= -->
+  <div id="hud" class="oculto">
+
+    <!-- =================== LA TIRA DE ARRIBA ===================
+
+         Medida sobre capturas del juego original a 640x360. Y eso
+         es una suerte: --u es alto/360, asi que UN PIXEL DE LA
+         CAPTURA ES UN --u, sin conversion de por medio.
+
+           retrato        x  9..64   y  6..69    55 x 63
+           placa nombre   x  9..55   y 66..80    46 x 14
+           barra          x 73..     y  8..17     -  x  9
+           rotulo         x 72..     y 17..25
+           hueco de arma  x 72..121  y 27..72    49 x 45
+           bloque izq.    x  0..128  y  0..85
+           banda          todo       y  0..28
+
+         La chapa es UNA sola forma negra con filo rojo, escalonada:
+         banda fina a todo lo ancho mas el bloque alto de la
+         izquierda. La traza hud.js.
+    -->
+    <div id="tira">
+      <svg id="platoHud" preserveAspectRatio="none" aria-hidden="true">
+        <path id="platoPath" d=""/>
+      </svg>
+
+      <div id="careto">
+        <canvas id="caraCanvas" width="110" height="126"></canvas>
+        <i id="caretoVida"></i>
+        <b id="caretoX"></b>
+      </div>
+      <div id="chapaNombre"><span>HANK</span></div>
+
+      <!-- La barra de BULLET-TIME. Se llama asi, no "furia": es
+           como la llama el original y es lo que hace. -->
+      <div id="barraLarga"><i id="barraFuria"></i></div>
+      <div id="rotuloBT">BULLET-TIME<u></u></div>
+
+      <!-- El arma, en su hueco: el sprite 873 del SWF, con los
+           cargadores de repuesto y la barra del cargador debajo.
+           Lo pinta hud.js (pintarHueco). -->
+      <div id="huecoArma">
+        <canvas id="armaCanvas"></canvas>
+        <em class="oculto" id="recargando">RECARGANDO</em>
+      </div>
+
+      <!-- Donde el original pone MAIN MENU. Tres rayas, misma
+           chapa: negro, filo rojo, letra en hueso. -->
+      <button id="tpausa" aria-label="Menu"><canvas id="menuCanvas"></canvas></button>
+    </div>
+
+    <!-- LA TIENDA de la armeria (tienda.js): se abre en el mostrador.
+         Izquierda la ficha, en medio el arma, a la derecha las armas. -->
+    <div id="tienda" class="oculto">
+      <div class="tdCab">
+        <button class="bt menor" id="tdSalir"><span>&lsaquo; VOLVER</span></button>
+        <h2>ARMORY</h2>
+        <b id="tdDinero">$0</b>
+      </div>
+      <div class="tdCuerpo v0" id="tdCuerpo">
+        <aside class="tdFicha">
+          <div class="tdPedestal">
+            <i class="foco"></i>
+            <span id="tdFondoNombre" class="fondoNombre"></span>
+            <canvas id="tdFigura" width="300" height="360"></canvas>
+            <div class="tdNom"><b id="tdNombre"></b><small id="tdNivel"></small></div>
+          </div>
+          <div id="tdRecuadro" class="tdRecuadro"></div>
+          <div id="tdPestanas" class="tdPestanas"></div>
+        </aside>
+        <div id="tdArma" class="tdArma"></div>
+        <div id="tdLista" class="tdLista"></div>
+      </div>
+    </div>
+
+    <!-- El fundido de cruzar la puerta de la armeria (game.js) -->
+    <div id="velo"></div>
+
+    <!-- Avisos grandes en el centro -->
+    <div id="aviso"></div>
+
+  </div>
+
+  <!-- ================= MANDOS TACTILES ================= -->
+  <div id="mandos" class="oculto">
+    <div id="palanca"><div id="palancaBase"></div><div id="palancaBola"></div></div>
+    <div id="botonera">
+      <!-- En arco alrededor de ATACAR: los de pulgar (ESQUIVA, BLOQUEAR,
+           B.TIME) en el anillo de dentro y los de manejo de armas en el de
+           fuera. Uno solo por funcion; los que no sirven ahora se apagan. -->
+      <button class="tbtn peq" data-act="recargar"><span>RECARGAR</span></button>
+      <button class="tbtn peq" data-act="cambiar"><span>ARMA</span></button>
+      <button class="tbtn peq" data-act="tirar"><span>TIRAR</span></button>
+      <button class="tbtn peq" data-act="recoger"><span>COGER</span></button>
+      <button class="tbtn med" data-act="esquiva"><span>ESQUIVA</span></button>
+      <button class="tbtn med" data-act="bloquear"><span>BLOQUEAR</span></button>
+      <button class="tbtn med furia" data-act="furia"><span>B.TIME</span></button>
+      <button class="tbtn grande" data-act="fuego"><span>ATACAR</span></button>
+    </div>
+  </div>
+
+  <!-- ================= MENU PRINCIPAL ================= -->
+  <section class="pantalla ver" id="menu">
+    <!-- Como el menu principal del SWF (madness_game_select): el titulo
+         arriba, una franja entre dos lineas rojas con los modos colgando
+         de la de arriba y las opciones apoyadas en la de abajo, y los creditos
+         al pie (CREATED BY / MUSIC BY, como el SWF). Detras, la ciudad del mapa de
+         episodios (js/ciudad.js). -->
+    <div class="titulo">
+      <div class="tituloMad" role="img" aria-label="MADNESS"></div>
+      <div class="tituloNom">PROJECT ALPHA 2</div>
+    </div>
+    <div class="banda" id="banda">
+      <!-- charIcon del SWF (MadnessGameSelect.assignRandomCharacter): un
+           personaje al azar de la lista del menu, sin armas, cortado por la
+           linea de abajo de la franja. Aqui, en 3D (main.js, figuraMenu). -->
+      <div class="charIcon"><canvas id="menuFigura" width="360" height="360"></canvas></div>
+      <div class="bandaCont">
+        <nav class="modos">
+          <button class="bt pestana wip" data-ir="historia" disabled><span>STORY CAMPAIGN</span></button>
+          <button class="bt pestana" data-ir="modoArena" id="tabArena"><span>ARENA COMBAT</span></button>
+          <button class="bt pestana wip" data-ir="entrenar" disabled><span>THE PLAYGROUND</span></button>
+        </nav>
+        <!-- El fotograma 'arena' de madness_game_select (7547): la pestaña
+             queda apretada y de ella cuelga una linea roja con NEW GAME
+             (pressNew) y CONTINUE (pressContinue; sin partida guardada es
+             continueTEXT, apagado). -->
+        <div class="submodo" id="subArena">
+          <i class="ramal" aria-hidden="true"></i>
+          <button class="opcion" data-ir="nueva"><span>NEW GAME</span></button>
+          <button class="opcion" data-ir="continuar" id="btContinuar"><span>CONTINUE</span></button>
+        </div>
+        <div class="cartel">
+          <b>ARENA COMBAT IS OPEN<br>IN THIS ALPHA!</b>
+          <i class="raya" aria-hidden="true"></i>
+          <p>Story Campaign and The Playground are coming<br>in future updates.</p>
+          <strong>THIS IS ONLY THE BEGINNING</strong>
+        </div>
+        <div class="apoyados">
+          <button class="bt apoyado" data-ir="ajustes"><span>GAME OPTIONS</span></button>
+          <button class="bt apoyado" data-ir="salir"><span>QUIT</span></button>
+        </div>
+      </div>
+    </div>
+    <!-- La version, arriba a la derecha, como el "Version 1.8 / UPDATED /
+         9/9/14" del SWF (medidas en ui.css). Una menor por bloque grande
+         desde la 0.2: punteria y cuerpos, trajes y accesorios, ragdoll y
+         combate del SWF. La fecha, en el formato del SWF (mes/dia/año). -->
+    <div class="versionMenu" aria-label="Alpha 0.6, actualizado el 28/9/26">
+      <b>Alpha 0.6</b><strong>UPDATED</strong><i></i><em>9/28/26</em>
+    </div>
+    <div class="pieMenu">
+      <div class="creditos">
+        <div><small>BASED ON</small><span>MADNESS COMBAT <em>&amp;</em> PROJECT NEXUS</span></div>
+        <div><small>CREATOR OF MADNESS COMBAT</small><span>MATT KRINKELS JOLLY</span></div>
+        <div><small>MUSIC BY</small><span>SEAN HODGES</span></div>
+      </div>
+      <div class="presenta"><small>PRESENTED BY</small><span>GOSHUMIO</span></div>
+    </div>
+  </section>
+
+  <!-- ================= NUEVA PARTIDA SOBRE UNA GUARDADA =================
+       MadnessPopup.addPopup('yesno', "You're about to ruin the entirety of
+       your data.", ..., pressYes, pressNo) de MadnessGameSelect.pressNew. -->
+  <section class="pantalla" id="confirmaNueva">
+    <div class="panel">
+      <div class="panelBorde"><i></i><i></i></div>
+      <h2 class="sangriento">NEW GAME</h2>
+      <p>You're about to ruin the entirety of your data.</p>
+      <div class="separador"><i></i><i></i></div>
+      <button class="bt principal" data-ir="nuevaSi"><span>YES</span></button>
+      <button class="bt menor" data-ir="menuArena"><span>NO</span></button>
+    </div>
+  </section>
+
+  <!-- ================= AJUSTES ================= -->
+  <section class="pantalla" id="ajustes">
+    <div class="panel ancho ajustes">
+      <div class="panelBorde"><i></i><i></i></div>
+      <h2>AJUSTES</h2>
+      <nav class="ajTabs">
+        <button data-tab="video" class="on">VIDEO</button>
+        <button data-tab="juego">JUEGO</button>
+        <button data-tab="audio">AUDIO</button>
+      </nav>
+
+      <div class="ajHoja on" data-hoja="video">
+        <div class="ajFila">
+          <div class="ajTxt"><label>CALIDAD</label><small>Enemigos a la vez, cantidad de sangre y suavizado de bordes</small></div>
+          <div class="segm" data-aj="calidad">
+            <button data-v="baja">BAJA</button><button data-v="media">MEDIA</button><button data-v="alta">ALTA</button>
+          </div>
+        </div>
+        <div class="ajFila">
+          <div class="ajTxt"><label>RESOLUCION</label><small>Pixeles que se dibujan. AUTO la ajusta sola para sostener los FPS</small></div>
+          <div class="segm" data-aj="resolucion">
+            <button data-v="auto">AUTO</button><button data-v="0.5">50%</button><button data-v="0.67">67%</button><button data-v="0.75">75%</button><button data-v="0.85">85%</button><button data-v="1">100%</button>
+          </div>
+        </div>
+        <div class="ajFila">
+          <div class="ajTxt"><label>FPS MAXIMOS</label><small>30 ahorra bateria y calienta menos el telefono</small></div>
+          <div class="segm" data-aj="fps">
+            <button data-v="30">30</button><button data-v="60">60</button><button data-v="0">SIN TOPE</button>
+          </div>
+        </div>
+        <div class="ajFila">
+          <div class="ajTxt"><label>CONTADOR DE FPS</label><small>Arriba a la derecha, debajo de la pausa</small></div>
+          <div class="segm" data-aj="verFps">
+            <button data-v="false">NO</button><button data-v="true">SI</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ajHoja" data-hoja="juego">
+        <div class="ajFila">
+          <div class="ajTxt"><label>SANGRE</label><small>Salpicaduras y charcos. En NO no sale ni una gota</small></div>
+          <div class="segm" data-aj="sangre">
+            <button data-v="true">SI</button><button data-v="false">NO</button>
+          </div>
+        </div>
+        <div class="ajFila apagada">
+          <div class="ajTxt"><label>GORE <b class="prox">PROXIMAMENTE</b></label><small>Desmembramiento y decapitaciones</small></div>
+          <div class="segm" data-aj="gore">
+            <button data-v="true" disabled>SI</button><button data-v="false" disabled>NO</button>
+          </div>
+        </div>
+        <div class="ajFila">
+          <div class="ajTxt"><label>MANDOS</label><small>AUTO elige tactil o teclado y raton segun el aparato</small></div>
+          <div class="segm" data-modo>
+            <button data-v="auto">AUTO</button><button data-v="pc">PC</button><button data-v="movil">MOVIL</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ajHoja" data-hoja="audio">
+        <div class="ajFila">
+          <div class="ajTxt"><label>MUSICA</label><small>A cero, apagada (MUSIC OFF)</small></div>
+          <div class="ajVol"><input type="range" id="volMusica" data-aj="musica" min="0" max="100" step="5"><output for="volMusica">100%</output></div>
+        </div>
+        <div class="ajFila">
+          <div class="ajTxt"><label>EFECTOS</label><small>Disparos, golpes, puertas y botones</small></div>
+          <div class="ajVol"><input type="range" id="volEfectos" data-aj="efectos" min="0" max="100" step="5"><output for="volEfectos">100%</output></div>
+        </div>
+      </div>
+
+      <div class="ajInfo" id="infoRend">—</div>
+      <div class="ajPie">
+        <button class="bt menor" id="ajAuto"><span>RESTABLECER (AUTO)</span></button>
+        <button class="bt principal" data-ir="volverAjustes"><span>VOLVER</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CREDITOS ================= -->
+  <section class="pantalla" id="creditos">
+    <div class="panel ancho">
+      <div class="panelBorde"><i></i><i></i></div>
+      <h2>CREDITOS</h2>
+      <p>Juego de fans inspirado en <b>Madness Combat</b>, de Krinkels,
+         y en el modo Arena de <b>Madness: Project Nexus</b>.</p>
+      <p>Sin relacion con Krinkels ni con Newgrounds. Las armas, las
+         manos, los carteles, los sonidos y la letra salen del SWF de
+         Project Nexus; el codigo y el 3D son de esta version.</p>
+      <button class="bt principal" data-ir="menu"><span>VOLVER</span></button>
+    </div>
+  </section>
+
+  <!-- ================= PAUSA ================= -->
+  <section class="pantalla" id="pausa">
+    <div class="panel">
+      <div class="panelBorde"><i></i><i></i></div>
+      <h2>EN PAUSA</h2>
+      <button class="bt principal" data-ir="seguir"><span>SEGUIR</span></button>
+      <button class="bt principal" data-ir="ajustes"><span>AJUSTES</span></button>
+      <button class="bt menor" data-ir="abandonar"><span>ABANDONAR</span></button>
+    </div>
+  </section>
+
+  <!-- ================= MUERTE ================= -->
+  <section class="pantalla" id="muerte">
+    <div class="panel">
+      <div class="panelBorde"><i></i><i></i></div>
+      <h2 class="sangriento">HAS MUERTO</h2>
+      <div class="resumen">
+        <div><span id="mOleada">0</span><small>OLEADAS</small></div>
+        <div><span id="mBajas">0</span><small>BAJAS</small></div>
+        <div><span id="mRecord">0</span><small>RECORD</small></div>
+      </div>
+      <button class="bt principal" data-ir="reintentar"><span>OTRA VEZ</span></button>
+      <button class="bt menor" data-ir="menu"><span>AL MENU</span></button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ---- vendor/three.min.js ---- */
+{{vendor/three.min.js}}</script>
+<script>
+/* ---- vendor/cannon-es.min.js ---- */
+{{vendor/cannon-es.min.js}}</script>
+<script>
+/* ---- js/util.js ---- */
+{{js/util.js}}</script>
+<script>
+/* ---- js/art.js ---- */
+{{js/art.js}}</script>
+<script>
+/* ---- js/manos_swf.js ---- */
+{{js/manos_swf.js}}</script>
+<script>
+/* ---- js/manos.js ---- */
+{{js/manos.js}}</script>
+<script>
+/* ---- js/chars.js ---- */
+{{js/chars.js}}</script>
+<script>
+/* ---- js/accesorios_tex.js ---- */
+{{js/accesorios_tex.js}}</script>
+<script>
+/* ---- js/accesorios.js ---- */
+{{js/accesorios.js}}</script>
+<script>
+/* ---- js/ropa.js ---- */
+{{js/ropa.js}}</script>
+<script>
+/* ---- js/golpes_swf.js ---- */
+{{js/golpes_swf.js}}</script>
+<script>
+/* ---- js/esquivas_swf.js ---- */
+{{js/esquivas_swf.js}}</script>
+<script>
+/* ---- js/anim.js ---- */
+{{js/anim.js}}</script>
+<script>
+/* ---- js/modelos_swf.js ---- */
+{{js/modelos_swf.js}}</script>
+<script>
+/* ---- js/weapons.js ---- */
+{{js/weapons.js}}</script>
+<script>
+/* ---- js/golpes.js ---- */
+{{js/golpes.js}}</script>
+<script>
+/* ---- js/arena.js ---- */
+{{js/arena.js}}</script>
+<script>
+/* ---- js/armeria_swf.js ---- */
+{{js/armeria_swf.js}}</script>
+<script>
+/* ---- js/armeria.js ---- */
+{{js/armeria.js}}</script>
+<script>
+/* ---- js/ciudad_swf.js ---- */
+{{js/ciudad_swf.js}}</script>
+<script>
+/* ---- js/ciudad.js ---- */
+{{js/ciudad.js}}</script>
+<script>
+/* ---- js/mira.js ---- */
+{{js/mira.js}}</script>
+<script>
+/* ---- js/tacbar.js ---- */
+{{js/tacbar.js}}</script>
+<script>
+/* ---- js/combat.js ---- */
+{{js/combat.js}}</script>
+<script>
+/* ---- js/disparo_swf.js ---- */
+{{js/disparo_swf.js}}</script>
+<script>
+/* ---- js/disparo.js ---- */
+{{js/disparo.js}}</script>
+<script>
+/* ---- js/ragdoll.js ---- */
+{{js/ragdoll.js}}</script>
+<script>
+/* ---- js/actor.js ---- */
+{{js/actor.js}}</script>
+<script>
+/* ---- js/reticula_swf.js ---- */
+{{js/reticula_swf.js}}</script>
+<script>
+/* ---- js/ai.js ---- */
+{{js/ai.js}}</script>
+<script>
+/* ---- js/player.js ---- */
+{{js/player.js}}</script>
+<script>
+/* ---- js/waves.js ---- */
+{{js/waves.js}}</script>
+<script>
+/* ---- js/input.js ---- */
+{{js/input.js}}</script>
+<script>
+/* ---- js/device.js ---- */
+{{js/device.js}}</script>
+<script>
+/* ---- js/sonido.js ---- */
+{{js/sonido.js}}</script>
+<script>
+/* ---- js/hud_swf.js ---- */
+{{js/hud_swf.js}}</script>
+<script>
+/* ---- js/cartel.js ---- */
+{{js/cartel.js}}</script>
+<script>
+/* ---- js/iconos_swf.js ---- */
+{{js/iconos_swf.js}}</script>
+<script>
+/* ---- js/iconos.js ---- */
+{{js/iconos.js}}</script>
+<script>
+/* ---- js/hud.js ---- */
+{{js/hud.js}}</script>
+<script>
+/* ---- js/game.js ---- */
+{{js/game.js}}</script>
+<script>
+/* ---- js/ajustes.js ---- */
+{{js/ajustes.js}}</script>
+<script>
+/* ---- js/progreso.js ---- */
+{{js/progreso.js}}</script>
+<script>
+/* ---- js/popup_swf.js ---- */
+{{js/popup_swf.js}}</script>
+<script>
+/* ---- js/popup.js ---- */
+{{js/popup.js}}</script>
+<script>
+/* ---- js/tienda_swf.js ---- */
+{{js/tienda_swf.js}}</script>
+<script>
+/* ---- js/tienda.js ---- */
+{{js/tienda.js}}</script>
+<script>
+/* ---- js/main.js ---- */
+{{js/main.js}}</script>
+</body>
+</html>

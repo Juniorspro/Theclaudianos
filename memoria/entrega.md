@@ -3,7 +3,8 @@ Ver también: [rezona](rezona.md), [bosque](bosque.md).
 
 ## El link para el celular
 `https://raw.githack.com/Juniorspro/Theclaudianos/claude/mmm-repo-name-53rbfd/juegos-pc/Bosque.html`
-— `raw.githubusercontent` y jsDelivr sirven el HTML como `text/plain` con `nosniff`, así que
+— el patrón es `raw.githack.com/Juniorspro/Theclaudianos/<rama>/juegos-pc/<Juego>.html`.
+`raw.githubusercontent` y jsDelivr sirven el HTML como `text/plain` con `nosniff`, así que
 muestran el código en vez de correr el juego. Y **el HTML se adjunta siempre** al cerrar la vuelta.
 
 ## Los assets no van adentro del HTML
@@ -16,6 +17,7 @@ muestran el código en vez de correr el juego. Y **el HTML se adjunta siempre** 
 - Peso hoy: HTML ~250 kB; assets 2,6 MB (el GLB del bicho, 1,29 MB, es el grueso).
 
 ## Git
-- Rama de trabajo: `claude/mmm-repo-name-53rbfd`. Push seguido: **el contenedor se revierte solo**
+- Rama de trabajo: la que indica cada sesión (29/09: `ccr-29311d97-jmb0eu`; el Bosque quedó en
+  `claude/mmm-repo-name-53rbfd`). Push seguido: **el contenedor se revierte solo**
   y lo pusheado es lo único que sobrevive.
 - Antes de commitear, mirar el diff; si algo parece faltar, `git fetch` antes de sacar conclusiones.

@@ -1,0 +1,7 @@
+# Lo armado y lo generado no se muestran en git diff: son megas de base64.
+juegos-pc/ArenaNevada.html -diff linguist-generated
+nevada/audio/*.js -diff linguist-generated
+nevada/vendor/*.js -diff linguist-vendored
+nevada/js/*_swf.js -diff linguist-generated
+nevada/js/accesorios_tex.js -diff linguist-generated
+nevada/css/*_swf.css -diff linguist-generated
