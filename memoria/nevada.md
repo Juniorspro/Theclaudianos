@@ -90,6 +90,11 @@ Fuente: `nevada/` → `juegos-pc/ArenaNevada.html`. Ver también: [banco](banco.
   rayitas de cabeza y una tinta finita. Una pieza que pasa detrás del contorno de otra a su misma
   profundidad le tapa la tinta de adentro: se corta en el contorno. Esquinas vivas de una placa → pico
   de tinta de sesgo: redondas. `CUBRE` de más adelgaza el contorno de la cara donde se ve.
+- Cascos (`casco`): el reborde va pintado a distancia MEDIDA del borde (`rebordeCasco`); el Blast
+  Helm lleva la pantalla EN V (`pantallaV`, el método de Tricky) y los brazos como sólido (`tubo3`):
+  como lámina en el aire, la tinta estirada de costado hacía cuñas. **Antes de tocar una pieza
+  compartida (`casco`), confirmar de qué prenda habla quien pide**: la V era de la pantalla del Blast
+  Helm y se la puse al borde del casco (revertido).
 
 ## Estado al cierre del log (29/09 05:31)
 - Lo último fue rehacer los íconos de los botones con piezas del SWF; USAR quedó con el dedo en
