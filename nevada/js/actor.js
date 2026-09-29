@@ -1823,6 +1823,10 @@
       /* La velocidad que ve el animador incluye la de salir por la
          puerta: andar hacia camara es andar igual. */
       vel: A.salLado ? 2.35 : Math.hypot(A.vx, A.velZ || 0),
+      /* Donde esta de verdad: el animador clava la bota apoyada en el suelo
+         con lo que el muñeco se movio (anim.js, LOS PIES), no con la
+         velocidad pedida, que contra una pared o en bullet time miente. */
+      x: A.x, z: A.z,
       aire: !enSuelo,
       tiempo: t,
       mirando: A.mirando,

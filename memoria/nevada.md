@@ -38,10 +38,14 @@ Fuente: `nevada/` → `juegos-pc/ArenaNevada.html`. Ver también: [banco](banco.
   Antes (zancada fija) daba 9 / 13 / 22 pasos/s: el "aleteo" que se veía feo al subir DEX.
 - Adaptado al 3D, cada cosa por un choque medido: sin la agachada del dash (el bajo del torso a
   16 cm, la bota mide 15,5); torso a la mitad de adelantado y a 2/3 de echado (13°) porque las
-  botas quedaban lejos del cuerpo (lo pidió quien pide); paso ×1,3; apoyo al 30% del ciclo;
-  talón y punta; `dentroTorso` baja la bota o sube el torso; puños que bombean al esprintar.
-- Medido con `node herramientas/banco/marcha.js`: bota dentro del torso 7-8 → 0-0,2 cm; patina
-  0,70-0,79 (antes 0,66-0,74: el pie apoyado sigue deslizando, como en el SWF).
+  botas quedaban lejos del cuerpo (lo pidió quien pide); talón y punta; `dentroTorso` baja la bota
+  o sube el torso; puños que bombean al esprintar.
+- **Bota clavada** (29/09, quien pide sentía que patinaba): en el apoyo su avance = el de la pisada
+  − lo recorrido de verdad (`A.dist`, con `est.x/z` del actor); apoyo corto según la velocidad
+  para que el recorrido se tope en 0,46 m andando, 0,60 esprintando, 0,66 con DEX; vuela con el
+  arco del SWF. Torso, vaivén y manos van en `faseT` (lo más bajo, a mitad del apoyo).
+- Medido con `node herramientas/banco/marcha.js`: `clavada` 0,000 (antes el pie apoyado iba al
+  70-79% del cuerpo), bota dentro del torso 0-0,1 cm, pies separados hasta 0,37-0,53 m.
 
 ## La ropa en la Shop (29/09)
 - MÁSCARAS: Agent Shades roja y negra ($900), ATP Mask ($1200, light: pide ARMOR 1 para ponerla) y

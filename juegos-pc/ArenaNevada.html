@@ -7486,20 +7486,6 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
   }
   const _tr = [0, 0, 0], _td = [0, 0, 0], _pp = [0, 0], _mr = [0, 0], _md = [0, 0];
   const Q_VUELO = 16 / 28;        // en MARCHA_SWF.pie la bota vuela de la fase 0 a la 16/28
-  /* EL APOYO, MAS CORTO QUE EN EL SWF. En la tabla cada bota apoya el 43%
-     del ciclo; aqui el 30%, apretado alrededor del mismo centro (y el
-     vuelo, estirado). Recorre lo mismo en menos tiempo: el pie apoyado
-     retrocede mas deprisa y patina menos, que es lo que hace una carrera
-     de verdad -cuanto mas se corre, menos se pisa-. El torso sigue la
-     fase sin tocar: el centro de cada apoyo cae donde caia. */
-  const AP_MITAD = (Q_VUELO + 1) / 2, AP_LARGO = 0.30;
-  function faseBota(p) {
-    const d = ((p - AP_MITAD) % 1 + 1.5) % 1 - 0.5;          // del centro del apoyo, -0,5..0,5
-    const mA = AP_LARGO / 2, mT = (1 - Q_VUELO) / 2;         // media anchura del apoyo: aqui y en la tabla
-    const q = Math.abs(d) <= mA ? AP_MITAD + d * (mT / mA)
-      : AP_MITAD + Math.sign(d) * (mT + (Math.abs(d) - mA) * ((0.5 - mT) / (0.5 - mA)));
-    return ((q % 1) + 1) % 1;
-  }
 
   /* LA BOTA NO SE METE EN EL TORSO.
 
@@ -8121,7 +8107,18 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
     const mirando = est.mirando || 1;
     const vel = est.vel || 0;
     ejesDe(mirando, est.giro, est.marcha, est.paso);
-    A.vel = U.damp(A.vel, vel, 16, dt);
+    /* LO QUE SE MOVIO DE VERDAD. La bota apoyada tiene que retroceder
+       exactamente lo que avanza el muñeco, y eso lo dice su posicion, no la
+       velocidad pedida: contra una pared, en bullet time o saliendo por una
+       puerta no coinciden. A.dist suma lo recorrido (en metros del modelo) y
+       la velocidad que anima sale de ahi. */
+    let recorrido = -1;
+    if (est.x !== undefined) {
+      if (A.px !== undefined) recorrido = Math.min(0.5, Math.hypot(est.x - A.px, est.z - A.pz));
+      A.px = est.x; A.pz = est.z;
+    }
+    if (recorrido >= 0) A.dist = (A.dist || 0) + recorrido / (A.c.escala || 1);
+    A.vel = U.damp(A.vel, recorrido >= 0 && dt > 0 ? recorrido / dt : vel, 16, dt);
     A.aire = U.damp(A.aire, est.aire ? 1 : 0, 18, dt);
     A.retro = Math.max(0, A.retro - dt * 7);
     /* La animacion del arma del SWF -Fire R o Reload R- que este en
@@ -8366,6 +8363,19 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
        6,4 m/s en una decima, y el torso no se echa 20 grados de golpe. */
     A.galope = U.damp(A.galope || 0, suave(U.clamp((A.vel - V_ANDA) / (V_CORRE - V_ANDA), 0, 1)), 7, dt);
     A.extra = U.damp(A.extra || 0, U.clamp((A.vel - V_CORRE) / (V_TOPE - V_CORRE), 0, 1), 5, dt);
+    /* CUANTO DEL CICLO APOYA CADA BOTA. Con la bota clavada, en el apoyo el
+       cuerpo avanza v * apoyo / cadencia, y eso es lo que la bota recorre de
+       delante a atras respecto a el. Se topa ese recorrido -0,46 m andando,
+       0,60 esprintando, 0,66 con DEX- y el apoyo sale de ahi: 18% del ciclo
+       andando (0,13 s en el suelo), 20% corriendo (0,09 s), 17% con DEX 30
+       (0,06 s), que es lo que pisa alguien que corre. El resto vuela. */
+    const recMax = 0.46 + 0.14 * A.galope + 0.06 * A.extra;
+    const apoyoObj = A.vel > 0.05 ? U.clamp(recMax * cadencia(A.vel) / A.vel, 0.12, 0.40) : 0.40;
+    A.st = U.damp(A.st || apoyoObj, apoyoObj, 6, dt);
+    const st = A.st;
+    /* El torso, el vaiven y las manos del SWF van en la fase de las
+       pisadas: lo mas bajo del torso, a mitad del apoyo de cada bota. */
+    const faseT = ((A.fase - st / 2 + 0.5) % 1 + 1) % 1;
     const t = est.tiempo || 0;
 
     /* ---------------- Accion en curso ---------------- */
@@ -8530,8 +8540,8 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
     const frente = sal * sal;
     const M = global.MARCHA_SWF;
     const g = A.galope, e = A.extra;
-    enCiclo(M.run.torso, A.fase, _tr);
-    enCiclo(M.dash.torso, A.fase, _td);
+    enCiclo(M.run.torso, faseT, _tr);
+    enCiclo(M.dash.torso, faseT, _td);
     /* EL DASH NO SE AGACHA AQUI. En el SWF baja el torso 3,6 cm de media,
        pero alli las botas se pintan detras del cuerpo. Aqui el bajo del
        torso esta a 16 cm del suelo y la bota mide 15,5: agachado, el
@@ -8552,8 +8562,8 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
     const resp = Math.sin(t * 1.9 + A.semilla) * 0.010 * (1 - anda);
     /* El peso va al pie que apoya: el vaiven lateral y el ladeo son
        maximos a mitad del apoyo de cada pie (el izquierdo apoya de la
-       fase 0,57 a la 1: su mitad es 0,78). */
-    const apoyo = Math.sin((A.fase - 0.53) * U.TAU) * anda;
+       fase 0 a la 'st': su mitad es st/2). */
+    const apoyo = Math.cos((A.fase - st / 2) * U.TAU) * anda;
     const vaiven = -apoyo * 0.020;
     cu.position.set(rc.x + vaiven, rc.y + resp - A.aire * 0.03 + tac[0], rc.z);
     const incl = inclMarcha + A.retro * 0.10 - A.dolor * 0.16 + A.inclAcc + tac[1];
@@ -8610,27 +8620,45 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
             giroAcc * 0.55 - balOsc * 0.16, mirando);
 
     /* ---------------- LOS PIES ----------------
-       El ciclo del SWF (MARCHA_SWF.pie): la bota vuela 15 cuadros de 28
-       -sube hasta 5,5 cm y avanza 22- y apoya los otros 13 retrocediendo.
-       El pie izquierdo va en la fase y el derecho medio ciclo detras.
-       El recorrido va al 130% del SWF: con la cadencia de una carrera y
-       no la de un aleteo, el pie apoyado retrocede poco comparado con lo
-       que avanza el cuerpo, y en 3D, con el suelo en perspectiva, ese
-       patinar se ve mas que en el dibujo. Asi las botas se separan
-       0,29 m como mucho, dentro del bajo del torso (0,32). Con DEX el
-       paso se alarga otro 15% y se levanta un 30% mas.
+       LA BOTA APOYADA QUEDA CLAVADA EN EL SUELO. Al pisar se anota donde
+       -su avance- y cuanto llevaba recorrido el muñeco; mientras apoya, su
+       avance es ese menos lo que el muñeco avanzo desde entonces, asi que
+       sobre el suelo no se mueve ni un milimetro. Despues despega y vuela
+       hasta la pisada siguiente, medio recorrido por delante, con el arco
+       del SWF (MARCHA_SWF.pie: sube hasta 5,5 cm al principio del vuelo y
+       baja estirandose). El pie izquierdo va en la fase y el derecho medio
+       ciclo detras.
+       Antes la bota apoyada retrocedia despacio todo el ciclo y sobre el
+       suelo iba al 70-79% de la velocidad del cuerpo: patinaba. Con DEX se
+       levanta un 30% mas.
        Esprintando, las botas van 3 cm atrasadas: el bajo del torso baja
-       por delante al inclinarse y la punta de una bota de 31 cm se
-       metia debajo. Mas atrasadas se despegan del cuerpo. */
-    const ampl = anda * 1.3 * (1 + 0.15 * e), subida = anda * (1 + 0.30 * e);
+       por delante al inclinarse y la punta de una bota de 31 cm se metia
+       debajo. */
+    const subida = anda * (1 + 0.30 * e);
     const atras = (0.03 * g + 0.02 * e) * anda;
+    const rec = A.vel * st / Math.max(0.05, cadencia(A.vel));   // lo que avanza el cuerpo en un apoyo
+    const xDespega = M.pie[0][0], xPisa = M.pie[16][0];        // el vuelo de la tabla, de punta a punta
+    if (!A.pies) A.pies = [0, 1].map(() => ({ apoya: true, a: 0, d: A.dist || 0, a0: 0, ult: 0 }));
     let alza = 0;
     for (let s = 0; s < 2; s++) {
-      const id = s ? H.PIE_D : H.PIE_I;
-      const p = faseBota((A.fase + (s ? 0.5 : 0)) % 1);
-      enCiclo(M.pie, p, _pp);
-      let alcance = _pp[0] * ampl - atras, alto = _pp[1] * subida;
-      const vuelo = U.clamp(_pp[1] / 0.055, 0, 1) * anda;
+      const id = s ? H.PIE_D : H.PIE_I, P = A.pies[s];
+      const p = (A.fase + (s ? 0.5 : 0)) % 1;
+      let alcance, alto = 0, u = -1;
+      if (p < st) {
+        // APOYO: clavada (y si el muñeco acelera de golpe, no se va mas atras de 0,6 m)
+        if (!P.apoya) { P.apoya = true; P.a = P.ult; P.d = A.dist || 0; }
+        alcance = Math.max(-0.60, P.a - ((A.dist || 0) - P.d));
+      } else {
+        // VUELO: de donde despego a la pisada siguiente, con la curva del SWF
+        if (P.apoya) { P.apoya = false; P.a0 = P.ult; }
+        u = (p - st) / (1 - st);
+        enCiclo(M.pie, u * Q_VUELO, _pp);
+        alcance = P.a0 + (rec / 2 - atras - P.a0) * (_pp[0] - xDespega) / (xPisa - xDespega);
+        alto = _pp[1] * subida;
+      }
+      P.ult = alcance;
+      alcance *= anda;          // despacio, el paso se achica hasta el reposo
+      const vuelo = U.clamp(alto / 0.055, 0, 1);
       /* La patada la da SIEMPRE el mismo pie, el derecho del hueso:
          el muñeco se gira, no se refleja, y nadie cambia de pierna
          buena segun hacia donde mire. */
@@ -8662,7 +8690,6 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
          pies apoyados del SWF. El pie gira sobre su hueso, que esta
          arriba: se sube lo justo para que la punta o el talon no se metan
          en el suelo. (+ baja la punta, - la levanta) */
-      const u = p < Q_VUELO ? p / Q_VUELO : -1;
       const punta = u < 0 ? 0 : (u < 0.5 ? 0.30 : 0.12) * Math.sin(u * U.TAU) * anda;
       alto += Math.abs(Math.sin(punta)) * 0.19;
       colocaPie(hs, R, id, alcance, alto,
@@ -8703,9 +8730,9 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
        fase de los pies): un lazo de 7 cm adelante-atras y 6 de alto por
        ciclo, al doble porque en 3D y de lejos el del SWF no se ve. Cada
        mano lo hace medio ciclo corrida, contra el pie de su lado. */
-    enCiclo(M.run.mano, A.fase, _mr); enCiclo(M.dash.mano, A.fase, _md);
+    enCiclo(M.run.mano, faseT, _mr); enCiclo(M.dash.mano, faseT, _md);
     const vDa = U.lerp(_mr[0], _md[0], g) * 2, vDy = U.lerp(_mr[1], _md[1], g);
-    enCiclo(M.run.mano, (A.fase + 0.5) % 1, _mr); enCiclo(M.dash.mano, (A.fase + 0.5) % 1, _md);
+    enCiclo(M.run.mano, (faseT + 0.5) % 1, _mr); enCiclo(M.dash.mano, (faseT + 0.5) % 1, _md);
     const vIa = U.lerp(_mr[0], _md[0], g) * 2, vIy = U.lerp(_mr[1], _md[1], g);
     const osc = U.clamp(vDa / 0.08, -1, 1);          // para lo que solo quiere el sentido
     /* Las dos manos NO son gemelas. La de delante va un poco mas
@@ -8729,7 +8756,7 @@ window.ACCESORIOS_TEX = { agent2_mask: {"atlas":"data:image/png;base64,iVBORw0KG
        la mano manda el agarre, mas abajo. */
     const bombeo = g * anda * (est.agarre ? 0 : 1);
     if (bombeo > 0.01) {
-      const b = Math.sin((A.fase - 0.25) * U.TAU);    // +1: la derecha delante (el pie izquierdo delante)
+      const b = Math.cos(A.fase * U.TAU);    // +1: la derecha delante (el pie izquierdo pisando delante)
       dDa = U.lerp(dDa, 0.02 + 0.19 * b, bombeo); dDy = U.lerp(dDy, 0.44 + 0.065 * b, bombeo);
       dIa = U.lerp(dIa, 0.02 - 0.19 * b, bombeo); dIy = U.lerp(dIy, 0.44 - 0.065 * b, bombeo);
     }
@@ -18156,6 +18183,10 @@ window.CIUDAD_SWF = {"ancho":860,"alto":540,"capas":{"fondo":{"src":"data:image/
       /* La velocidad que ve el animador incluye la de salir por la
          puerta: andar hacia camara es andar igual. */
       vel: A.salLado ? 2.35 : Math.hypot(A.vx, A.velZ || 0),
+      /* Donde esta de verdad: el animador clava la bota apoyada en el suelo
+         con lo que el muñeco se movio (anim.js, LOS PIES), no con la
+         velocidad pedida, que contra una pared o en bullet time miente. */
+      x: A.x, z: A.z,
       aire: !enSuelo,
       tiempo: t,
       mirando: A.mirando,

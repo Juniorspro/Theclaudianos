@@ -72,7 +72,8 @@ const INSTALAR = `(() => {
       }
     }
     v.setFromMatrixPosition(hs[H.CUERPO].matrixWorld);
-    M.filas.push({ t: Game.tiempo, x: A.x, z: A.z, vel: Math.hypot(A.vx, A.vz || 0), pies, pen,
+    const apoya = A.anim.pies ? A.anim.pies.map((P) => !!P.apoya) : null;
+    M.filas.push({ t: Game.tiempo, x: A.x, z: A.z, vel: Math.hypot(A.vx, A.vz || 0), pies, pen, apoya,
                    cuerpoY: v.y, fase: A.anim.fase });
     M.n++;
     if (M.fotoCada && M.n % M.fotoCada === 0 && M.fotos.length < M.fotoHasta && Game.tiempo - M.filas[0].t >= 0.5) M.fotos.push(foto(A));
@@ -100,12 +101,21 @@ const MEDIR = `((calienta) => {
       if (vPie < vCuerpo * 0.98) { sumaPat += Math.max(0, vPie) / vCuerpo; nPat++; }
     }
   }
+  /* clavada: la velocidad sobre el suelo de la bota mientras el animador la da por apoyada
+     (A.anim.pies[k].apoya), sobre la del cuerpo. 0 = no se mueve nada. */
+  let sumaC = 0, nC = 0;
+  for (let p = 0; p < 2; p++) for (let i = 1; i < F.length; i++) {
+    if (!F[i].apoya || !F[i].apoya[p] || !F[i - 1].apoya[p]) continue;
+    const a = F[i - 1].pies[p], b = F[i].pies[p], dt_ = F[i].t - F[i - 1].t;
+    sumaC += Math.hypot(b[0] - a[0], b[2] - a[2]) / dt_ / Math.max(0.1, F[i].vel); nC++;
+  }
   for (const f of F) {
     pen = Math.max(pen, f.pen);
     separa = Math.max(separa, Math.abs((f.pies[0][0] - f.pies[1][0]) * dirX));
   }
   const pasosS = 2 * vueltas / dur;
   return { vel: +vel.toFixed(2), pasosS: +pasosS.toFixed(2), patina: nPat ? +(sumaPat / nPat).toFixed(2) : null,
+           clavada: nC ? +(sumaC / nC).toFixed(3) : null,
            subeCm: +(subeMax * 100).toFixed(1), penetraCm: +(pen * 100).toFixed(1), separaM: +separa.toFixed(3), muestras: F.length, dur: +dur.toFixed(2),
            botaCuerpoY: +(Math.max(...F.map((f) => f.cuerpoY)) - Math.min(...F.map((f) => f.cuerpoY))).toFixed(3) };
 })`;
