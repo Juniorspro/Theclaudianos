@@ -143,10 +143,20 @@
       const k = silueta ? [0, 0, 0] : B._rgb(enTrazo(j) ? NEGRO : (o.color ? o.color(az, el) : o.hex), 1);
       return B._vert(p[0], p[1], p[2], n[0], n[1], n[2], k[0], k[1], k[2]);
     }));
+    /* o.diagCorta: cada cuadro por su diagonal corta. Donde el borde cae casi
+       vertical (la mejilla del casco) la grilla queda muy sesgada y, de un
+       lado, la diagonal fija era la larga: triangulos astilla que de refilon
+       se daban vuelta y dejaban ver la tinta de atras a puntitos (solo en
+       el costado -x: del otro la fija ya era la corta). */
     for (let j = 0; j < N; j++) {
       for (let i = 0; i < (vuelta ? cols : cols - 1); i++) {
         const i2 = (i + 1) % cols;
         const f = sub(P[j][i], O);
+        if (o.diagCorta && dist(P[j][i2], P[j + 1][i]) < dist(P[j][i], P[j + 1][i2])) {
+          tri(B, ids[j][i], ids[j][i2], ids[j + 1][i], P[j][i], P[j][i2], P[j + 1][i], f);
+          tri(B, ids[j][i2], ids[j + 1][i2], ids[j + 1][i], P[j][i2], P[j + 1][i2], P[j + 1][i], f);
+          continue;
+        }
         tri(B, ids[j][i], ids[j][i2], ids[j + 1][i2], P[j][i], P[j][i2], P[j + 1][i2], f);
         tri(B, ids[j][i], ids[j + 1][i2], ids[j + 1][i], P[j][i], P[j + 1][i2], P[j + 1][i], f);
       }
@@ -897,7 +907,7 @@
   function casco(B, o, g, silueta) {
     const M = azCasco.length;
     casquete(B, { lo: loCasco, d: dCasco, azDe: (t) => azCasco[Math.min(M - 1, Math.round(t * M))], M, N: 24, trazo: 0.012, hex: o.hex, canto: sw(50),
-                  filasBorde: [1.2, 2.4, 3.6, 4.8, 6, 7.5, 9, 11] }, g, silueta);
+                  filasBorde: [1.2, 2.4, 3.6, 4.8, 6, 7.5, 9, 11], diagCorta: true }, g, silueta);
     if (!silueta) rebordeCasco(B, o.hexBorde);
     return dCasco;
   }
@@ -983,7 +993,7 @@
      ancho de la cabeza, como en la hoja), levantada 30 grados hacia atras
      sobre la frente. Como la placa de Tricky: u a lo largo de cada panel
      desde la arista, v a lo largo de ella, w hacia atras (0 = la cara). */
-  const VISOR = { C: [0, 1.665, 0.51], Wp: 0.25, H: 0.13, T: 0.04, BETA: 18 };   // 3,6 cm sobre el casco en lo mas cerca (medido); mas adelante y abajo, como en la hoja
+  const VISOR = { C: [0, 1.65, 0.49], Wp: 0.25, H: 0.13, T: 0.04, BETA: 18 };   // 1,3 cm sobre el casco en lo mas cerca (medido); lo mas baja posible, como en la hoja
   function pantallaV(B, g, silueta) {
     const { Wp, H, T } = VISOR, be = VISOR.BETA * RAD, cb = Math.cos(be), sb = Math.sin(be);
     const E0 = [1, 0, 0], E1 = uni([0, 0.87, -0.5]), E2 = cruz(E0, E1), Cv = VISOR.C;
@@ -1078,48 +1088,73 @@
     const V = pantallaV(B, g, silueta);
     for (const s of [1, -1]) {
       const azB = s * BLAST.bis, elB = BLAST.elBis;
-      /* EL BRAZO: una placa de 7 cm DE COSTADO, como en el SWF: sale apoyada de
-         la bisagra y sube hasta montarse sobre el canto de afuera de la
-         pantalla. Su cara gira suave de la del casco (en la bisagra) a la del
-         canto: con la normal del casco de debajo, en el aire se retorcia y se
-         clavaba en la pantalla en ganchos negros. Donde se levanta sus bordes
-         quedan sueltos (la tinta se estira y dibuja su silueta). */
-      /* la punta llega por detras y apoya A LO LARGO del canto (su ancho sobre
-         el largo del canto, hasta 6 mm de la cara): cruzada, con 7 cm contra 3,
-         sobresalia de la silueta de la pantalla como una lengüeta */
-      // se une al canto a media altura, como en la hoja
-      const N1 = V.nCanto(s), nF = V.nCara(s), Xa = mas(V.mundo(s * V.Wp, -0.01, -0.02), N1, 0.0055), Xa2 = mas(Xa, nF, -0.05);
-      const [azF, elF] = azEl(Xa2), hF = dist(Xa2, centro()) - dist(S(azF, elF, 0), centro());
-      const N0 = normalDe((a, e) => S(a, e, 0), azB, elB);
-      // sube por el casco hasta el 75% del camino y de ahi dobla en curva (cuadratica, con Xa2 de control) hasta la punta: con un quiebre, el contorno hacia un pico
-      const NA = 14, NR = 8, Q = [];
-      const subida = (t) => S(lerp(azB, azF, t), lerp(elB, elF, t) + 6 * Math.sin(Math.PI * t), 0.006 + (hF - 0.006) * suave(0.25, 1, t));
-      for (let i = 0; i <= NA; i++) {
-        const t = 0.75 * i / NA, k = suave(0.15, 0.75, t);
-        Q.push({ q: subida(t), n: uni([0, 1, 2].map((e) => lerp(N0[e], N1[e], k))) });
+      /* EL BRAZO, como en la hoja: sale de la bisagra, sube por el costado
+         PEGADO al casco (su cara sigue la del casco y la de adentro va 1 mm
+         metida en el: ni una rendija), dobla hacia delante y, justo debajo
+         del canto de la pantalla, se para derecho y se apoya contra el. Asi
+         llega al canto de frente: no se tuerce ni se despega. Nace angosto
+         (4 cm) bajo la tapa: ancho, su tinta asomaba alrededor de la bisagra
+         en un triangulo de rayas. Un solido (tubo3). */
+      /* la punta, como en la hoja: DETRAS del canto, entrando derecha por la
+         cara de atras de la placa (3 cm antes de la punta del panel) y solo
+         3 mm: con la punta mas adentro, su tinta (1,6 cm mas el adelanto de 1)
+         asomaba por la cara de la pantalla en una rayita. Por fuera del
+         canto, de tres cuartos el tramo parado se veia de refilon como una
+         astilla gris pegada a la placa. El pie, donde esa recta toca el casco. */
+      const nCasco = (az, el) => normalDe((a, e) => S(a, e, 0), az, el), nF = V.nCara(s);
+      const Xa = V.mundo(s * (V.Wp - 0.03), 0.0, -V.T + 0.003);
+      let tP = 0;
+      for (; tP < 0.2; tP += 0.001) { const p = mas(Xa, nF, -tP), [az, el] = azEl(p); if (dot(sub(p, S(az, el, 0.004)), nCasco(az, el)) <= 0) break; }
+      const [azP, elP] = azEl(mas(Xa, nF, -tP));
+      const K = [azB - s * 2, elP + 1], NA = 24, Q = [];
+      for (let i = 0; i <= NA - 2; i++) {
+        const t = i / NA, a = (1 - t) * (1 - t), b = 2 * t * (1 - t), c2 = t * t;
+        const az = a * azB + b * K[0] + c2 * azP, el = a * elB + b * K[1] + c2 * elP;
+        Q.push({ q: S(az, el, 0.004), n: nCasco(az, el) });
       }
-      const Q75 = Q[NA].q;
-      for (let i = 1; i <= NR; i++) {
-        const u = i / NR, a = (1 - u) * (1 - u), b = 2 * u * (1 - u), c2 = u * u;
-        Q.push({ q: [0, 1, 2].map((e) => a * Q75[e] + b * Xa2[e] + c2 * Xa[e]), n: N1 });
+      /* el codo (cuadratico, con el pie Pb de control) y el tramo parado hasta
+         la placa: dobla como una chapa, sin torcerse (su cara de arriba queda
+         mirando hacia atras, a la bisagra) */
+      const Pb = S(azP, elP, 0.004), U = uni(sub(Xa, Pb)), Lp = dist(Xa, Pb), Qa = Q[Q.length - 1];
+      const tF = uni(sub(Pb, Q[Q.length - 2].q)), N1 = uni(mas(tF.map((x) => -x), U, dot(tF, U)));
+      const r0 = Math.min(0.015, Lp * 0.4), P1 = mas(Pb, U, r0);
+      for (let i = 1; i <= 6; i++) {
+        const u = i / 6, a = (1 - u) * (1 - u), b = 2 * u * (1 - u), c2 = u * u;
+        Q.push({ q: [0, 1, 2].map((e) => a * Qa.q[e] + b * Pb[e] + c2 * P1[e]), n: uni([0, 1, 2].map((e) => lerp(Qa.n[e], N1[e], u))) });
       }
-      /* un solido (tubo3): seccion de 7 x 1 cm con los costados negros y la
-         tinta pareja por los vertices compartidos. Como lamina, la tinta
-         estirada de costado cambiaba de ancho donde el brazo gira y hacia
-         cuñas en el contorno. La punta queda 1,8 cm antes de la cara de la
-         pantalla: su tinta (1,6 cm) llega justo a ella. */
-      const MQ = Q.length - 1, e = 0.001, hw = 0.035, ht = 0.005;
-      const sec = [[-hw + e, ht], [hw - e, ht], [hw, ht - e], [hw, -ht + e], [hw - e, -ht], [-hw + e, -ht], [-hw, -ht + e], [-hw, ht - e]];
+      for (let i = 1; i <= 4; i++) Q.push({ q: mas(Pb, U, lerp(r0, Lp, i / 4)), n: N1 });
+      /* la seccion lleva pintada la franja negra de cada borde en su cara de
+         arriba (7 mm), como las correas: pegado al casco, de canto solo se
+         veian sus costados en dos rayitas y el brazo casi no se leia */
+      const MQ = Q.length - 1, e = 0.001, ht = 0.005, fr = 0.007;
+      const sec = (hw) => [[-hw + e, ht], [-hw + fr, ht], [-hw + fr + 5e-4, ht], [hw - fr - 5e-4, ht], [hw - fr, ht], [hw - e, ht],
+                   [hw, ht - e], [hw, -ht + e], [hw - e, -ht], [-hw + e, -ht], [-hw, -ht + e], [-hw, ht - e]];
+      const gris81 = new Set([2, 3, 8, 9]);
+      let largo = 0;
       const anillos = Q.map((o, i) => {
+        if (i > 0) largo += dist(o.q, Q[i - 1].q);
         const T = uni(sub(Q[Math.min(MQ, i + 1)].q, Q[Math.max(0, i - 1)].q)), L = uni(cruz(o.n, T)), Nn = uni(cruz(T, L));
-        return sec.map(([x, y]) => mas(mas(o.q, L, x), Nn, y));
+        return sec(lerp(0.02, 0.035, suave(0.02, 0.06, largo))).map(([x, y]) => mas(mas(o.q, L, x), Nn, y));
       });
-      tubo3(B, anillos, (r, k) => (k === 2 || k === 3 || k === 6 || k === 7 ? NEGRO : sw(81)), g, silueta, false);
+      /* su tinta, PEGADA AL CASCO como la de las correas a la cabeza: estirada
+         de costado quedaba 1-2 mm dentro del casco a 1,2 cm del brazo y, con
+         el adelanto de 1 cm, asomaba en una raya punteada junto a su borde
+         (y engordaba el de fuera). Desde el codo se apaga y el tramo parado
+         va sin casco de tinta (lo contornean sus costados y franjas negras):
+         con ella, la de su cara de delante, hundida, lo cruzaba en rayitas
+         vistas desde atras, y suelta dibujaba un arquito sobre el casco. */
+      const nG = NA - 1;
+      const pega = Q.map((o, i) => { const [az, el] = azEl(o.q); return [nCasco(az, el), 1, 1 - suave(0, 6, i - (nG - 1))]; });
+      tubo3(B, anillos, (r, k) => (gris81.has(k) ? sw(81) : NEGRO), g, silueta, (p, r) => pega[r]);
       // LA BISAGRA: una tapa (69) con su tornillo hexagonal
       const pB = S(azB, elB, 0.004), nB = normalDe((a, e) => S(a, e, 0), azB, elB);
-      pieza(B, [[0, 0.016, sw(69)], [0.03, 0.014, sw(69)], [0.036, 0.006, sw(69)], [0.037, 0.0]], pB, nB, sw(69), g * 0.45, silueta, 20);
+      /* la tapa, de 4 cm de radio y 2 de alto (tapa las puntas del brazo, la
+         vincha y la correa), con el filo y el costado NEGROS: su contorno sale
+         entero desde cualquier lado (con la tinta sola, fina y a medias) */
+      // su tinta se pierde al pie (el costado negro hace el contorno): entera, al cortar las caras del casco salia a puntitos
+      pieza(B, [[0, 0.02, sw(69)], [0.029, 0.0185, sw(69)], [0.031, 0.018, NEGRO], [0.039, 0.011, NEGRO, 0.4], [0.041, 0.0, undefined, 0]], pB, nB, NEGRO, g * 0.45, silueta, 28);
       if (!silueta) {
-        const u = uni(cruz(nB, [0, 1, 0])), v = cruz(nB, u), top = mas(pB, nB, 0.0165);
+        const u = uni(cruz(nB, [0, 1, 0])), v = cruz(nB, u), top = mas(pB, nB, 0.0205);
         const hx = (r) => [0, 1, 2, 3, 4, 5].map((k) => [r * Math.cos(k * Math.PI / 3), r * Math.sin(k * Math.PI / 3)]);
         mancha(B, hx(0.013), (a, b) => mas(mas(top, u, a), v, b), nB, NEGRO);
         mancha(B, hx(0.007), (a, b) => mas(mas(mas(top, u, a), v, b), nB, 0.0008), nB, sw(33));
@@ -1136,14 +1171,25 @@
       lamina(B, PC, { gr: 0.006, dentro: 0.02, color: (i, j) => (j <= 1 || j >= 8 ? NEGRO : sw(69)) }, g, silueta);
       const tH = 0.2, ph = S(azC(tH), elC(tH), 0.012), nH = normalDe((a, e) => S(a, e, 0), azC(tH), elC(tH));
       const thv = uni(sub(S(azC(tH + 0.05), elC(tH + 0.05), 0), S(azC(tH - 0.05), elC(tH - 0.05), 0)));
-      hebilla(B, ph, thv, nH, 0.034, 0.1, 0.01, sw(59), sw(40), g, silueta);
+      /* la hebilla: los costados negros y arriba el marco claro (59) pintado
+         dentro de un filo negro de 5 mm, con la ranura oscura: su contorno
+         sale entero (con la tinta fina de las piezas chicas, a medias) */
+      { const bH = uni(cruz(nH, thv)), Lh = 0.034, Wh = 0.1, Hh2 = 0.01;
+        caja(B, ph, [thv, bH, nH], [Lh / 2, Wh / 2, Hh2 / 2], NEGRO, g, silueta, true);
+        if (!silueta) {
+          const top = mas(ph, nH, Hh2 / 2 + 0.0006), R = (a, b) => [[-a, -b], [a, -b], [a, b], [-a, b]];
+          mancha(B, R(Lh / 2 - 0.005, Wh / 2 - 0.005), (u, v) => mas(mas(top, thv, u), bH, v), nH, sw(59));
+          mancha(B, R(Lh * 0.18, Wh * 0.3), (u, v) => mas(mas(mas(top, thv, u), bH, v), nH, 0.0006), nH, sw(40));
+        } }
     }
     /* LA VINCHA: de bisagra a bisagra por la nuca, 7 cm de alto y 2 cm
        separada del casco (asoma por detras de la silueta, como en el SWF) */
-    const NV = 40, PV = [], elV = [BLAST.elBis - 6, BLAST.elBis + 4];
+    // en cada punta se angosta a 5 cm bajo la tapa de la bisagra: con 7, sus esquinas asomaban de ella
+    const NV = 44, PV = [], elM = BLAST.elBis - 1;
     for (let i = 0; i <= NV; i++) {
-      const az = BLAST.bis + (360 - 2 * BLAST.bis) * i / NV;
-      PV.push(filas(1, 9, 0.09, 0.09).map((f) => S(az, lerp(elV[0], elV[1], f), 0.011)));
+      const az = BLAST.bis + (360 - 2 * BLAST.bis) * i / NV, dp = Math.min(az - BLAST.bis, 360 - BLAST.bis - az);
+      const med = lerp(3.6, 5, suave(3, 9, dp));
+      PV.push(filas(1, 9, 0.09, 0.09).map((f) => S(az, elM + lerp(-med, med, f), 0.011)));
     }
     lamina(B, PV, { gr: 0.012, dentro: 0.025, color: (i, j) => (j <= 1 || j >= 8 ? NEGRO : sw(81)) }, g, silueta);
   };
@@ -1539,10 +1585,13 @@
                cara de abajo quedaba 1,6 cm por debajo de la correa, vista desde
                arriba (la dibuja el material, que pinta las caras de atras), y
                entre las dos asomaba una tira de piel. Solo sale hacia fuera; y
-               la de dentro se hunde (ver HUNDE). */
-            const nh = normalCab(p), k = cerca(p), rad = dot(off, nh);
+               la de dentro se hunde (ver HUNDE). Pegado a otra superficie (el
+               brazo sobre el casco), sobreCab(p, r) da [su normal, cuanto pega]. */
+            // m: cuanta tinta lleva ese anillo (1)
+            const [nh, k, m = 1] = typeof sobreCab === 'function' ? sobreCab(p, r) : [normalCab(p), cerca(p)], rad = dot(off, nh);
             off = mas(nh.map((v) => v * rad), mas(off, nh, -rad), 1 - k);
             if (rad < 0) off = mas(off, nh, -HUNDE * k);
+            off = off.map((v) => v * m);
           }
           q = mas(p, off, 1);
           if (r === 0) q = mas(q, ax, -g);

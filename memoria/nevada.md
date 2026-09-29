@@ -95,6 +95,17 @@ Fuente: `nevada/` → `juegos-pc/ArenaNevada.html`. Ver también: [banco](banco.
   como lámina en el aire, la tinta estirada de costado hacía cuñas. **Antes de tocar una pieza
   compartida (`casco`), confirmar de qué prenda habla quien pide**: la V era de la pantalla del Blast
   Helm y se la puse al borde del casco (revertido).
+- Lo pegado a OTRA superficie (brazo sobre el casco) tampoco estira la tinta a lo largo de ella:
+  `tubo3(..., sobreCab)` acepta `(p, r) => [normal, pega, m]` (m = cuánta tinta lleva el anillo).
+  Estirada, quedaba 1-2 mm dentro del casco a 1,2 cm del brazo y salía una raya punteada al lado.
+  Un tramo parado corto va sin cáscara (lo contornean sus costados y franjas negras).
+- Una pieza que entra en otra (el brazo en la pantalla) entra solo 3 mm: la tinta es 1,6 cm más
+  el adelanto de 1, y más adentro asomaba por la cara de enfrente.
+- **Grilla muy sesgada** (borde que cae casi vertical, la mejilla del casco): con la diagonal fija,
+  de un lado era la larga y los triángulos astilla se daban vuelta de refilón → puntitos de la tinta
+  de atrás. La pista: salía de UN solo costado. `casquete({diagCorta})` parte cada cuadro por la corta.
+- Queda una franjita de puntos donde el tramo parado del brazo cruza el borde de la silueta del casco
+  (misma profundidad), solo de atrás-costado (±120°): ~7 px a escala de celular.
 
 ## Estado al cierre del log (29/09 05:31)
 - Lo último fue rehacer los íconos de los botones con piezas del SWF; USAR quedó con el dedo en
