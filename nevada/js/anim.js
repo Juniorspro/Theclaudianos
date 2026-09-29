@@ -380,30 +380,92 @@
      conecta con el aire por delante de la mano. */
   const BRAZO = 0.96;
 
-  /* La zancada es lo que separa los dos pies, y estos pies flotan:
-     no hay pierna que explique un metro de hueco entre ellos. Medido
-     con la zancada de antes (1,18 corriendo) los pies llegaban a
-     0,86 m de separacion, la MITAD de la altura del personaje.
+  /* =============================================================
+     LA MARCHA DEL SWF
 
-     Se acorta la zancada, no la amplitud: la amplitud tiene que ser
-     un cuarto de la zancada o el pie patina (ver arriba). Zancada
-     mas corta = mas pasos por segundo, que ademas es lo que hace que
-     correr parezca correr y no dar trancos. */
-  const ZANCADA_ANDA = 0.78;
-  const ZANCADA_CORRE = 0.96;
-  /* Se subio de 0,155 a 0,205 al recortar el recorrido horizontal.
-     Dos botas de 0,246 m de ancho en un torso de 0,564 no tienen
-     sitio para abrirse: en Madness el paso NO se lee por lo que el
-     pie viaja de lado, se lee por LO QUE SE LEVANTA y por como se
-     inclina. Bajando la amplitud sin subir la altura el ciclo se
-     quedaba en nada; con la altura arriba se sigue viendo andar. */
-  /* Y SE BAJO A 0,09 CON LOS PIES DEL SWF. El bajo del torso esta a
-     16 cm del suelo y el pie mide 19: con 20,5 cm de paso, en pleno
-     vuelo el pie se metia 25 cm dentro del torso y al correr -con el
-     cuerpo inclinado encima- la punta atravesaba la pared de delante.
-     En el SWF el pie apenas se levanta: se desliza por debajo del
-     cuerpo, y el paso se lee por el cabeceo del pie y el bamboleo. */
-  const ALTURA_PASO = 0.09;
+     La caminata y la carrera salen de madness_character (marcha_swf.js,
+     que genera herramientas/swf/marcha.py): el 'run' (28 cuadros) y el
+     'dash' (14). En el SWF el dash son los MISMOS pies que el run, un
+     cuadro de cada dos; lo que cambia es el torso: 19-20 grados echado
+     hacia delante, 25 cm adelantado y 3-4 cm mas bajo. Asi que aqui hay
+     un solo ciclo de pies y dos de torso, mezclados segun la velocidad:
+     nunca se salta de una animacion a otra.
+
+     LA CADENCIA YA NO VA PEGADA A LA DISTANCIA. Iba: una zancada fija
+     de 0,96 m daba 13,5 pasos por segundo corriendo a 6,4 m/s y 22 con
+     DEX 30 (10,7 m/s), medido con herramientas/banco/marcha.js. Eso es
+     un aleteo, no una carrera. El original tampoco lo hace: su ciclo va
+     a 30 fps vaya a la velocidad que vaya, y el pie patina. Aqui la
+     cadencia crece con la velocidad pero cada vez menos, como en una
+     persona, que primero alarga el paso y despues lo acelera:
+
+       andar   3,5 m/s   1,40 ciclos/s   2,8 pasos/s
+       correr  6,4 m/s   2,14 ciclos/s   4,3 pasos/s  (el dash a 30 fps)
+       DEX 30 10,7 m/s   2,69 ciclos/s   5,4 pasos/s
+
+     Y con DEX la carrera no se ve como una pelicula pasada rapido: se
+     echa mas hacia delante, baja un poco y levanta y alarga el paso.
+     ============================================================= */
+  const V_ANDA = 3.5, V_CORRE = 6.4, V_TOPE = 6.4 * (1 + 30 / 45);   // actor.js: tope * modSpeed
+  const C_ANDA = 1.40, C_CORRE = 2.14;                              // ciclos por segundo
+  const EXP_ANDA = Math.log(C_CORRE / C_ANDA) / Math.log(V_CORRE / V_ANDA);   // 0,70
+  function cadencia(v) {
+    if (v <= V_CORRE) return C_ANDA * Math.pow(v / V_ANDA, EXP_ANDA);
+    return C_CORRE * Math.pow(v / V_CORRE, 0.45);
+  }
+  Anim.cadencia = cadencia;
+  /* Una fila de una tabla del SWF en la fase f (0..1), interpolada. */
+  function enCiclo(tabla, f, sal) {
+    const n = tabla.length, x = f * n, i = Math.floor(x) % n, j = (i + 1) % n, u = x - Math.floor(x);
+    const a = tabla[i], b = tabla[j];
+    for (let k = 0; k < a.length; k++) sal[k] = a[k] + (b[k] - a[k]) * u;
+    return sal;
+  }
+  const _tr = [0, 0, 0], _td = [0, 0, 0], _pp = [0, 0], _mr = [0, 0], _md = [0, 0];
+  const Q_VUELO = 16 / 28;        // en MARCHA_SWF.pie la bota vuela de la fase 0 a la 16/28
+  /* EL APOYO, MAS CORTO QUE EN EL SWF. En la tabla cada bota apoya el 43%
+     del ciclo; aqui el 30%, apretado alrededor del mismo centro (y el
+     vuelo, estirado). Recorre lo mismo en menos tiempo: el pie apoyado
+     retrocede mas deprisa y patina menos, que es lo que hace una carrera
+     de verdad -cuanto mas se corre, menos se pisa-. El torso sigue la
+     fase sin tocar: el centro de cada apoyo cae donde caia. */
+  const AP_MITAD = (Q_VUELO + 1) / 2, AP_LARGO = 0.30;
+  function faseBota(p) {
+    const d = ((p - AP_MITAD) % 1 + 1.5) % 1 - 0.5;          // del centro del apoyo, -0,5..0,5
+    const mA = AP_LARGO / 2, mT = (1 - Q_VUELO) / 2;         // media anchura del apoyo: aqui y en la tabla
+    const q = Math.abs(d) <= mA ? AP_MITAD + d * (mT / mA)
+      : AP_MITAD + Math.sign(d) * (mT + (Math.abs(d) - mA) * ((0.5 - mT) / (0.5 - mA)));
+    return ((q % 1) + 1) % 1;
+  }
+
+  /* LA BOTA NO SE METE EN EL TORSO.
+
+     El bajo del torso esta a 16 cm del suelo y la bota mide 15,5: en
+     reposo ya se tocan. En el SWF da igual -las botas se pintan DETRAS
+     del cuerpo-, pero en 3D un pie que sube 5 cm debajo del torso
+     entra en el: medido con el paso de antes, hasta 8 cm dentro de la
+     caja interior del ragdoll, que ya va 2,8 cm por dentro de la malla.
+     Es el "pie que atraviesa el torso".
+
+     Asi que despues de colocar cada bota se mira cuanto entra en esa
+     caja (sus nueve puntos de arriba, en el marco del torso) y se baja
+     lo que haga falta. Si ya esta en el suelo y aun entra, sube el
+     torso. Las medidas son las de ragdoll.js. */
+  const CAJA_T = { hx: 0.26, y0: -0.07, y1: 0.80, hz: 0.235, z: 0.004 };
+  const BOTA = [0, -0.0935, 0.022, 0.09, 0.0775, 0.1575];     // centro y medio lado
+  const _mT = new THREE.Matrix4(), _mB = new THREE.Matrix4(), _vB = new THREE.Vector3(), _uno = new THREE.Vector3(1, 1, 1);
+  function dentroTorso(cu, pie) {
+    _mT.compose(cu.position, cu.quaternion, _uno).invert();
+    _mB.compose(pie.position, pie.quaternion, _uno).premultiply(_mT);   // la bota, en el marco del torso
+    let hondo = 0;
+    for (let i = -1; i <= 1; i++) for (let k = -1; k <= 1; k++) {
+      _vB.set(BOTA[0] + i * BOTA[3], BOTA[1] + BOTA[4], BOTA[2] + k * BOTA[5]).applyMatrix4(_mB);
+      if (Math.abs(_vB.x) < CAJA_T.hx && Math.abs(_vB.z - CAJA_T.z) < CAJA_T.hz && _vB.y < CAJA_T.y1)
+        hondo = Math.max(hondo, _vB.y - CAJA_T.y0);
+    }
+    return hondo;
+  }
+
   /* El pie que vuela se recoge hacia dentro este tanto: su canto de
      fuera sobresale 4 cm del torso y, subido, perforaba el costado. */
   const RECOGE_PIE = 0.20;
@@ -995,7 +1057,6 @@
     const hs = A.c.huesos, R = A.reposo;
     const mirando = est.mirando || 1;
     const vel = est.vel || 0;
-    const corre = vel > 3.6;
     ejesDe(mirando, est.giro, est.marcha, est.paso);
     A.vel = U.damp(A.vel, vel, 16, dt);
     A.aire = U.damp(A.aire, est.aire ? 1 : 0, 18, dt);
@@ -1225,54 +1286,23 @@
     A.anguloRodada = 0;
 
     /* ---------------- La fase del paso ----------------
-       Avanza con la DISTANCIA recorrida, no con el tiempo: asi el
-       pie no patina ni andando ni esprintando. */
-    const ZANCADA = corre ? ZANCADA_CORRE : ZANCADA_ANDA;
+       Avanza con la CADENCIA, que sale de la velocidad (ver LA MARCHA DEL
+       SWF, arriba), y al pararse vuelve al contacto por el camino corto.
+       La fase la llevan los pies Y el torso: los dos ciclos del SWF van
+       siempre juntos. */
     if (A.vel > 0.12 && A.aire < 0.5) {
-      A.fase = (A.fase + (A.vel * dt) / ZANCADA) % 1;
+      A.fase = (A.fase + cadencia(A.vel) * dt) % 1;
     } else {
-      // al parar, la fase vuelve al contacto por el camino corto
       const d = U.angDiff(A.fase * U.TAU, 0) / U.TAU;
       A.fase = (A.fase + d * Math.min(1, dt * 8) + 1) % 1;
     }
-
-    const anda = U.clamp(A.vel / 2.4, 0, 1);
-    /* LA AMPLITUD VISIBLE NO ES LA FISICA, Y ES A PROPOSITO.
-
-       ZANCADA/4 es lo que pide la condicion de NO PATINAR: el pie
-       apoyado tiene que retroceder respecto al cuerpo exactamente
-       lo que el cuerpo avanza. Con ZANCADA_CORRE = 0,96 eso da
-       0,24 m de amplitud, y medido en pantalla la separacion entre
-       los dos pies iba de 0,077 m a 0,726 m en el mismo ciclo: en
-       un extremo las dos botas una encima de otra en el centro del
-       torso, en el otro un esparrancado de 50 px por lado fuera de
-       la silueta. Es lo que se veia mal.
-
-       Y en Madness no es asi. Medido sobre las capturas del juego
-       -ref/m1-: las botas van PEGADAS Y DEBAJO DEL TORSO, y las dos
-       juntas ocupan mas o menos lo que el bajo del cuerpo. El torso
-       mide 142 px de ancho en la hoja, o sea 0,564 m; la bota, 62
-       px, 0,246 m. Para que las dos quepan dentro de esa silueta,
-       los CENTROS no pueden separarse mas de unos 0,32 m.
-
-       No se puede tener las tres cosas a la vez -no patinar, pie
-       corto y correr a 6,4 m/s-: saldrian 31 pasos por segundo. El
-       original no lo intenta siquiera; es un ciclo de sprite en
-       bucle que patina sin ningun pudor. Asi que aqui se separa lo
-       que hace cada cosa:
-
-         la FASE la sigue mandando la distancia recorrida, que es
-         lo que hace que la cadencia case con la velocidad y no
-         parezca que va haciendo el paso lunar;
-
-         la AMPLITUD VISIBLE se topa, para que los pies no salgan
-         de la silueta.
-
-       El tope se paga con un poco de deslizamiento del pie apoyado
-       cuando se esprinta. Es el precio, esta medido, y se ve mucho
-       menos que un esparrancado. */
-    const AMPL_TOPE = 0.075;
-    const AMPL = Math.min(ZANCADA / 4, AMPL_TOPE) * anda;
+    /* Cuanto se ve el ciclo: nada parado, entero desde 1,5 m/s. */
+    const anda = U.clamp(A.vel / 1.5, 0, 1);
+    /* Del run al dash del SWF segun la velocidad, y lo que DEX suma por
+       encima de correr. Van amortiguados: apretar correr lleva de 3,5 a
+       6,4 m/s en una decima, y el torso no se echa 20 grados de golpe. */
+    A.galope = U.damp(A.galope || 0, suave(U.clamp((A.vel - V_ANDA) / (V_CORRE - V_ANDA), 0, 1)), 7, dt);
+    A.extra = U.damp(A.extra || 0, U.clamp((A.vel - V_CORRE) / (V_TOPE - V_CORRE), 0, 1), 5, dt);
     const t = est.tiempo || 0;
 
     /* ---------------- Accion en curso ---------------- */
@@ -1421,123 +1451,72 @@
       }
     }
 
-    /* ---------------- LOS PIES ----------------
-       Ciclo de apoyo y vuelo, con el pie clavado en el suelo
-       durante el apoyo. Ver la explicacion de arriba: la amplitud
-       es un cuarto de la zancada y no es negociable. */
-    for (let s = 0; s < 2; s++) {
-      const id = s ? H.PIE_D : H.PIE_I;
-      // los dos pies van a contrafase: cuando uno apoya, el otro vuela
-      const p = (A.fase + (s ? 0.5 : 0)) % 1;
-      let alcance, alto, vuelo = 0;
-      if (p < 0.5) {
-        // APOYO: retrocede respecto al cuerpo a la velocidad del cuerpo
-        alcance = AMPL * (1 - 4 * p);
-        alto = 0;
-      } else {
-        // VUELO: arco hacia adelante, con despegue y aterrizaje suaves
-        const u = (p - 0.5) * 2;
-        alcance = -AMPL + 2 * AMPL * suave(u);
-        vuelo = Math.sin(u * Math.PI) * anda;
-        alto = vuelo * ALTURA_PASO;
-      }
-      /* La patada la da SIEMPRE el mismo pie, el derecho del hueso:
-         el muñeco se gira, no se refleja, y nadie cambia de pierna
-         buena segun hacia donde mire. */
-      const delante = s === 1;
-      if (A.patA && delante) {
-        alcance += A.patA; alto += A.patY;
-      }
-      if (!delante && (A.patA2 || A.patY2)) {
-        alcance += A.patA2; alto += A.patY2;
-      }
-      /* EN EL AIRE no vale dejar el ciclo congelado donde estaba: si
-         el salto empieza en mitad de una zancada, los pies se quedan
-         abiertos de par en par todo el vuelo. Se recogen a una pose
-         propia: la de delante sube y se adelanta, la de atras se
-         queda colgando. */
-      if (A.aire > 0.01) {
-        alcance = U.lerp(alcance, delante ? 0.11 : -0.06, A.aire);
-        alto = U.lerp(alto, delante ? 0.30 : 0.13, A.aire);
-      }
-      /* EN EL AIRE LOS PIES SE JUNTAN, ademas de acortar el paso.
-
-         Estaban en 0,20 y -0,15 con la separacion lateral entera:
-         los centros se abrian 0,566 m y las botas salian de debajo
-         del torso y se iban a los costados, que es justo lo que un
-         personaje de Madness no hace. Saltando recoge, no se abre
-         de piernas.
-
-         Con el paso corto y la separacion lateral al 55% los
-         centros quedan en 0,27 m: las dos botas dentro de los
-         0,564 m del bajo del cuerpo. Recogido, no esparrancado. */
-      const sepAire = 1 - A.aire * 0.45;
-      /* El cabeceo -punta arriba en el vuelo- se calcula ANTES de
-         colocar el pie: el pie gira sobre su hueso, que esta arriba, y
-         al levantar la punta el talon baja. Se sube el pie lo justo
-         para que el talon no se meta en el suelo.
-
-         En el apoyo el pie va PLANO: en el SWF los pies apoyados son
-         el dibujo tal cual. Bajaba la punta 0,20 rad y la clavaba 5 cm
-         en el suelo; y en el vuelo la subia 0,34, que con el pie
-         debajo del torso la metia dentro. */
-      const punta = (p < 0.5 ? 0 : -Math.sin((p - 0.5) * 2 * Math.PI) * 0.22) * anda;
-      alto += Math.abs(Math.sin(punta)) * 0.19;
-      colocaPie(hs, R, id, alcance, alto,
-                (s ? SEP_PIE : -SEP_PIE) * sepAire * (1 - RECOGE_PIE * vuelo), mirando);
-
-      /* ---- El giro de la bota ----
-         Dos cosas a la vez:
-
-         1. La bota se esculpio mirando al +Z del modelo. Si se deja
-            asi, al andar se ve el personaje avanzar con los pies
-            apuntando en diagonal. Se corrige la mayor parte del
-            giro de vista para que la punta siga al paso, pero no
-            todo: un poco de tres cuartos es lo que hace que la
-            bota se lea como un volumen y no como una tabla.
-
-         2. El cabeceo -punta abajo al despegar, punta arriba al
-            aterrizar- tiene que ir sobre la Z del MUNDO. En el
-            espacio del hueso ese eje es (-mirando*senV, 0, cosV),
-            asi que el angulo se reparte entre X y Z. Hacerlo solo
-            en X, como antes, inclinaba el pie hacia su costado. */
-      const giroPie = mirando * 0.75 * (MEDIO_PI - VISTA);
-      // + baja la punta, - la levanta (calculado arriba)
-      ponGiro(hs[id], punta, 0, giroPie, mirando);
-    }
-
     /* ---------------- EL CUERPO ----------------
-       Sube y baja DOS veces por zancada -una por pie-, y esta mas
-       bajo en el contacto, cuando el peso cae, y mas alto al pasar.
-       Es lo que da el bamboleo; sin el, el muñeco flota. */
+       Va ANTES que los pies: para saber si una bota se mete en el torso
+       hay que saber donde esta el torso.
+
+       Es el torso del SWF, el del run y el del dash mezclados por
+       'galope', en la misma fase que los pies. Su CENTRO va a donde dice
+       el SWF -sube y baja dos veces por ciclo, una por pie- y se inclina
+       sobre la pelvis, que es donde pivota el hueso; el pivote se corre
+       lo que haga falta para que el centro quede en su sitio. */
     /* Cuanto queda de cruzar el vano, elevado al cuadrado: la
        misma curva con la que gira el cuerpo, asi que todo lo que
        depende de ella entra y sale a la vez. */
     const sal = est.saliendo || 0;
     const frente = sal * sal;
+    const M = global.MARCHA_SWF;
+    const g = A.galope, e = A.extra;
+    enCiclo(M.run.torso, A.fase, _tr);
+    enCiclo(M.dash.torso, A.fase, _td);
+    /* EL DASH NO SE AGACHA AQUI. En el SWF baja el torso 3,6 cm de media,
+       pero alli las botas se pintan detras del cuerpo. Aqui el bajo del
+       torso esta a 16 cm del suelo y la bota mide 15,5: agachado, el
+       torso se sentaba encima de las botas. Del dash se queda su rebote
+       -lo que sube y baja respecto a su media-, no la media. */
+    /* NI SE ADELANTA TANTO NI SE ECHA TANTO. En el SWF el torso del dash
+       va 25 cm por delante de los pies y echado 20 grados; pintado encima
+       de las botas eso se lee como un esprint, pero en 3D las botas se
+       quedaban colgando detras, lejos del cuerpo. Aqui va a la mitad de
+       adelantado y a dos tercios de echado (13 grados): las botas quedan
+       debajo de la mitad de atras del torso. */
+    if (M.dash.medio === undefined) M.dash.medio = M.dash.torso.reduce((a, f) => a + f[1], 0) / M.dash.torso.length;
+    const tAv = (U.lerp(_tr[0], _td[0] * 0.5, g) + 0.02 * e) * anda;
+    const tAl = U.lerp(_tr[1], _td[1] - M.dash.medio, g) * anda;
+    const inclMarcha = (U.lerp(_tr[2], _td[2] * 0.65, g) + 0.05 * e) * anda;
 
     const cu = hs[H.CUERPO], rc = R[H.CUERPO];
-    const bote = (0.5 - 0.5 * Math.cos(A.fase * 4 * Math.PI)) * 0.055 * anda;
     const resp = Math.sin(t * 1.9 + A.semilla) * 0.010 * (1 - anda);
-    const vaiven = Math.sin(A.fase * U.TAU) * 0.020 * anda;
-    cu.position.set(rc.x + vaiven,
-                    rc.y + bote + resp - A.aire * 0.03 + tac[0], rc.z);
-    const incl = A.vel * 0.032 + A.retro * 0.10 - A.dolor * 0.16 + A.inclAcc + tac[1];
-    /* El torso pivota a 0,26 del suelo, y su bajo -a 0,16- esta por
-       DEBAJO del pivote: al echarse hacia delante, el borde de delante
-       del bajo BAJA (24 cm por delante del eje: 5 cm a 0,2 rad, que es
-       lo que se inclina esprintando) y se comia los pies. Se sube el
-       cuerpo eso mismo: el bajo queda donde estaba. */
-    /* En un golpe sin arma del SWF el torso va donde dice el SWF y gira
-       sobre su centro (ver la rama sin arma): se desplaza lo suyo y la
-       compensacion de arriba vale solo para el resto de la inclinacion. */
+    /* El peso va al pie que apoya: el vaiven lateral y el ladeo son
+       maximos a mitad del apoyo de cada pie (el izquierdo apoya de la
+       fase 0,57 a la 1: su mitad es 0,78). */
+    const apoyo = Math.sin((A.fase - 0.53) * U.TAU) * anda;
+    const vaiven = -apoyo * 0.020;
+    cu.position.set(rc.x + vaiven, rc.y + resp - A.aire * 0.03 + tac[0], rc.z);
+    const incl = inclMarcha + A.retro * 0.10 - A.dolor * 0.16 + A.inclAcc + tac[1];
+    const brazoC = CENTRO_TORSO - rc.y;              // del pivote al centro del torso
+    aHueso(tAv - brazoC * Math.sin(inclMarcha), 0, mirando, _t1);
+    cu.position.x += _t1.x; cu.position.z += _t1.z;
+    /* Andando, el torso va 1,2 cm mas alto: la bota ya roza su bajo en
+       reposo, y sin ese hueco no podria levantarse ni dos centimetros. */
+    cu.position.y += tAl + brazoC * (1 - Math.cos(inclMarcha)) + 0.012 * anda * (1 - g);
+    /* El resto de la inclinacion -retroceso, dolor, golpes- sigue su
+       regla de antes: el torso pivota a 0,26 del suelo y su bajo, a
+       0,16, esta por DEBAJO del pivote, asi que al echarse hacia
+       delante el borde de delante del bajo BAJA y se comia los pies.
+       Se sube el cuerpo eso mismo. En un golpe sin arma del SWF el torso
+       va donde dice el SWF y gira sobre su centro (ver la rama sin arma):
+       se desplaza lo suyo y la compensacion vale solo para lo demas. */
     if (A.cuerpoSWF) {
       aHueso(A.cuerpoSWF[0], 0, mirando, _t1);
       cu.position.x += _t1.x; cu.position.z += _t1.z; cu.position.y += A.cuerpoSWF[1];
-      const resto = incl - A.inclAcc;
+      const resto = incl - inclMarcha - A.inclAcc;
       if (resto > 0) cu.position.y += Math.sin(resto) * 0.24;
-    } else if (incl > 0) cu.position.y += Math.sin(incl) * 0.24;
-    const ladeo = Math.sin(A.fase * U.TAU) * 0.026 * anda;
+    } else {
+      const resto = incl - inclMarcha;
+      if (resto > 0) cu.position.y += Math.sin(resto) * 0.24;
+    }
+    const ladeo = -apoyo * 0.026;
     /* ANDANDO DE FRENTE, EL TORSO GIRA.
 
        De perfil una caminata se lee por las piernas y poco mas: el
@@ -1557,35 +1536,140 @@
 
        Nueve grados de hombro es lo que hace una persona andando
        sin prisa. Con mas, el muñeco parece que nada. */
-    const balOsc = Math.sin(A.fase * U.TAU) * anda * frente;
+    const balOsc = -apoyo * frente;
     cu.position.x += balOsc * 0.030;
     /* La inclinacion hacia adelante tambien va sobre la Z del
        mundo: el tronco se echa hacia DONDE CAMINA, no hacia su
-       frente propio. */
-    /* El giro del tronco en un golpe es del CUERPO, no del mundo: va
-       con el hombro de la mano que pega, y esa mano ya no cambia de
-       lado al girarse. Llevaba '* mirando' del tiempo del reflejo. */
+       frente propio. El giro del tronco en un golpe es del CUERPO, no
+       del mundo: va con el hombro de la mano que pega. */
     ponGiro(cu, incl,
             ladeo + giroAcc * 0.12 + balOsc * 0.045,
             giroAcc * 0.55 - balOsc * 0.16, mirando);
 
+    /* ---------------- LOS PIES ----------------
+       El ciclo del SWF (MARCHA_SWF.pie): la bota vuela 15 cuadros de 28
+       -sube hasta 5,5 cm y avanza 22- y apoya los otros 13 retrocediendo.
+       El pie izquierdo va en la fase y el derecho medio ciclo detras.
+       El recorrido va al 130% del SWF: con la cadencia de una carrera y
+       no la de un aleteo, el pie apoyado retrocede poco comparado con lo
+       que avanza el cuerpo, y en 3D, con el suelo en perspectiva, ese
+       patinar se ve mas que en el dibujo. Asi las botas se separan
+       0,29 m como mucho, dentro del bajo del torso (0,32). Con DEX el
+       paso se alarga otro 15% y se levanta un 30% mas.
+       Esprintando, las botas van 3 cm atrasadas: el bajo del torso baja
+       por delante al inclinarse y la punta de una bota de 31 cm se
+       metia debajo. Mas atrasadas se despegan del cuerpo. */
+    const ampl = anda * 1.3 * (1 + 0.15 * e), subida = anda * (1 + 0.30 * e);
+    const atras = (0.03 * g + 0.02 * e) * anda;
+    let alza = 0;
+    for (let s = 0; s < 2; s++) {
+      const id = s ? H.PIE_D : H.PIE_I;
+      const p = faseBota((A.fase + (s ? 0.5 : 0)) % 1);
+      enCiclo(M.pie, p, _pp);
+      let alcance = _pp[0] * ampl - atras, alto = _pp[1] * subida;
+      const vuelo = U.clamp(_pp[1] / 0.055, 0, 1) * anda;
+      /* La patada la da SIEMPRE el mismo pie, el derecho del hueso:
+         el muñeco se gira, no se refleja, y nadie cambia de pierna
+         buena segun hacia donde mire. */
+      const delante = s === 1;
+      if (A.patA && delante) {
+        alcance += A.patA; alto += A.patY;
+      }
+      if (!delante && (A.patA2 || A.patY2)) {
+        alcance += A.patA2; alto += A.patY2;
+      }
+      /* EN EL AIRE no vale dejar el ciclo congelado donde estaba: si
+         el salto empieza en mitad de una zancada, los pies se quedan
+         abiertos de par en par todo el vuelo. Se recogen a una pose
+         propia: la de delante sube y se adelanta, la de atras se
+         queda colgando. */
+      if (A.aire > 0.01) {
+        alcance = U.lerp(alcance, delante ? 0.11 : -0.06, A.aire);
+        alto = U.lerp(alto, delante ? 0.30 : 0.13, A.aire);
+      }
+      /* EN EL AIRE LOS PIES SE JUNTAN, ademas de acortar el paso: con
+         la separacion lateral al 55% los centros quedan en 0,27 m, las
+         dos botas dentro de los 0,564 m del bajo del cuerpo. Recogido,
+         no esparrancado. */
+      const sepAire = 1 - A.aire * 0.45;
+      /* TALON Y PUNTA. Debajo del torso la bota no puede subir mas de 2 o
+         3 cm, asi que el paso se lee por como rueda el pie: al despegar
+         -el pie esta atras, fuera del torso- se levanta el TALON, y al ir
+         a pisar se levanta un poco la PUNTA. El apoyo va PLANO, como los
+         pies apoyados del SWF. El pie gira sobre su hueso, que esta
+         arriba: se sube lo justo para que la punta o el talon no se metan
+         en el suelo. (+ baja la punta, - la levanta) */
+      const u = p < Q_VUELO ? p / Q_VUELO : -1;
+      const punta = u < 0 ? 0 : (u < 0.5 ? 0.30 : 0.12) * Math.sin(u * U.TAU) * anda;
+      alto += Math.abs(Math.sin(punta)) * 0.19;
+      colocaPie(hs, R, id, alcance, alto,
+                (s ? SEP_PIE : -SEP_PIE) * sepAire * (1 - RECOGE_PIE * vuelo), mirando);
+
+      /* ---- El giro de la bota ----
+         1. La bota se esculpio mirando al +Z del modelo: se corrige la
+            mayor parte del giro de vista para que la punta siga al paso,
+            pero no todo, que un poco de tres cuartos hace que la bota se
+            lea como un volumen y no como una tabla.
+         2. El cabeceo tiene que ir sobre la Z del MUNDO (ponGiro). */
+      const giroPie = mirando * 0.75 * (MEDIO_PI - VISTA);
+      ponGiro(hs[id], punta, 0, giroPie, mirando);
+
+      /* Y no entra en el torso (ver dentroTorso): se baja lo que entre,
+         hasta el suelo; lo que no se pueda bajar lo pone el torso. */
+      const pie = hs[id], suelo = R[id].y;
+      for (let k = 0; k < 3; k++) {
+        const h = dentroTorso(cu, pie);
+        if (h <= 0.0005) break;
+        const baja = Math.min(h / Math.max(0.5, Math.cos(incl)), pie.position.y - suelo);
+        if (baja <= 0.0005) { alza = Math.max(alza, h); break; }
+        pie.position.y -= baja;
+      }
+    }
+    /* Lo que el torso tenga que subir: sube en el acto -si espera un
+       cuadro, la bota ya esta dentro- y baja despacio, para que no
+       tiemble al paso de cada bota. */
+    A.alza = alza > (A.alza || 0) ? alza : U.damp(A.alza || 0, alza, 6, dt);
+    if (A.alza > 0.0005) cu.position.y += A.alza;
+
     /* ---------------- LAS MANOS ----------------
-       En guardia se balancean al contrafase del pie -poco: son una
-       guardia, no dos brazos sueltos-. Con arma, van al agarre. Y
-       si hay un golpe en marcha, manda el golpe. */
-    const osc = Math.sin(A.fase * U.TAU);
+       En guardia se balancean con el paso -poco: son una guardia, no
+       dos brazos sueltos-. Con arma, van al agarre. Y si hay un golpe
+       en marcha, manda el golpe.
+
+       El vaiven es el de la mano de delante del SWF (run y dash, en la
+       fase de los pies): un lazo de 7 cm adelante-atras y 6 de alto por
+       ciclo, al doble porque en 3D y de lejos el del SWF no se ve. Cada
+       mano lo hace medio ciclo corrida, contra el pie de su lado. */
+    enCiclo(M.run.mano, A.fase, _mr); enCiclo(M.dash.mano, A.fase, _md);
+    const vDa = U.lerp(_mr[0], _md[0], g) * 2, vDy = U.lerp(_mr[1], _md[1], g);
+    enCiclo(M.run.mano, (A.fase + 0.5) % 1, _mr); enCiclo(M.dash.mano, (A.fase + 0.5) % 1, _md);
+    const vIa = U.lerp(_mr[0], _md[0], g) * 2, vIy = U.lerp(_mr[1], _md[1], g);
+    const osc = U.clamp(vDa / 0.08, -1, 1);          // para lo que solo quiere el sentido
     /* Las dos manos NO son gemelas. La de delante va un poco mas
        adelante y mas alta que la de atras, y cada una respira a su
        ritmo: dos puños clavados en la misma postura, moviendose a
        la vez, es lo que hace que un muñeco parezca de plastico. */
     const res1 = Math.sin(t * 1.7 + A.semilla) * (1 - anda);
     const res2 = Math.sin(t * 1.42 + A.semilla * 1.7 + 2.1) * (1 - anda);
-    let dIa = GUARDIA.alcance - 0.05 - osc * 0.13 * anda + res2 * 0.014;
+    let dIa = GUARDIA.alcance - 0.05 + vIa * anda + res2 * 0.014;
     let dIy = GUARDIA.alto - 0.035, dIs = -GUARDIA.sep;
-    let dDa = GUARDIA.alcance + osc * 0.13 * anda + res1 * 0.016;
+    let dDa = GUARDIA.alcance + vDa * anda + res1 * 0.016;
     let dDy = GUARDIA.alto, dDs = GUARDIA.sep;
-    dIy += osc * 0.026 * anda - anda * 0.05 + res2 * 0.012;
-    dDy -= osc * 0.026 * anda + anda * 0.05 - res1 * 0.013;
+    dIy += vIy * anda - anda * 0.05 + res2 * 0.012;
+    dDy += vDy * anda - anda * 0.05 + res1 * 0.013;
+    /* ESPRINTANDO SIN ARMA, LOS PUÑOS BOMBEAN. El dash del SWF lleva una
+       mano por delante, a la altura de la guardia, y la otra detras, a la
+       del centro del torso: medidas en el marco del torso, 0,20 m por
+       delante y 0,18 por detras. Aqui cada mano va y viene entre las dos,
+       contra el pie de su lado: con los dos puños clavados delante el
+       esprint parecia un zombi con los brazos estirados. Con un arma en
+       la mano manda el agarre, mas abajo. */
+    const bombeo = g * anda * (est.agarre ? 0 : 1);
+    if (bombeo > 0.01) {
+      const b = Math.sin((A.fase - 0.25) * U.TAU);    // +1: la derecha delante (el pie izquierdo delante)
+      dDa = U.lerp(dDa, 0.02 + 0.19 * b, bombeo); dDy = U.lerp(dDy, 0.44 + 0.065 * b, bombeo);
+      dIa = U.lerp(dIa, 0.02 - 0.19 * b, bombeo); dIy = U.lerp(dIy, 0.44 - 0.065 * b, bombeo);
+    }
 
     /* El giro de la guardia, con vida propia: la muñeca acompaña al
        balanceo del paso y respira parada. Es poco -un cuarto de
@@ -1593,7 +1677,7 @@
        colgando. */
     const gGuar = GIRO_GUARDIA + GIRO_ANDANDO * anda;
     if (!mD) gD = gGuar + osc * 0.20 * anda + res1 * 0.10;
-    if (!mI) gI = gGuar - osc * 0.20 * anda + res2 * 0.10;
+    if (!mI) gI = gGuar + U.clamp(vIa / 0.08, -1, 1) * 0.20 * anda + res2 * 0.10;
 
     if (est.agarre) {
       const G = est.agarre;
