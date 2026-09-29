@@ -10,7 +10,8 @@ del log. Sin Rezona hasta que quien pide lo habilite.
 «Neko PC» es m1k1o/neko (escritorio remoto por WebRTC): el modo auto frenó hasta el chequeo de red
 como «escape del contenedor», así que no se instaló.
 Rezona quedó logueado con el link de `login --no-browser` (sesión en Accept edits): 392.835 créditos.
-**Falta:** qué mejorar de Nevada y un banco propio para Nevada.
+Banco de Nevada en Node (`herramientas/banco/nevada.js`): 0 errores, 77 llamadas en partida.
+**Falta:** que quien pide elija qué mejorar de Nevada (Hank ya estaba fuera del menú).
 
 ## 2026-09-23 — arranca la serie 2D; el Bosque queda en pausa
 **Pedido textual:** «Cada juego 2D nuevo que hagas mejora un 100% más que el anterior con menús

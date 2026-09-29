@@ -36,7 +36,7 @@
 | `nevada/` | fuentes de Arena Nevada: plantilla, js, css, audio y `armar.py` | [nevada](nevada.md) |
 | `assets/` | lo generado que el juego baja por CDN (texturas, GLB, cielo) | [entrega](entrega.md) |
 | `herramientas/rezona/` | cliente stdio `rz.py`, pedidos y horneados, `crudo/tareas.json` | [rezona](rezona.md) |
-| `herramientas/banco/` | `correr.py` (juego) y `ver_glb.py` / `ver_anim.py` (modelos) | [banco](banco.md) |
+| `herramientas/banco/` | `correr.py` (Bosque), `nevada.js` (Nevada) y `ver_glb.py` / `ver_anim.py` (modelos) | [banco](banco.md) |
 | `.claude/skills/` | graficos, assets-ia, banco: las reglas largas heredadas | — |
 | `docs/` | `MANUAL_JUEGOS.md`, `GUIA-JUEGOS.md`, `MEMORIA.md`, traspaso | referencia, no plan |
 | `crudo/` | descargas y capturas de trabajo, **fuera de git** | — |

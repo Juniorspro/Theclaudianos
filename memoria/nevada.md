@@ -25,7 +25,17 @@ Fuente: `nevada/` → `juegos-pc/ArenaNevada.html`. Ver también: [banco](banco.
 - `audio/`: `window.__AUDIO` (sonidos, 436 kB) y `window.__MUSICA` (2,27 MB), mp3 en base64.
 - `.gitattributes` saca lo armado y lo generado de `git diff`: si no, un diff tira megas de base64.
 
-## Pendiente según el log (§ 5, 29/09)
-- Hank fuera del menú y rehacer su modelo; gore «próximamente»; mirar arriba/abajo cómodo en el
-  celu; silueta y sombreado de los cuerpos; ropa de enemigos que falta; caminata y carrera sin
-  piernas que se buguean.
+## Medido acá (banco, 2026-09-29, DPR 2, swiftshader)
+- Carga 3,4 s; **0 errores, 0 pedidos afuera**; sólo el aviso de three de «build/three.min.js».
+- Menú: 3 llamadas (el fondo es 2D; la figura va en otro lienzo). Partida: **77 llamadas,
+  95 mil triángulos**, 68 geometrías, 29 texturas; lienzo interno 802×370 (resolución AUTO).
+- El jugador arranca en la puerta del fondo; la oleada se abre con ATACAR en el panel.
+
+## Estado al cierre del log (29/09 05:31)
+- Lo último fue rehacer los íconos de los botones con piezas del SWF; USAR quedó con el dedo en
+  diagonal y la sesión preguntó si lo quería más girado.
+- **Hank ya no sale en el menú** (`main.js › TIPOS_MENU`, commit `e89b80d` del otro repo);
+  falta rehacer su modelo, «más adelante».
+- Abiertos: #40 mirar arriba/abajo cómodo (la mira táctil se rehízo el 29/09, falta que la pruebe
+  quien pide); #41 silueta y sombreado de los cuerpos; #44 al correr el pie de adelante atraviesa
+  el torso; #42 ropa de enemigos (necesita el SWF, que no está); el gore sigue «próximamente».

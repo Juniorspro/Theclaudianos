@@ -25,6 +25,16 @@ SALIDA=crudo/banco/x.jpg  BQ=otro.html  DIST=8  ESPERA=40   # variables
 - `camera.position` es **local** (cuelga de la cabeza): va `camera.getWorldPosition()`.
 - Los botones responden a `touchstart`; el camino de `click` se saltea si hay `ontouchstart`.
 
+## Nevada (2026-09-29)
+- `node herramientas/banco/nevada.js [html] [carpeta]` → fotos del menú y de la partida, `hoja.png`
+  enderezada y un JSON con errores, pedidos afuera, llamadas, triángulos, lienzo y reloj del juego.
+  `DPR=2 SEG=8 ANCHO=446` (892 = foto a tamaño real). Tarda ~30 s.
+- En este contenedor hay **Playwright de Node** (`/opt/node22/lib/node_modules/playwright`, 1.56.1)
+  y **no** el de Python ni PIL: `correr.py` no anda sin instalar. La hoja se arma con CSS.
+- Nevada cuelga todo de `window` (`Game`, `HUD`, `Device`…) y deja `__ir(destino)` para saltar
+  de pantalla (`'nueva'` arranca la partida). `Game.tiempo` es el reloj del juego.
+- Las llamadas se miden envolviendo `Game.dibujar` con `ren.info.autoReset=false`.
+
 ## Sintaxis antes de mirar nada
 ```bash
 node -e "const a=require('/tmp/node_modules/acorn'),f=require('fs');
