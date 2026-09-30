@@ -1,6 +1,12 @@
 # Diario — una entrada por sesión
 Lo viejo abajo. Rama de trabajo: `claude/mariano-peak-repo-63ebvl`.
 
+### 2026-09-30 — Espacio del repo medido y limpieza segura
+Pedido: «Libera espacio en este repo con cosas innecesarias». Mapa en [repo](repo.md) § Espacio: nuestra rama
+pesa 149 MB y 85 MB son copias viejas de ARRABAL de antes del sellado (sólo en la historia). No se purgó: ARRABAL
+streamea de un commit fijo de esta rama. Se sacaron 4 imágenes y 3 clips sin uso y un script viejo
+(`Duelo.html` −398 kB). Queda ofrecida la purga de historia, sólo con el código del sello y un sí explícito.
+
 ### 2026-09-27 — DUELO: tiro preciso y movimiento fluido
 La pelota va adonde termina el dedo (proyección real al arco): error medio 2 cm contra 2,87 m antes. Trazo por
 evento, trayectoria prevista, cámara de patear más cerca (arco ~65 % más grande), bucle de paso variable (fluido

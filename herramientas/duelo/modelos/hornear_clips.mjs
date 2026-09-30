@@ -15,11 +15,14 @@ R.listAnimations().forEach(a=>a.dispose());
 const nodos=new Map(R.listNodes().map(n=>[n.getName(),n]));
 const hips=nodos.get('Hips'), rest=hips.getTranslation();
 // qué clips viajan (el viaje sale de la pista) y cuáles se centran (se les saca el promedio horizontal)
-const VIAJAN=/^(estirada_|vuelo_|atrapa|levantarse|arquero_paso)/;
+const VIAJAN=/^(estirada_|vuelo_|atrapa|arquero_paso)/;
 const CENTRAR=/^(quieto|parado|listo|carrera|sprint|caminar|arquero_)/;
 const viajes={};
+/* clips que el juego no pide (se generaron y no quedaron en ningún estado): no se hornean, ocupan lugar */
+const SIN_USO=new Set(['arquero_alto','levantarse','caminar']);
 for(const f of fs.readdirSync(carpeta).filter(f=>f.endsWith('.json')).sort()){
-  const c=JSON.parse(fs.readFileSync(path.join(carpeta,f),'utf8'));const nom=f.replace('.json','');
+  const nom=f.replace('.json','');if(SIN_USO.has(nom))continue;
+  const c=JSON.parse(fs.readFileSync(path.join(carpeta,f),'utf8'));
   const n=c.n, fps=c.fps, t=new Float32Array(n);for(let i=0;i<n;i++)t[i]=i/fps;
   const a=doc.createAnimation(nom);
   const inp=doc.createAccessor().setType('SCALAR').setArray(t).setBuffer(buf);

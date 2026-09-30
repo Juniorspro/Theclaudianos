@@ -18,9 +18,9 @@ function cargarModelos(listo){
 var _q=new THREE.Quaternion(), _q2=new THREE.Quaternion(), _p0=new THREE.Vector3(), _p1=new THREE.Vector3(), _p2=new THREE.Vector3(), _p3=new THREE.Vector3();
 function posEnRaiz(J,o,v){o.getWorldPosition(v);return J.raiz.worldToLocal(v);}
 /* estado del juego → clips (con variantes); UNA_VEZ = los que se tocan una sola vez y quedan en el último cuadro */
-var CLIPS_DE={quieto:['quieto'],parado:['parado'],espera:['listo'],arquero:['arquero_listo'],correr:['carrera'],caminar:['caminar'],
+var CLIPS_DE={quieto:['quieto'],parado:['parado'],espera:['listo'],arquero:['arquero_listo'],correr:['carrera'],
   patear:['patada'],festejar:['puno','salto_brazos','musculos'],lamento:['lamento','bronca'],malabares:['quieto'],volada:['estirada_alta_izq']};
-var UNA_VEZ=/^(patada|puno|salto_brazos|musculos|lamento|bronca|atrapa|levantarse|estirada_|vuelo_)/;
+var UNA_VEZ=/^(patada|puno|salto_brazos|musculos|lamento|bronca|atrapa|estirada_|vuelo_)/;
 /* qué hace cada estado cuando su clip de un tiro termina */
 var LUEGO={festejar:'quieto',lamento:'quieto'};
 function crearFutbolista(nombre,o){

@@ -31,8 +31,9 @@ Nombre, arenas y jugadores propios (no se copia la marca). Primer juego 3D de la
 - Dos lienzos: el 3D abajo y la interfaz 2D encima (el kit de UI de CABEZONES y el módulo de idiomas
   funcionan tal cual). Pantalla **parada**: 412 de ancho; en pantallas anchas, columna centrada.
 - **Futbolistas** (`fuentes/d6b_futbolista.js`, `assets/duelo/jugador-*.glb` ~1,9 MB c/u + `viajes-*.json`):
-  malla de Rezona, **esqueleto y 14 clips de la biblioteca de mocap de Meshy** (vía Higgsfield `3d_rigging`,
-  8 créditos c/u: patada, carrera, sprint, caminata, 3 idles, 2 lamentos, 3 festejos, levantarse, atrapar) y
+  malla de Rezona, **esqueleto y clips de la biblioteca de mocap de Meshy** (vía Higgsfield `3d_rigging`,
+  8 créditos c/u: patada, carrera, sprint, 3 idles, 2 lamentos, 3 festejos, atrapar; caminata y levantarse se
+  pidieron y no se usan: `hornear_clips.mjs` los saltea con `SIN_USO`) y
   **8 clips sacados de video con MediaPipe** (estiradas alta/baja/lateral izq y der, postura de arquero x2).
   Capas por código: IK de manos a la pelota, IK de pierna en el contacto de la patada y en el jueguito,
   cabeza que sigue la pelota, pies al piso, guantes pintados por peso de hueso, número pintado en la textura.
