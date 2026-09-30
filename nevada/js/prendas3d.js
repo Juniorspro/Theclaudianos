@@ -1239,124 +1239,405 @@
   };
 
   /* =============================================================
-     LOS ANTEOJOS (MasksAll, 7358; puestos en 'Parts - Head' con myMask)
-
-     RIGIDOS, DELANTE DE LA CARA: cada lente es una placa plana con su
-     marco, parada a 2 cm de la cabeza en el azimut de su ojo y girada con
-     ella; un puente las une por encima de la linea de la cruz y las
-     patillas vuelven por los costados hasta donde irian las orejas. Asi,
-     de perfil, se ve la lente de canto y la patilla, como en el SWF.
-     El marco es la placa entera por detras (negra, o del color que toque) y
-     el cristal va encima, apenas mas chico: el filo del marco queda
-     alrededor sin agujeros ni tapas raras.
+     LOS ANTEOJOS (MasksAll, 7358; puestos en 'Parts - Head' con myMask):
+     cada uno de su hoja, mas abajo (lentes, shades1, shades8, goggles1,
+     paintball1). Antes todos salian de un mismo molde de dos lentes rigidas
+     a 17 grados, de la mitad del tamaño de la hoja.
      ============================================================= */
-  const OJO = 17;                          // azimut de cada lente desde la linea de la cruz
-  function caminoLado(a0, a1, off0, off1, y) {
-    const c = C(), k = Math.sqrt(Math.max(0.05, 1 - Math.pow((y - c.cy) / c.ry, 2)));
-    return (t) => {
-      const a = (a0 + (a1 - a0) * t) * RAD, off = off0 + (off1 - off0) * suave(0, 0.35, t);
-      const rx = c.rx * k + off, rz = c.rz * k + off;
-      let nx = Math.sin(a) / rx, nz = Math.cos(a) / rz;
-      const L = Math.hypot(nx, nz); nx /= L; nz /= L;
-      return { x: rx * Math.sin(a), z: c.cz + rz * Math.cos(a), nx, nz };
-    };
-  }
-  /* o: poly (u, v en metros; u hacia fuera de la cara), marco (ancho del
-     filo), hexMarco, hexCristal (o cristal(lado) -> hex), reflejo [u0, u1,
-     sesgo], d (a cuanto de la cabeza), gr (grueso), puente [v0, v1],
-     patilla (alto), sube (grados sobre la cruz) */
-  function anteojos(o) {
-    return function (B, g, silueta) {
-      const [a0, e0] = Hh.centroCruz(), el = e0 + (o.sube || 1), d = o.d || 0.02, gr = o.gr || 0.012;
-      const hexM = silueta ? 0x000000 : o.hexMarco;
-      const bordes = [];
-      for (const lado of [1, -1]) {
-        const az = a0 + lado * (o.ojo || OJO), p = sobre(az, el, d);
-        const P = lado > 0 ? o.poly : o.poly.map(([u, v]) => [-u, v]).reverse();
-        B.push(); B.translate(p[0], p[1], p[2]); B.rotateY(az * RAD);
-        // el marco: la placa entera, del filo hacia fuera
-        Hh.prisma(B, Hh.hinchar(P, o.marco), 'z', -gr, 0, hexM, silueta ? g : 0, silueta ? undefined : U.LUZ_PLANA);
-        if (!silueta) {
-          const hexC = o.cristal ? o.cristal(lado) : o.hexCristal;
-          Hh.prisma(B, P, 'z', -0.004, 0.002, hexC, 0, U.LUZ_PLANA);
-          if (o.reflejo) {
-            const [r0, r1, sg] = o.reflejo, vv = P.map((q) => q[1]), v0 = Math.min(...vv), v1 = Math.max(...vv);
-            let R = [[r0 * lado + sg * v0, v0], [r1 * lado + sg * v0, v0], [r1 * lado + sg * v1, v1], [r0 * lado + sg * v1, v1]];
-            if (lado < 0) R = R.reverse();
-            R = Hh.recortar(R, P);
-            if (R.length >= 3) Hh.prisma(B, R, 'z', 0.002, 0.0035, o.hexReflejo || 0x8a8a8a, 0, U.LUZ_PLANA);
-          }
-        }
-        B.pop();
-        // los cantos de la lente, en el mundo: el de dentro (puente) y el de fuera (patilla)
-        const uu = P.map((q) => q[0]), uIn = lado > 0 ? Math.min(...uu) : Math.max(...uu), uOut = lado > 0 ? Math.max(...uu) : Math.min(...uu);
-        const aa = az * RAD, mundo = (u) => [p[0] + Math.cos(aa) * u, p[2] - Math.sin(aa) * u];
-        bordes.push({ lado, az, adentro: mundo(uIn - lado * o.marco * 0.5), afuera: mundo(uOut + lado * o.marco * 0.5), p });
-      }
-      // el puente, entre los cantos de dentro, a la altura o.puente
-      const [pb0, pb1] = o.puente || [0.012, 0.024];
-      const ia = bordes[0].adentro, ib = bordes[1].adentro, pc = sobre(a0, el, d);
-      B.push(); B.translate(0, pc[1], (ia[1] + ib[1]) / 2 - gr * 0.5);
-      Hh.prisma(B, [[ib[0], pb0], [ia[0], pb0], [ia[0], pb1], [ib[0], pb1]], 'z', -gr * 0.5, gr * 0.5, hexM, silueta ? g : 0);
-      B.pop();
-      // las patillas: del canto de fuera, por el costado, hasta la oreja
-      const y = sobre(0, el, 0)[1] + (o.yPatilla || 0.012), h = (o.patilla || 0.009) / 2;
-      for (const b of bordes) {
-        const azF = Math.atan2(b.afuera[0], b.afuera[1] - C().cz) / RAD;
-        Hh.banda(B, caminoLado(azF, b.lado * 104, d - 0.004, 0.008, y), 18, y, () => h, -0.004, 0.006, hexM, silueta ? g * 0.7 : 0);
-      }
-    };
-  }
   // una lente de superelipse: medio ancho w, medio alto h, exponente p (2 redonda, mas: cuadrada)
   const superLente = (w, h, p, n) => Array.from({ length: n || 28 }, (_, i) => {
     const a = i / (n || 28) * 2 * Math.PI, c2 = Math.cos(a), s2 = Math.sin(a);
     return [w * Math.sign(c2) * Math.pow(Math.abs(c2), 2 / p), h * Math.sign(s2) * Math.pow(Math.abs(s2), 2 / p)];
   });
 
-  // Radio-Shades (shades1): pasta negra ancha (25), el cristal oscuro (58) con su reflejo
-  MOD.shades1 = anteojos({ poly: [[-0.052, 0.030], [0.058, 0.036], [0.060, 0.004], [0.046, -0.030], [-0.040, -0.030], [-0.054, -0.006]].map(([u, v]) => [u * 1.12, v * 1.12]),
-                           marco: 0.012, hexMarco: sw(25), hexCristal: sw(58), reflejo: [0.004, 0.022, 0.5], hexReflejo: sw(90), gr: 0.014 });
-  // Coolguys (shades12): cuadrados, todo negro
-  MOD.shades12 = anteojos({ poly: superLente(0.056, 0.04, 7), marco: 0.01, hexMarco: 0x0c0c0c, hexCristal: 0x141414, reflejo: [-0.01, 0.008, 0.6], hexReflejo: sw(70) });
-  // State Troopers (shades3): aviador, la gota caida hacia fuera, filo fino
-  MOD.shades3 = anteojos({ poly: superLente(0.056, 0.047, 2.4).map(([u, v]) => [u + (v < 0 ? 0.013 * (-v / 0.047) : 0), v * (v < 0 ? 1.12 : 0.85)]),
-                           marco: 0.005, hexMarco: 0x0a0a0a, hexCristal: 0x121212, reflejo: [-0.012, 0.004, 0.55], hexReflejo: sw(80), gr: 0.008, puente: [0.02, 0.028] });
-  // Professionals (shades5): redondos y chicos, cristal gris oscuro (47)
-  MOD.shades5 = anteojos({ poly: superLente(0.04, 0.04, 2), ojo: 15.5, marco: 0.005, hexMarco: 0x0a0a0a, hexCristal: sw(47), gr: 0.008, puente: [0.008, 0.014] });
-  // 3-D (shades8): marco blanco grueso, rojo a la izquierda y azul a la derecha
-  MOD.shades8 = anteojos({ poly: superLente(0.056, 0.034, 8), marco: 0.013, hexMarco: sw(235), cristal: (lado) => (lado > 0 ? swc(255, 0, 0) : swc(0, 60, 255)), gr: 0.012 });
-
-  /* Dr. Horrible (goggles1): antiparras de soldador. Dos copas cilindricas
-     (72) que salen de los ojos, con su aro (94) y el vidrio claro (128), el
-     puente, y la correa que da la vuelta a la cabeza (94). */
-  MOD.goggles1 = function (B, g, silueta) {
-    const [a0, e0] = Hh.centroCruz(), el = e0 + 1;
+  /* Radio-Shades (shades1), DE SU HOJA: no son dos lentes sino UNA PANTALLA
+     de lado a lado (25), curva alrededor de la cara a 2,5 cm, de -44 a +44
+     grados de la cruz, 22,6 cm de alto con su trazo (v de -12,1 a +10,5 cm),
+     con la nariz recortada abajo (tope a -2,6 cm, se abre hasta 10,5 cm); y
+     las PATILLAS anchas (58, trazo pintado), altas como la pantalla junto a
+     ella y despues una banda de 10 cm hasta la nuca, pegadas a la cabeza.
+     Placa suelta: tinta en su plano (ver visera2), toda la silueta suelta. */
+  const RADIO = { az: 44.2, vB: -0.121, vT: 0.105, sep: 0.025 };
+  MOD.shades1 = function (B, g, silueta) {
+    const [a0, e0] = Hh.centroCruz(), yC = sobre(a0, e0, 0)[1], c = C(), rS = radioA(yC)[0] + RADIO.sep, gE = 0.016;
+    const pto = (u, v) => { const a = a0 * RAD + u / rS; return [rS * Math.sin(a), yC + v, c.cz + rS * Math.cos(a)]; };
+    // la placa va 1,6 cm adentro del borde de la hoja: la tinta estirada en su plano pone el trazo
+    const U = RADIO.az * RAD * rS - gE, vB = RADIO.vB + gE, vT = RADIO.vT - gE;
+    // la nariz, medida en la hoja (lo que se ve de cara) y agrandada por la tinta: medio ancho -> v del borde
+    const NAR = [[0, -0.0176], [0.02, -0.019], [0.035, -0.022], [0.0454, -0.0435], [0.0544, -0.0777], [0.0605, -0.1033], [0.062, -0.112]].map(([u, v]) => [u + gE, v + gE]);
+    const bajo = (u) => {
+      const a = Math.abs(u);
+      for (let k = 1; k < NAR.length; k++) if (a <= NAR[k][0]) return Math.max(vB, lerp(NAR[k - 1][1], NAR[k][1], (a - NAR[k - 1][0]) / (NAR[k][0] - NAR[k - 1][0])));
+      return vB;
+    };
+    // columnas: cada 1,5 cm, cada 3 mm donde baja el costado de la nariz
+    const us = []; for (let u = -U; u < U - 1e-9;) { us.push(u); const a = Math.abs(u); u += a > NAR[1][0] && a < NAR[NAR.length - 1][0] + 0.004 ? 0.003 : 0.015; }
+    us.push(U);
+    const N = 10, P = us.map((u) => { const b = bajo(u); return Array.from({ length: N + 1 }, (_, j) => pto(u, lerp(b, vT, j / N))); });
+    lamina(B, P, { gr: 0.01, tintaN: 0.25, sinHundir: true, color: () => sw(25), apoyo: () => 0, apoyoLado: () => 0 }, g, silueta);
+    /* LAS PATILLAS (medidas de la hoja, v del borde de fuera de su trazo):
+       nacen detras de la punta de la pantalla, altas como ella, el borde de
+       abajo sube en diagonal hasta la banda y la banda sigue a la nuca */
+    const PERF = [[42, 0.1016, -0.127], [48, 0.1016, -0.127], [51.7, 0.1, -0.105], [57.7, 0.09, -0.0196], [62.4, 0.0786, -0.0196],
+                  [79.6, 0.0743, -0.0162], [97.7, 0.0709, -0.0137], [125, 0.066, -0.01]];
     for (const lado of [1, -1]) {
-      const az = a0 + lado * 16, p = sobre(az, el, -0.012), n = uni(sub(sobre(az, el, 0.1), sobre(az, el, 0)));
-      pieza(B, [[0, 0.075, sw(128)], [0.04, 0.075, sw(94)], [0.056, 0.073, sw(94)], [0.058, 0.06, sw(72)], [0.056, 0.0, sw(72)], [0, 0]], p, n, sw(72), g, silueta, 24);
-      if (!silueta) pieza(B, [[0.033, 0.0765, 0x0a0a0a], [0.041, 0.0765]], p, n, 0x0a0a0a, 0, false, 24);   // el aro negro del vidrio
+      const PT = [];
+      for (let k = 0; k < PERF.length; k++) {
+        const [az, vt, vb] = PERF[k], a = a0 + lado * az;
+        const rows = filas(vt - vb, 9, 0.016, 0.016);
+        PT.push(rows.map((s) => {
+          const y = yC + vb + s, [rx, rz] = radioA(y), t = a * RAD;
+          // de la punta de la pantalla (a rS del eje) a 5 mm de la cabeza
+          let nx = Math.sin(t) / rx, nz = Math.cos(t) / rz; const Ln = Math.hypot(nx, nz); nx /= Ln; nz /= Ln;
+          const off = k === 0 ? Math.max(0.005, rS - Math.hypot(rx * Math.sin(t), rz * Math.cos(t))) : 0.005;
+          return [rx * Math.sin(t) + nx * off, y, c.cz + rz * Math.cos(t) + nz * off];
+        }));
+      }
+      lamina(B, PT, { gr: 0.008, dentro: 0.02, sinHundirLado: true, color: (i, j) => (j <= 1 || j >= 8 ? NEGRO : sw(58)) }, g, silueta);
     }
-    const pc = sobre(a0, el, 0.03);
-    if (!silueta) pieza(B, [[0, 0.03, sw(72)], [0.012, 0.03, sw(72)], [0.012, -0.03, sw(72)], [0, -0.03]], pc, [1, 0, 0], sw(72), 0, false, 10);
-    casquete(B, { lo: () => el - 2.6, hi: () => el + 2.6, d: () => 0.007, hex: sw(94), M: 48, N: 2 }, g, silueta);
+  };
+  /* =============================================================
+     LOS DE CRISTALES, MEDIDOS EN SU HOJA Y DES-PROYECTADOS (la hoja es la
+     vista de la camara a -38,6 grados; cada cristal se leyo fila por fila
+     y se paso al plano de su lente, que mira a su azimut). En metros, u
+     hacia fuera de la cara y v desde la linea de la cruz. Todo trazo de la
+     hoja mide 22 px = 1,9 cm, como el contorno de la cabeza: el marco es
+     ese trazo, un aro negro. Los cristales son TRANSLUCIDOS (la cruz se ve
+     a traves): van en B.vidrio, malla aparte (chars.js).
+     Antes: lentes de la mitad de tamaño, opacos y con reflejo, el marco una
+     placa entera con una tinta de 1,6 cm y patillas con tinta estirada a lo
+     largo de la cabeza (rayas sucias).
+     ============================================================= */
+  // una LOSA plana o curva con agujeros: contorno O y agujeros Hs (u, v), de w0 a w1, puesta por mapa(u, v, w).
+  // La tinta: O hinchado gT y w estirado gT, vertices compartidos; los agujeros sin tocar (el cristal limpio).
+  function losa(B, O, Hs, w0, w1, mapa, col, gT, silueta) {
+    const g2 = silueta ? gT : 0, Oh = g2 > 0 ? Hh.hinchar(O, g2) : O, conts = [Oh].concat(Hs), eps = 1e-4;
+    const nPlano = (u, v) => {
+      const p = mapa(u, v, 0), n = uni(cruz(sub(mapa(u + eps, v, 0), p), sub(mapa(u, v + eps, 0), p)));
+      return dot(n, sub(mapa(u, v, eps), p)) < 0 ? n.map((x) => -x) : n;
+    };
+    // la normal de canto de cada punto: hacia fuera de la losa (en un agujero, hacia su centro)
+    const canto = conts.map((P, c) => { const Q = Hh.hinchar(P, c === 0 ? eps : -eps); return P.map((p, k) => [Q[k][0] - p[0], Q[k][1] - p[1]]); });
+    const aMundo = (p, d2, w) => uni(sub(mapa(p[0] + d2[0], p[1] + d2[1], w), mapa(p[0], p[1], w)));
+    const T = THREE.ShapeUtils.triangulateShape(Oh.map((q) => new THREE.Vector2(q[0], q[1])), Hs.map((h) => h.map((q) => new THREE.Vector2(q[0], q[1]))));
+    const plano = [].concat(...conts), deC = []; conts.forEach((P, c) => P.forEach(() => deC.push(c)));
+    const wF = (k) => (deC[k] === 0 ? w1 + g2 : w1), wD = (k) => (deC[k] === 0 ? w0 - g2 : w0);
+    const vert = (q, n, hx) => { const k = hx === undefined ? [0, 0, 0] : B._rgb(hx, 1); return { i: B._vert(q[0], q[1], q[2], n[0], n[1], n[2], k[0], k[1], k[2]), q }; };
+    const base = []; conts.forEach((P, c) => P.forEach((p, k) => base.push({ p, c, k })));
+    const F = base.map((b, k) => {
+      const q = mapa(b.p[0], b.p[1], wF(k)), n = nPlano(b.p[0], b.p[1]);
+      return silueta ? vert(q, uni(mas(n, aMundo(b.p, canto[b.c][b.k], wF(k)), 1))) : vert(q, n, col.cara);
+    });
+    const D = base.map((b, k) => {
+      const q = mapa(b.p[0], b.p[1], wD(k)), n = nPlano(b.p[0], b.p[1]).map((x) => -x);
+      return silueta ? vert(q, uni(mas(n, aMundo(b.p, canto[b.c][b.k], wD(k)), 1))) : vert(q, n, col.dorso);
+    });
+    for (const t of T) {
+      const [a, b2, c2] = t, cen = plano[a].map((x, e) => (x + plano[b2][e] + plano[c2][e]) / 3), n = nPlano(cen[0], cen[1]);
+      tri(B, F[a].i, F[b2].i, F[c2].i, F[a].q, F[b2].q, F[c2].q, n);
+      tri(B, D[a].i, D[b2].i, D[c2].i, D[a].q, D[b2].q, D[c2].q, n.map((x) => -x));
+    }
+    let k0 = 0;
+    for (let c = 0; c < conts.length; c++) {
+      const P = conts[c], n = P.length;
+      for (let k = 0; k < n; k++) {
+        const a = k0 + k, b2 = k0 + (k + 1) % n, pm = [(P[k][0] + P[(k + 1) % n][0]) / 2, (P[k][1] + P[(k + 1) % n][1]) / 2];
+        const d2 = [(canto[c][k][0] + canto[c][(k + 1) % n][0]) / 2, (canto[c][k][1] + canto[c][(k + 1) % n][1]) / 2], f = aMundo(pm, d2, (w0 + w1) / 2);
+        const Q = silueta ? [F[a], F[b2], D[b2], D[a]] : [F[a].q, F[b2].q, D[b2].q, D[a].q].map((q) => vert(q, f, col.canto));
+        tri(B, Q[0].i, Q[1].i, Q[2].i, Q[0].q, Q[1].q, Q[2].q, f); tri(B, Q[0].i, Q[2].i, Q[3].i, Q[0].q, Q[2].q, Q[3].q, f);
+      }
+      k0 += n;
+    }
+  }
+  // el plano de un lente: centrado en (az, y) a d de la cabeza, mirando a su azimut; u hacia fuera de la cara
+  function planoLente(az, y, d, lado) {
+    const c = C(), [rx, rz] = radioA(y), a = az * RAD, en = [Math.sin(a), 0, Math.cos(a)], eu = [lado * Math.cos(a), 0, -lado * Math.sin(a)];
+    let nx = Math.sin(a) / rx, nz = Math.cos(a) / rz; const L = Math.hypot(nx, nz); nx /= L; nz /= L;
+    const c0 = [rx * Math.sin(a) + nx * d, y, c.cz + rz * Math.cos(a) + nz * d];
+    return (u, v, w) => [c0[0] + eu[0] * u + en[0] * w, y + v, c0[2] + eu[2] * u + en[2] * w];
+  }
+  // un cristal (poligono plano): translucido en B.vidrio si o.opac, si no, opaco en la malla de color
+  function cristal(B, P, w, mapa, hex, opac) {
+    const BV = opac && B.vidrio ? B.vidrio : B;
+    if (opac && B.vidrio) B.vidrio.opacidad = opac;
+    // sin malla de vidrio (otra construccion): el color ya mezclado con el de la cara
+    const hx = opac && !B.vidrio ? mezclaHex(hex, 0xcccccc, opac) : hex, k = BV._rgb(hx, 1);
+    const p0 = mapa(0, 0, w), n = uni(sub(mapa(0, 0, w + 0.01), p0));
+    const ids = P.map((q) => { const x = mapa(q[0], q[1], w); return { i: BV._vert(x[0], x[1], x[2], n[0], n[1], n[2], k[0], k[1], k[2], U.LUZ_PLANA), q: x }; });
+    for (const t of THREE.ShapeUtils.triangulateShape(P.map((q) => new THREE.Vector2(q[0], q[1])), [])) tri(BV, ids[t[0]].i, ids[t[1]].i, ids[t[2]].i, ids[t[0]].q, ids[t[1]].q, ids[t[2]].q, n);
+  }
+  const mezclaHex = (a, b, t) => { const ca = [a >> 16 & 255, a >> 8 & 255, a & 255], cb = [b >> 16 & 255, b >> 8 & 255, b & 255]; return ca.reduce((s, x, e) => (s << 8) | Math.round(x * t + cb[e] * (1 - t)), 0); };
+  // donde la recta horizontal v corta el poligono: el u mas adentro (s = -1) o mas afuera (s = 1)
+  const corteV = (P, v, s) => {
+    let best = null;
+    for (let i = 0; i < P.length; i++) {
+      const a = P[i], b = P[(i + 1) % P.length];
+      if ((a[1] - v) * (b[1] - v) > 0 || a[1] === b[1]) continue;
+      const u = a[0] + (b[0] - a[0]) * (v - a[1]) / (b[1] - a[1]);
+      if (best === null || u * s > best * s) best = u;
+    }
+    return best;
+  };
+  /* o: vidrio (poligono del cristal), trazo (el aro, sin la tinta), opac y hexVidrio, nariz (luz entre
+     marcos), puentes [[v, alto]], patilla {v0, v1, alto, az} (de cuña, termina en punta en la oreja) */
+  function lentes(o) {
+    return function (B, g, silueta) {
+      const [a0, e0] = Hh.centroCruz(), yC = sobre(a0, e0, 0)[1], d = o.d || 0.02, gr = o.gr || 0.008, tr = o.trazo || 0.012, gT = o.tinta || 0.002;
+      const rL = radioA(yC)[0] + d, adentro = Math.max(...o.vidrio.map((q) => -q[0]));
+      const ojo = ((o.nariz || 0.03) / 2 + tr + gT + adentro) / rL / RAD, Pout = Hh.hinchar(o.vidrio, tr);
+      const L = [1, -1].map((lado) => {
+        const az = a0 + lado * ojo, mapa = planoLente(az, yC, d, lado);
+        losa(B, Pout, [o.vidrio], -gr, 0, mapa, { cara: NEGRO, dorso: NEGRO, canto: NEGRO }, gT, silueta);
+        if (!silueta) cristal(B, Hh.hinchar(o.vidrio, 0.002), -gr / 2, mapa, o.hexVidrio || NEGRO, o.opac);
+        return { lado, az, mapa };
+      });
+      // los puentes: barras entre los marcos, metidas 5 mm en cada uno
+      for (const [v, alto] of o.puentes || []) {
+        const u = corteV(Pout, v, -1), A = L[0].mapa(u + 0.005, v, -gr / 2), Bq = L[1].mapa(u + 0.005, v, -gr / 2);
+        const ex = uni(sub(A, Bq)), ey = [0, 1, 0], ez = uni(cruz(ex, ey));
+        caja(B, A.map((x, e) => (x + Bq[e]) / 2), [ex, ey, ez], [dist(A, Bq) / 2, alto / 2, gr / 2], NEGRO, gT, silueta);
+      }
+      // las patillas: cuñas negras del canto de fuera del marco hasta la oreja, pegadas a la cabeza (sin tinta: son negras)
+      if (!silueta && o.patilla) {
+        const P = o.patilla, NP = 22;
+        for (const lt of L) {
+          const u0 = corteV(Pout, P.v0, 1), S = lt.mapa(u0 - 0.006, P.v0, -gr / 2);
+          const azS = Math.atan2(S[0], S[2] - C().cz) / RAD, [rx0] = radioA(yC + P.v0), offS = Math.hypot(S[0], S[2] - C().cz) - rx0;
+          const an = [];
+          for (let i = 0; i <= NP; i++) {
+            const t = i / NP, az = lerp(azS, lt.lado * P.az, t), y = yC + lerp(P.v0, P.v1, t), off = lerp(offS, 0.004, suave(0, 0.3, t));
+            // como en la hoja: casi pareja (baja un tercio) y en punta en el ultimo cuarto
+            const [rx, rz] = radioA(y), a = az * RAD, h = Math.max(0.0008, P.alto * 0.5 * (1 - 0.35 * t) * Math.min(1, (1 - t) * 4));
+            let nx = Math.sin(a) / rx, nz = Math.cos(a) / rz; const Ln = Math.hypot(nx, nz); nx /= Ln; nz /= Ln;
+            const p = [rx * Math.sin(a) + nx * off, y, C().cz + rz * Math.cos(a) + nz * off], n = [nx, 0, nz], e = 0.0015;
+            an.push([mas(mas(p, n, e), [0, 1, 0], h), mas(mas(p, n, -e), [0, 1, 0], h), mas(mas(p, n, -e), [0, 1, 0], -h), mas(mas(p, n, e), [0, 1, 0], -h)]);
+          }
+          tubo3(B, an, () => NEGRO, 0, false, false);
+        }
+      }
+    };
+  }
+  // media lente (de arriba abajo, con los dos puntos del eje) -> la lente entera, sin puntos repetidos
+  const medio = (P) => P.concat(P.slice(1, -1).reverse().map(([u, v]) => [-u, v]));
+  // State Troopers (shades3): aviador, gota simetrica de 16,7 x 13,6 cm, negro al 69% (63 sobre la cara 204)
+  MOD.shades3 = lentes({
+    vidrio: medio([[0.0, 0.055], [0.03, 0.0545], [0.045, 0.052], [0.058, 0.047], [0.068, 0.042], [0.076, 0.036], [0.081, 0.029], [0.0834, 0.0214],
+                   [0.083, 0.011], [0.08, 0.0], [0.0755, -0.0145], [0.0705, -0.0248], [0.064, -0.035], [0.0565, -0.0453], [0.046, -0.0555],
+                   [0.034, -0.0658], [0.019, -0.074], [0.0, -0.079]]).map(([u, v]) => [u * 0.95, v]),   // 5% mas angosta: de la hoja salia 5-10% ancha
+    opac: 0.69, puentes: [[0.039, 0.014]], patilla: { v0: 0.018, v1: -0.003, alto: 0.018, az: 84 } });
+  // Professionals (shades5): redondos de 11,9 x 13,3 cm, gris 47 al 64% (104 sobre la cara, 30 sobre la cruz)
+  MOD.shades5 = lentes({
+    vidrio: Array.from({ length: 36 }, (_, i) => { const a = i / 36 * 2 * Math.PI; return [0.0595 * Math.cos(a), 0.0128 + 0.0666 * Math.sin(a)]; }),
+    opac: 0.64, hexVidrio: sw(47), puentes: [[0.0167, 0.015]], patilla: { v0: 0.018, v1: -0.004, alto: 0.018, az: 84 } });
+  // Coolguys (shades12): trapecios de 18,7 x 16,4 cm con la esquina de dentro redonda, negro al 50%, marco grueso (30-42 px), patilla alta y gruesa
+  MOD.shades12 = lentes({
+    vidrio: [[0.0865, 0.0692], [0.0901, 0.0589], [0.0936, 0.04], [0.0936, 0.0128], [0.0901, -0.0128], [0.0856, -0.0384], [0.0812, -0.0589], [0.0758, -0.0743],
+             [0.0678, -0.0948], [-0.0749, -0.0948], [-0.0812, -0.0794], [-0.0856, -0.0641], [-0.0901, -0.0436], [-0.0928, -0.0231], [-0.0936, -0.0128],
+             [-0.0936, 0.0333], [-0.0919, 0.0487], [-0.0838, 0.0538], [-0.0713, 0.0589], [-0.0517, 0.0641], [-0.0116, 0.0692]].map(([u, v]) => [u * 0.92, v]),
+    trazo: 0.025, opac: 0.5, puentes: [[0.0354, 0.047]], patilla: { v0: 0.045, v1: 0.024, alto: 0.028, az: 103 } });
+  /* una BANDA PEGADA A LA CABEZA por un camino: puntos [az, v, medio alto,
+     despegue] (az en grados, v desde la linea de la cruz yC); la seccion va
+     perpendicular al camino (en el gancho de una patilla se da vuelta sola).
+     Devuelve la grilla de una lamina, con las filas de las franjas negras. */
+  function bandaCabeza(pts, yC, franja) {
+    const r0 = radioA(yC)[0], xs = pts.map((p) => [p[0] * RAD * r0, p[1]]);
+    return pts.map((p, i) => {
+      const a = xs[Math.max(0, i - 1)], b = xs[Math.min(pts.length - 1, i + 1)];
+      let tx = b[0] - a[0], tv = b[1] - a[1]; const L = Math.hypot(tx, tv) || 1; tx /= L; tv /= L;
+      // la normal de la seccion, siempre del lado de abajo al de arriba (o de atras a delante en el gancho)
+      let nx = -tv, nv = tx; if (nv < 0 || (Math.abs(nv) < 1e-6 && nx * Math.sign(p[0]) > 0)) { nx = -nx; nv = -nv; }
+      return filas(2 * p[2], 9, franja, franja).map((s) => {
+        const x = xs[i][0] + nx * (s - p[2]), v = xs[i][1] + nv * (s - p[2]), az = x / r0 / RAD, y = yC + v, [rx, rz] = radioA(y), t = az * RAD;
+        let mx = Math.sin(t) / rx, mz = Math.cos(t) / rz; const Lm = Math.hypot(mx, mz); mx /= Lm; mz /= Lm;
+        return [rx * Math.sin(t) + mx * p[3], y, C().cz + rz * Math.cos(t) + mz * p[3]];
+      });
+    });
+  }
+  /* 3-D (shades8), DE SU HOJA: un FRENTE de carton blanco de una pieza en V
+     (dos paneles de 20 grados que se juntan en la nariz, a 2,5 cm de la cara:
+     de tres cuartos el lente de lejos sale la mitad de ancho, como en la
+     hoja), con la nariz recortada angosta y alta; los lentes, trapecios
+     pintados en cada panel con su trazo, rojo el de -x y azul el de +x (en la
+     hoja el de cerca es el rojo; estaban cambiados); y las patillas blancas
+     que vuelven a la oreja y bajan en gancho detras. Medidas del borde de
+     fuera de cada trazo; la placa va 1,6 cm adentro (la tinta pone el trazo). */
+  const TRESD = { th: 20, sep: 0.025, vT: 0.1016, vB: -0.0863, uFin: 0.27, uDiag: 0.229, vDiag: 0.025,
+                  lente: [[-0.259, 0.072], [-0.03, 0.072], [-0.0758, -0.056], [-0.213, -0.056]],
+                  nariz: [[0, 0.019], [0.008, 0.016], [0.016, 0.006], [0.029, -0.029], [0.04, -0.0863]] };
+  MOD.shades8 = function (B, g, silueta) {
+    const [a0, e0] = Hh.centroCruz(), yC = sobre(a0, e0, 0)[1], gE = 0.016, T3 = TRESD;
+    const t = T3.th * RAD, ct = Math.cos(t), st = Math.sin(t), ar = a0 * RAD;
+    const f0 = [Math.sin(ar), 0, Math.cos(ar)], ex = [Math.cos(ar), 0, -Math.sin(ar)], pf = sobre(a0, e0, 0);
+    const Cf = [pf[0] + f0[0] * T3.sep, yC, pf[2] + f0[2] * T3.sep];
+    const mapa = (u, v, w) => { const s = Math.sign(u); return [0, 1, 2].map((e) => Cf[e] + ex[e] * (u * ct + s * st * w) + (e === 1 ? v : 0) + f0[e] * (-Math.abs(u) * st + ct * w)); };
+    const vT = T3.vT - gE, vB = T3.vB + gE, uF = T3.uFin, uD = T3.uDiag - gE, vD = T3.vDiag;
+    const NAR = T3.nariz.map(([u, v]) => [u + gE, v - gE]);
+    const bajo = (u) => {
+      const a = Math.abs(u);
+      if (a > uD) return lerp(vB, vD, Math.min(1, (a - uD) / (uF - uD)));   // la diagonal de la punta, que sigue en la patilla
+      for (let k = 1; k < NAR.length; k++) if (a <= NAR[k][0]) return Math.max(vB, lerp(NAR[k - 1][1], NAR[k][1], (a - NAR[k - 1][0]) / (NAR[k][0] - NAR[k - 1][0])));
+      return vB;
+    };
+    // columnas: una justo en la arista (u = 0), cada 3 mm junto a la nariz y cada 1,5 cm en el resto
+    const us = [0];
+    for (let u = 0; u < uF - 1e-9;) { const a = u; u += a < NAR[NAR.length - 1][0] + 0.004 ? 0.003 : (a > uD - 0.004 ? 0.006 : 0.015); us.push(Math.min(u, uF)); }
+    const cols = us.slice(1).reverse().map((u) => -u).concat(us);
+    const N = 10, P = cols.map((u) => { const b = bajo(u); return Array.from({ length: N + 1 }, (_, j) => mapa(u, lerp(b, vT, j / N), 0)); });
+    const M = P.length;
+    // donde sigue la patilla (la punta, de vD para arriba) el canto no es silueta, y en esa columna la tinta se afina a cero
+    // (con su grueso, la cara de adentro de la cascara asomaba de refilon en una raya en la union)
+    // el canto blanco (carton): negro asomaba en un tic donde el frente sigue en la patilla; la silueta la pone la tinta
+    lamina(B, P, { gr: 0.008, tintaN: 0.25, sinHundir: true, sinTintaLado: true, tintaEn: (i) => (i === 0 || i === M - 1 ? 0 : 1), color: () => sw(252), canto: sw(252), apoyo: () => 0,
+                   apoyoLado: (i, j) => ((i === 0 || i === M - 1) && lerp(bajo(cols[i]), vT, j / N) >= vD - 1e-6 ? 1 : 0) }, g, silueta);
+    // los lentes, pintados en su panel: el trazo negro y el color adentro
+    if (!silueta) for (const s of [-1, 1]) {
+      const L = T3.lente.map(([u, v]) => [u * -s, v]), n = uni([0, 1, 2].map((e) => ex[e] * s * st + f0[e] * ct));
+      mancha(B, L, (u, v) => mapa(u, v, 0.0055), n, NEGRO);
+      mancha(B, Hh.hinchar(L, -0.017), (u, v) => mapa(u, v, 0.0065), n, s < 0 ? swc(255, 0, 0) : swc(0, 0, 255));
+    }
+    /* LAS PATILLAS: de la punta del frente (vD a vT) a la oreja (-66 grados)
+       y el gancho, que baja por detras hasta -80 a 4 cm bajo la cruz */
+    const pa = mapa(-uF, (vD + vT) / 2, 0), azF = Math.abs(Math.atan2(pa[0], pa[2] - C().cz) / RAD), offF = Math.hypot(pa[0], pa[2] - C().cz) - radioA(pa[1])[0];
+    const hh = (vT + gE - vD) / 2, vc = (vD + vT + gE) / 2;
+    for (const lado of [1, -1]) {
+      const pts = [[azF - 1, vc, hh, offF], [azF + 4, vc, hh, offF * 0.4], [55, vc, hh * 0.95, 0.005], [66, vc - 0.004, hh * 0.9, 0.005],
+                   [72, vc - 0.025, hh * 0.85, 0.005], [77, vc - 0.06, hh * 0.7, 0.005], [80, vc - 0.1, 0.0175, 0.005]].map(([az, v, h, o]) => [lado * az, v, h, o]);   // al final, las dos franjas se juntan: la punta queda negra
+      // su punta de delante sale del frente, despegada: el canto de su tinta no se hunde (asomaba en una raya entre las dos piezas)
+      lamina(B, bandaCabeza(pts, yC, 0.017), { gr: 0.006, dentro: 0.02, sinHundirLado: true, color: (i, j) => (j <= 1 || j >= 8 ? NEGRO : sw(252)) }, g, silueta);
+    }
   };
 
-  /* Paintball Mask (paintball1): el visor rojo (153, 0, 0) de lado a lado,
-     curvo, en su marco oscuro (59), los enganches a los costados (82) y la
-     correa. */
-  function visorPaintball(B, g, silueta) {
-    const c = C(), [a0, e0] = Hh.centroCruz(), y0 = sobre(0, e0 + 1, 0)[1] - c.cy;
-    const R = c.rz + 0.03;
-    const marco = Hh.hinchar(superLente(0.175, 0.056, 6, 40), 0.014), vidrio = superLente(0.175, 0.056, 6, 40);
-    Hh.losaCurva(B, marco, { R, d0: c.rz - 0.01, d1: c.rz + 0.036, y0, x0: a0 * RAD * R, luz: true }, silueta ? 0x000000 : sw(59), silueta ? g : 0);
-    if (!silueta) Hh.losaCurva(B, vidrio, { R, d0: c.rz + 0.03, d1: c.rz + 0.042, y0, x0: a0 * RAD * R, luz: false }, swc(153, 0, 0), 0);
-    for (const lado of [1, -1]) {
-      const p = sobre(a0 + lado * 36, e0 + 1, 0.02);
-      pieza(B, [[0, 0.03, sw(82)], [0.022, 0.028, sw(82)], [0.024, 0.0, sw(82)], [0, 0]], p, uni(sub(p, centro())), sw(82), g, silueta, 12);
+  /* Dr. Horrible (goggles1), DE SU HOJA: binoculares grandes. Una CARCASA
+     curva a 2 cm de la cara (128 arriba, 102 abajo), de -57 a +57 grados de
+     la cruz, que sube en un escalon sobre los cañones (v de -11,2 a +15 cm)
+     y tiene la nariz recortada; dos CAÑONES de 18 cm que salen 12 cm hacia
+     delante (cuerpo 72, aro 111 y el vidrio negro hundido); el remache oval
+     del costado; y la CORREA negra de 10 cm que da la vuelta por la nuca.
+     Antes: dos copas chicas pegadas a los ojos, vidrio claro y una correa
+     finita. Medidas del borde de fuera del trazo; la carcasa, 1,6 cm adentro. */
+  const DRH = { sep: 0.02, az: 56.8, ojo: 16, vC: 0.042, R: 0.09, frente: 0.46, vidrio: 0.064,
+                arriba: [[0, 0.15], [30.7, 0.14], [36.9, 0.106], [56.8, 0.0845]],
+                abajo: [[0, -0.069], [4, -0.074], [8, -0.088], [12, -0.108], [14.1, -0.112], [53.3, -0.078], [56.8, -0.056]] };
+  MOD.goggles1 = function (B, g, silueta) {
+    const [a0, e0] = Hh.centroCruz(), yC = sobre(a0, e0, 0)[1], c = C(), gE = 0.016, rH = radioA(yC)[0] + DRH.sep;
+    const pto = (u, v, dr) => { const a = a0 * RAD + u / rH, r = rH + (dr || 0); return [r * Math.sin(a), yC + v, c.cz + r * Math.cos(a)]; };
+    const perfil = (L, az) => { const a = Math.abs(az); for (let k = 1; k < L.length; k++) if (a <= L[k][0]) return lerp(L[k - 1][1], L[k][1], (a - L[k - 1][0]) / (L[k][0] - L[k - 1][0])); return L[L.length - 1][1]; };
+    const U = DRH.az * RAD * rH - gE, top = (az) => perfil(DRH.arriba, az) - gE, bot = (az) => perfil(DRH.abajo, az) + gE;
+    // columnas cada 1 cm (cada 4 mm en la nariz y en el escalon); filas con el corte de los dos grises en v = -0,03
+    const us = []; for (let u = -U; u < U - 1e-9;) { us.push(u); const az = Math.abs(u / rH / RAD); u += az < 15 || (az > 29 && az < 38) ? 0.004 : 0.01; }
+    us.push(U);
+    const P = [], corte = -0.03;
+    for (const u of us) {
+      const az = u / rH / RAD, b = bot(az), t = top(az), vs = [];
+      for (let j = 0; j <= 5; j++) vs.push(lerp(b, Math.min(corte - 0.0004, t - 0.001), j / 5));
+      vs.push(Math.min(corte, t - 0.0005)); for (let j = 1; j <= 6; j++) vs.push(lerp(Math.min(corte, t - 0.0005), t, j / 6));
+      P.push(vs.map((v) => pto(u, v)));
     }
-    casquete(B, { lo: () => e0 - 2, hi: () => e0 + 4, d: () => 0.008, hex: sw(59), M: 48, N: 2 }, g, silueta);
+    lamina(B, P, { gr: 0.012, tintaN: 0.25, sinHundir: true, apoyo: () => 0, apoyoLado: () => 0,
+                   color: (i, j) => (j >= 6 ? sw(128) : sw(102)) }, g, silueta);
+    // los cañones: del medio de la carcasa hasta 46 cm del eje, a la altura vC
+    for (const lado of [1, -1]) {
+      const az = a0 + lado * DRH.ojo, a = az * RAD, n = [Math.sin(a), 0, Math.cos(a)], base = [rH * n[0], yC + DRH.vC, c.cz + rH * n[2]];
+      const L = DRH.frente - rH, R = DRH.R, rv = DRH.vidrio;
+      pieza(B, [[0, L - 0.015, NEGRO], [rv, L - 0.015, NEGRO], [rv, L, sw(111)], [R - 0.004, L, sw(111)], [R, L - 0.006, sw(72)], [R, 0.004, sw(72), 0], [R * 0.9, -0.004, undefined, 0], [0, -0.004]],
+            base, n, sw(72), g, silueta, 32);
+      // el remache oval del costado, pintado en la carcasa
+      if (!silueta) {
+        const u0 = lado * 45 * RAD * rH, v0 = 0.0205, nR = uni(sub(pto(u0, v0, 0.01), pto(u0, v0, 0)));
+        for (const [w, h, hx, al] of [[0.019, 0.0255, NEGRO, 0.0075], [0.011, 0.0165, sw(72), 0.0085]]) {
+          mancha(B, superLente(w, h, 2, 24), (x, y) => pto(u0 + x, v0 + y, al), nR, hx);
+        }
+      }
+    }
+    // la correa: negra, de una punta de la carcasa a la otra por la nuca
+    const pts = []; for (let az = 52; az <= 308.01; az += 8) { const t = Math.abs(az - 180) / 128; pts.push([az, lerp(-0.041, -0.018, t), 0.05, 0.005]); }
+    lamina(B, bandaCabeza(pts, yC, 0.01), { gr: 0.006, dentro: 0.02, color: () => NEGRO }, g, silueta);
+  };
+
+  // el rango de v de un poligono (u, v) en la vertical u
+  const rangoV = (P, u) => {
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < P.length; i++) {
+      const a = P[i], b = P[(i + 1) % P.length];
+      if ((a[0] - u) * (b[0] - u) > 0 || a[0] === b[0]) continue;
+      const v = a[1] + (b[1] - a[1]) * (u - a[0]) / (b[0] - a[0]); lo = Math.min(lo, v); hi = Math.max(hi, v);
+    }
+    return [lo, hi];
+  };
+  // un poligono con puntos cada 'paso' (m)
+  const densificar = (P, paso) => { const out = []; P.forEach((a, i) => { const b = P[(i + 1) % P.length], n = Math.max(1, Math.ceil(dist([a[0], a[1], 0], [b[0], b[1], 0]) / paso)); for (let k = 0; k < n; k++) out.push([lerp(a[0], b[0], k / n), lerp(a[1], b[1], k / n)]); }); return out; };
+  /* un CRISTAL CURVO: el poligono (u, v) en una grilla de columnas que sigue
+     la superficie de mapa(u, v) (triangulado de una, un cristal de 30 cm en
+     una curva de 36 cm de radio se hundia 4 cm por la cuerda y cortaba la cara) */
+  function vidrioCurvo(B, P, mapa, hex, opac) {
+    const BV = opac && B.vidrio ? B.vidrio : B;
+    if (opac && B.vidrio) B.vidrio.opacidad = opac;
+    const hx = opac && !B.vidrio ? mezclaHex(hex, 0xcccccc, opac) : hex, k = BV._rgb(hx, 1);
+    const us = P.map((q) => q[0]), u0 = Math.min(...us) + 1e-4, u1 = Math.max(...us) - 1e-4, NC = Math.max(2, Math.ceil((u1 - u0) / 0.012)), NR = 8;
+    const G = [];
+    for (let i = 0; i <= NC; i++) {
+      const u = lerp(u0, u1, i / NC), [lo, hi] = rangoV(P, u);
+      G.push(Array.from({ length: NR + 1 }, (_, j) => {
+        const v = lerp(lo, hi, j / NR), q = mapa(u, v), n = uni(sub(mapa(u, v, 0.01), q));
+        return { i: BV._vert(q[0], q[1], q[2], n[0], n[1], n[2], k[0], k[1], k[2], U.LUZ_PLANA), q, n };
+      }));
+    }
+    for (let i = 0; i < NC; i++) for (let j = 0; j < NR; j++) {
+      const a = G[i][j], b = G[i + 1][j], c2 = G[i + 1][j + 1], d = G[i][j + 1];
+      tri(BV, a.i, b.i, c2.i, a.q, b.q, c2.q, a.n); tri(BV, a.i, c2.i, d.i, a.q, c2.q, d.q, a.n);
+    }
   }
-  MOD.paintball1 = visorPaintball;
+  /* un PARCHE pegado a la cabeza (hebilla, pasador): de az0 a az1 y de v0 a v1
+     a 'off' de ella, con la grilla cortada en los bordes de sus franjas: el
+     color sale de la distancia al borde mas cercano (m), por colorDe(d) */
+  function parche(B, az0, az1, v0, v1, off, yC, cortes, colorDe, g, silueta) {
+    const r0 = radioA(yC)[0], W = Math.abs(az1 - az0) * RAD * r0, H = v1 - v0;
+    const eje = (L) => { const s = new Set([0, L]); for (let x = 0.015; x < L; x += 0.015) s.add(x); for (const c of cortes) if (2 * c < L) { s.add(c); s.add(c + 0.0004); s.add(L - c); s.add(L - c - 0.0004); } return [...s].filter((x) => x >= 0 && x <= L).sort((a, b) => a - b); };
+    const us = eje(W), vs = eje(H);
+    const P = us.map((x) => vs.map((y) => {
+      const az = lerp(az0, az1, x / W), yy = yC + v0 + y, [rx, rz] = radioA(yy), t = az * RAD;
+      let nx = Math.sin(t) / rx, nz = Math.cos(t) / rz; const L = Math.hypot(nx, nz); nx /= L; nz /= L;
+      return [rx * Math.sin(t) + nx * off, yy, C().cz + rz * Math.cos(t) + nz * off];
+    }));
+    lamina(B, P, { gr: 0.008, dentro: 0.02, color: (i, j) => colorDe(Math.min(us[i], W - us[i], vs[j], H - vs[j])) }, g, silueta);
+  }
+  /* Paintball Mask (paintball1), DE SU HOJA: un VISOR curvo a 3 cm de la cara,
+     de -43 a +43 grados de la cruz, que termina en punta a cada lado; el MARCO
+     gris (60) de 2 cm, con su trazo por fuera y por dentro; el CRISTAL rojo
+     (153, 0, 0) TRANSLUCIDO al 61% (sobre la cara da 173, 80, 80, y la cruz se
+     ve roja oscura a traves), detras de la tinta del marco para que su trazo
+     de adentro quede negro; la nariz recortada; la BISAGRA de cada lado (60)
+     con su remache negro; y la CORREA gris (82) que da la vuelta, con su
+     hebilla de aro claro (126) y el pasador. Medidas del borde de fuera de
+     cada trazo, des-proyectadas a 36 cm del eje. Antes: visor opaco oscuro,
+     un marco de losa curva con tinta de 1,6 cm y una correa finita. */
+  const PNTB = { sep: 0.03, marco: 0.02, opac: 0.61,
+                 fuera: [[0, 0.149], [5.3, 0.1486], [20, 0.14], [38.1, 0.119], [42.9, 0.008], [37.4, -0.0946], [29.1, -0.1117],
+                         [12, -0.1], [8, -0.0946], [6, -0.08], [4.5, -0.069], [0, -0.069]] };
+  MOD.paintball1 = function (B, g, silueta) {
+    const [a0, e0] = Hh.centroCruz(), yC = sobre(a0, e0, 0)[1], c = C(), gE = 0.016, rV = radioA(yC)[0] + PNTB.sep;
+    const mapa = (u, v, dr) => { const a = a0 * RAD + u / rV, r = rV + (dr || 0); return [r * Math.sin(a), yC + v, c.cz + r * Math.cos(a)]; };
+    const med = PNTB.fuera.map(([az, v]) => [az * RAD * rV, v]);
+    const O = densificar(Hh.hinchar(med.concat(med.slice(1, -1).reverse().map(([u, v]) => [-u, v])), -gE), 0.012), I = Hh.hinchar(O, -PNTB.marco);
+    // el marco: una lamina cerrada del borde de dentro (j = 0) al de fuera; los dos, silueta suelta
+    const P = O.map((o, i) => [0, 0.5, 1].map((t) => mapa(lerp(I[i][0], o[0], t), lerp(I[i][1], o[1], t))));
+    lamina(B, P, { vuelta: true, gr: 0.01, tintaN: 0.25, sinHundir: true, apoyo: () => 0, color: () => sw(60) }, g, silueta);
+    if (!silueta) vidrioCurvo(B, Hh.hinchar(I, 0.004), (u, v, dr) => mapa(u, v, -0.004 + (dr || 0)), swc(153, 0, 0), PNTB.opac);
+    for (const lado of [1, -1]) {
+      // la bisagra: un bloque (60) entre la punta del visor y la correa, con su remache
+      const azB = a0 + lado * 47.2, cB = sobre(azB, elDeY(yC + 0.023), 0.012), nB = normalCab(cB), tB = uni(cruz([0, 1, 0], nB));
+      caja(B, cB, [tB, [0, 1, 0], nB], [0.027, 0.062, 0.012], sw(60), g, silueta, true);
+      if (!silueta) mancha(B, superLente(0.013, 0.013, 2, 20), (x, y) => mas(mas(mas(cB, tB, x), [0, 1, 0], y + 0.032), nB, 0.0126), nB, NEGRO);
+      // la hebilla (aro claro entre dos trazos, adentro se ve la correa) y el pasador
+      parche(B, a0 + lado * 59.6, a0 + lado * 86.5, -0.078, 0.097, 0.013, yC, [0.017, 0.037, 0.054],
+             (d) => (d < 0.017 ? NEGRO : d < 0.037 ? sw(126) : d < 0.054 ? NEGRO : sw(82)), g, silueta);
+      parche(B, a0 + lado * 97, a0 + lado * 104, -0.086, 0.063, 0.012, yC, [0.012, 0.0165],
+             (d) => (d < 0.012 ? NEGRO : d < 0.0165 ? sw(82) : NEGRO), g, silueta);
+    }
+    // la correa: gris con sus bordes negros, de bisagra a bisagra por la nuca
+    const pts = []; for (let az = 50; az <= 310.01; az += 8) { const t = Math.abs(az - 180) / 130; pts.push([az, lerp(-0.001, 0.02, t), 0.06, 0.005]); }
+    lamina(B, bandaCabeza(pts, yC, 0.017), { gr: 0.006, dentro: 0.02, color: (i, j) => (j <= 1 || j >= 8 ? NEGRO : sw(82)) }, g, silueta);
+  };
 
   /* =============================================================
      HERRAMIENTAS DE LO QUE VA EN LA CARA
@@ -1500,10 +1781,13 @@
     const fila = (j) => { const L = []; for (let t = 0; t <= nc; t++) { const i = t % M; L.push([F[i][j], D[i][j], apoyo(i, j), dirB(i, j)]); } return L; };
     if (!o.sinCanto0) canto(fila(0));
     canto(fila(N));
-    if (!vuelta) {
+    /* o.sinTintaLado: la tinta queda abierta por los costados (la placa sigue en otra pieza,
+       la patilla de los 3-D): cerrada, su pared de 1,6 cm asomaba en una raya en la union */
+    if (!vuelta && !(silueta && o.sinTintaLado)) {
       for (const i of [0, M - 1]) {
         const L = [];
-        for (let j = 0; j <= N; j++) L.push([F[i][j], D[i][j], apoyoL(i, j), dirL(i, j)]);
+        // o.sinHundirLado: el costado no estira la tinta pero tampoco la hunde (una placa despegada de la cabeza que sigue en otra pieza)
+        for (let j = 0; j <= N; j++) L.push([F[i][j], D[i][j], o.sinHundirLado ? 0 : apoyoL(i, j), dirL(i, j)]);
         canto(L);
       }
     }
@@ -2049,8 +2333,20 @@
   });
 
   // lo que tapan: los anteojos, la franja de los ojos; lo de la boca, de la cruz para abajo
-  const ojos = (az, el) => Math.abs(el - 2) < 16 && Math.cos(az * RAD) > -0.2;
-  for (const id of ['shades1', 'shades12', 'shades3', 'shades5', 'shades8', 'goggles1', 'paintball1']) CUBRE[id] = ojos;
+  /* los anteojos: su banda en v (desde la linea de la cruz) hasta azMax grados de ella, con sus medidas de la
+     hoja (los de dos lentes no cubren la patilla: es negra y fina, el contorno encima no se nota) */
+  const bandaV = (v0, v1, azMax) => (az, el) => {
+    const [a0, e0] = Hh.centroCruz(), yC = sobre(a0, e0, 0)[1], da = Math.abs(((az - a0 + 540) % 360) - 180);
+    return da < azMax && el > elDeY(yC + v0) - MARGEN && el < elDeY(yC + v1) + MARGEN;
+  };
+  const oBanda = (...L) => (az, el) => L.some((f) => f(az, el));
+  CUBRE.shades3 = bandaV(-0.093, 0.069, 40);
+  CUBRE.shades5 = bandaV(-0.068, 0.093, 36);
+  CUBRE.shades12 = bandaV(-0.122, 0.096, 42);
+  CUBRE.shades1 = oBanda(bandaV(-0.121, 0.105, 48), bandaV(-0.02, 0.105, 128));        // la pantalla y las patillas anchas
+  CUBRE.shades8 = oBanda(bandaV(-0.086, 0.102, 48), bandaV(-0.1, 0.102, 84));          // el frente y las patillas con el gancho
+  CUBRE.goggles1 = oBanda(bandaV(-0.112, 0.15, 60), bandaV(-0.095, 0.035, 180));       // la carcasa y la correa
+  CUBRE.paintball1 = oBanda(bandaV(-0.112, 0.149, 56), bandaV(-0.086, 0.1, 106), bandaV(-0.061, 0.08, 180));   // visor, hebillas, correa
   // la plancha: su frente (de costado tapa el perfil de la cara) y la correa
   CUBRE.tricky = (az, el) => (Math.cos(az * RAD) > 0.35 && el < 48) || Math.abs(el - elDeY(trickyBase().yE + TRICKY.vCorrea)) < 7;
   // los pañuelos: de su borde de arriba para abajo

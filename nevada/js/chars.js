@@ -1251,7 +1251,12 @@
     const F = Chars.TIPOS[tipo];
     if (!F) throw new Error('Tipo de personaje desconocido: ' + tipo);
     const bc = U.builder({ skinned: true });
+    /* LOS CRISTALES TRANSLUCIDOS de los anteojos (prendas3d.js: lentes): en
+       el SWF se ve la cruz a traves. Van en su propia malla, transparente,
+       atada a la cabeza; la prenda pone la opacidad en bc.vidrio.opacidad. */
+    bc.vidrio = U.builder({ skinned: true }).skin(H.CABEZA);
     cuerpo(bc, F, 0, false);
+    const vid = bc.vidrio.count() ? bc.vidrio.build() : null, vidOp = bc.vidrio.opacidad || 0.6;
     const bs = U.builder({ skinned: true });
     cuerpo(bs, F, 0.016, true);
     let manos = null, tm = 0;
@@ -1332,7 +1337,7 @@
       for (const [a0, z] of bc.ropa || []) ad.fill(Ropa.ADELANTO, a0, z);
       gc.setAttribute('aAde', new THREE.BufferAttribute(ad, 1));
     }
-    _geos[tipo] = { color: gc, contorno: gs, manos: manos, acc: acc,
+    _geos[tipo] = { color: gc, contorno: gs, manos: manos, acc: acc, vidrio: vid, vidOp,
                     tris: bc.count() + bs.count() + tm };
     return _geos[tipo];
   }
@@ -1344,6 +1349,20 @@
   /* =============================================================
      CREAR UN PERSONAJE
      ============================================================= */
+  const _matsVidrio = {};
+  const matVidrio = (op) => {
+    if (!_matsVidrio[op]) {
+      _matsVidrio[op] = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: op, depthWrite: false, side: THREE.DoubleSide });
+      _matsVidrio[op].userData.vidrio = true;
+    }
+    return _matsVidrio[op];
+  };
+  /* EL MISMO CRISTAL EN UN RENDER A TEXTURA sRGB (la ficha de la tienda): ahi
+     la mezcla es lineal y el visor rojo al 61% salia rosado (156, 129, 128
+     medido; en la pantalla, 149, 77, 76, como el SWF). Con esta opacidad deja
+     pasar lo mismo de una cara 204 que en la pantalla. */
+  const srgbALin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  Chars.matVidrioLineal = (op) => matVidrio(Math.round((1 - srgbALin(0.8 * (1 - op)) / srgbALin(0.8)) * 1000) / 1000);
   Chars.crear = function (tipo, opts) {
     opts = opts || {};
     const F = Chars.TIPOS[tipo];
@@ -1381,6 +1400,14 @@
       ma.bind(esq, new THREE.Matrix4());
       ma.frustumCulled = false;
       grupo.add(ma);
+    }
+
+    // los cristales: transparentes, se dibujan despues de todo lo opaco (tinta incluida)
+    if (g.vidrio) {
+      const mv = new THREE.SkinnedMesh(g.vidrio, matVidrio(g.vidOp));
+      mv.bind(esq, new THREE.Matrix4());
+      mv.frustumCulled = false;
+      grupo.add(mv);
     }
 
     let contorno = null;
@@ -1448,6 +1475,7 @@
       _geos[k].contorno.dispose();
       if (_geos[k].manos) _geos[k].manos.dispose();
       if (_geos[k].acc) _geos[k].acc.dispose();
+      if (_geos[k].vidrio) _geos[k].vidrio.dispose();
       delete _geos[k];
     }
   };

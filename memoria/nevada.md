@@ -107,6 +107,27 @@ Fuente: `nevada/` → `juegos-pc/ArenaNevada.html`. Ver también: [banco](banco.
 - Queda una franjita de puntos donde el tramo parado del brazo cruza el borde de la silueta del casco
   (misma profundidad), solo de atrás-costado (±120°): ~7 px a escala de celular.
 
+## Los anteojos, medidos en su hoja (30/09)
+- Método: la hoja (`ref3/m_*_g.png`) es la cámara a −38,6°, ortográfica; todas a 0,854 mm/px (la
+  elipse de la cabeza da b = 467 px ↔ 0,399 m), la de paintball corrida 44 px en x. Cada cristal se
+  lee fila por fila por su color (`region.js`, `bordes.js`) y se des-proyecta al plano de su lente,
+  que mira a su azimut (`desproy.py`); todo en `herramientas/banco/`. Comparar superpuesto con `calza.js` y la escala FIJA
+  (`K=2.623` con `FOV=10`, D 9.6: casi sin perspectiva; a 3,2 m lo cercano sale 10% más grande).
+- Todo trazo de la hoja mide 22 px = 1,9 cm (= el contorno de la cabeza). Los anteojos del SWF son
+  GRANDES (el cristal del aviador 16,7 × 13,6 cm); los de antes eran la mitad y de un solo molde.
+- La hoja exagera el lado de lejos (lente lejana más ancha y corrida): se calza el de cerca y se
+  espeja. Nuestra cruz está 2,6 cm más arriba en la cabeza que la del SWF: todo va relativo a ella.
+- **Cristales translúcidos** (aviador 69%, redondos 64% gris 47, cuadrados 50%, visor rojo 61%): malla
+  aparte `B.vidrio` (chars.js). En render a textura sRGB (ficha de la tienda, zoom) la mezcla es
+  lineal y sale más claro/rosado (medido 156,129,128 contra 149,77,76 en pantalla):
+  `Chars.matVidrioLineal` para la tienda; para mirar colores reales, `CANVAS=1 zoom_prendas.js`.
+- Piezas en V o curvas grandes: `lamina` (grilla que sigue la curva), no un polígono triangulado de
+  una (las cuerdas hundían 4 cm un cristal de 30 cm). Lentes y trazos pintados, planos, en su panel.
+- Una placa despegada que sigue en otra pieza (frente de los 3-D → patilla): `sinTintaLado` y
+  `tintaEn` = 0 en esa columna; si no, la pared o la cara de adentro de su tinta asoma en una raya.
+- Nuestra línea horizontal de la cruz mide 3,7 cm (la del SWF 1,8) y arranca ~5 cm más afuera: con
+  anteojos asoma por fuera del cristal cercano. No la toqué (es la cara de todos).
+
 ## Estado al cierre del log (29/09 05:31)
 - Lo último fue rehacer los íconos de los botones con piezas del SWF; USAR quedó con el dedo en
   diagonal y la sesión preguntó si lo quería más girado.

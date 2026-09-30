@@ -546,6 +546,8 @@
     // con la luz y el tono de las fichas (Art.matFicha / Art.tonoFicha), no con la de la sala
     const matF = Art.matFicha();
     grupo.traverse((o) => { if (o.material === Art.mats.cuerpo) o.material = matF; });
+    // los cristales translucidos, con la opacidad para mezcla lineal (ver Chars.matVidrioLineal)
+    grupo.traverse((o) => { if (o.material && o.material.userData && o.material.userData.vidrio) o.material = Chars.matVidrioLineal(o.material.opacity); });
     // la prenda a prueba: el muñeco entero en azul translucido, menos su tinta y el arma
     if (probar && t) t.cuerpo.grupo.traverse((o) => {
       if (o.isMesh && o.material !== Art.mats.contornoPiel && !(t.mallaArma && o.parent && esDe(o, t.mallaArma))) o.material = materialPrueba(o.material);
