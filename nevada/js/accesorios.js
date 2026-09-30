@@ -233,71 +233,9 @@
 
   const MODELOS = {};
 
-  /* =============================================================
-     AGENT SHADES (agent1_mask / agent1_mask_b), de sus dibujos de frente
+  /* AGENT SHADES (agent1_mask / agent1_mask_b): en prendas3d.js, con los
+     demas anteojos (medidas de su hoja de tres cuartos). */
 
-     Cada lente, un poligono de siete lados: el canto de dentro vertical,
-     junto al trazo de la cruz; el de arriba SUBE hacia fuera; el de fuera
-     en punta, con las dos esquinas biseladas; la base casi recta. Un
-     PUENTE fino las une por encima del trazo vertical de la cruz. Todo
-     medido en los dibujos (420 px de ancho, centro en x = 210) y pasado a
-     la cabeza 3D: el canto de dentro a 6 grados de la linea media, el de
-     fuera a 37.
-       · las negras: armazon y cristal negros, con un reflejo gris en
-         diagonal ('/', el mismo sesgo en las dos)
-       · las rojas: el cristal en degradé -rojo vivo al centro, casi negro
-         en los cantos- con su filo negro, y dos reflejos blancos en
-         diagonal, uno ancho y uno fino
-     Los reflejos son piezas propias con el borde nitido, recortadas al
-     cristal. Sin luz: los tonos vienen dibujados.
-     ============================================================= */
-  const GAFAS = {
-    // la lente derecha (+x), en px del dibujo: con su filo negro
-    lente: [[222, 190], [367, 152], [412, 176], [418, 214], [391, 266], [236, 266], [222, 248]],
-    filo: 4.5,
-    puente: [196, 224],
-    // reflejos: [x a la altura 215 del borde izquierdo, del derecho, sesgo px de x por px de y]
-    negra: { puenteY: 212, reflejos: { der: [[278, 336, 0.64]], izq: [[82, 127, 0.72]] }, alto: [181, 252] },
-    roja: { puenteY: 222, reflejos: { der: [[298, 332, 0.283], [348, 357, 0.283]], izq: [[75, 108, 0.283], [119, 127, 0.283]] }, alto: [140, 280] }
-  };
-  function gafasAgente(tipo) {
-    const G = GAFAS[tipo], K = 31 / 196;
-    return function (B, g, silueta) {
-      const [a0, e0] = centroCruz();
-      // del dibujo a la cabeza: cada lente con su propio origen (el canto de dentro, a 6 grados)
-      const aDe = (x) => { const d = x - 210, ad = Math.abs(d); return a0 + Math.sign(d) * (ad <= 12 ? ad * 0.5 : 6 + (ad - 12) * K); };
-      const eDe = (y) => e0 + 1.5 - (y - 210) * K * 0.76;
-      const cabeza = (P) => P.map(([x, y]) => [aDe(x), eDe(y)]);
-      const izq = (P) => P.map(([x, y]) => [420 - x, y]).reverse();
-      const kl = (k) => [k, k, k];
-      const plano = { paso: 1.5, luz: false };
-      for (const lado of ['der', 'izq']) {
-        const L = lado === 'der' ? GAFAS.lente : izq(GAFAS.lente);
-        // el armazon (el filo negro y el fondo del cristal)
-        cascara(B, cabeza(L), kl(1.0), kl(1.03), silueta ? 0x000000 : 0x0b0b0b, g, { paso: 2 });
-        if (silueta) continue;
-        const C = cabeza(hinchar(L, -GAFAS.filo));      // el cristal, dentro del filo
-        if (tipo === 'roja') cristalDegrade(B, C, (az, el) => {
-          // el rojo del dibujo: 205 al centro de la lente, ~40 en los cantos; algo mas oscuro arriba y abajo
-          const xs = lado === 'der' ? 318 : 102, u = Math.abs(Math.abs(az - a0) - Math.abs(aDe(xs) - a0)) / (96 * K);
-          const v = (el - eDe(210)) / (57 * K * 0.76);
-          const r = Math.round(Math.max(40, (205 - 165 * Math.pow(Math.min(1, u), 1.1)) * (1 - 0.22 * v * v)));
-          return B._rgb((r << 16) | 0x2222, 1);        // como el resto: de sRGB a lineal
-        }, 1.036);
-        // los reflejos, recortados al cristal
-        for (const [x0, x1, sg] of G.reflejos[lado]) {
-          const [ya, yb] = G.alto;
-          let R = [[x0 + (215 - yb) * sg, yb], [x1 + (215 - yb) * sg, yb], [x1 + (215 - ya) * sg, ya], [x0 + (215 - ya) * sg, ya]];
-          R = recortar(cabeza(R), C);
-          if (R.length >= 3) cascara(B, R, kl(1.036), kl(1.041), tipo === 'roja' ? 0xffffff : 0x9c9c9c, 0, plano);
-        }
-      }
-      // el puente, por encima del trazo de la cruz
-      const [p0, p1] = GAFAS.puente, py = G.puenteY;
-      cascara(B, cabeza([[p0, py - 3.5], [p1, py - 3.5], [p1, py + 3.5], [p0, py + 3.5]]).map(([a, e], i) => [i === 0 || i === 3 ? aDe(p0) : aDe(p1), e]),
-              kl(1.0), kl(1.03), silueta ? 0x000000 : 0x0b0b0b, g, { paso: 1.5 });
-    };
-  }
   // el poligono P recortado al convexo C (los dos en az, el)
   function recortar(P, C) {
     const s = areaDe(C) > 0 ? 1 : -1;
@@ -325,8 +263,6 @@
       for (let t = 1; t < ids.length - 1; t++) B.idx.push(ids[0], ids[t], ids[t + 1]);
     }
   }
-  MODELOS.agent1_mask = gafasAgente('roja');
-  MODELOS.agent1_mask_b = gafasAgente('negra');
 
   /* =============================================================
      HERRAMIENTAS DE PIEZAS RIGIDAS (placas, cajas, bandas)

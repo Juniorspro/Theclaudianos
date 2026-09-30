@@ -1435,6 +1435,15 @@
              [0.0678, -0.0948], [-0.0749, -0.0948], [-0.0812, -0.0794], [-0.0856, -0.0641], [-0.0901, -0.0436], [-0.0928, -0.0231], [-0.0936, -0.0128],
              [-0.0936, 0.0333], [-0.0919, 0.0487], [-0.0838, 0.0538], [-0.0713, 0.0589], [-0.0517, 0.0641], [-0.0116, 0.0692]].map(([u, v]) => [u * 0.92, v]),
     trazo: 0.025, opac: 0.5, puentes: [[0.0354, 0.047]], patilla: { v0: 0.045, v1: 0.024, alto: 0.028, az: 103 } });
+  /* Agent Shades (agent1_mask roja, agent1_mask_b negra), DE SU HOJA DE TRES
+     CUARTOS: hexagonos PLANOS y opacos (153, 0, 0 la roja; negro la clasica)
+     con el trazo de 1,9 cm, el borde de arriba subiendo hacia fuera, 17,6 x
+     10,3 cm; el puente justo sobre la linea de la cruz (por eso se ve doble)
+     y sin patillas, como en el SWF. Antes: salian del dibujo DE FRENTE
+     (degradé y reflejos blancos), mas chicas y pegadas a la cara. */
+  const AGENTE = [[0.0713, 0.0743], [0.0876, 0.0384], [0.0831, 0.0179], [0.0785, -0.0026], [0.0722, -0.0282], [-0.0758, -0.0282], [-0.0885, -0.0128], [-0.0876, 0.0384], [-0.0821, 0.0436]];
+  MOD.agent1_mask = lentes({ vidrio: AGENTE, hexVidrio: swc(153, 0, 0), nariz: 0.06, puentes: [[0.0196, 0.016]] });
+  MOD.agent1_mask_b = lentes({ vidrio: AGENTE, hexVidrio: NEGRO, nariz: 0.06, puentes: [[0.0196, 0.016]] });
   /* una BANDA PEGADA A LA CABEZA por un camino: puntos [az, v, medio alto,
      despegue] (az en grados, v desde la linea de la cruz yC); la seccion va
      perpendicular al camino (en el gancho de una patilla se da vuelta sola).
@@ -2343,6 +2352,7 @@
   CUBRE.shades3 = bandaV(-0.093, 0.069, 40);
   CUBRE.shades5 = bandaV(-0.068, 0.093, 36);
   CUBRE.shades12 = bandaV(-0.122, 0.096, 42);
+  CUBRE.agent1_mask = CUBRE.agent1_mask_b = bandaV(-0.042, 0.088, 42);
   CUBRE.shades1 = oBanda(bandaV(-0.121, 0.105, 48), bandaV(-0.02, 0.105, 128));        // la pantalla y las patillas anchas
   CUBRE.shades8 = oBanda(bandaV(-0.086, 0.102, 48), bandaV(-0.1, 0.102, 84));          // el frente y las patillas con el gancho
   CUBRE.goggles1 = oBanda(bandaV(-0.112, 0.15, 60), bandaV(-0.095, 0.035, 180));       // la carcasa y la correa
