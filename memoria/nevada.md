@@ -20,8 +20,8 @@ Fuente: `nevada/` → `juegos-pc/ArenaNevada.html`. Ver también: [banco](banco.
   `/* ---- js/x.js ---- */`.
 - `js/`: 46 scripts en el orden de la plantilla; cada uno cuelga su módulo de `window`, así que el
   orden importa.
-- Generados con base64 adentro, que el original **no editaba a mano**: `js/*_swf.js`,
-  `js/accesorios_tex.js`, `css/*_swf.css`.
+- Generados con base64 adentro, que el original **no editaba a mano**: `js/*_swf.js`, `css/*_swf.css`
+  (`js/accesorios_tex.js`, el atlas de la ATP vieja, se borró el 30/09: −690 kB).
 - `audio/`: `window.__AUDIO` (sonidos, 436 kB) y `window.__MUSICA` (2,27 MB), mp3 en base64.
 - `.gitattributes` saca lo armado y lo generado de `git diff`: si no, un diff tira megas de base64.
 
@@ -127,6 +127,29 @@ Fuente: `nevada/` → `juegos-pc/ArenaNevada.html`. Ver también: [banco](banco.
   `tintaEn` = 0 en esa columna; si no, la pared o la cara de adentro de su tinta asoma en una raya.
 - Nuestra línea horizontal de la cruz mide 3,7 cm (la del SWF 1,8) y arranca ~5 cm más afuera: con
   anteojos asoma por fuera del cristal cercano. No la toqué (es la cara de todos).
+
+## La ATP Mask de geometría (30/09)
+- Frente = `losa` plana CON el agujero del visor (la cara se ve por el cristal translúcido 255,175,29
+  al 41%); esquinas + costados = una `lamina` por lado, cosidas SIN tinta en la costura: `o.lado`/
+  `o.sinCanto` en la losa, `sinTintaLado:[0]`, `sinCantoLado:[0]` y `normal` impuesta (la de la losa) en
+  la columna 0 de la lámina; con la normal de la grilla las caras quedaban corridas 0,04 mm y asomaba
+  la tinta a puntitos. Panel, marco y quijada, pintados (`mancha` ahora acepta huecos y `conLuz`).
+- La hoja de tres cuartos y la de costado no cuadran: de costado la ATP cubre 2/3 de la cabeza, de
+  tres cuartos apenas la cara. Mandé la de tres cuartos (costados hasta z = 0,32); rieles como ALA
+  abierta 35° (así asoman de frente y se ven anchos de tres cuartos, como en las dos hojas).
+- **El adelanto de 1 cm de la tinta de la cabeza**: toda cara de la tinta a menos de 1 cm detrás de
+  una cara de color se ve a través (tiras finas: `tintaN` para que su cara de atrás quede ≥1 cm;
+  la placa de la boca, 3,5 cm detrás del frente; las puntas de la solapa, 5 cm dentro del costado).
+- **`losa`, la tinta**: caras planas (w1+g2 / w0−g2 también en los agujeros, sin canto en ellos) y
+  triangulación con puntos por dentro (`o.paso`) + aristas dadas vuelta hasta Delaunay (`triangular`):
+  las astillas de earcut, con el empuje en pantalla de la tinta (por la normal de cada punto), se
+  daban vuelta y se dibujaban en rayas finas de punta a punta. La tapa sin puntos (con ellos, una raya).
+- Una tela SUELTA a 2 cm (la solapa): placa fina (`tintaN` 0,25, bordes sueltos). Apoyada, su canto
+  entra 3,6 cm en la cabeza y sale a dientes por las caras del óvalo; con tinta gruesa, manchones.
+- `ofsetear(P, d)`: agrandar de verdad (campo de distancias + marching squares). `Hh.hinchar` hace
+  rulos en las esquinas de dentro cuando d > los tramos (la cerradura del visor).
+- Para aislar qué pieza pinta una raya: `PRE="window.x=..." zoom_prendas.js` (código antes de vestir) y
+  el modo `sin` (sin tinta): si con `sin` se va, es tinta asomando.
 
 ## Estado al cierre del log (29/09 05:31)
 - Lo último fue rehacer los íconos de los botones con piezas del SWF; USAR quedó con el dedo en

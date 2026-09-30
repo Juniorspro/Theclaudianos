@@ -22,6 +22,7 @@ const fs=require('fs'); let pw; try{pw=require('playwright')}catch(e){pw=require
   await pg.waitForFunction('window.Game && Game.ren && window.Prendas');
   await pg.evaluate(()=>{ __ir('nueva'); });
   await pg.waitForFunction('Game.enMarcha && Game.tiempo > 0.5',null,{polling:250});
+  if(process.env.PRE) await pg.evaluate(process.env.PRE);   // PRE: codigo a correr en la pagina antes de vestir (depurar)
   for(const id of ids){
     const out=await pg.evaluate(async({id,cat,vistas,R,D,modo,Y0,TW0,S0,FOV0,CV0})=>{
       Game.pausa=true; const at={}; if(id!=='-') at[cat]=id;

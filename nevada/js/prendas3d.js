@@ -1310,27 +1310,43 @@
      ============================================================= */
   // una LOSA plana o curva con agujeros: contorno O y agujeros Hs (u, v), de w0 a w1, puesta por mapa(u, v, w).
   // La tinta: O hinchado gT y w estirado gT, vertices compartidos; los agujeros sin tocar (el cristal limpio).
-  function losa(B, O, Hs, w0, w1, mapa, col, gT, silueta) {
-    const g2 = silueta ? gT : 0, Oh = g2 > 0 ? Hh.hinchar(O, g2) : O, conts = [Oh].concat(Hs), eps = 1e-4;
+  /* o.lado(k): cuanto de la tinta lleva el tramo k del contorno (del punto k al k+1; 1 por defecto) y
+     o.sinCanto(k): ese tramo sin canto. Para una losa que sigue en otra pieza (el frente de la ATP, que
+     sigue en sus esquinas): por la costura la tinta no se estira ni cierra, si no asomaba en una raya */
+  function losa(B, O, Hs, w0, w1, mapa, col, gT, silueta, o) {
+    o = o || {};
+    const g2 = silueta ? gT : 0, Oh = g2 > 0 ? (o.lado ? hincharLados(O, (k) => g2 * o.lado(k)) : Hh.hinchar(O, g2)) : O, conts = [Oh].concat(Hs), eps = 1e-4;
     const nPlano = (u, v) => {
       const p = mapa(u, v, 0), n = uni(cruz(sub(mapa(u + eps, v, 0), p), sub(mapa(u, v + eps, 0), p)));
       return dot(n, sub(mapa(u, v, eps), p)) < 0 ? n.map((x) => -x) : n;
     };
-    // la normal de canto de cada punto: hacia fuera de la losa (en un agujero, hacia su centro)
-    const canto = conts.map((P, c) => { const Q = Hh.hinchar(P, c === 0 ? eps : -eps); return P.map((p, k) => [Q[k][0] - p[0], Q[k][1] - p[1]]); });
+    // la normal de canto de cada punto: hacia fuera de la losa (en un agujero, hacia su centro); con o.lado, la de la
+    // tinta de cada punto (cero en la costura: ahi su normal es la de la cara, como la de la pieza que sigue)
+    const canto = conts.map((P, c) => {
+      if (c === 0 && o.lado && g2 > 0) return P.map((p, k) => { const d = [p[0] - O[k][0], p[1] - O[k][1]], L = Math.hypot(d[0], d[1]); return L < 1e-9 ? [0, 0] : [d[0] / L * eps, d[1] / L * eps]; });
+      const Q = Hh.hinchar(P, c === 0 ? eps : -eps); return P.map((p, k) => [Q[k][0] - p[0], Q[k][1] - p[1]]);
+    });
     const aMundo = (p, d2, w) => uni(sub(mapa(p[0] + d2[0], p[1] + d2[1], w), mapa(p[0], p[1], w)));
-    const T = THREE.ShapeUtils.triangulateShape(Oh.map((q) => new THREE.Vector2(q[0], q[1])), Hs.map((h) => h.map((q) => new THREE.Vector2(q[0], q[1]))));
-    const plano = [].concat(...conts), deC = []; conts.forEach((P, c) => P.forEach(() => deC.push(c)));
-    const wF = (k) => (deC[k] === 0 ? w1 + g2 : w1), wD = (k) => (deC[k] === 0 ? w0 - g2 : w0);
+    // o.paso: puntos de mas por dentro, cada tanto (ver triangular)
+    const { T, sueltos } = triangular(conts, o.paso);
+    const plano = [].concat(...conts, sueltos);
+    /* las caras de la tinta, planas (a w1 + g2 y w0 - g2), tambien en los agujeros; y en ellos sin canto. Con los
+       agujeros a w1 y w0 las dos bajaban en rampa: una astilla de la triangulacion que iba del agujero al borde
+       quedaba casi de canto y, de costado, se daba vuelta y se dibujaba (una raya fina de punta a punta del frente
+       de la ATP) */
+    const wF = () => w1 + g2, wD = () => w0 - g2;
     const vert = (q, n, hx) => { const k = hx === undefined ? [0, 0, 0] : B._rgb(hx, 1); return { i: B._vert(q[0], q[1], q[2], n[0], n[1], n[2], k[0], k[1], k[2]), q }; };
-    const base = []; conts.forEach((P, c) => P.forEach((p, k) => base.push({ p, c, k })));
+    const base = []; conts.forEach((P, c) => P.forEach((p, k) => base.push({ p, c, k }))); sueltos.forEach((p) => base.push({ p, c: -1 }));
+    // en la tinta, la normal de los puntos del contorno se abre hacia fuera (la tinta se empuja en pantalla por
+    // ella); la de los de dentro y los agujeros (sin tinta), la de la cara: todos empujados igual, nada se da vuelta
+    const nT = (b, n, w) => (b.c === 0 ? uni(mas(n, aMundo(b.p, canto[0][b.k], w), 1)) : n);
     const F = base.map((b, k) => {
       const q = mapa(b.p[0], b.p[1], wF(k)), n = nPlano(b.p[0], b.p[1]);
-      return silueta ? vert(q, uni(mas(n, aMundo(b.p, canto[b.c][b.k], wF(k)), 1))) : vert(q, n, col.cara);
+      return silueta ? vert(q, nT(b, n, wF(k))) : vert(q, n, col.cara);
     });
     const D = base.map((b, k) => {
       const q = mapa(b.p[0], b.p[1], wD(k)), n = nPlano(b.p[0], b.p[1]).map((x) => -x);
-      return silueta ? vert(q, uni(mas(n, aMundo(b.p, canto[b.c][b.k], wD(k)), 1))) : vert(q, n, col.dorso);
+      return silueta ? vert(q, nT(b, n, wD(k))) : vert(q, n, col.dorso);
     });
     for (const t of T) {
       const [a, b2, c2] = t, cen = plano[a].map((x, e) => (x + plano[b2][e] + plano[c2][e]) / 3), n = nPlano(cen[0], cen[1]);
@@ -1340,7 +1356,9 @@
     let k0 = 0;
     for (let c = 0; c < conts.length; c++) {
       const P = conts[c], n = P.length;
+      if (c > 0 && silueta) { k0 += n; continue; }
       for (let k = 0; k < n; k++) {
+        if (c === 0 && o.sinCanto && o.sinCanto(k)) continue;
         const a = k0 + k, b2 = k0 + (k + 1) % n, pm = [(P[k][0] + P[(k + 1) % n][0]) / 2, (P[k][1] + P[(k + 1) % n][1]) / 2];
         const d2 = [(canto[c][k][0] + canto[c][(k + 1) % n][0]) / 2, (canto[c][k][1] + canto[c][(k + 1) % n][1]) / 2], f = aMundo(pm, d2, (w0 + w1) / 2);
         const Q = silueta ? [F[a], F[b2], D[b2], D[a]] : [F[a].q, F[b2].q, D[b2].q, D[a].q].map((q) => vert(q, f, col.canto));
@@ -1348,6 +1366,72 @@
       }
       k0 += n;
     }
+  }
+  /* LA TRIANGULACION DE UNA LOSA: la de three (earcut) deja astillas largas -abanicos de un punto a todo un
+     borde, mas con puntos en fila-; la tinta se empuja en pantalla por la normal de cada punto y una astilla mas
+     angosta que ese empuje se daba vuelta y se dibujaba: rayas finas de punta a punta del frente de la ATP. Aqui,
+     con paso, puntos sueltos por dentro (a mas de medio paso del contorno) y despues las aristas se dan vuelta
+     hasta que cada una cumple Delaunay (sin tocar las del contorno): triangulos parejos. Devuelve los triangulos
+     (indices en los contornos seguidos y despues los sueltos) y los sueltos. */
+  function triangular(conts, paso) {
+    const sueltos = [];
+    if (paso) {
+      const O = conts[0], xs = O.map((p) => p[0]), ys = O.map((p) => p[1]);
+      const dentro = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
+      const dSeg = (x, y, a, b) => { const ex = b[0] - a[0], ey = b[1] - a[1], t = Math.max(0, Math.min(1, ((x - a[0]) * ex + (y - a[1]) * ey) / (ex * ex + ey * ey || 1))); return Math.hypot(x - a[0] - ex * t, y - a[1] - ey * t); };
+      for (let y = Math.min(...ys) + paso / 2; y < Math.max(...ys); y += paso) for (let x = Math.min(...xs) + paso / 2; x < Math.max(...xs); x += paso) {
+        if (!dentro(O, x, y) || conts.slice(1).some((H) => dentro(H, x, y))) continue;
+        if (conts.some((P) => P.some((a, i) => dSeg(x, y, a, P[(i + 1) % P.length]) < paso * 0.5))) continue;
+        sueltos.push([x, y]);
+      }
+    }
+    const V2 = (P) => P.map((q) => new THREE.Vector2(q[0], q[1]));
+    const T = THREE.ShapeUtils.triangulateShape(V2(conts[0]), conts.slice(1).map(V2).concat(sueltos.map((p) => V2([p]))));
+    const P = [].concat(...conts, sueltos), clave = (a, b) => (a < b ? a + ',' + b : b + ',' + a);
+    const fijas = new Set(); let k0 = 0;
+    for (const C of conts) { C.forEach((_, k) => fijas.add(clave(k0 + k, k0 + (k + 1) % C.length))); k0 += C.length; }
+    const gira = (a, b, c) => (P[b][0] - P[a][0]) * (P[c][1] - P[a][1]) - (P[b][1] - P[a][1]) * (P[c][0] - P[a][0]);
+    let s0 = 0; for (const t of T) s0 += gira(...t); s0 = Math.sign(s0) || 1;
+    // d dentro del circulo de (a, b, c)
+    const enCirculo = (a, b, c, d) => {
+      const [ax, ay] = [P[a][0] - P[d][0], P[a][1] - P[d][1]], [bx, by] = [P[b][0] - P[d][0], P[b][1] - P[d][1]], [cx, cy] = [P[c][0] - P[d][0], P[c][1] - P[d][1]];
+      return s0 * ((ax * ax + ay * ay) * (bx * cy - cx * by) - (bx * bx + by * by) * (ax * cy - cx * ay) + (cx * cx + cy * cy) * (ax * by - bx * ay)) > 1e-14;
+    };
+    for (let pasada = 0; pasada < 60; pasada++) {
+      const E = new Map(), tocado = new Set(); let n = 0;
+      T.forEach((t, i) => { for (let e = 0; e < 3; e++) { const k = clave(t[e], t[(e + 1) % 3]); if (!E.has(k)) E.set(k, []); E.get(k).push([i, t[(e + 2) % 3], t[e], t[(e + 1) % 3]]); } });
+      for (const [k, L] of E) {
+        if (L.length !== 2 || fijas.has(k)) continue;
+        const [[i, c, a, b], [j, d]] = L;
+        if (tocado.has(i) || tocado.has(j) || !enCirculo(a, b, c, d)) continue;
+        if (Math.sign(gira(c, d, a)) === Math.sign(gira(c, d, b))) continue;   // el cuadrilatero no es convexo
+        const t1 = [c, a, d], t2 = [d, b, c];
+        if (Math.sign(gira(...t1)) !== s0 || Math.sign(gira(...t2)) !== s0) continue;
+        T[i] = t1; T[j] = t2; tocado.add(i); tocado.add(j); n++;
+      }
+      if (!n) break;
+    }
+    return { T, sueltos };
+  }
+  // el poligono agrandado por tramos: el tramo k (del punto k al k+1) se corre dk(k) hacia fuera; cada punto, donde se cortan sus dos tramos
+  function hincharLados(P, dk) {
+    const n = P.length; let ar = 0;
+    for (let k = 0; k < n; k++) { const a = P[k], b = P[(k + 1) % n]; ar += a[0] * b[1] - b[0] * a[1]; }
+    const s = ar > 0 ? 1 : -1, T = [], N = [], D = [];
+    for (let k = 0; k < n; k++) {
+      const a = P[k], b = P[(k + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, t = [(b[0] - a[0]) / L, (b[1] - a[1]) / L];
+      T.push(t); N.push([s * t[1], -s * t[0]]); D.push(dk(k));
+    }
+    return P.map((p, k) => {
+      const j = (k - 1 + n) % n, t1 = T[j], t2 = T[k], r = [N[k][0] * D[k] - N[j][0] * D[j], N[k][1] * D[k] - N[j][1] * D[j]];
+      const det = -(t1[0] * t2[1] - t1[1] * t2[0]);
+      if (Math.abs(det) < 1e-4) { const d = (D[j] + D[k]) / 2; return [p[0] + N[k][0] * d, p[1] + N[k][1] * d]; }
+      const la = (-r[0] * t2[1] + t2[0] * r[1]) / det;
+      let q = [p[0] + N[j][0] * D[j] + t1[0] * la, p[1] + N[j][1] * D[j] + t1[1] * la];
+      const lim = 2.5 * Math.max(D[j], D[k]), Lq = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      if (Lq > lim && Lq > 1e-9) q = [p[0] + (q[0] - p[0]) * lim / Lq, p[1] + (q[1] - p[1]) * lim / Lq];
+      return q;
+    });
   }
   // el plano de un lente: centrado en (az, y) a d de la cabeza, mirando a su azimut; u hacia fuera de la cara
   function planoLente(az, y, d, lado) {
@@ -1648,6 +1732,221 @@
     lamina(B, bandaCabeza(pts, yC, 0.017), { gr: 0.006, dentro: 0.02, color: (i, j) => (j <= 1 || j >= 8 ? NEGRO : sw(82)) }, g, silueta);
   };
 
+  /* EL POLIGONO AGRANDADO DE VERDAD: el borde a distancia d, por un campo de
+     distancias y marching squares (las esquinas de fuera salen redondas, como
+     las de un trazo). Hh.hinchar corre cada punto por su bisectriz y, con d
+     mayor que los tramos, en las esquinas de dentro (la cerradura del visor
+     de la ATP) el contorno se cruzaba en rulos. Campo y contornos en cache. */
+  const _campos = new Map();
+  function ofsetear(P, d) {
+    const h = 0.002, clave = P.length + ':' + P[0].join(',') + ':' + P[P.length >> 1].join(',');
+    let K = _campos.get(clave);
+    if (!K) {
+      const M = 0.06, xs = P.map((p) => p[0]), ys = P.map((p) => p[1]), x0 = Math.min(...xs) - M, y0 = Math.min(...ys) - M;
+      const nx = Math.ceil((Math.max(...xs) + M - x0) / h) + 1, ny = Math.ceil((Math.max(...ys) + M - y0) / h) + 1, n = P.length;
+      const F = new Float32Array(nx * ny);
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+        const x = x0 + i * h, y = y0 + j * h; let m = Infinity, dentro = false;
+        for (let k = 0, l = n - 1; k < n; l = k++) {
+          const a = P[k], b = P[l], ex = b[0] - a[0], ey = b[1] - a[1];
+          if ((a[1] > y) !== (b[1] > y) && x < ex * (y - a[1]) / ey + a[0]) dentro = !dentro;
+          const t = Math.max(0, Math.min(1, ((x - a[0]) * ex + (y - a[1]) * ey) / (ex * ex + ey * ey || 1)));
+          m = Math.min(m, Math.hypot(x - a[0] - ex * t, y - a[1] - ey * t));
+        }
+        F[j * nx + i] = dentro ? -m : m;
+      }
+      K = { F, x0, y0, nx, ny, iso: new Map() };
+      _campos.set(clave, K);
+    }
+    if (!K.iso.has(d)) K.iso.set(d, isoLinea(K, d, h));
+    return K.iso.get(d);
+  }
+  function isoLinea(K, d, h) {
+    const { F, x0, y0, nx, ny } = K, f = (i, j) => F[j * nx + i] - d, pt = new Map(), vec = new Map();
+    const arista = (i, j, i2, j2) => {
+      const k = (i2 > i ? 'h' : 'v') + i + ',' + j;
+      if (!pt.has(k)) { const a = f(i, j), t = a / (a - f(i2, j2)); pt.set(k, [x0 + (i + (i2 - i) * t) * h, y0 + (j + (j2 - j) * t) * h]); }
+      return k;
+    };
+    const une = (a, b) => { for (const [x, y] of [[a, b], [b, a]]) { if (!vec.has(x)) vec.set(x, []); vec.get(x).push(y); } };
+    for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+      const c = [f(i, j) < 0, f(i + 1, j) < 0, f(i + 1, j + 1) < 0, f(i, j + 1) < 0];
+      const lados = [[i, j, i + 1, j], [i + 1, j, i + 1, j + 1], [i, j + 1, i + 1, j + 1], [i, j, i, j + 1]];
+      const ks = [c[0] !== c[1], c[1] !== c[2], c[3] !== c[2], c[0] !== c[3]].map((x, e) => (x ? arista(...lados[e]) : null));
+      const cortadas = ks.filter(Boolean);
+      if (cortadas.length === 2) une(cortadas[0], cortadas[1]);
+      else if (cortadas.length === 4) {
+        // silla: si el centro va con la esquina 0, el contorno aparta las esquinas 1 y 3
+        const cen = f(i, j) + f(i + 1, j) + f(i + 1, j + 1) + f(i, j + 1) < 0;
+        if (cen === c[0]) { une(ks[0], ks[1]); une(ks[2], ks[3]); } else { une(ks[3], ks[0]); une(ks[1], ks[2]); }
+      }
+    }
+    // el anillo mas largo
+    const usado = new Set(); let R = [];
+    for (const k0 of vec.keys()) {
+      if (usado.has(k0)) continue;
+      const A = []; let k = k0;
+      while (k !== null) { usado.add(k); A.push(pt.get(k)); const nb = vec.get(k).filter((x) => !usado.has(x)); k = nb.length ? nb[0] : null; }
+      if (A.length > R.length) R = A;
+    }
+    // sin los puntos de mas (Douglas-Peucker a medio milimetro), partido en el punto mas lejos del primero
+    const dS = (p, a, b) => { const ex = b[0] - a[0], ey = b[1] - a[1], t = Math.max(0, Math.min(1, ((p[0] - a[0]) * ex + (p[1] - a[1]) * ey) / (ex * ex + ey * ey || 1))); return Math.hypot(p[0] - a[0] - ex * t, p[1] - a[1] - ey * t); };
+    const dp = (P) => {
+      let m = -1, im = 0;
+      for (let i = 1; i < P.length - 1; i++) { const x = dS(P[i], P[0], P[P.length - 1]); if (x > m) { m = x; im = i; } }
+      return m <= 0.0005 ? [P[0], P[P.length - 1]] : dp(P.slice(0, im + 1)).slice(0, -1).concat(dp(P.slice(im)));
+    };
+    let lejos = 0; R.forEach((p, i) => { if (dist([p[0], p[1], 0], [R[0][0], R[0][1], 0]) > dist([R[lejos][0], R[lejos][1], 0], [R[0][0], R[0][1], 0])) lejos = i; });
+    return dp(R.slice(0, lejos + 1)).slice(0, -1).concat(dp(R.slice(lejos).concat([R[0]])).slice(0, -1));
+  }
+  const tabla = (L, x) => { if (x <= L[0][0]) return L[0][1]; for (let k = 1; k < L.length; k++) if (x <= L[k][0]) return lerp(L[k - 1][1], L[k][1], (x - L[k - 1][0]) / (L[k][0] - L[k - 1][0])); return L[L.length - 1][1]; };
+
+  /* ATP Mask (agent2_mask), DE SU HOJA: una MASCARA DE CASCO sobre la cara.
+     Una CASCARA de una pieza (60): el frente plano a 1,3 cm de la cara, las
+     esquinas redondas y los costados, que vuelven hasta z = 0,32 (medio
+     casco: de tres cuartos se ve la cabeza detras, como en la hoja) y arriba
+     se cierran en chaflan contra la TAPA; el PANEL claro (84) pintado en el
+     frente con su raya; el VISOR en forma de cerradura -el lobulo en -x y la
+     banda que se abre hacia +x-, su marco negro, gris y negro pintado y el
+     CRISTAL naranja TRANSLUCIDO (255, 175, 29 al 41%: la cruz se ve a
+     traves) en el agujero de la cascara; la PLACA de la boca (204) entre las
+     quijadas; los RIELES (negro y 108) por el borde de atras de cada costado,
+     que bajan y vuelven de correa hasta el visor; y la SOLAPA (48) que rodea
+     la nuca. Medidas de la hoja de frente (el borde de dentro de cada trazo;
+     la tinta pone el contorno). El frente es una losa (con el agujero) y sus
+     esquinas y costados, una lamina a cada lado, cosidas sin tinta en la
+     costura. Antes: la hoja pegada como textura en una concha (borrosa, el
+     visor corrido y un costado que tapaba media cabeza). */
+  const ATP = {
+    zf: 0.492, R: 0.05, zb: 0.32, gr: 0.01, arriba: 1.681, abajo: 1.005, boca: 1.118, quijada: 0.19,
+    ancho: [[1.0, 0.27], [1.06, 0.31], [1.12, 0.36], [1.18, 0.378], [1.3, 0.375], [1.44, 0.374],
+            [1.58, 0.316], [1.624, 0.236], [1.681, 0.205]],   // arriba, tres chaflanes planos (con los quiebres de la hoja, la luz salia a manchas)
+    cristal: [[0.255, 1.26], [0.255, 1.36], [0.25, 1.3717], [0.2399, 1.3869], [0.2298, 1.3899], [0.1894, 1.3829], [0.149, 1.3768], [0.1086, 1.3697],
+              [0.0682, 1.3627], [0.0278, 1.3556], [0.0076, 1.3526], [-0.0025, 1.3505], [-0.0126, 1.3526], [-0.0328, 1.3596], [-0.053, 1.3667],
+              [-0.0631, 1.3748], [-0.0732, 1.394], [-0.0833, 1.4081], [-0.0934, 1.4172], [-0.1035, 1.4243], [-0.1136, 1.4283], [-0.1237, 1.4313],
+              [-0.1439, 1.4313], [-0.154, 1.4303], [-0.1641, 1.4263], [-0.1742, 1.4202], [-0.1843, 1.4121], [-0.1944, 1.402], [-0.2045, 1.3899],
+              [-0.2247, 1.3899], [-0.2388, 1.389], [-0.249, 1.3727], [-0.254, 1.36], [-0.254, 1.26], [-0.249, 1.2495], [-0.2388, 1.2435],
+              [-0.2247, 1.2344], [-0.2045, 1.2384], [-0.1944, 1.2405], [-0.1843, 1.2324], [-0.1742, 1.2253], [-0.1641, 1.2192], [-0.154, 1.2162],
+              [-0.1439, 1.2132], [-0.1338, 1.2132], [-0.1237, 1.2152], [-0.1136, 1.2172], [-0.1035, 1.2223], [-0.0934, 1.2283], [-0.0833, 1.2384],
+              [-0.0732, 1.2516], [-0.0631, 1.2687], [-0.053, 1.2768], [-0.0328, 1.2819], [-0.0126, 1.2859], [-0.0025, 1.2879], [0.0076, 1.2859],
+              [0.0278, 1.2798], [0.0682, 1.2708], [0.1086, 1.2606], [0.149, 1.2516], [0.1894, 1.2415], [0.2298, 1.2384], [0.2399, 1.2445], [0.25, 1.2505]],
+    panel: [[-0.16, 1.634], [0.16, 1.634], [0.2, 1.579], [0.258, 1.549], [0.29, 1.518], [0.31, 1.498], [0.312, 1.175], [0.236, 1.121],
+            [-0.236, 1.121], [-0.312, 1.175], [-0.31, 1.498], [-0.29, 1.518], [-0.258, 1.549], [-0.2, 1.579]]
+  };
+  // la seccion de la cascara a la altura v: la mitad del frente plano (a), y hasta el borde de atras (L), por la seccion
+  const atpA = (v) => tabla(ATP.ancho, v) - ATP.R;
+  const atpL = (v) => atpA(v) + Math.PI / 2 * ATP.R + (ATP.zf - ATP.R - ATP.zb);
+  // el medio de la cascara a la altura v y a u por su seccion desde el medio del frente (+u hacia +x)
+  function atpP(u, v) {
+    const R = ATP.R, a = atpA(v), s = u < 0 ? -1 : 1, c = Math.abs(u) - a;
+    if (c <= 0) return [u, v, ATP.zf];
+    if (c <= Math.PI / 2 * R) { const th = c / R; return [s * (a + R * Math.sin(th)), v, ATP.zf - R + R * Math.cos(th)]; }
+    return [s * (a + R), v, ATP.zf - R - (c - Math.PI / 2 * R)];
+  }
+  // corrido w por su normal, hacia fuera
+  function atpMapa(u, v, w) {
+    const p = atpP(u, v);
+    if (!w) return p;
+    const e = 1e-4, n = uni(cruz(sub(atpP(u + e, v), atpP(u - e, v)), sub(atpP(u, v + e), atpP(u, v - e))));
+    return mas(p, n, dot(n, [p[0], 0, p[2] - C().cz]) < 0 ? -w : w);
+  }
+  MOD.agent2_mask = function (B, g, silueta) {
+    const gr = ATP.gr, V = [1.005, 1.02, 1.04, 1.06, 1.08, 1.1, 1.12, 1.14, 1.16, 1.18];
+    for (let v = 1.205; v < 1.44; v += 0.025) V.push(v);
+    V.push(1.44, 1.47, 1.5, 1.53, 1.555, 1.58, 1.595, 1.61, 1.624, 1.643, 1.662, ATP.arriba);
+    const oscuro = (hx) => mezclaHex(hx, 0, 0.78), c60 = sw(60);
+    /* EL FRENTE: plano, con el agujero del visor. Su contorno: la costura con la esquina de +x (sube), el borde de arriba
+       (suelto, con su tinta: es el borde de la cascara), la costura de -x (baja) y abajo las quijadas y la boca. Sin
+       tinta ni canto en las costuras. */
+    const O = [], tipo = [];
+    const pon = (p, t) => { O.push(p); tipo.push(t); };
+    V.forEach((v, j) => pon([atpA(v), v], j < V.length - 1 ? 'costura' : 'libre'));
+    const aT = atpA(ATP.arriba);
+    for (let k = 1; k < 14; k++) pon([aT * (1 - 2 * k / 14), ATP.arriba], 'libre');
+    V.slice().reverse().forEach((v, j) => pon([-atpA(v), v], j < V.length - 1 ? 'costura' : 'libre'));
+    const q = ATP.quijada;
+    for (const p of [[-q, ATP.abajo], [-q + 0.005, ATP.boca], [q - 0.005, ATP.boca], [q, ATP.abajo]]) pon(p, 'libre');
+    const GL = ATP.cristal, frente = (u, v, w) => [u, v, ATP.zf + w];
+    losa(B, O, [ofsetear(GL, 0.009)], -gr / 2, gr / 2, frente, { cara: c60, dorso: oscuro(c60), canto: NEGRO }, g, silueta,
+         { lado: (k) => (tipo[k] === 'libre' ? 1 : 0), sinCanto: (k) => tipo[k] !== 'libre', paso: 0.04 });
+    /* LAS ESQUINAS Y LOS COSTADOS: una lamina por lado, de la costura (t = 0) al borde de atras (t = 1); el borde de abajo
+       sube atras hasta 1,10, como el de la quijada en la hoja (las filas de debajo se juntan en el borde: corridas,
+       la grilla quedaba sesgada y la luz salia a rayas). La costura, sin tinta ni canto (sigue en el frente); abajo,
+       arriba y atras, sueltos */
+    const tc = Math.PI / 2 * ATP.R / (atpL(1.3) - atpA(1.3)), ts = [0, 0.004];
+    for (let k = 1; k <= 7; k++) ts.push(lerp(0.004, tc, k / 7));
+    for (let k = 1; k <= 6; k++) ts.push(lerp(tc, 1, k / 6));
+    for (const s of [1, -1]) {
+      const P = ts.map((t) => {
+        const vb = ATP.abajo + 0.095 * suave(0.45, 1, t);
+        return V.map((v0) => { const v = Math.max(v0, vb), a = atpA(v); return atpP(s * (a + t * (atpL(v) - a)), v); });
+      });
+      lamina(B, P, { gr, color: () => c60, canto: NEGRO, sinHundir: true, sinTintaLado: [0], sinCantoLado: [0], normal: (i) => (i === 0 ? [0, 0, 1] : null),
+                     apoyo: () => 0, apoyoLado: (i) => (i === 0 ? 1 : 0) }, g, silueta);
+    }
+    /* LA TAPA: plana, DENTRO del borde de arriba de la cascara (4 mm dentro de su cara de dentro, 2 mm mas baja: con
+       la tapa hasta el medio del grueso, la cara de atras de su tinta se metia en el frente y asomaba en raya): el
+       contorno de arriba lo pone la tinta del borde, de una pieza con la del frente y los costados. Sobre la cascara,
+       su tinta se juntaba con la de ella en cuernos y muescas en las esquinas. Solo su borde de atras lleva tinta */
+    const T = [], L1 = atpL(ATP.arriba);
+    for (let k = 0; k <= 40; k++) { const p = atpMapa(-L1 + 2 * L1 * k / 40, ATP.arriba, -gr / 2 - 0.004); T.push([p[0], p[2]]); }
+    losa(B, T, [], -0.012, -0.002, (x, z, w) => [x, ATP.arriba + w, z], { cara: c60, dorso: oscuro(c60), canto: c60 }, g, silueta,
+         { lado: (k) => (k === T.length - 1 ? 1 : 0), sinCanto: (k) => k !== T.length - 1 });
+    /* LA PLACA DE LA BOCA: entre las quijadas, 3,5 cm detras del frente (su borde de arriba, escondido detras de el).
+       Solo su borde de abajo lleva tinta: la de los costados, adelantada 1 cm como toda la de la cabeza, asomaba por
+       delante de las quijadas en una raya */
+    losa(B, [[-q + 0.004, 1.0], [q - 0.004, 1.0], [q - 0.004, 1.13], [-q + 0.004, 1.13]], [], -gr / 2, gr / 2, (u, v, w) => [u, v, ATP.zf - 0.035 + w],
+         { cara: sw(204), dorso: oscuro(sw(204)), canto: NEGRO }, g, silueta, { lado: (k) => (k === 0 ? 1 : 0), sinCanto: (k) => k !== 0 });
+    /* LOS RIELES: una tira por el borde de atras de cada costado, hasta la vuelta, y de correa por 1,26 hasta el
+       visor (como en las hojas, de 1,48 para abajo); de la raiz a la punta, negro, 108, negro, 108, negro. Por el borde de atras es un ALA abierta 35 grados
+       hacia fuera (de frente asoma de la silueta, como en la hoja de frente, y de tres cuartos se ve casi de frente,
+       ancha como en la suya); en la vuelta se acuesta sobre el costado. Donde es ala, su punta va suelta (la franja
+       fina: el trazo lo pone su tinta); acostada, apoya y la franja es entera. Su tinta, 1 cm detras de la cara (con
+       el adelanto de la cabeza, mas cerca la pintaba de negro entera) */
+    const ri = 0.02, vr = 1.316, Lc = atpL(1.3) - 0.012, EST = [];
+    for (let v = 1.48; v > vr + ri + 1e-9; v -= 0.02) EST.push({ u: atpL(v) - 0.012, v, fi: 0, f: 0 });
+    for (let k = 0; k <= 6; k++) { const fi = Math.PI / 2 * k / 6; EST.push({ u: Lc - ri + ri * Math.cos(fi), v: vr + ri - ri * Math.sin(fi), fi, f: k / 6 }); }
+    for (let u = Lc - ri - 0.02; u > 0.29; u -= 0.02) EST.push({ u, v: vr, fi: Math.PI / 2, f: 1 });
+    EST.push({ u: 0.285, v: vr, fi: Math.PI / 2, f: 1 });
+    const COL = [NEGRO, NEGRO, sw(108), sw(108), NEGRO, NEGRO, sw(108), sw(108), NEGRO, NEGRO];
+    for (const s of [1, -1]) {
+      const P = EST.map((e) => {
+        const R3 = atpMapa(s * e.u, e.v, gr / 2 + 0.005), N3 = uni(sub(R3, atpP(s * e.u, e.v)));
+        const Tu = uni(sub(atpP(s * (e.u + 0.001), e.v), atpP(s * e.u, e.v))), Tv = uni(sub(atpP(s * e.u, e.v + 0.001), atpP(s * e.u, e.v)));
+        const pl = [0, 1, 2].map((k) => Tu[k] * Math.cos(e.fi) - Tv[k] * Math.sin(e.fi)), ti = 35 * RAD * (1 - e.f);
+        const D3 = uni([0, 1, 2].map((k) => pl[k] * Math.cos(ti) + N3[k] * Math.sin(ti)));
+        const b = lerp(0.004, 0.012, e.f), ds = [0, 0.012, 0.0124, 0.019, 0.0194, 0.035, 0.0354, 0.042, 0.0424, 0.0424 + b];
+        return ds.map((d) => mas(R3, D3, d));
+      });
+      lamina(B, P, { gr: 0.004, tintaN: 0.6, dentro: 0.01, color: (i, j) => COL[j], canto: NEGRO,
+                     apoyo: (i, j) => (j === 0 ? 1 : EST[i].f), apoyoLado: (i) => (i === 0 ? 0 : 1) }, g, silueta);
+    }
+    /* LA SOLAPA: de dentro de un costado al otro por la nuca, a 2 cm de ella (6 cm en las puntas, metidas 5 cm en la
+       cascara: menos, su tinta adelantada asomaba por el costado). Es una placa fina SUELTA, como un ala: la tinta en su plano, estirada por los bordes (el trazo). Con
+       los bordes apoyados su canto bajaba 3,6 cm hasta dentro de la cabeza y, a 2 cm de ella, se veia encima del
+       borde cortado a dientes por las caras del ovalo; con la tinta gruesa, por donde se aparta de la cabeza la cara
+       de dentro de su tinta quedaba en el aire y salia en manchones negros */
+    const [a0, e0] = Hh.centroCruz(), yC = sobre(a0, e0, 0)[1], pts = [];
+    for (let az = 55; az <= 305.01; az += 7.5) { const d = Math.min(az, 360 - az); pts.push([az, 1.17 - yC, 0.08, lerp(0.06, 0.02, suave(55, 105, d))]); }
+    lamina(B, bandaCabeza(pts, yC, 0.012), { gr: 0.008, tintaN: 0.25, apoyo: () => 0, color: () => sw(48) }, g, silueta);
+    if (silueta) return;
+    // EL PANEL Y EL VISOR, pintados en el frente (el panel, sin salirse del frente plano)
+    const nF = [0, 0, 1], en = (off) => (u, v) => [u, v, ATP.zf + gr / 2 + off];
+    const dentroFrente = (P, m) => P.map(([u, v]) => [Math.sign(u) * Math.min(Math.abs(u), atpA(v) - m), Math.max(v, ATP.boca + 0.0005)]);
+    const hueco = [ofsetear(GL, 0.006)];
+    mancha(B, dentroFrente(Hh.hinchar(ATP.panel, 0.011), 0.001), en(0.0015), nF, NEGRO, hueco);
+    mancha(B, dentroFrente(ATP.panel, 0.012), en(0.0025), nF, sw(84), hueco, true);
+    mancha(B, ofsetear(GL, 0.036), en(0.0035), nF, NEGRO, [GL]);
+    mancha(B, ofsetear(GL, 0.023), en(0.0045), nF, c60, [ofsetear(GL, 0.013)], true);
+    cristal(B, ofsetear(GL, 0.013), 0, (u, v, w) => [u, v, ATP.zf + 0.004 + w], swc(255, 175, 29), 0.41);
+    // LA QUIJADA: la raya que la separa del costado, pintada, de la esquina de abajo del panel al borde de atras (1,19 a 1,105)
+    for (const s of [1, -1]) {
+      const u0 = atpA(1.19) - 0.004, u1 = atpL(1.105) - 0.004, pts = [], nrm = [];
+      for (let k = 0; k <= 40; k++) { const t = k / 40, u = lerp(u0, u1, t), v = lerp(1.19, 1.105, t); pts.push(atpMapa(s * u, v, gr / 2 + 0.0015)); nrm.push(uni(sub(atpMapa(s * u, v, 0.01), atpP(s * u, v)))); }
+      trazo(B, pts, nrm, 0.012, NEGRO);
+    }
+  };
+
   /* =============================================================
      HERRAMIENTAS DE LO QUE VA EN LA CARA
      ============================================================= */
@@ -1722,7 +2021,11 @@
     const vecJ = (i, j, s) => { let k = j + s; while (k > 0 && k < N && dist(at(i, k), at(i, j)) < 1e-4) k += s; return Math.max(0, Math.min(N, k)); };
     const tanI = (i, j) => sub(vuelta || i < M - 1 ? at(i + 1, j) : at(i, j), vuelta || i > 0 ? at(i - 1, j) : at(i, j));
     const tanJ = (i, j) => sub(at(i, vecJ(i, j, 1)), at(i, vecJ(i, j, -1)));
+    // o.normal(i, j): la normal de ese punto, si la pieza la impone (la costura con una losa plana: la misma de ella,
+    // si no las caras quedaban corridas una fraccion de milimetro y la tinta de atras asomaba a puntitos)
     const NR = P.map((col, i) => col.map((p, j) => {
+      const nf = o.normal && o.normal(i, j);
+      if (nf) return nf;
       let n = cruz(tanI(i, j), tanJ(i, j));
       n = Math.hypot(n[0], n[1], n[2]) < 1e-12 ? normalCab(p) : uni(n);
       return dot(n, normalCab(p)) < 0 ? [-n[0], -n[1], -n[2]] : n;
@@ -1791,9 +2094,12 @@
     if (!o.sinCanto0) canto(fila(0));
     canto(fila(N));
     /* o.sinTintaLado: la tinta queda abierta por los costados (la placa sigue en otra pieza,
-       la patilla de los 3-D): cerrada, su pared de 1,6 cm asomaba en una raya en la union */
-    if (!vuelta && !(silueta && o.sinTintaLado)) {
+       la patilla de los 3-D): cerrada, su pared de 1,6 cm asomaba en una raya en la union.
+       true: los dos costados; una lista: esos (0 o M - 1). o.sinCantoLado, lo mismo con el canto de color */
+    const salta = (L, i) => L === true || (Array.isArray(L) && L.includes(i));
+    if (!vuelta) {
       for (const i of [0, M - 1]) {
+        if (silueta ? salta(o.sinTintaLado, i) : salta(o.sinCantoLado, i)) continue;
         const L = [];
         // o.sinHundirLado: el costado no estira la tinta pero tampoco la hunde (una placa despegada de la cabeza que sigue en otra pieza)
         for (let j = 0; j <= N; j++) L.push([F[i][j], D[i][j], o.sinHundirLado ? 0 : apoyoL(i, j), dirL(i, j)]);
@@ -1836,12 +2142,13 @@
       }
     }
   }
-  // una mancha pintada: un poligono 2D llevado a 3D por 'donde(u, v)', mirando a 'n'
-  function mancha(B, poly, donde, n, hex) {
-    const k = B._rgb(hex === undefined ? NEGRO : hex, 1);
-    const v2 = poly.map((q) => new THREE.Vector2(q[0], q[1]));
-    const ids = poly.map((q) => { const p = donde(q[0], q[1]); return { i: B._vert(p[0], p[1], p[2], n[0], n[1], n[2], k[0], k[1], k[2], U.LUZ_PLANA), q: p }; });
-    for (const t of THREE.ShapeUtils.triangulateShape(v2, [])) tri(B, ids[t[0]].i, ids[t[1]].i, ids[t[2]].i, ids[t[0]].q, ids[t[1]].q, ids[t[2]].q, n);
+  // una mancha pintada: un poligono 2D llevado a 3D por 'donde(u, v)', mirando a 'n'; con sus huecos y, con conLuz,
+  // con la luz de la cara (un panel del mismo plano: sin luz, de costado quedaba de otro gris que lo de al lado)
+  function mancha(B, poly, donde, n, hex, huecos, conLuz) {
+    const k = B._rgb(hex === undefined ? NEGRO : hex, 1), H = huecos || [];
+    const v2 = (P) => P.map((q) => new THREE.Vector2(q[0], q[1]));
+    const ids = [].concat(poly, ...H).map((q) => { const p = donde(q[0], q[1]); return { i: B._vert(p[0], p[1], p[2], n[0], n[1], n[2], k[0], k[1], k[2], conLuz ? undefined : U.LUZ_PLANA), q: p }; });
+    for (const t of THREE.ShapeUtils.triangulateShape(v2(poly), H.map(v2))) tri(B, ids[t[0]].i, ids[t[1]].i, ids[t[2]].i, ids[t[0]].q, ids[t[1]].q, ids[t[2]].q, n);
   }
 
   /* UN TUBO: anillos 3D (secciones convexas, todas con los mismos puntos)
@@ -2357,6 +2664,8 @@
   CUBRE.shades8 = oBanda(bandaV(-0.086, 0.102, 48), bandaV(-0.1, 0.102, 84));          // el frente y las patillas con el gancho
   CUBRE.goggles1 = oBanda(bandaV(-0.112, 0.15, 60), bandaV(-0.095, 0.035, 180));       // la carcasa y la correa
   CUBRE.paintball1 = oBanda(bandaV(-0.112, 0.149, 56), bandaV(-0.086, 0.1, 106), bandaV(-0.061, 0.08, 180));   // visor, hebillas, correa
+  // la ATP: lo que queda delante del borde de atras de sus costados, y la solapa
+  CUBRE.agent2_mask = (az, el) => { const p = sobre(az, el, 0); return (p[2] > ATP.zb - 0.05 && p[1] > 0.99) || (p[1] > 1.07 && p[1] < 1.27); };
   // la plancha: su frente (de costado tapa el perfil de la cara) y la correa
   CUBRE.tricky = (az, el) => (Math.cos(az * RAD) > 0.35 && el < 48) || Math.abs(el - elDeY(trickyBase().yE + TRICKY.vCorrea)) < 7;
   // los pañuelos: de su borde de arriba para abajo
