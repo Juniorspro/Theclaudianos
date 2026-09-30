@@ -2,6 +2,14 @@
 Una entrada por sesión: qué quedó y qué falta. Lo largo de cada vuelta está en el mensaje del
 commit; acá va lo que otra sesión necesita saber.
 
+## 2026-09-30 — armor3, tienda completa y Nevada en pausa
+Quien pide veía la silueta del primer chaleco cortada o deforme. Lo rehice con canto en cuarto de caña
+y tinta en cuarto de elipse; el detector nuevo (`trazos.js`) bajó de 8.762 px sueltos y 48.738
+despegados a 403 y 2.086 en 36 vistas. La tienda vende las 33 prendas con baldosa del SWF y la
+armadura protege y pide su ventaja. Bancos con 0 errores.
+**Pedido:** no seguir con el juego hasta nuevo aviso. **Falta:** armor1/2/4/5/6, remodelar los trajes
+de los enemigos y la astilla de la tinta bajo el chaleco vista de arriba ([nevada](nevada.md)).
+
 ## 2026-09-29 — chamaco: Nevada entra al repo
 Rama `ccr-29311d97-jmb0eu`. Arena Nevada (el Madness 3D de otra sesión) llegó como un HTML de
 7,29 MB: se partió en `nevada/` (53 fuentes + plantilla) y `armar.py` lo rearma idéntico (sha256).

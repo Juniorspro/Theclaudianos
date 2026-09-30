@@ -356,7 +356,7 @@
        o el collar del arnes) asoma la piel del muñeco, como en las hojas
        de vueltas. Un anillo repetido en el corte: debajo la tela, encima
        la piel, con el borde nitido. */
-    const corte = !silueta && F.ropa && Ropa.corte ? Ropa.corte(F.ropa) : 0;
+    const corte = !silueta && F.ropa && Ropa.corte ? Ropa.corte(F.ropa, F.camisa) : 0;
     if (corte) {
       let k = 0;
       while (k < filas.length - 1 && filas[k + 1][0] <= corte) k++;
@@ -380,7 +380,7 @@
          correas van a 2 cm de el, y adelantada su tinta les pasaba por
          delante y las pintaba de negro enteras */
       const n0 = B.n;
-      Ropa.construir(B, F.ropa, g, silueta, A, F.cara);
+      Ropa.construir(B, F.ropa, g, silueta, A, F.cara, F.camisa);
       (B.ropa = B.ropa || []).push([n0, B.n]);
     }
     /* EL CHALECO (la ranura shirt del SWF, prendas.js): va ENCIMA del

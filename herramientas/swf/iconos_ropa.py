@@ -12,6 +12,8 @@ sea la caja (-2, -2, 88, 110) a escala 3 da 270 x 336.
   MasksAll, solo _R y _L: el original se quedaba en el cuadro 1 (otra mascara). Va la _R.
 - Los trajes de agente no se venden en el SWF: son el cuerpo del agente ('Parts - Body', 7289,
   cuadros agent / agent2 / agent3), puesto donde el retrato pone la ropa (myShirt).
+- Cascos (HatsAll 7363, myHat), mascaras (MasksAll 7358, myMask), bocas (MouthsAll 7318, myMouth) y
+  chalecos (Outfit - Body - Core 7295, myShirt): el cuadro hat / mask / mouth / shirt del retrato.
 """
 import base64, json, os, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -26,16 +28,21 @@ FUERA_CUERPO = {'myBackup', 'myShirt', 'teamColor'}
 # el cuerpo (34 x 61 px, centro en 0,-0,5) a escala 0,95 centrado en (40, 44), el centro de la ropa
 # de la tienda (armor1 de 'Outfit - Body - Core' puesto por el retrato)
 M_CUERPO = (0.95, 0.0, 0.0, 0.95, 800, 890)
-# id de la tienda -> (cuadro del retrato, instancia, simbolo, rotulo de la prenda)
-PRENDAS = {
-    'agent1_mask':   ('mask', 'myMask', 7358, 'agent1_mask'),
-    'agent1_mask_b': ('mask', 'myMask', 7358, 'agent1_mask_b'),
-    'agent2_mask':   ('mask', 'myMask', 7358, 'agent2_mask_R'),
-    'agent3_mask':   ('mask', 'myMask', 7358, 'agent3_mask_R'),
-    'agent':         ('shirt', 'myShirt', 7289, 'agent'),
-    'agent2':        ('shirt', 'myShirt', 7289, 'agent2'),
-    'agent3':        ('shirt', 'myShirt', 7289, 'agent3'),
+# id de la tienda -> (cuadro del retrato, instancia, simbolo, rotulo de la prenda): TODO lo que la
+# tienda vende (lo modelado en 3D: Prendas.modelada). El rotulo es el id del SWF salvo las mascaras con
+# dos lados, que van con la _R.
+CATS = {'hat': ('hat', 'myHat', 7363), 'mask': ('mask', 'myMask', 7358), 'mouth': ('mouth', 'myMouth', 7318),
+        'shirt': ('shirt', 'myShirt', 7295), 'traje': ('shirt', 'myShirt', 7289)}
+VENTA = {
+    'hat':   ['hat1', 'hat2', 'hat3', 'hat4', 'hat5', 'hat6', 'headphones', 'top', 'fedora', 'hat9', 'helmet1', 'helmet3'],
+    'mask':  ['agent1_mask', 'agent1_mask_b', 'agent2_mask', 'agent3_mask', 'shades1', 'shades3', 'shades5', 'shades8',
+              'shades12', 'goggles1', 'paintball1', 'tricky'],
+    'mouth': ['mouth3', 'mouth6', 'mask1', 'mouth10', 'mouth1'],
+    'shirt': ['armor3'],
+    'traje': ['agent', 'agent2', 'agent3'],
 }
+ROTULO = {'agent2_mask': 'agent2_mask_R', 'agent3_mask': 'agent3_mask_R'}
+PRENDAS = {pid: CATS[cat] + (ROTULO.get(pid, pid),) for cat, L in VENTA.items() for pid in L}
 
 
 def main():
@@ -69,7 +76,8 @@ def main():
     with open(js, 'w', encoding='utf-8') as f:
         f.write('/* ropa_swf.js -> GENERADO por herramientas/swf/iconos_ropa.py: no se edita a mano.\n'
                 '   Baldosas de la ropa de la tienda: madness_item_portrait (8254) del SWF con la prenda\n'
-                '   dentro (MasksAll 7358; los trajes de agente, bodySprite de Parts - Body 7289), con el\n'
+                '   dentro (HatsAll 7363, MasksAll 7358, MouthsAll 7318, Outfit - Body - Core 7295; los trajes\n'
+                '   de agente, bodySprite de Parts - Body 7289), con el\n'
                 '   mismo encuadre que las baldosas de armas de tienda_swf.js (270 x 336, x3). */\n'
                 '(function (global) {\n  global.ROPA_SWF = ' + json.dumps({'baldosa': baldosa}, separators=(',', ':')) +
                 ';\n})(window);\n')

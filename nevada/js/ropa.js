@@ -272,7 +272,8 @@
      altura a que altura sobre la tela. o.borde: el filo negro de su
      cara (el trazo del dibujo); los cantos, negros.
        o.pegada: sigue la tela punto a punto (camisa, lineas, botones)
-       si no, rigida en el plano tangente (placas, hebillas, remaches)
+       si no, rigida en el plano tangente (placas, hebillas, remaches);
+       o.lisa, en el de la cascara lisa de los chalecos
      o.tinta: con casco de contorno (las que asoman de la silueta).
      ============================================================= */
   function area2(poly) {
@@ -313,13 +314,19 @@
   function aplicarPlano(F, o) {
     const giro = o.giro || 0, cg = Math.cos(giro), sg = Math.sin(giro);
     const rot = (u, v) => { u += o.du || 0; v += o.dv || 0; return [u * cg - v * sg, u * sg + v * cg]; };
+    if (o.pegada && o.lisa) {
+      return (u, v, h) => {
+        const [a, b] = rot(u, v), y = o.y + b, ps = avanzarL(F, o.psi, y, a);
+        return { p: supL(F, ps, y, h).slice(0, 3), n: normalL(F, ps, y) };
+      };
+    }
     if (o.pegada) {
       return (u, v, h) => {
         const [a, b] = rot(u, v), y = o.y + b, ps = avanzar(F, o.psi, y, a);
         return { p: sup(F, ps, y, h).slice(0, 3), n: normal(F, ps, y) };
       };
     }
-    const K = marco(F, o.psi, o.y);
+    const K = (o.lisa ? marcoL : marco)(F, o.psi, o.y);     // o.lisa: sobre la cascara lisa de un chaleco
     return (u, v, h) => {
       const [a, b] = rot(u, v);
       return { p: [0, 1, 2].map((k) => K.P[k] + K.U[k] * a + K.V[k] * b + K.n[k] * h), n: K.n };
@@ -331,7 +338,34 @@
     if (area2(poly) < 0) poly = poly.slice().reverse();
     const M = aplicarPlano(F, o), d0 = o.d[0], d1 = o.d[1], paso = o.pegada ? PASO : 1e9;
     if (silueta) {
-      const fuera = encoger(poly, -g), P = densificar(fuera, cuentas(fuera, paso));
+      const fuera = encoger(poly, -g), ks = cuentas(fuera, paso), P = densificar(fuera, ks);
+      if (o.bisel) {
+        /* o.bisel (lo que se apoya en la tela: las hebillas de un chaleco): con la pared recta, el pie del
+           casco quedaba en la tela a g de la pieza y de refilon salia como una raya aparte. Asi que el casco
+           baja EN BISEL desde la arista de arriba hasta la tela, g mas afuera, con las esquinas del
+           pie REDONDAS (en inglete la esquina salia g x 1,4 en diagonal y de refilon parecia una espina). El
+           pie, 2 cm bajo la tela punto por punto: pegada, es M; rigida, una hebilla de 6 cm en la esquina de
+           atras del torso tiene la tela 1,5 cm por debajo de su plano en los costados, y un pie a una altura
+           fija del plano quedaba en el aire. */
+        const arr = [], pie2 = [], n = poly.length, K = o.pegada ? null : marcoL(F, o.psi, o.y), giro = o.giro || 0;
+        const fuera2 = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1; return [dy / L, -dx / L]; };
+        for (let i = 0; i < n; i++) {
+          const a = poly[(i + n - 1) % n], b = poly[i], c = poly[(i + 1) % n], n1 = fuera2(a, b), n2 = fuera2(b, c);
+          const t1 = Math.atan2(n1[1], n1[0]); let t2 = Math.atan2(n2[1], n2[0]);
+          while (t2 < t1) t2 += U.TAU;
+          for (let k = 0; k <= 4; k++) { const t = t1 + (t2 - t1) * k / 4; arr.push(b); pie2.push([b[0] + g * Math.cos(t), b[1] + g * Math.sin(t)]); }
+          const L = Math.hypot(c[0] - b[0], c[1] - b[1]), m = Math.max(1, Math.ceil(L / Math.min(paso, 1e3)));
+          for (let j = 1; j < m; j++) { const q = [b[0] + (c[0] - b[0]) * j / m, b[1] + (c[1] - b[1]) * j / m]; arr.push(q); pie2.push([q[0] + n2[0] * g, q[1] + n2[1] * g]); }
+        }
+        const pie = (q) => {
+          if (o.pegada) return M(q[0], q[1], -0.02).p;
+          const u0 = q[0] + (o.du || 0), v0 = q[1] + (o.dv || 0), u = u0 * Math.cos(giro) - v0 * Math.sin(giro), v = u0 * Math.sin(giro) + v0 * Math.cos(giro);
+          const Sh = supL(F, o.psi + u / metricaL(F, o.psi, o.y), o.y + v, 0);
+          return M(q[0], q[1], Math.min(0, dot3(sub3(Sh, K.P), K.n)) - 0.02).p;
+        };
+        H3().barridoTinta(B, [pie2.map((q) => M(q[0], q[1], d0 - g).p), pie2.map(pie), arr.map((q) => M(q[0], q[1], d1 + g).p)]);
+        return;
+      }
       H3().barridoTinta(B, [P.map((q) => M(q[0], q[1], d0 - g).p), P.map((q) => M(q[0], q[1], d1 + g).p)]);
       return;
     }
@@ -466,7 +500,9 @@
     const co = (o) => correa(B, F, g, silueta, o);
     const al = (o) => almohada(B, F, g, silueta, o);
     const ar = (o) => aro(B, F, g, silueta, o);
-    const arnes = F2.traje === 'agente2';
+    /* CON CHALECO ENCIMA (la ranura shirt), como en el SWF -el chaleco se dibuja sobre el cuerpo-, lo que
+       queda debajo no se hace: sin arnes ni bandolera (asomaban por la placa), el saco de siempre */
+    const arnes = F2.traje === 'agente2' && !F2.chaleco;
 
     /* LA CORBATA (el arnes la tapa): UNA pieza negra: el nudo -un bulto
        redondo que de costado asoma de la silueta, como en la hoja- en el
@@ -610,7 +646,7 @@
            poly: [[-0.02, 0.018], [-0.03, -0.02], [0.03, -0.02], [0.02, 0.018]] });
     }
 
-    if (F2.traje === 'agente3') {
+    if (F2.traje === 'agente3' && !F2.chaleco) {
       /* LA BANDOLERA (su hoja de vueltas, gris 39): 6,5 cm de ancho, por
          encima del hombro derecho (-x: lo mas alto, 0,95, un poco por
          delante del costado, con la hebilla) a la cadera izquierda (+x:
@@ -636,6 +672,285 @@
     }
   }
 
+  /* =============================================================
+     LOS CHALECOS (la ranura 'shirt' del SWF: 'Outfit - Body - Core',
+     7295, armor1 a armor6), DE SUS TRAZADOS: el cuerpo del civ con cada
+     uno puesto ('Parts - Body' 7289, myShirt) en SVG. El cuerpo del SWF
+     esta dibujado DE PERFIL (mira a la derecha): se comparan con la camara
+     a -90. Lo que en la hoja es una placa que tapa el costado es, en 3D,
+     un CHALECO que envuelve el frente y los dos costados; atras lo cierran
+     las correas, con sus hebillas junto al borde de la placa.
+     De la hoja (escala 12) al muñeco: y = 0,146 + (870 - y_png) / 732; y
+     la x del perfil, entre el contorno de atras y el de delante del civ en
+     esa fila, es la profundidad del nuestro: psi = acos(w^1,5), con w de
+     -1 (atras) a 1 (delante).
+     ============================================================= */
+
+  /* LA CASCARA LISA: la superelipse (|x/a|^3 + |z/b|^3 = 1) que pasa por
+     las esquinas del dodecagono; sus caras quedan hasta 0,9 cm por dentro
+     (medido). Una prenda RIGIDA se apoya en ella: pegada a las caras, su
+     borde de arriba salia quebrado en cada arista del torso. */
+  function supL(F, psi, y, d) {
+    const q = filaEn(F, y), th = Math.PI / 2 - psi, c = Math.cos(th), s = Math.sin(th);
+    const dx = Math.sign(c) * Math.pow(Math.abs(c), POT), dz = Math.sign(s) * Math.pow(Math.abs(s), POT);
+    let nx = Math.sign(dx) * dx * dx / q[1], nz = Math.sign(dz) * dz * dz / q[2];
+    const L = Math.hypot(nx, nz) || 1; nx /= L; nz /= L;
+    return [dx * q[1] + nx * d, y, q[3] + dz * q[2] + nz * d, nx, nz];
+  }
+  function metricaL(F, psi, y) {
+    const e = 0.003, a = supL(F, psi - e, y, 0), b = supL(F, psi + e, y, 0);
+    return Math.hypot(b[0] - a[0], b[2] - a[2]) / (2 * e);
+  }
+  function normalL(F, psi, y) {
+    const e = 0.003, P = supL(F, psi, y, 0), a = supL(F, psi, y - e, 0), b = supL(F, psi, y + e, 0);
+    const dr = ((b[0] - a[0]) * P[3] + (b[2] - a[2]) * P[4]) / (2 * e);
+    const L = Math.hypot(P[3], dr, P[4]);
+    return [P[3] / L, -dr / L, P[4] / L];
+  }
+  // su plano tangente (como marco): lo rigido que va encima de un chaleco
+  function marcoL(F, psi, y) {
+    const e = 0.003, P = supL(F, psi, y, 0);
+    const Uu = uni(sub3(supL(F, psi + e, y, 0), supL(F, psi - e, y, 0)));
+    let n = uni(cruz(Uu, sub3(supL(F, psi, y + e, 0), supL(F, psi, y - e, 0))));
+    if (n[0] * P[3] + n[2] * P[4] < 0) n = [-n[0], -n[1], -n[2]];
+    return { P: [P[0], P[1], P[2]], U: Uu, V: uni(cruz(n, Uu)), n };
+  }
+
+  function avanzarL(F, psi, y, u) {
+    const n = Math.max(1, Math.ceil(Math.abs(u) / 0.006)), du = u / n;
+    for (let i = 0; i < n; i++) psi += du / metricaL(F, psi + du / (2 * metricaL(F, psi, y)), y);
+    return psi;
+  }
+
+  /* UNA PLACA RIGIDA sobre la cascara lisa, CON EL CANTO EN CUARTO DE
+     CAÑA: de psC - psE a psC + psE (0 delante, PI atras), de o.yB(psi) a
+     o.yT(psi), con las esquinas de sus puntas redondas (o.RT arriba, o.RB
+     abajo, en metros) y FRANJAS pintadas a todo su alrededor, de fuera
+     hacia dentro (o.franjas: [{T, B, E, hex}]: su ancho arriba, abajo y en
+     las puntas); dentro, o.hex.
+     EL CANTO: de la tela a la cara en un cuarto de circulo de radio r = el
+     alto de la cara (dentro de la primera franja, negro), y LA TINTA es la
+     misma placa agrandada g: la cara a dF + g y el canto de radio r + g con
+     el mismo centro. Asi es convexa y lisa, y desde cualquier lado lo que
+     asoma de ella es una franja pegada al borde. Con canto recto y el casco
+     hinchado para todos lados, sus paredes de arriba y de abajo eran una
+     cornisa en la tela a g del borde (vista de arriba o de abajo, una
+     segunda linea separada por una tira de torso); con un bisel plano, al
+     ponerse de canto (a ~16 grados) salia una rayita cortada.
+     Se arma desde EL BORDE DE LA CARA (el contorno de mas adentro), hacia
+     fuera: cada punto de ese contorno se corre por su normal lo que mide
+     cada franja ahi (en las esquinas, mezcla del ancho de arriba o abajo y
+     el de la punta), y hacia dentro la cara es una grilla de columnas. */
+  const D_IN = -0.015;                         // bajo toda cara del torso (0,9 cm por dentro de la cascara)
+  function placaL(B, F, g, silueta, o) {
+    if (silueta && o.sinTinta) return;
+    const fn = (v) => (typeof v === 'function' ? v : () => v);
+    const yT = fn(o.yT), yB = fn(o.yB), psC = o.psC || 0, psE = o.psE, fr = o.franjas || [];
+    const W = { T: 0, B: 0, E: 0 };
+    for (const f of fr) { W.T += f.T; W.B += f.B; W.E += f.E; }
+    // el canto cabe en la primera franja
+    const r = o.r || Math.min(fr[0].T, fr[0].B, fr[0].E) - 0.001, dF = r;
+    const yM = (yB(psC) + yT(psC)) / 2, mm = metricaL(F, psC + psE, yM), sF = psE * mm - W.E;
+    const ejes = (R, Wy) => [Math.max(0.006, R - W.E), Math.max(0.006, R - Wy)];
+    const [axT, ayT] = ejes(o.RT || 0, W.T), [axB, ayB] = ejes(o.RB || 0, W.B);
+    // [abajo, arriba] del borde de la cara en la columna s (metros desde psC, |s| <= sF)
+    const cara = (s) => {
+      const ps = psC + s / mm, d = Math.abs(s);
+      const q = (ax, ay) => { const x = U.clamp((d - (sF - ax)) / ax, 0, 1); return ay * (1 - Math.sqrt(1 - x * x)); };
+      return [yB(ps) + W.B + q(axB, ayB), yT(ps) - W.T - q(axT, ayT)];
+    };
+    const ss = new Set(), nC = Math.max(8, Math.ceil(2 * sF / 0.02));
+    for (let i = 0; i <= nC; i++) ss.add(+(-sF + 2 * sF * i / nC).toFixed(5));
+    for (const l of [-1, 1]) for (const ax of [axT, axB]) for (let k = 1; k < 10; k++) ss.add(+(l * (sF - ax * (1 - Math.sin(k / 10 * Math.PI / 2)))).toFixed(5));
+    const S = Array.from(ss).map((v) => U.clamp(v, -sF, sF)).sort((a, b) => a - b).filter((v, i, A) => i === 0 || v - A[i - 1] > 2e-4);
+    const nIn = o.nIn || 8;
+    const col = S.map((s) => { const [a, b] = cara(s); return { ps: psC + s / mm, ys: Array.from({ length: nIn + 1 }, (_, j) => a + (b - a) * j / nIn) }; });
+    const nc = col.length;
+    // el borde de la cara, antihorario: abajo, la punta de +psi, arriba, la otra punta
+    const lazo = [];
+    for (let j = 0; j < nc; j++) lazo.push([j, 0]);
+    for (let k = 1; k < nIn; k++) lazo.push([nc - 1, k]);
+    for (let j = nc - 1; j >= 0; j--) lazo.push([j, nIn]);
+    for (let k = nIn - 1; k >= 1; k--) lazo.push([0, k]);
+    const pts = lazo.map(([j, k]) => [col[j].ps, col[j].ys[k]]), M = pts.length;
+    const nor = pts.map((p, i) => {
+      const a = pts[(i + M - 1) % M], b = pts[(i + 1) % M], m = metricaL(F, p[0], p[1]);
+      const tx = (b[0] - a[0]) * m, ty = b[1] - a[1], L = Math.hypot(tx, ty) || 1;
+      return [ty / L, -tx / L];
+    });
+    const N3 = (ps, y) => normalL(F, ps, y);
+    const Tout = (ps, y, nu, ny) => {
+      const e = 0.003, Uu = uni(sub3(supL(F, ps + e, y, 0), supL(F, ps - e, y, 0))), Vv = uni(sub3(supL(F, ps, y + e, 0), supL(F, ps, y - e, 0)));
+      return uni([0, 1, 2].map((k) => nu * Uu[k] + ny * Vv[k]));
+    };
+    const P3 = (ps, y, h) => supL(F, ps, y, h).slice(0, 3);
+    const mezcla = (n1, n2, c, s2) => uni([0, 1, 2].map((k) => n1[k] * c + n2[k] * s2));
+    const BET = [22.5, 45, 67.5, 90].map((b) => b * Math.PI / 180);
+    // los niveles de cada punto del borde, de la cara hacia fuera: [o (m por su normal), h, normal, franja]
+    const niveles = (i, tinta) => {
+      const [nu, ny] = nor[i], wu = nu * nu, w = fr.map((f) => wu * f.E + (1 - wu) * (ny > 0 ? f.T : f.B));
+      const Wp = w.reduce((a, b) => a + b, 0), p = pts[i], m = metricaL(F, p[0], p[1]);
+      /* lo que va por debajo de la cascara (el pie del canto, la tinta que se mete) se mide desde la cara
+         de verdad del torso, facetada: entre arista y arista queda hasta 0,9 cm por dentro de la cascara, y
+         un pie a la altura de la cascara asomaba ahi como una raya suelta junto al borde */
+      const en = (o2, h) => { const ps = p[0] + nu * o2 / m, y = p[1] + ny * o2; return { p: h > 0 ? P3(ps, y, h) : sup(F, ps, y, h - 0.002).slice(0, 3), N: N3(ps, y), T: Tout(ps, y, nu, ny) }; };
+      const L = [];
+      if (!tinta) {
+        L.push(Object.assign(en(0, dF), { f: fr.length - 1, a: 0 }));
+        let t = Wp;
+        for (let k = fr.length - 1; k >= 1; k--) {
+          t -= w[k];
+          const q = en(Wp - t, dF);
+          L.push(Object.assign({}, q, { f: k, a: 0 }), Object.assign({}, q, { f: k - 1, a: 0 }));   // doble: el color corta limpio
+        }
+        L.push(Object.assign(en(Wp - r, dF), { f: 0, a: 0 }));
+        for (const b of BET) L.push(Object.assign(en(Wp - r + r * Math.sin(b), r * Math.cos(b)), { f: 0, a: b }));
+        L.push(Object.assign(en(Wp, D_IN), { f: 0, a: Math.PI / 2 }));
+      } else {
+        /* la tinta: la cara a dF + g y el canto en CUARTO DE ELIPSE hasta el mismo pie que el color (semiejes
+           r a lo ancho y r + g de alto, mismo centro): sale del color solo hacia fuera de la cara. Un canto de
+           tinta que pisaba la tela g mas alla del borde (redondo o en bisel), mirado casi de frente, dejaba
+           ver solo su pie empinado: una raya suelta a g del borde. El pie del borde es un pliegue, no una
+           silueta: su trazo es el canto negro del color. */
+        L.push(Object.assign(en(Wp - r, dF + g), { a: 0 }));
+        for (const b of BET) L.push(Object.assign(en(Wp - r + r * Math.sin(b), (r + g) * Math.cos(b)), { a: Math.atan2(Math.sin(b) / r, Math.cos(b) / (r + g)) }));
+        L.push(Object.assign(en(Wp, D_IN - g), { a: Math.PI / 2 }));
+        L.push(Object.assign(en(Wp, D_IN - g), { a: Math.PI }));
+      }
+      for (const q of L) q.n = q.a <= Math.PI / 2 ? mezcla(q.N, q.T, Math.cos(q.a), Math.sin(q.a)) : q.N.map((v) => -v);
+      return L;
+    };
+    const NIV = pts.map((_, i) => niveles(i, silueta));
+    const nL = NIV[0].length;
+
+    if (silueta) {
+      const c = B._rgb(0x000000, 1);
+      const rej = (h, abajo) => col.map((C) => C.ys.map((y) => { const n = N3(C.ps, y); return vert(B, P3(C.ps, y, h), abajo ? n.map((v) => -v) : n, c); }));
+      const Tg = rej(dF + g, false), Bg = rej(D_IN - g, true);
+      for (let j = 1; j < nc; j++) for (let k = 0; k < nIn; k++) {
+        quad(B, Tg[j - 1][k], Tg[j][k], Tg[j][k + 1], Tg[j - 1][k + 1], Tg[j - 1][k].n);
+        quad(B, Bg[j - 1][k], Bg[j][k], Bg[j][k + 1], Bg[j - 1][k + 1], Bg[j - 1][k].n);
+      }
+      // los anillos: del borde de la grilla de arriba, por el canto, al borde de la de abajo
+      const filas = [lazo.map(([j, k]) => Tg[j][k])];
+      for (let L = 0; L < nL; L++) filas.push(NIV.map((lv) => vert(B, lv[L].p, lv[L].n, c)));
+      filas.push(lazo.map(([j, k]) => Bg[j][k]));
+      for (let L = 1; L < filas.length; L++) {
+        const A = filas[L - 1], Bf = filas[L];
+        for (let i = 0; i < M; i++) { const i2 = (i + 1) % M; quad(B, A[i], A[i2], Bf[i2], Bf[i], Bf[i].n); }
+      }
+      return;
+    }
+
+    // la cara: la grilla de columnas
+    {
+      const c = B._rgb(o.hex, 1);
+      let prev = null;
+      for (const C of col) {
+        const fila = C.ys.map((y) => vert(B, P3(C.ps, y, dF), N3(C.ps, y), c));
+        if (prev) for (let k = 0; k < nIn; k++) quad(B, prev[k], fila[k], fila[k + 1], prev[k + 1], prev[k].n);
+        prev = fila;
+      }
+    }
+    /* las franjas y el canto: una tira por cada par de niveles seguidos de la misma franja (los dobles de
+       un borde de franja cambian de color sin tira entre ellos) */
+    for (let L = 1; L < nL; L++) {
+      const f = NIV[0][L].f;
+      if (NIV[0][L - 1].f !== f) continue;
+      const cA = B._rgb(fr[f].hex, 1);
+      const A = NIV.map((lv) => vert(B, lv[L - 1].p, lv[L - 1].n, cA)), Bf = NIV.map((lv) => vert(B, lv[L].p, lv[L].n, cA));
+      for (let i = 0; i < M; i++) { const i2 = (i + 1) % M; quad(B, A[i], A[i2], Bf[i2], Bf[i], Bf[i].n); }
+    }
+  }
+
+  const TR = 0.0164;                  // el trazo del SWF: 1 px de su escala, 1,64 cm en el muñeco
+  const GR_PLACA = 0x353535, GR_BORDE = 0x272727, GR_HEBILLA = 0x656565;   // 69, 51 y 131 de la hoja (x 0,77)
+  /* LA HEBILLA: un marco de cuatro barras, rigido en el plano tangente de
+     la cascara lisa, centrado en (psi, y): o.w a lo largo de la correa, o.h
+     a lo largo del cuerpo. Las barras sin tinta propia: donde se pisan en
+     las esquinas, el casco de cada una asomaba sobre la otra como una raya
+     negra; la tinta es UN casco alrededor del marco entero. */
+  function hebilla(B, F, g, silueta, o) {
+    const w = o.w, h = o.h, b = o.barra || 0.022, base = { lisa: true, pegada: true, psi: o.psi, y: o.y, d: o.d || [D_IN, 0.03] };
+    if (silueta) { pieza(B, F, g, true, Object.assign({ w, h, tinta: true, bisel: true }, base)); return; }
+    const barra = (bw, bh, du, dv) => pieza(B, F, g, false, Object.assign({ du, dv, w: bw, h: bh, hex: o.hex || GR_HEBILLA }, base));
+    barra(w, b, 0, (h - b) / 2); barra(w, b, 0, -(h - b) / 2);
+    barra(b, h - 2 * b, (w - b) / 2, 0); barra(b, h - 2 * b, -(w - b) / 2, 0);
+  }
+  /* LAS CORREAS DE ATRAS, de yB a yT por la espalda, con su HEBILLA en
+     cada punta, pegada al borde de la placa: la correa acaba bajo la barra
+     de delante de la hebilla (metida bajo la placa, en su esquina redonda
+     la correa quedaba al aire y su tinta asomaba en punta). */
+  function correaAtras(B, F, g, silueta, o) {
+    const y = (o.yB + o.yT) / 2, m = metricaL(F, o.psE, y), w = o.hw || 0.065, b = 0.022;
+    placaL(B, F, g, silueta, { psC: Math.PI, psE: Math.PI - o.psE - (b / 2) / m, yB: o.yB, yT: o.yT, r: o.grueso || 0.008, RT: 0.014, RB: 0.014,
+                               franjas: [{ T: 0.012, B: 0.012, E: 0.012, hex: NEGRO }], hex: o.hex || GR_BORDE });
+    // el hueco de la hebilla, 5 mm dentro de la correa: si no, asoma el torso por arriba y por abajo
+    for (const s of [1, -1]) {
+      const ps = s * (o.psE + (w / 2) / m);
+      hebilla(B, F, g, silueta, { psi: ps, y, w, h: o.yT - o.yB + 2 * b - 0.01, barra: b });
+      if (o.punta) solapa(B, F, g, silueta, { psi: ps, y, lado: s, u0: w / 2 - b / 2, b, L: o.punta, h: o.yT - o.yB - 0.01, hex: o.hex || GR_BORDE });
+    }
+  }
+  /* LA PUNTA SUELTA de una correa: la lengueta que en la hoja asoma de la
+     hebilla hacia atras, por fuera del contorno de la espalda. Una
+     tablita que sale de debajo de la barra de atras de la hebilla, 25
+     grados despegada de la tela, larga o.L y de 6 mm; su tinta, la tablita
+     agrandada g, desde donde sale de la barra (en su raiz, metida en la
+     hebilla, el casco asomaba por encima de la barra). */
+  function solapa(B, F, g, silueta, o) {
+    const K = marcoL(F, o.psi, o.y), th = 25 * Math.PI / 180, t = 0.006;
+    const U0 = K.U.map((v) => v * o.lado), A = uni([0, 1, 2].map((k) => U0[k] * Math.cos(th) + K.n[k] * Math.sin(th))), V = K.V;
+    let Nn = uni(cruz(A, V));
+    if (dot3(Nn, K.n) < 0) Nn = Nn.map((v) => -v);
+    const O = [0, 1, 2].map((k) => K.P[k] + U0[k] * o.u0 + K.n[k] * 0.012);
+    const Pt = (a, v, n) => [0, 1, 2].map((k) => O[k] + A[k] * a + V[k] * v + Nn[k] * n);
+    const h2 = o.h / 2;
+    if (silueta) {
+      /* en la raiz, apoyada en la correa, el casco apenas pasa de la tablita por los costados y por debajo
+         (hinchado g, se apoyaba en la correa y en el torso como una cornisa); en la punta, g para todos lados */
+      const an = [[o.b / 2, 0.003, 0.002], [o.L + g, g, g]].map(([a, gs, gd]) => [[-h2 - gs, -gd], [h2 + gs, -gd], [h2 + gs, t + g], [-h2 - gs, t + g]].map(([v, n]) => Pt(a, v, n)));
+      H3().barridoTinta(B, an);
+      return;
+    }
+    const c = B._rgb(o.hex, 1), neg = (v) => v.map((x) => -x);
+    const cara = (q, n) => { const v4 = q.map((p) => vert(B, p, n, c)); quad(B, v4[0], v4[1], v4[2], v4[3], n); };
+    cara([Pt(0, -h2, t), Pt(o.L, -h2, t), Pt(o.L, h2, t), Pt(0, h2, t)], Nn);
+    cara([Pt(0, -h2, 0), Pt(o.L, -h2, 0), Pt(o.L, h2, 0), Pt(0, h2, 0)], neg(Nn));
+    cara([Pt(0, h2, 0), Pt(o.L, h2, 0), Pt(o.L, h2, t), Pt(0, h2, t)], V);
+    cara([Pt(0, -h2, 0), Pt(o.L, -h2, 0), Pt(o.L, -h2, t), Pt(0, -h2, t)], neg(V));
+    cara([Pt(o.L, -h2, 0), Pt(o.L, h2, 0), Pt(o.L, h2, t), Pt(o.L, -h2, t)], A);
+  }
+
+  const CHALECOS = {
+    /* armor3 (su trazado): la placa (69) con el reborde (51) entre dos
+       trazos de 1 px: arriba y atras sin reborde a la vista (3,3 cm de
+       negro), abajo 1,8 negro + reborde + 1,6 negro (el reborde, 1 cm y no
+       los 0,4 de la hoja: mas fino que dos pixeles en el celular sale a
+       rayitas, y sin antialias en calidad media, mas). Su borde de arriba baja
+       un centimetro de atras (0,906) hacia delante (0,895); el de abajo, a
+       0,340; atras llega a psi 2,29. Las dos correas, al ras de la placa
+       arriba y abajo, con la hebilla (131) en la esquina de atras. */
+    armor3: { nombre: 'Chaleco de placa', hacer: (B, F, g, s) => {
+      const w = (ps) => Math.sign(Math.cos(ps)) * Math.pow(Math.abs(Math.cos(ps)), POT);
+      const psE = 2.29;
+      placaL(B, F, g, s, { psE, yB: 0.340, yT: (ps) => 0.895 + 0.011 * U.clamp((0.98 - w(ps)) / 1.747, 0, 1), RT: 0.08, RB: 0.07,
+                           franjas: [{ T: TR, B: 0.0178, E: TR, hex: NEGRO }, { T: 0, B: 0.010, E: 0, hex: GR_BORDE }, { T: TR, B: TR, E: TR, hex: NEGRO }],
+                           hex: GR_PLACA });
+      correaAtras(B, F, g, s, { psE, yB: 0.818, yT: 0.884, punta: 0.045 });
+      correaAtras(B, F, g, s, { psE, yB: 0.346, yT: 0.436, punta: 0.045 });
+    } }
+  };
+  Ropa.CHALECOS = CHALECOS;
+  /* Pone el chaleco 'id' en B (el hueso del torso ya elegido); A, el ancho del torso; sobre un traje
+     (conTraje), un poco mas despegado. */
+  Ropa.construirCamisa = function (B, id, g, silueta, A, conTraje) {
+    const c = CHALECOS[id];
+    if (!c) return B;
+    c.hacer(B, filasTorso(A), g || 0, !!silueta, !!conTraje);
+    return B;
+  };
+
   /* LAS PRENDAS: la tela (color del torso) y lo que lleva encima. El
      traje del SWF mide 51 de gris contra los 153 del civ; aqui el peto
      del grunt va a 118, asi que el traje va a 118 x 51/153 = 39. Lo de
@@ -658,13 +973,13 @@
   /* Hasta donde sube la tela: por encima asoma la piel (chars.js). El
      saco, desde 0,915 (encima, su cuello tapa hasta donde llega); el arnes,
      por debajo del borde del collar y de la placa. */
-  Ropa.corte = (id) => (id === 'agent2' ? 0.885 : 0.915);
+  Ropa.corte = (id, chaleco) => (id === 'agent2' && !chaleco ? 0.885 : 0.915);      // con chaleco, sin arnes: el cuello del saco
   /* Pone la prenda 'id' en B, con el hueso del torso ya elegido. A es
-     el ancho del torso de quien la lleva. */
-  Ropa.construir = function (B, id, g, silueta, A) {
+     el ancho del torso de quien la lleva; chaleco, el que va encima (si hay). */
+  Ropa.construir = function (B, id, g, silueta, A, cara, chaleco) {
     const m = MODELOS[id];
     if (!m) return B;
-    traje(B, { traje: m.detalle, camisa: m.camisa, tela: m.tela }, g || 0, !!silueta, A);
+    traje(B, { traje: m.detalle, camisa: m.camisa, tela: m.tela, chaleco: chaleco || null }, g || 0, !!silueta, A);
     return B;
   };
 

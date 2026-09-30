@@ -7,13 +7,13 @@
        ids   lista separada por comas ('-' = sin prenda); cat: hat | mask | mouth
        vistas por defecto 0:10,35:10,70:10,110:10,160:10,-60:30; recorte en fracciones del cuadro
      TW=600 (ancho de cada vista en la hoja); S=1000 (lado del render, antes de recortar); FOV=30 (con 10 y D x3, casi sin perspectiva, como la hoja);
-     CANVAS=1 dibuja al canvas del juego y no a una textura: los cristales translucidos se mezclan como en
+     SINMANOS=1 esconde las manos (para mirar el torso); CANVAS=1 dibuja al canvas del juego y no a una textura: los cristales translucidos se mezclan como en
      la pantalla (en una textura sRGB la mezcla es lineal y salen mas claros) */
 const fs=require('fs'); let pw; try{pw=require('playwright')}catch(e){pw=require('/opt/node22/lib/node_modules/playwright')}
 (async()=>{
   const a=process.argv; const ids=a[2].split(','), cat=a[3], pre=a[4];
   const vistas=(a[5]||'0:10,35:10,70:10,110:10,160:10,-60:30').split(',').map(s=>s.split(':').map(Number));
-  const R=a[6]?[+a[6],+a[7],+a[8],+a[9]]:[0.15,0.10,0.85,0.90]; const D=+(a[10]||2.3); const modo=a[11]||''; const Y0=+(a[12]||1.33); const TW0=+(process.env.TW||600); const S0=+(process.env.S||1000); const FOV0=+(process.env.FOV||30); const CV0=!!process.env.CANVAS;
+  const R=a[6]?[+a[6],+a[7],+a[8],+a[9]]:[0.15,0.10,0.85,0.90]; const D=+(a[10]||2.3); const modo=a[11]||''; const Y0=+(a[12]||1.33); const TW0=+(process.env.TW||600); const S0=+(process.env.S||1000); const FOV0=+(process.env.FOV||30); const CV0=!!process.env.CANVAS; const SM0=!!process.env.SINMANOS;
   const nav=await pw.chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist','--no-sandbox']});
   const pg=await nav.newPage({viewport:{width:412,height:892},deviceScaleFactor:2,isMobile:true,hasTouch:true});
   pg.on('pageerror',e=>console.log('ERR',e.message));
@@ -24,11 +24,13 @@ const fs=require('fs'); let pw; try{pw=require('playwright')}catch(e){pw=require
   await pg.waitForFunction('Game.enMarcha && Game.tiempo > 0.5',null,{polling:250});
   if(process.env.PRE) await pg.evaluate(process.env.PRE);   // PRE: codigo a correr en la pagina antes de vestir (depurar)
   for(const id of ids){
-    const out=await pg.evaluate(async({id,cat,vistas,R,D,modo,Y0,TW0,S0,FOV0,CV0})=>{
+    const out=await pg.evaluate(async({id,cat,vistas,R,D,modo,Y0,TW0,S0,FOV0,CV0,SM0})=>{
       Game.pausa=true; const at={}; if(id!=='-') at[cat]=id;
       const t=Actor.crear({tipo:Chars.vestido('grunt',at),arma:'puños',x:0,z:0,mirando:1}); t.sinTope=true; t.guion=true; t.rumbo=t.rumboObj=Math.PI/2;
       for(let i=0;i<40;i++) Actor.actualizar(t,1/60,i/60);
       const esc=new THREE.Scene(); esc.add(t.grupo);
+      // SINMANOS=1: sin manos (tapan el pecho): sus huesos a escala casi nula, color y tinta
+      if(SM0 && t.cuerpo && t.cuerpo.piel){ const bs=t.cuerpo.piel.skeleton.bones; for(const i of Chars.MANOS_I.concat(Chars.MANOS_D)) if(bs[i]) bs[i].scale.setScalar(1e-4); }
       if(modo){ t.grupo.traverse(o=>{ if(o.isMesh && o.material && o.material.side===THREE.BackSide) o.visible=false; }); }
       const S=S0, ren=Game.ren, rt=new THREE.WebGLRenderTarget(S,S,{depthBuffer:true,colorSpace:THREE.SRGBColorSpace});
       const y0=Y0, TW=TW0;
@@ -58,7 +60,7 @@ const fs=require('fs'); let pw; try{pw=require('playwright')}catch(e){pw=require
       }
       ren.setRenderTarget(null); rt.dispose(); esc.remove(t.grupo);
       return c2.toDataURL('image/png');
-    },{id,cat,vistas,R,D,modo,Y0,TW0,S0,FOV0,CV0});
+    },{id,cat,vistas,R,D,modo,Y0,TW0,S0,FOV0,CV0,SM0});
     const f=pre+'_'+id+'.png'; fs.writeFileSync(f, Buffer.from(out.split(',')[1],'base64')); console.log(f);
   }
   await nav.close();

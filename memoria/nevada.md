@@ -151,6 +151,41 @@ Fuente: `nevada/` → `juegos-pc/ArenaNevada.html`. Ver también: [banco](banco.
 - Para aislar qué pieza pinta una raya: `PRE="window.x=..." zoom_prendas.js` (código antes de vestir) y
   el modo `sin` (sin tinta): si con `sin` se va, es tinta asomando.
 
+## El chaleco armor3 y la tienda completa (30/09)
+- **Nevada en pausa por pedido** («no seguiremos trabajando en el juego hasta nuevo aviso»). Quedaron
+  sin modelar armor1, 2, 4, 5 y 6 (el catálogo los tiene; `Prendas.modelada` los esconde) y sin
+  remodelar los trajes de los enemigos.
+- Chaleco (`ropa.js › placaL`): la placa va sobre la **cáscara lisa** (`supL`: la superelipse que pasa
+  por las esquinas del dodecágono; las caras quedan hasta 0,9 cm por dentro, medido). Pegada a las
+  caras, el borde de arriba salía quebrado en cada arista. Se arma desde el borde de la cara hacia
+  afuera: franjas pintadas por punto (arriba T, abajo B, puntas E, mezcladas en las esquinas) y el
+  canto en **cuarto de caña** negro de radio = alto de la cara.
+- **La tinta de algo apoyado en el torso**: su borde de abajo es un pliegue, no una silueta. Probé tres
+  cosas, y el detector las contó:
+  - el casco hinchado para todos lados (cornisa a g del borde) daba línea doble vista de arriba o de
+    abajo, y rayitas vista de canto;
+  - el bisel plano se pone de canto a unos 16° y deja una rayita cortada;
+  - el canto redondo de radio r + g, con el pie g más allá del borde, casi de frente deja ver solo el pie
+    empinado: una raya suelta.
+  Lo que anda: tinta en **cuarto de elipse** (semiejes r y r + g, mismo centro) que termina en el MISMO
+  pie que el color. Lo que va por debajo de la cáscara se mide desde la cara facetada (`sup`).
+- Ojo: `r * Math.cos(Math.PI / 2)` da 6e-17 > 0; `h > 0` no separa «en la cáscara» de «debajo».
+- Hebillas: pegadas a la cáscara (rígidas en la esquina de atrás del torso, sus cantos salían por la
+  otra cara como espinas), tinta en bisel con las esquinas del pie redondas. La correa termina bajo la
+  barra de adelante de la hebilla: metida bajo la placa, en su esquina redonda quedaba al aire. Las
+  lengüetas (`solapa`) son las del perfil del SWF.
+- Queda: vista de arriba a 45°, una astilla fina bajo el borde de abajo. La rampa de profundidad del
+  torso (`Art.CAPA`: 0,30 m × smoothstep(0,25, 0,85, y), por vértice) aleja 0,38 cm por cada cm de
+  altura, y la tinta del borde, más alta que el torso que tapa, queda detrás. Se arreglaría con un
+  adelanto chico para la tinta de la ropa, que el color de la ropa (adelantado 12 cm) sigue tapando.
+- Con chaleco encima, el traje no hace arnés ni bandolera (asomaban por la placa) y corta a 0,915
+  (`Ropa.construir(..., chaleco)`, `Ropa.corte(id, chaleco)`), como en el SWF.
+- Tienda: `iconos_ropa.py` saca las **33 baldosas** (cascos 7363 `myHat`, máscaras 7358, bocas 7318
+  `myMouth`, chalecos 7295 `myShirt`, trajes 7289) → `ropa_swf.js` (243 kB). Armadura medida con una
+  pistola de 7: sin nada, 7; chaleco + Blast Helm + Paintball + Breather, 4 al cuerpo y 2,7 a la cabeza;
+  sin ARMOR 1 se compra pero no se pone («REQUIERE ARMOR 1»); perforación atraviesa lo liviano y no lo
+  heavy. Grunt con el chaleco: 54.380 triángulos.
+
 ## Estado al cierre del log (29/09 05:31)
 - Lo último fue rehacer los íconos de los botones con piezas del SWF; USAR quedó con el dedo en
   diagonal y la sesión preguntó si lo quería más girado.

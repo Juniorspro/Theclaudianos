@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 2026-09-29.
+Última puesta al día: 2026-09-30.
 
 ## Reglas que no se discuten
 - Nunca cuadros de `AskUserQuestion`: se buguea en el celular. Preguntar en texto plano.
@@ -38,7 +38,7 @@
 | `assets/` | lo generado que el juego baja por CDN (texturas, GLB, cielo) | [entrega](entrega.md) |
 | `herramientas/rezona/` | cliente stdio `rz.py`, pedidos y horneados, `crudo/tareas.json` | [rezona](rezona.md) |
 | `herramientas/swf/` | lector de SWF en Python puro, SWF→SVG→PNG sin Ruffle, extractores (`marcha.py`, `iconos_ropa.py`) | [swf](swf.md) |
-| `herramientas/banco/` | `correr.py` (Bosque), `nevada.js`, `marcha.js`, `tienda.js`, `prendas.js` y `zoom_prendas.js` + `difpng.js` (Nevada) y `ver_glb.py` / `ver_anim.py` (modelos) | [banco](banco.md) · [nevada](nevada.md) |
+| `herramientas/banco/` | `correr.py` (Bosque), `nevada.js`, `marcha.js`, `tienda.js`, `prendas.js`, `zoom_prendas.js`, `trazos.js` (detector de trazos) + `difpng.js` (Nevada) y `ver_glb.py` / `ver_anim.py` (modelos) | [banco](banco.md) · [nevada](nevada.md) |
 | `.claude/skills/` | graficos, assets-ia, banco: las reglas largas heredadas | — |
 | `docs/` | `MANUAL_JUEGOS.md`, `GUIA-JUEGOS.md`, `MEMORIA.md`, traspaso | referencia, no plan |
 | `crudo/` | descargas y capturas de trabajo, **fuera de git** | — |

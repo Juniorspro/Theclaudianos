@@ -47,3 +47,16 @@ La ruta de acorn va **absoluta**.
 `python3 herramientas/banco/ver_glb.py <glb en crudo/ver> <salida.jpg>` da huesos, triángulos,
 caja y cuatro fotos. `ver_anim.py <glb> <clip>` mide además **cuánto se movieron los vértices**:
 un hueso mal pesado gira igual y no desplaza nada.
+
+## Trazos: el detector (30/09)
+- `node herramientas/banco/trazos.js ids cat carpeta [vistas] [y0] [D]`: cada prenda contra el muñeco
+  pelado, en 36 vistas. Hace tres pasadas (con tinta, sin tinta y la profundidad real) y cuenta en px:
+  - `suelta`: tinta sin contorno al lado;
+  - `despegada`: tinta separada del contorno por algo que no es negro (la línea doble);
+  - `hueco`: silueta sin tinta;
+  - `fino`: rasgos de 1-2 px.
+  Deja un JSON y recortes marcados en rojo. Para el torso: `SINMANOS=1 ... "" 0.68 3.0`.
+- `fino` es orientativo: un canto negro visto de refilón también mide 1-2 px.
+- Para ver la tinta sola: el material de tinta clonado en rojo (`mat.color`, que multiplica el color de
+  vértice) y el color de la ropa descartado donde `aAde > 0`. Así se vio que el torso tapaba la tinta
+  (la rampa `Art.CAPA`).
