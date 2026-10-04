@@ -174,7 +174,8 @@ Fuente: `nevada/` → `juegos-pc/ArenaNevada.html`. Ver también: [banco](banco.
   otra cara como espinas), tinta en bisel con las esquinas del pie redondas. La correa termina bajo la
   barra de adelante de la hebilla: metida bajo la placa, en su esquina redonda quedaba al aire. Las
   lengüetas (`solapa`) son las del perfil del SWF.
-- Queda: vista de arriba a 45°, una astilla fina bajo el borde de abajo. La rampa de profundidad del
+- Queda: vista de arriba a 45°, una astilla fina bajo el borde de abajo (2.101 px «despegados» con el detector corregido, R=30; las
+  lengüetas de las correas, que con R=14 daban ~400 «sueltos», con R=30 dan 0). **Hipótesis sin probar** de la astilla: la rampa de profundidad del
   torso (`Art.CAPA`: 0,30 m × smoothstep(0,25, 0,85, y), por vértice) aleja 0,38 cm por cada cm de
   altura, y la tinta del borde, más alta que el torso que tapa, queda detrás. Se arreglaría con un
   adelanto chico para la tinta de la ropa, que el color de la ropa (adelantado 12 cm) sigue tapando.

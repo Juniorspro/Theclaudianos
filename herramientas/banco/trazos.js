@@ -14,8 +14,10 @@
        ids: lista separada por comas; cat: hat | mask | mouth | shirt | traje. Cada vista se compara
        con el muñeco pelado: cuenta solo lo marcado cerca de la prenda que el pelado no marca ya
        vistas "az:el,..." (por defecto 12 azimuts x elevaciones -10, 15 y 45); y0 1.33, D 2.3
-     S=900 (lado del render), FOV=30, SINMANOS=1 (sin manos), R=14 (radio en px para buscar el
-     contorno de una tinta), UMBRAL=0.015 (m: salto de profundidad que es contorno)
+     S=900 (lado del render), FOV=30, SINMANOS=1 (sin manos), R=30 (radio en px para buscar el
+     contorno de una tinta: tiene que ser MAYOR que el grosor aparente de la linea, ~16-20 px a D=2,3 y
+     ~11 px a D=3,0; con R=14 la tinta gruesa de un sombrero salia 'suelta' sin serlo), UMBRAL=0.015
+     (m: salto de profundidad que es contorno)
    Deja carpeta/<id>.json con cada defecto y carpeta/<id>.png con los recortes marcados en rojo. */
 'use strict';
 const fs = require('fs'), path = require('path');
@@ -27,7 +29,7 @@ const VISTAS = vistasA ? vistasA.split(',').map((s) => s.split(':').map(Number))
   : [].concat(...[-10, 15, 45].map((el) => Array.from({ length: 12 }, (_, i) => [i * 30, el])));
 const Y0 = +(y0A || 1.33), D = +(dA || 2.3);
 const S = +(process.env.S || 900), FOV = +(process.env.FOV || 30), SM = !!process.env.SINMANOS;
-const R = +(process.env.R || 14), TAU = +(process.env.UMBRAL || 0.015);
+const R = +(process.env.R || 30), TAU = +(process.env.UMBRAL || 0.015);
 
 (async () => {
   fs.mkdirSync(DIR, { recursive: true });
@@ -91,7 +93,7 @@ const R = +(process.env.R || 14), TAU = +(process.env.UMBRAL || 0.015);
         esc.overrideMaterial = null; for (const o of F.tintas) o.visible = true; for (const o of F.vidrios) o.visible = true;
         return leer(rt);
       };
-      const cA = pasada(rtC, 0x8a8a8a, true, true), cB = pasada(rtC, 0x8a8a8a, false, true), cD = pasada(rtD, 0xffffff, false, false, matD);
+      const cA = pasada(rtC, 0x8a8a8a, true, true), cB = pasada(rtC, 0x8a8a8a, false, true), cD = pasada(rtD, 0xffffff, false, true, matD);      // el vidrio cuenta en la profundidad: es parte de la figura (si no, sus bordes salian como 'hueco')
       ren.setRenderTarget(null); esc.remove(F.t.grupo);
       const LA = new Float32Array(N), LB = new Float32Array(N), Z = new Float32Array(N);
       const n = 0.05, f = 60;

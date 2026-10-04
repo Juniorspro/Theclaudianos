@@ -57,6 +57,10 @@ un hueso mal pesado gira igual y no desplaza nada.
   - `fino`: rasgos de 1-2 px.
   Deja un JSON y recortes marcados en rojo. Para el torso: `SINMANOS=1 ... "" 0.68 3.0`.
 - `fino` es orientativo: un canto negro visto de refilón también mide 1-2 px.
+- `R` (radio para buscar el contorno de una tinta) tiene que ser MAYOR que el grosor aparente de la
+  línea: con `R=14` en cabezas (`D=2,3`) la tinta gruesa de un sombrero salía «suelta» sin serlo. Defecto
+  desde el 04/10: `R=30`; el vidrio cuenta en la pasada de profundidad (si no, su borde salía «hueco»).
+- Método completo, todas las herramientas y el estado de cada prenda: `docs/TRASPASO_NEVADA.md`.
 - Para ver la tinta sola: el material de tinta clonado en rojo (`mat.color`, que multiplica el color de
   vértice) y el color de la ropa descartado donde `aAde > 0`. Así se vio que el torso tapaba la tinta
   (la rampa `Art.CAPA`).

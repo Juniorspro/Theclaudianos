@@ -4,10 +4,12 @@ commit; acá va lo que otra sesión necesita saber.
 
 ## 2026-09-30 — armor3, tienda completa y Nevada en pausa
 Quien pide veía la silueta del primer chaleco cortada o deforme. Lo rehice con canto en cuarto de caña
-y tinta en cuarto de elipse; el detector nuevo (`trazos.js`) bajó de 8.762 px sueltos y 48.738
-despegados a 403 y 2.086 en 36 vistas. La tienda vende las 33 prendas con baldosa del SWF y la
+y tinta en cuarto de elipse; el detector nuevo (`trazos.js`) bajó, **con el mismo método**, de 3.116 px sueltos y 36.398
+despegados a ~400 y ~2.100 en 36 vistas (las cifras 8.762 / 48.738 del commit `06710f8` comparaban
+dos métodos distintos: ver `docs/TRASPASO_NEVADA.md` § 12.4). La tienda vende las 33 prendas con baldosa del SWF y la
 armadura protege y pide su ventaja. Bancos con 0 errores.
-**Pedido:** no seguir con el juego hasta nuevo aviso. **Falta:** armor1/2/4/5/6, remodelar los trajes
+**Pedido:** no seguir con el juego hasta nuevo aviso. El 04/10 se escribió `docs/TRASPASO_NEVADA.md`
+(todo el método, las herramientas y el estado, para pasarle a otra sesión). **Falta:** armor1/2/4/5/6, remodelar los trajes
 de los enemigos y la astilla de la tinta bajo el chaleco vista de arriba ([nevada](nevada.md)).
 
 ## 2026-09-29 — chamaco: Nevada entra al repo

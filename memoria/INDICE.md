@@ -40,5 +40,5 @@
 | `herramientas/swf/` | lector de SWF en Python puro, SWF→SVG→PNG sin Ruffle, extractores (`marcha.py`, `iconos_ropa.py`) | [swf](swf.md) |
 | `herramientas/banco/` | `correr.py` (Bosque), `nevada.js`, `marcha.js`, `tienda.js`, `prendas.js`, `zoom_prendas.js`, `trazos.js` (detector de trazos) + `difpng.js` (Nevada) y `ver_glb.py` / `ver_anim.py` (modelos) | [banco](banco.md) · [nevada](nevada.md) |
 | `.claude/skills/` | graficos, assets-ia, banco: las reglas largas heredadas | — |
-| `docs/` | `MANUAL_JUEGOS.md`, `GUIA-JUEGOS.md`, `MEMORIA.md`, traspaso | referencia, no plan |
+| `docs/` | `MANUAL_JUEGOS.md`, `GUIA-JUEGOS.md`, `MEMORIA.md`, `TRASPASO_BOSQUE.md`, **`TRASPASO_NEVADA.md`** (todo el método de la ropa de Nevada, las herramientas y el estado) | referencia, no plan |
 | `crudo/` | descargas y capturas de trabajo, **fuera de git** | — |
