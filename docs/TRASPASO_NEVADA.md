@@ -570,18 +570,18 @@ Detector (`trazos.js`, 36 vistas, método del 04/10; § 8.9): `sueltas / despega
 
 | id | nombre | armor | peso | precio | tris | detector | qué es / notas |
 |---|---|---|---|---|---|---|---|
-| `hat1` | SWAT Cap | 0,5 | light | $250 | 50.796 | — | SWAT Cap: casquete con el panel claro del frente ancho y su borde de arriba con trazo; visera con pico (`visera`). `90239b1` |
-| `hat2` | Leon Cap | 0,5 | light | $250 | 38.196 | — | Leon Cap: gorro de lana caído (`MOD.hat2`) |
-| `hat3` | Sweatband | 0,5 | light | $250 | 36.940 | — | Sweatband: vincha de tela; `CUBRE` entre `LO_HAT3` y `+ANCHO_HAT3`. Fue el primer caso de «trazos flotando» (la cinta de arriba) |
-| `hat4` | Ballcap | 0,5 | light | $250 | 40.540 | — | Ballcap: gorra de béisbol con visera |
-| `hat5` | Desperado | 0 | none | $100 | 37.136 | — | Desperado: ala plana (`torno` + ala alabeada, `juntaAla`) |
-| `hat6` | Bowler | 0 | none | $100 | 38.192 | — | Bowler: bombín (`torno` + ala) |
-| `headphones` | Headphones | 0 | none | $100 | 46.220 | — | Auriculares: copas de 1/3 de la cabeza a 76°, cara clara con su arco, arco y yugo como láminas apoyadas, `juntaPieza`. `90239b1`. Volvió varias veces |
-| `top` | Tophat | 0 | none | $100 | 37.136 | — | Tophat: galera (`torno`) |
-| `fedora` | Fedora | 0 | none | $100 | 37.488 | — | Fedora: sombrero de fieltro (`torno`, ala) |
-| `hat9` | Sombrero | 0 | none | $100 | 41.880 | — | Sombrero mexicano: ala ancha (`torno`); su error fue de los primeros que señaló quien pide |
-| `helmet1` | Soldier Helm | 2 | med | $700 | 55.934 | — | Soldier Helm: borde medido, reborde (trazo, banda gris, trazo) **pintado** a distancia medida (`rebordeCasco`), remache grande. `d8b2335` |
-| `helmet3` | Blast Helm | 3 | heavy | $1.500 | 66.568 | — | Blast Helm: pantalla **en V** (`pantallaV`), brazos-placa sólidos (`tubo3`), bisagra con tornillo, vincha por la nuca, correa ancha con hebilla. `d8b2335`, `9a9f21c`. **La que más vueltas pidió** |
+| `hat1` | SWAT Cap | 0,5 | light | $250 | 50.796 | 208 / 16.253 / 0 / 1.139 | SWAT Cap: casquete con el panel claro del frente ancho y su borde de arriba con trazo; visera con pico (`visera`). `90239b1` |
+| `hat2` | Leon Cap | 0,5 | light | $250 | 38.196 | 0 / 436 / 10 / 530 | Leon Cap: gorro de lana caído (`MOD.hat2`) |
+| `hat3` | Sweatband | 0,5 | light | $250 | 36.940 | 0 / 27 / 0 / 546 | Sweatband: vincha de tela; `CUBRE` entre `LO_HAT3` y `+ANCHO_HAT3`. Fue el primer caso de «trazos flotando» (la cinta de arriba) |
+| `hat4` | Ballcap | 0,5 | light | $250 | 40.540 | 38 / 24.859 / 0 / 2.182 | Ballcap: gorra de béisbol con visera |
+| `hat5` | Desperado | 0 | none | $100 | 37.136 | 0 / 5.001 / 0 / 191 | Desperado: ala plana (`torno` + ala alabeada, `juntaAla`) |
+| `hat6` | Bowler | 0 | none | $100 | 38.192 | 0 / 4.389 / 28 / 836 | Bowler: bombín (`torno` + ala) |
+| `headphones` | Headphones | 0 | none | $100 | 46.220 | 161 / 1.012 / 0 / 942 | Auriculares: copas de 1/3 de la cabeza a 76°, cara clara con su arco, arco y yugo como láminas apoyadas, `juntaPieza`. `90239b1`. Volvió varias veces |
+| `top` | Tophat | 0 | none | $100 | 37.136 | 0 / 30.799 / 0 / 1.550 | Tophat: galera (`torno`) |
+| `fedora` | Fedora | 0 | none | $100 | 37.488 | 0 / 2.881 / 0 / 1.629 | Fedora: sombrero de fieltro (`torno`, ala) |
+| `hat9` | Sombrero | 0 | none | $100 | 41.880 | 0 / 5.494 / 0 / 46.657 | Sombrero mexicano: ala ancha (`torno`); su error fue de los primeros que señaló quien pide |
+| `helmet1` | Soldier Helm | 2 | med | $700 | 55.934 | 51 / 1.837 / 116 / 4.526 | Soldier Helm: borde medido, reborde (trazo, banda gris, trazo) **pintado** a distancia medida (`rebordeCasco`), remache grande. `d8b2335` |
+| `helmet3` | Blast Helm | 3 | heavy | $1.500 | 66.568 | 1.550 / 12.214 / 116 / 6.003 | Blast Helm: pantalla **en V** (`pantallaV`), brazos-placa sólidos (`tubo3`), bisagra con tornillo, vincha por la nuca, correa ancha con hebilla. `d8b2335`, `9a9f21c`. **La que más vueltas pidió** |
 
 **MÁSCARAS (`mask`)**
 
@@ -598,7 +598,7 @@ Detector (`trazos.js`, 36 vistas, método del 04/10; § 8.9): `sueltas / despega
 | `shades12` | Coolguys | 0 | none | $100 | 35.096 | 283 / 1.952 / 1.228 / 1.095 | Coolguys (cuadrados): translúcidos al 50 % |
 | `goggles1` | Dr. Horrible | 0 | none | $100 | 51.348 | 148 / 6.690 / 0 / 2.218 | Dr. Horrible: carcasa con escalón y nariz, cañones de 18 cm con aro y vidrio negro, remache y correa negra |
 | `paintball1` | Paintball Mask | 0,8 | light | $480 | 55.376 | 7.257 / 33.222 / 340 / 3.653 | Paintball Mask: visor rojo translúcido al 61 % en su marco, bisagras con remache, correa gris con hebilla y pasador |
-| `tricky` | Iron Slab | 1,2 | med | $9.120 | 36.082 | — | Iron Slab (Tricky): placa en V ancha como la cabeza, forma de escudo, correa por la tangente. La vista de frente la dio quien pide. `59ed9c9` |
+| `tricky` | Iron Slab | 1,2 | med | $9.120 | 36.082 | 423 / 21.416 / 0 / 7.913 | Iron Slab (Tricky): placa en V ancha como la cabeza, forma de escudo, correa por la tangente. La vista de frente la dio quien pide. `59ed9c9` |
 
 **BOCA (`mouth`)**
 
@@ -634,7 +634,7 @@ Total modeladas: **33** de 38 (12 + 12 + 5 + 1 + 3). Las 5 que faltan son los ch
 ### 12.2 Cómo leer la tabla del detector
 
 - Una prenda con **decenas de miles** de `sueltas`/`despegadas` merece una mirada de cerca con `zoom_prendas.js` y los recortes de `trazos.js` **antes** de afirmar nada: el detector pudo marcar tinta legítima (p. ej. contornos finos de cristal).
-- Las cabezas de **agente** (`agent1_mask*`, ATP, OBSV) y los **lentes** tienen `huecos` por cómo se ven los cristales translúcidos y sus marcos pintados.
+- Hay `huecos` (silueta sin tinta) en las Agent Shades (897), la ATP (704), las OBSV (2.786), State Troopers (763), Professionals (378), Coolguys (1.228), Paintball (340), los cascos (116) y los trajes (176 / 526 / 153). **Causa sin investigar**: pueden ser cristales translúcidos, marcos pintados sin tinta o un defecto real. Mirar el recorte `<id>.png` de `trazos.js` antes de decidir.
 - Todo esto se midió **después** de que quien pide diera por buenas la mayoría (las cabezas); no es una queja suya sino una **línea de base** para la próxima vuelta.
 
 ### 12.3 Estado visual verificado por quien pide
@@ -692,8 +692,8 @@ agente**, el traje no hace arnés ni bandolera (`Ropa.construir(…, chaleco)`, 
 Después de cada uno: el Paso 4–8 completo. **El detector es el criterio de salida**, y mirar de cerca el borde de abajo y las hebillas.
 
 **Los trajes de enemigos** (`agent`, `agent2` arnés, `agent3` bandolera, en `ropa.js › traje`) están hechos pero **no remodelados con este método**; el detector
-mide en el Mk1 (`agent2`) **~7.500 sueltos y ~7.300 despegados, 526 huecos** (el arnés, el bolso y su correa), y en el Mk0 **77/143/153**. `agent` (el saco) es
-el más limpio (176 huecos). Es el trabajo pendiente más claro.
+(`R=30`) mide en el Mk1 (`agent2`) 18 sueltos, **7.421 despegados**, 526 huecos y 6.374 finos (el arnés, el bolso y su correa); en el Mk0 (`agent3`)
+0 / 144 / 153 / 2.887; y `agent` (el saco) es el más limpio: 0 / 0 / 176 / 651. (Con `R=14` el Mk1 daba ~7.500 «sueltos»: era falsa alarma.) Es el trabajo pendiente más claro.
 
 ---
 
@@ -744,7 +744,7 @@ el torso de run y de dash, cabeza y manos, simetrizados); la usa `anim.js › LA
 
 Cuando se retome:
 1. **Chalecos armor1, 2, 4, 5 y 6** (notas en § 13). Agregarlos a `CHALECOS` hace que aparezcan solos en la tienda (`Prendas.modelada`), pero **sumar su baldosa a `VENTA`** en `iconos_ropa.py` y re-correrlo.
-2. **Remodelar los trajes de los enemigos** (`ropa.js › traje`): Mk1 (`agent2`) primero (el detector marca ~7.500 sueltos), mismo método que los accesorios. Verificar con `combo.js` que conviven con el chaleco.
+2. **Remodelar los trajes de los enemigos** (`ropa.js › traje`): Mk1 (`agent2`) primero (el detector marca 7.421 despegados), mismo método que los accesorios. Verificar con `combo.js` que conviven con el chaleco.
 3. **La astilla bajo el borde de abajo del chaleco** (vista desde arriba a 45°; son los 2.101 `despegados`) y las **lengüetas de las correas**: inspeccionarlas de cerca una por una (el detector las dio por «sueltas» con `R=14` y por limpias con `R=30`).
 4. Correr `trazos.js` sobre **todas** las prendas ya modeladas (tabla del § 12) y atacar las peores; el detector se escribió al final y no se había usado en la cabeza.
 5. Pendientes viejos de la sesión anterior (en `memoria/nevada.md`, «Estado al cierre del log»): #40 mirar arriba/abajo cómodo con la mira táctil, #41 silueta y sombreado de los cuerpos, #44 al correr el pie de adelante atraviesa el torso, #42 ropa de enemigos, gore «próximamente», Hank sin modelo (ya no sale en el menú).
